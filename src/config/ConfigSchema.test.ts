@@ -1,0 +1,220 @@
+import { describe, expect, it } from "vitest";
+import {
+	defineConfig,
+	ModuleConfigSchema,
+	PackageConfigSchema,
+	ProjectConfigSchema,
+	StorageConfigSchema,
+	WatchConfigSchema,
+} from "./ConfigSchema.js";
+
+describe("ConfigSchema", () => {
+	describe("PackageConfigSchema", () => {
+		it("validates valid package config", () => {
+			const config = {
+				name: "core",
+				tsconfig: "./packages/core/tsconfig.json",
+			};
+			const result = PackageConfigSchema.parse(config);
+			expect(result).toEqual(config);
+		});
+
+		it("rejects empty name", () => {
+			expect(() =>
+				PackageConfigSchema.parse({ name: "", tsconfig: "./tsconfig.json" }),
+			).toThrow();
+		});
+
+		it("rejects empty tsconfig", () => {
+			expect(() =>
+				PackageConfigSchema.parse({ name: "core", tsconfig: "" }),
+			).toThrow();
+		});
+	});
+
+	describe("ModuleConfigSchema", () => {
+		it("validates module with single package", () => {
+			const config = {
+				name: "api",
+				packages: [
+					{ name: "rest", tsconfig: "./packages/api/rest/tsconfig.json" },
+				],
+			};
+			const result = ModuleConfigSchema.parse(config);
+			expect(result.name).toBe("api");
+			expect(result.packages).toHaveLength(1);
+		});
+
+		it("validates module with multiple packages", () => {
+			const config = {
+				name: "api",
+				packages: [
+					{ name: "rest", tsconfig: "./packages/api/rest/tsconfig.json" },
+					{ name: "graphql", tsconfig: "./packages/api/graphql/tsconfig.json" },
+				],
+			};
+			const result = ModuleConfigSchema.parse(config);
+			expect(result.packages).toHaveLength(2);
+		});
+
+		it("rejects empty packages array", () => {
+			expect(() =>
+				ModuleConfigSchema.parse({ name: "api", packages: [] }),
+			).toThrow();
+		});
+	});
+
+	describe("StorageConfigSchema", () => {
+		it("validates sqlite storage with path", () => {
+			const config = { type: "sqlite" as const, path: "./data/graph.db" };
+			const result = StorageConfigSchema.parse(config);
+			expect(result.type).toBe("sqlite");
+			if (result.type === "sqlite") {
+				expect(result.path).toBe("./data/graph.db");
+			}
+		});
+
+		it("validates sqlite storage without path (optional)", () => {
+			const config = { type: "sqlite" as const };
+			const result = StorageConfigSchema.parse(config);
+			expect(result.type).toBe("sqlite");
+		});
+
+		it("validates memgraph storage with all options", () => {
+			const config = {
+				type: "memgraph" as const,
+				host: "192.168.1.100",
+				port: 7688,
+				username: "admin",
+				password: "secret",
+			};
+			const result = StorageConfigSchema.parse(config);
+			expect(result.type).toBe("memgraph");
+			if (result.type === "memgraph") {
+				expect(result.host).toBe("192.168.1.100");
+				expect(result.port).toBe(7688);
+			}
+		});
+
+		it("validates memgraph storage with defaults", () => {
+			const config = { type: "memgraph" as const };
+			const result = StorageConfigSchema.parse(config);
+			expect(result.type).toBe("memgraph");
+		});
+
+		it("rejects invalid storage type", () => {
+			expect(() => StorageConfigSchema.parse({ type: "postgres" })).toThrow();
+		});
+
+		it("rejects negative port", () => {
+			expect(() =>
+				StorageConfigSchema.parse({ type: "memgraph", port: -1 }),
+			).toThrow();
+		});
+	});
+
+	describe("WatchConfigSchema", () => {
+		it("validates watch config with all options", () => {
+			const config = {
+				include: ["**/*.ts", "**/*.tsx"],
+				exclude: ["**/node_modules/**"],
+				debounce: 200,
+			};
+			const result = WatchConfigSchema.parse(config);
+			expect(result.include).toEqual(["**/*.ts", "**/*.tsx"]);
+			expect(result.debounce).toBe(200);
+		});
+
+		it("validates empty watch config (all optional)", () => {
+			const result = WatchConfigSchema.parse({});
+			expect(result).toEqual({});
+		});
+
+		it("rejects negative debounce", () => {
+			expect(() => WatchConfigSchema.parse({ debounce: -100 })).toThrow();
+		});
+	});
+
+	describe("ProjectConfigSchema", () => {
+		it("validates minimal project config", () => {
+			const config = {
+				modules: [
+					{
+						name: "core",
+						packages: [{ name: "main", tsconfig: "./tsconfig.json" }],
+					},
+				],
+			};
+			const result = ProjectConfigSchema.parse(config);
+			expect(result.modules).toHaveLength(1);
+			expect(result.storage).toBeUndefined();
+			expect(result.watch).toBeUndefined();
+		});
+
+		it("validates full project config", () => {
+			const config = {
+				modules: [
+					{
+						name: "api",
+						packages: [
+							{ name: "rest", tsconfig: "./packages/api/rest/tsconfig.json" },
+						],
+					},
+					{
+						name: "core",
+						packages: [
+							{
+								name: "domain",
+								tsconfig: "./packages/core/domain/tsconfig.json",
+							},
+							{
+								name: "utils",
+								tsconfig: "./packages/core/utils/tsconfig.json",
+							},
+						],
+					},
+				],
+				storage: {
+					type: "sqlite" as const,
+					path: ".ts-graph-mcp/graph.db",
+				},
+				watch: {
+					include: ["**/*.ts", "**/*.tsx"],
+					exclude: ["**/node_modules/**", "**/dist/**"],
+					debounce: 100,
+				},
+			};
+			const result = ProjectConfigSchema.parse(config);
+			expect(result.modules).toHaveLength(2);
+			expect(result.storage?.type).toBe("sqlite");
+			expect(result.watch?.debounce).toBe(100);
+		});
+
+		it("rejects empty modules array", () => {
+			expect(() => ProjectConfigSchema.parse({ modules: [] })).toThrow();
+		});
+	});
+
+	describe("defineConfig", () => {
+		it("returns validated config", () => {
+			const config = {
+				modules: [
+					{
+						name: "app",
+						packages: [{ name: "main", tsconfig: "./tsconfig.json" }],
+					},
+				],
+			};
+			const result = defineConfig(config);
+			expect(result).toEqual(config);
+		});
+
+		it("throws on invalid config", () => {
+			expect(() =>
+				defineConfig({ modules: [] } as unknown as Parameters<
+					typeof defineConfig
+				>[0]),
+			).toThrow();
+		});
+	});
+});

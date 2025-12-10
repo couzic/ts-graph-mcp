@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# SQLite databases (generated during indexing)
+*.db
+*.db-journal
+*.db-wal
+
+# Local config
+*.local.json
+*.db-shm
+
+# TypeScript cache
+*.tsbuildinfo
