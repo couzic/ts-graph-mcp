@@ -40,9 +40,23 @@ Last updated: 2024-12-10
 
 ---
 
+## Architectural Limitations
+
+### 5. Cross-Module Edge Resolution
+
+**Status:** Documented, not yet fixed
+
+**Problem:** Edges that cross module boundaries are silently dropped during ingestion.
+
+**Details:** See [EDGE_RESOLUTION.md](./EDGE_RESOLUTION.md) for full design discussion and potential solutions.
+
+**Workaround:** Structure your config so interdependent code is in the same module.
+
+---
+
 ## Nice to Have
 
-### 5. Missing JSDoc on Some Exports
+### 6. Missing JSDoc on Some Exports
 
 **Problem:** A few exported functions lack JSDoc documentation.
 

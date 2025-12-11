@@ -2,7 +2,7 @@ import { dirname, join, relative } from "node:path";
 import { Project } from "ts-morph";
 import type { ProjectConfig } from "../config/ConfigSchema.js";
 import type { DbWriter } from "../db/DbWriter.js";
-import type { IndexResult } from "../db/Types.js";
+import type { Edge, IndexResult, Node } from "../db/Types.js";
 import { extractFromSourceFile } from "./Extractor.js";
 import type { ExtractionContext } from "./NodeExtractors.js";
 
@@ -148,6 +148,13 @@ export const indexProject = async (
 
 /**
  * Index a single package.
+ *
+ * Uses two-pass approach to handle cross-file edges:
+ * 1. Extract all files, collecting nodes and edges in memory
+ * 2. Insert all nodes first, then all edges
+ *
+ * This ensures target nodes exist before edges reference them,
+ * avoiding foreign key constraint failures.
  */
 const indexPackage = async (
 	moduleName: string,
@@ -172,6 +179,10 @@ const indexPackage = async (
 
 	const sourceFiles = project.getSourceFiles();
 
+	// Pass 1: Extract all files, collect nodes and edges
+	const allNodes: Node[] = [];
+	const allEdges: Edge[] = [];
+
 	for (const sourceFile of sourceFiles) {
 		const absolutePath = sourceFile.getFilePath();
 
@@ -195,8 +206,8 @@ const indexPackage = async (
 
 			const result = extractFromSourceFile(sourceFile, context);
 
-			await dbWriter.addNodes(result.nodes);
-			await dbWriter.addEdges(result.edges);
+			allNodes.push(...result.nodes);
+			allEdges.push(...result.edges);
 
 			filesProcessed++;
 			totalNodes += result.stats.nodeCount;
@@ -207,6 +218,26 @@ const indexPackage = async (
 				message: (e as Error).message,
 			});
 		}
+	}
+
+	// Pass 2: Insert all nodes first, then all edges
+	// This ensures target nodes exist before edges reference them
+	try {
+		await dbWriter.addNodes(allNodes);
+
+		// Filter out edges with dangling targets (e.g., imported types from external modules)
+		// These edges reference nodes that don't exist because we skip node_modules
+		const nodeIds = new Set(allNodes.map((n) => n.id));
+		const validEdges = allEdges.filter(
+			(e) => nodeIds.has(e.source) && nodeIds.has(e.target),
+		);
+
+		await dbWriter.addEdges(validEdges);
+	} catch (e) {
+		errors.push({
+			file: tsconfigPath,
+			message: `Failed to write to database: ${(e as Error).message}`,
+		});
 	}
 
 	return {

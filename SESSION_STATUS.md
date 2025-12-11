@@ -4,110 +4,67 @@ Last updated: 2024-12-11
 
 ## Current Phase
 
-**Documentation** - Phase 1, 2, 3, 4 & 6 complete, adding module documentation
+**Complete & Operational** - All phases done, MCP server working, documentation added
 
 ## Recently Completed
 
 - [x] Phase 1: Project Scaffold (package.json, tsconfig.json)
 - [x] Phase 2: DB Interface Module
-  - [x] `src/db/Types.ts` - All shared types
-  - [x] `src/db/SubgraphToMermaid.ts` - Mermaid conversion
-  - [x] `src/db/DbReader.ts` - Reader interface
-  - [x] `src/db/DbWriter.ts` - Writer interface
-  - [x] `src/db/sqlite/SqliteSchema.ts` - Table definitions
-  - [x] `src/db/sqlite/SqliteConnection.ts` - DB connection
-  - [x] `src/db/sqlite/SqliteWriter.ts` - Writer implementation
-  - [x] `src/db/sqlite/SqliteReader.ts` - Reader implementation (recursive CTEs)
-  - [x] `src/db/CLAUDE.md` - Module documentation
 - [x] Phase 3: Code Ingestion Module
-  - [x] `src/ingestion/IdGenerator.ts` - Node ID generation
-  - [x] `src/ingestion/NodeExtractors.ts` - AST node extraction (33 tests)
-  - [x] `src/ingestion/EdgeExtractors.ts` - AST edge extraction (19 tests)
-  - [x] `src/ingestion/Extractor.ts` - Orchestrates extraction (8 tests)
-  - [x] `src/ingestion/Ingestion.ts` - Public API: indexProject, indexFile, removeFile (8 tests)
 - [x] Phase 4: Config Module
-  - [x] `src/config/ConfigSchema.ts` - Zod schemas (20 tests)
-  - [x] `src/config/ConfigLoader.ts` - Config file loading (9 tests)
 - [x] Phase 6: MCP Server Module
-  - [x] `src/mcp/McpServer.ts` - MCP server with 7 tools
-  - [x] `src/mcp/StartServer.ts` - CLI entry point
-  - [x] `src/mcp/CLAUDE.md` - Module documentation
-- [x] Tests passing: 166 tests total
+- [x] **Bug Fix: Foreign Key Constraint Failures**
+  - Root cause: USES_TYPE edges pointing to imported types as if local
+  - Solution: Filter dangling edges before database insertion
+  - Added 3 regression tests for cross-file, external deps, cross-package
+- [x] **MCP Server Configuration**
+  - Created `.mcp.json` for project-scope config
+  - Server successfully indexes 263 nodes, 273 edges
+  - All 7 tools working: search_nodes, get_callers, get_callees, get_impact, find_path, get_neighbors, get_file_symbols
+- [x] **Documentation**
+  - `docs/FEATURES.md` - Current capabilities and examples
+  - `docs/ROADMAP.md` - Future vision and enhancement ideas
 
-## Currently Working On
+## Test Status
 
-Nothing in progress - awaiting next task
+**170 tests passing**
 
-## Pending Decisions
+- 24 tests: SubgraphToMermaid
+- 20 tests: ConfigSchema
+- 29 tests: SQLite roundtrip integration
+- 16 tests: IdGenerator
+- 9 tests: ConfigLoader
+- 19 tests: EdgeExtractors
+- 33 tests: NodeExtractors
+- 8 tests: Extractor
+- 11 tests: Ingestion (includes 3 new FK regression tests)
+- 1 test: DanglingEdges (diagnostic)
 
-None currently
-
-## Open Questions
-
-None currently
-
-## Key Design Decisions (This Session)
+## Key Design Decisions
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
-| SQLite schema | Single `nodes` table with JSON properties column | Flexibility for different node types |
-| Node properties | Stored as JSON, merged on read | Avoids wide table with many nullable columns |
-| Edge metadata | Separate columns (call_count, is_type_only, etc.) | Common fields, efficient querying |
-| Traversal queries | Recursive CTEs | SQLite native, efficient for graph traversal |
-| Path finding | BFS with json_array path tracking | Finds shortest path |
-| Node ID format | `{relativePath}:{symbolPath}` | Deterministic, human-readable |
-| TDD approach | Tests first, then implementation | Ensures correctness and design clarity |
-| MCP Server | Functional style, inline tool registration | Follows project patterns, simple and maintainable |
-| Tool responses | JSON + Mermaid for subgraphs | Machine-readable JSON, visual diagrams for understanding |
+| SQLite schema | Single `nodes` table with JSON properties | Flexibility for different node types |
+| Edge foreign keys | Filter invalid edges before insert | External deps don't have nodes |
+| Two-pass indexing | All nodes first, then all edges | Handles cross-file references |
+| MCP transport | stdio | Standard, works with Claude Code |
 
-## Files Created (This Session)
+## Files Modified This Session
 
-### Project Setup
-- `package.json` - Project dependencies
-- `tsconfig.json` - TypeScript config
-- `vitest.config.ts` - Test config
+- `src/ingestion/Ingestion.ts` - Two-pass indexing with edge filtering
+- `src/ingestion/Ingestion.test.ts` - Added 3 FK regression tests
+- `src/ingestion/DanglingEdges.test.ts` - Diagnostic test for edge analysis
+- `.mcp.json` - MCP server configuration
+- `ts-graph-mcp.config.json` - Project self-indexing config
+- `docs/FEATURES.md` - Current capabilities documentation
+- `docs/ROADMAP.md` - Future vision and roadmap
 
-### DB Module
-- `src/db/Types.ts` - Shared types
-- `src/db/SubgraphToMermaid.ts` - Mermaid conversion
-- `src/db/DbReader.ts` - Reader interface
-- `src/db/DbWriter.ts` - Writer interface
-- `src/db/sqlite/SqliteSchema.ts` - SQLite schema
-- `src/db/sqlite/SqliteConnection.ts` - Connection management
-- `src/db/sqlite/SqliteWriter.ts` - Writer implementation
-- `src/db/sqlite/SqliteReader.ts` - Reader implementation
-- `src/db/CLAUDE.md` - Module documentation
+## Next Steps (Optional Enhancements)
 
-### Ingestion Module
-- `src/ingestion/IdGenerator.ts` - Node ID generation
-- `src/ingestion/NodeExtractors.ts` - AST node extraction
-- `src/ingestion/EdgeExtractors.ts` - AST edge extraction
-- `src/ingestion/Extractor.ts` - Extraction orchestration
-- `src/ingestion/Ingestion.ts` - Public API (indexProject, indexFile, removeFile)
+1. **Phase 7: File Watcher** - Auto-reindex on save
+2. **CLI Tool** - `ts-graph search "pattern"`
+3. **Dead Code Detection** - Find unreachable functions
+4. **Circular Dependency Detection** - Find import cycles
+5. **Export to Neo4j** - Visual graph exploration
 
-### Config Module
-- `src/config/ConfigSchema.ts` - Zod schemas for ProjectConfig
-- `src/config/ConfigLoader.ts` - Load config from file
-
-### MCP Server Module
-- `src/mcp/McpServer.ts` - MCP server with 7 tools (search_nodes, get_callers, get_callees, get_impact, find_path, get_neighbors, get_file_symbols)
-- `src/mcp/StartServer.ts` - CLI entry point for server initialization
-- `src/mcp/CLAUDE.md` - Module documentation
-
-### Tests (colocated with implementation)
-- `src/db/SubgraphToMermaid.test.ts` - 24 tests
-- `src/ingestion/IdGenerator.test.ts` - 16 tests
-- `src/ingestion/NodeExtractors.test.ts` - 33 tests
-- `src/ingestion/EdgeExtractors.test.ts` - 19 tests
-- `src/ingestion/Extractor.test.ts` - 8 tests
-- `src/ingestion/Ingestion.test.ts` - 8 tests
-- `src/config/ConfigSchema.test.ts` - 20 tests
-- `src/config/ConfigLoader.test.ts` - 9 tests
-- `tests/db/integration/roundtrip.test.ts` - 29 tests
-
-## Next Steps
-
-1. ~~Phase 5: CLI Module~~ (Optional - MCP server is primary interface)
-2. ~~Phase 6: MCP Server Module~~ ✅ Complete
-3. Phase 7: File Watcher Module (Optional)
-4. Create CLI entry point to initialize DB and start MCP server
+See `docs/ROADMAP.md` for the full vision.

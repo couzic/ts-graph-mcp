@@ -1,8 +1,12 @@
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import type Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { ProjectConfig } from "../config/ConfigSchema.js";
 import type { DbWriter } from "../db/DbWriter.js";
+import { closeDatabase, openDatabase } from "../db/sqlite/SqliteConnection.js";
+import { createSqliteReader } from "../db/sqlite/SqliteReader.js";
+import { createSqliteWriter } from "../db/sqlite/SqliteWriter.js";
 import type { Edge, Node } from "../db/Types.js";
 import { indexFile, indexProject, removeFile } from "./Ingestion.js";
 
@@ -295,6 +299,262 @@ export class User {
 			});
 
 			expect(writer.cleared).toBe(true);
+		});
+
+		it("handles cross-file edges without foreign key errors", async () => {
+			// This test demonstrates the bug: when file A imports from file B,
+			// and we process A before B, the edge from A to B fails because
+			// the target node doesn't exist yet.
+
+			const pkgDir = join(TEST_DIR, "packages", "crossfile");
+			mkdirSync(pkgDir, { recursive: true });
+
+			writeFileSync(
+				join(pkgDir, "tsconfig.json"),
+				JSON.stringify({
+					compilerOptions: {
+						target: "ES2022",
+						module: "NodeNext",
+						moduleResolution: "NodeNext",
+					},
+					include: ["*.ts"],
+				}),
+			);
+
+			// File A imports and calls a function from file B
+			writeFileSync(
+				join(pkgDir, "a.ts"),
+				`
+import { helper } from './b.js';
+
+export function main(): void {
+  helper();
+}
+`.trim(),
+			);
+
+			// File B exports the helper function
+			writeFileSync(
+				join(pkgDir, "b.ts"),
+				`
+export function helper(): void {
+  console.log('helper');
+}
+`.trim(),
+			);
+
+			const config: ProjectConfig = {
+				modules: [
+					{
+						name: "test",
+						packages: [
+							{
+								name: "crossfile",
+								tsconfig: "./packages/crossfile/tsconfig.json",
+							},
+						],
+					},
+				],
+			};
+
+			// Use real SQLite writer with foreign key constraints
+			let db: Database.Database | undefined;
+			try {
+				db = openDatabase({ path: ":memory:" });
+				const sqliteWriter = createSqliteWriter(db);
+				const reader = createSqliteReader(db);
+
+				const result = await indexProject(config, sqliteWriter, {
+					projectRoot: TEST_DIR,
+				});
+
+				// Should have no errors - cross-file edges should work
+				expect(result.errors).toBeUndefined();
+				expect(result.filesProcessed).toBe(2);
+
+				// Verify both files were indexed
+				const mainNode = await reader.getNodeById(
+					"packages/crossfile/a.ts:main",
+				);
+				expect(mainNode).toBeDefined();
+
+				const helperNode = await reader.getNodeById(
+					"packages/crossfile/b.ts:helper",
+				);
+				expect(helperNode).toBeDefined();
+
+				// Verify the IMPORTS edge exists (file-to-file import relationship)
+				const aFileNode = await reader.getNodeById("packages/crossfile/a.ts");
+				expect(aFileNode).toBeDefined();
+			} finally {
+				if (db) {
+					closeDatabase(db);
+				}
+			}
+		});
+
+		it("handles edges to external dependencies without foreign key errors", async () => {
+			// This test demonstrates the bug: when a file imports from node_modules,
+			// the edge targets a node that doesn't exist (we skip node_modules),
+			// causing foreign key errors.
+
+			const pkgDir = join(TEST_DIR, "packages", "external");
+			mkdirSync(pkgDir, { recursive: true });
+
+			writeFileSync(
+				join(pkgDir, "tsconfig.json"),
+				JSON.stringify({
+					compilerOptions: {
+						target: "ES2022",
+						module: "NodeNext",
+						moduleResolution: "NodeNext",
+					},
+					include: ["*.ts"],
+				}),
+			);
+
+			// File that imports from an external dependency
+			writeFileSync(
+				join(pkgDir, "app.ts"),
+				`
+import { join } from 'node:path';
+
+export function getPath(): string {
+  return join('a', 'b');
+}
+`.trim(),
+			);
+
+			const config: ProjectConfig = {
+				modules: [
+					{
+						name: "test",
+						packages: [
+							{
+								name: "external",
+								tsconfig: "./packages/external/tsconfig.json",
+							},
+						],
+					},
+				],
+			};
+
+			// Use real SQLite writer with foreign key constraints
+			let db: Database.Database | undefined;
+			try {
+				db = openDatabase({ path: ":memory:" });
+				const sqliteWriter = createSqliteWriter(db);
+
+				const result = await indexProject(config, sqliteWriter, {
+					projectRoot: TEST_DIR,
+				});
+
+				// Should have no errors - edges to external deps should be filtered out
+				expect(result.errors).toBeUndefined();
+				expect(result.filesProcessed).toBe(1);
+			} finally {
+				if (db) {
+					closeDatabase(db);
+				}
+			}
+		});
+
+		it("handles cross-package edges without foreign key errors", async () => {
+			// This test demonstrates the bug: when package A imports from package B,
+			// and we process all of A before B, the edges from A to B fail because
+			// the target nodes don't exist yet (different packages = different indexPackage calls).
+
+			const pkg1Dir = join(TEST_DIR, "packages", "core");
+			const pkg2Dir = join(TEST_DIR, "packages", "utils");
+			mkdirSync(pkg1Dir, { recursive: true });
+			mkdirSync(pkg2Dir, { recursive: true });
+
+			// Package 1: core - imports from utils
+			writeFileSync(
+				join(pkg1Dir, "tsconfig.json"),
+				JSON.stringify({
+					compilerOptions: {
+						target: "ES2022",
+						module: "NodeNext",
+						moduleResolution: "NodeNext",
+						paths: { "@utils/*": ["../utils/*"] },
+					},
+					include: ["*.ts"],
+				}),
+			);
+			writeFileSync(
+				join(pkg1Dir, "app.ts"),
+				`
+import { formatDate } from '../utils/format.js';
+
+export function main(): void {
+  console.log(formatDate(new Date()));
+}
+`.trim(),
+			);
+
+			// Package 2: utils - exports helper
+			writeFileSync(
+				join(pkg2Dir, "tsconfig.json"),
+				JSON.stringify({
+					compilerOptions: {
+						target: "ES2022",
+						module: "NodeNext",
+						moduleResolution: "NodeNext",
+					},
+					include: ["*.ts"],
+				}),
+			);
+			writeFileSync(
+				join(pkg2Dir, "format.ts"),
+				`
+export function formatDate(date: Date): string {
+  return date.toISOString();
+}
+`.trim(),
+			);
+
+			const config: ProjectConfig = {
+				modules: [
+					{
+						name: "app",
+						packages: [
+							// core is processed first, but it depends on utils
+							{ name: "core", tsconfig: "./packages/core/tsconfig.json" },
+							{ name: "utils", tsconfig: "./packages/utils/tsconfig.json" },
+						],
+					},
+				],
+			};
+
+			// Use real SQLite writer with foreign key constraints
+			let db: Database.Database | undefined;
+			try {
+				db = openDatabase({ path: ":memory:" });
+				const sqliteWriter = createSqliteWriter(db);
+				const reader = createSqliteReader(db);
+
+				const result = await indexProject(config, sqliteWriter, {
+					projectRoot: TEST_DIR,
+				});
+
+				// Should have no errors - cross-package edges should work
+				expect(result.errors).toBeUndefined();
+				expect(result.filesProcessed).toBeGreaterThanOrEqual(2);
+
+				// Verify both packages were indexed
+				const mainNode = await reader.getNodeById("packages/core/app.ts:main");
+				expect(mainNode).toBeDefined();
+
+				const formatNode = await reader.getNodeById(
+					"packages/utils/format.ts:formatDate",
+				);
+				expect(formatNode).toBeDefined();
+			} finally {
+				if (db) {
+					closeDatabase(db);
+				}
+			}
 		});
 	});
 });

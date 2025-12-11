@@ -1,0 +1,10 @@
+{
+  "modules": [
+    {
+      "name": "ts-graph-mcp",
+      "packages": [
+        { "name": "main", "tsconfig": "./tsconfig.json" }
+      ]
+    }
+  ]
+}
