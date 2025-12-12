@@ -29,6 +29,7 @@
 	},
 	"dependencies": {
 		"@modelcontextprotocol/sdk": "^1.0.0",
+		"@toon-format/toon": "^2.1.0",
 		"better-sqlite3": "^11.0.0",
 		"chokidar": "^4.0.0",
 		"commander": "^12.0.0",

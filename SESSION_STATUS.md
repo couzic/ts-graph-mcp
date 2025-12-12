@@ -1,6 +1,6 @@
 # Session Status
 
-Last updated: 2024-12-11
+Last updated: 2024-12-12
 
 ## Current Phase
 
@@ -8,6 +8,11 @@ Last updated: 2024-12-11
 
 ## Recently Completed
 
+- [x] **TOON Format Integration** (2024-12-12)
+  - Replaced JSON output with TOON (Token-Oriented Object Notation) in all MCP tool responses
+  - ~60-70% token reduction for node/edge arrays
+  - Package: `@toon-format/toon@2.1.0`
+  - Modified: `src/mcp/McpServer.ts` (formatNodesResponse, formatPathResponse, formatSubgraphResponse)
 - [x] Phase 1: Project Scaffold (package.json, tsconfig.json)
 - [x] Phase 2: DB Interface Module
 - [x] Phase 3: Code Ingestion Module
@@ -27,7 +32,7 @@ Last updated: 2024-12-11
 
 ## Test Status
 
-**170 tests passing**
+**169 tests passing**
 
 - 24 tests: SubgraphToMermaid
 - 20 tests: ConfigSchema
@@ -48,6 +53,7 @@ Last updated: 2024-12-11
 | Edge foreign keys | Filter invalid edges before insert | External deps don't have nodes |
 | Two-pass indexing | All nodes first, then all edges | Handles cross-file references |
 | MCP transport | stdio | Standard, works with Claude Code |
+| Response format | TOON instead of JSON | ~60-70% token reduction for uniform arrays |
 
 ## Files Modified This Session
 

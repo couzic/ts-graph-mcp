@@ -9,7 +9,7 @@ Exposes the TypeScript code graph as an MCP (Model Context Protocol) server that
 ### `startMcpServer(reader: DbReader): Promise<void>`
 **File:** `McpServer.ts`
 
-Initializes and starts the MCP server on stdio transport with 7 registered tools. Uses functional style with inline tool registration. All tool responses are JSON-formatted, with Mermaid diagrams for visual subgraphs.
+Initializes and starts the MCP server on stdio transport with 7 registered tools. Uses functional style with inline tool registration. All tool responses use TOON format (Token-Oriented Object Notation) for ~60-70% token reduction, with Mermaid diagrams for visual subgraphs.
 
 **Tools provided:**
 1. `search_nodes` - Search by name pattern with filters (type, module, package, exported)
@@ -33,7 +33,7 @@ CLI entry point that orchestrates database initialization and server startup. Ha
 
 ### Server Architecture
 - **Transport:** Stdio only (designed for MCP protocol)
-- **Response format:** JSON + Mermaid diagrams for subgraphs
+- **Response format:** TOON (Token-Oriented Object Notation) + Mermaid diagrams for subgraphs
 - **Error handling:** All tool errors caught and returned as MCP error responses
 - **Validation:** Zod schemas validate all tool inputs before execution
 
@@ -44,14 +44,15 @@ CLI entry point that orchestrates database initialization and server startup. Ha
 - Uses `:memory:` for in-memory database (pass `--db :memory:`)
 
 ### Tool Response Patterns
-Each tool follows consistent response patterns:
-- **Node lists:** `{ count: number, nodes: Node[] }`
+Each tool follows consistent response patterns (encoded as TOON for token efficiency):
+- **Node lists:** `{ count: number, nodes: Node[] }` - uniform arrays compress well
 - **Paths:** `{ found: boolean, path?: {...}, message?: string }`
 - **Subgraphs:** `{ center: Node, nodeCount: number, edgeCount: number, nodes: Node[], edges: Edge[] }` + Mermaid diagram
 
 ### Dependencies
 - Requires `DbReader` interface (from `../db/DbReader.ts`)
 - Uses `@modelcontextprotocol/sdk` for MCP server implementation
+- Uses `@toon-format/toon` for token-efficient response encoding
 - All graph traversal is delegated to the reader implementation (typically `SqliteReader`)
 
 ## Integration Points

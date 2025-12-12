@@ -4,6 +4,7 @@ import {
 	CallToolRequestSchema,
 	ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
+import { encode } from "@toon-format/toon";
 import { z } from "zod";
 import type { DbReader } from "../db/DbReader.js";
 import { subgraphToMermaid } from "../db/SubgraphToMermaid.js";
@@ -364,28 +365,24 @@ export async function startMcpServer(reader: DbReader): Promise<void> {
 }
 
 /**
- * Format a list of nodes as a JSON response.
+ * Format a list of nodes as a TOON response (token-efficient format).
  */
 function formatNodesResponse(nodes: Node[]) {
 	return {
 		content: [
 			{
 				type: "text" as const,
-				text: JSON.stringify(
-					{
-						count: nodes.length,
-						nodes,
-					},
-					null,
-					2,
-				),
+				text: encode({
+					count: nodes.length,
+					nodes,
+				}),
 			},
 		],
 	};
 }
 
 /**
- * Format a path as a JSON response.
+ * Format a path as a TOON response (token-efficient format).
  */
 function formatPathResponse(
 	path: {
@@ -401,14 +398,10 @@ function formatPathResponse(
 			content: [
 				{
 					type: "text" as const,
-					text: JSON.stringify(
-						{
-							found: false,
-							message: "No path found between the specified nodes",
-						},
-						null,
-						2,
-					),
+					text: encode({
+						found: false,
+						message: "No path found between the specified nodes",
+					}),
 				},
 			],
 		};
@@ -418,21 +411,17 @@ function formatPathResponse(
 		content: [
 			{
 				type: "text" as const,
-				text: JSON.stringify(
-					{
-						found: true,
-						path,
-					},
-					null,
-					2,
-				),
+				text: encode({
+					found: true,
+					path,
+				}),
 			},
 		],
 	};
 }
 
 /**
- * Format a subgraph as a JSON response with a Mermaid diagram.
+ * Format a subgraph as a TOON response with a Mermaid diagram.
  */
 function formatSubgraphResponse(subgraph: {
 	center: Node;
@@ -445,17 +434,13 @@ function formatSubgraphResponse(subgraph: {
 		content: [
 			{
 				type: "text" as const,
-				text: JSON.stringify(
-					{
-						center: subgraph.center,
-						nodeCount: subgraph.nodes.length,
-						edgeCount: subgraph.edges.length,
-						nodes: subgraph.nodes,
-						edges: subgraph.edges,
-					},
-					null,
-					2,
-				),
+				text: encode({
+					center: subgraph.center,
+					nodeCount: subgraph.nodes.length,
+					edgeCount: subgraph.edges.length,
+					nodes: subgraph.nodes,
+					edges: subgraph.edges,
+				}),
 			},
 			{
 				type: "text" as const,
