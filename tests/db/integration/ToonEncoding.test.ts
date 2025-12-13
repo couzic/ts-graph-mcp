@@ -100,6 +100,36 @@ describe("MCP TOON output", () => {
 			expect(encoded).toContain("name:string");
 		});
 
+		it("handles parameters with commas in generic types", () => {
+			// Mock a function node with a parameter containing commas in the type
+			// e.g., function process(data: Map<string, number>, count: number)
+			const mockFunctionNode = {
+				id: "src/test.ts:process",
+				type: "Function" as const,
+				name: "process",
+				module: "test",
+				package: "test",
+				filePath: "src/test.ts",
+				startLine: 1,
+				endLine: 5,
+				exported: true,
+				parameters: [
+					{ name: "data", type: "Map<string, number>" },
+					{ name: "count", type: "number" },
+				],
+				returnType: "void",
+				async: false,
+			};
+
+			const grouped = groupNodesByType([mockFunctionNode]);
+			const encoded = encode(grouped);
+
+			// The output should use ['param:type','param2:type2'] format
+			// NOT "param:type, param2:type2" which would be ambiguous
+			// When parsed, we should be able to identify exactly 2 parameters
+			expect(encoded).toContain("['data:Map<string, number>','count:number']");
+		});
+
 		it("ensures all functions have consistent keys (returnType present)", async () => {
 			// When some functions have returnType and others don't, TOON falls back
 			// to verbose format. We need to ensure all optional fields are present

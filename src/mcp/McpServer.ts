@@ -403,6 +403,11 @@ const NODE_TYPE_DEFAULTS: Record<string, Record<string, unknown>> = {
 	},
 };
 
+/** Format a string array as ['a','b'] for LLM-friendly output (avoids escaped quotes) */
+function formatStringArray(arr: string[]): string {
+	return `[${arr.map((s) => `'${s}'`).join(",")}]`;
+}
+
 /**
  * Flatten a node for TOON encoding by converting arrays to strings
  * and ensuring all optional fields have default values.
@@ -422,18 +427,18 @@ function flattenNodeForToon(node: Node): Record<string, unknown> {
 	for (const [key, value] of Object.entries(node)) {
 		if (key === "type") continue;
 		if (Array.isArray(value)) {
-			// Convert arrays to compact string representation
-			// e.g., parameters: [{name: "x", type: "string"}] -> "x:string"
+			// Convert arrays to compact ['a','b'] format to avoid comma ambiguity
+			// (types can contain commas, e.g., Map<string, number>)
 			if (key === "parameters") {
-				result[key] = value
-					.map((p: { name: string; type?: string }) =>
+				result[key] = formatStringArray(
+					value.map((p: { name: string; type?: string }) =>
 						p.type ? `${p.name}:${p.type}` : p.name,
-					)
-					.join(", ");
+					),
+				);
 			} else if (key === "implements" || key === "extends") {
-				result[key] = value.join(", ");
+				result[key] = formatStringArray(value);
 			} else if (key === "importedSymbols") {
-				result[key] = value.join(", ");
+				result[key] = formatStringArray(value);
 			} else {
 				result[key] = JSON.stringify(value);
 			}
@@ -468,6 +473,11 @@ function flattenEdgeForToon(edge: Edge): Record<string, unknown> {
 		target: edge.target,
 		type: edge.type,
 		callCount: edge.callCount ?? "",
+		isTypeOnly: edge.isTypeOnly ?? "",
+		importedSymbols: edge.importedSymbols
+			? formatStringArray(edge.importedSymbols)
+			: "[]",
+		context: edge.context ?? "",
 	};
 }
 
