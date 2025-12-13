@@ -5,10 +5,18 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { ProjectConfig } from "../config/ConfigSchema.js";
 import type { DbWriter } from "../db/DbWriter.js";
 import { closeDatabase, openDatabase } from "../db/sqlite/SqliteConnection.js";
-import { createSqliteReader } from "../db/sqlite/SqliteReader.js";
 import { createSqliteWriter } from "../db/sqlite/SqliteWriter.js";
 import type { Edge, Node } from "../db/Types.js";
 import { indexFile, indexProject, removeFile } from "./Ingestion.js";
+
+/**
+ * Simple helper to check if a node exists in the database.
+ * Used for test verification only.
+ */
+function nodeExists(db: Database.Database, nodeId: string): boolean {
+	const row = db.prepare("SELECT 1 FROM nodes WHERE id = ?").get(nodeId);
+	return row !== undefined;
+}
 
 const TEST_DIR = "/tmp/ts-graph-rag-ingestion-test";
 
@@ -362,7 +370,6 @@ export function helper(): void {
 			try {
 				db = openDatabase({ path: ":memory:" });
 				const sqliteWriter = createSqliteWriter(db);
-				const reader = createSqliteReader(db);
 
 				const result = await indexProject(config, sqliteWriter, {
 					projectRoot: TEST_DIR,
@@ -373,19 +380,11 @@ export function helper(): void {
 				expect(result.filesProcessed).toBe(2);
 
 				// Verify both files were indexed
-				const mainNode = await reader.getNodeById(
-					"packages/crossfile/a.ts:main",
-				);
-				expect(mainNode).toBeDefined();
+				expect(nodeExists(db, "packages/crossfile/a.ts:main")).toBe(true);
+				expect(nodeExists(db, "packages/crossfile/b.ts:helper")).toBe(true);
 
-				const helperNode = await reader.getNodeById(
-					"packages/crossfile/b.ts:helper",
-				);
-				expect(helperNode).toBeDefined();
-
-				// Verify the IMPORTS edge exists (file-to-file import relationship)
-				const aFileNode = await reader.getNodeById("packages/crossfile/a.ts");
-				expect(aFileNode).toBeDefined();
+				// Verify the file node exists (for IMPORTS edge relationship)
+				expect(nodeExists(db, "packages/crossfile/a.ts")).toBe(true);
 			} finally {
 				if (db) {
 					closeDatabase(db);
@@ -532,7 +531,6 @@ export function formatDate(date: Date): string {
 			try {
 				db = openDatabase({ path: ":memory:" });
 				const sqliteWriter = createSqliteWriter(db);
-				const reader = createSqliteReader(db);
 
 				const result = await indexProject(config, sqliteWriter, {
 					projectRoot: TEST_DIR,
@@ -543,13 +541,10 @@ export function formatDate(date: Date): string {
 				expect(result.filesProcessed).toBeGreaterThanOrEqual(2);
 
 				// Verify both packages were indexed
-				const mainNode = await reader.getNodeById("packages/core/app.ts:main");
-				expect(mainNode).toBeDefined();
-
-				const formatNode = await reader.getNodeById(
-					"packages/utils/format.ts:formatDate",
+				expect(nodeExists(db, "packages/core/app.ts:main")).toBe(true);
+				expect(nodeExists(db, "packages/utils/format.ts:formatDate")).toBe(
+					true,
 				);
-				expect(formatNode).toBeDefined();
 			} finally {
 				if (db) {
 					closeDatabase(db);

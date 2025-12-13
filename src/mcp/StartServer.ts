@@ -4,7 +4,6 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { findConfigFile, loadConfig } from "../config/ConfigLoader.js";
 import { openDatabase } from "../db/sqlite/SqliteConnection.js";
-import { createSqliteReader } from "../db/sqlite/SqliteReader.js";
 import { createSqliteWriter } from "../db/sqlite/SqliteWriter.js";
 import { indexProject } from "../ingestion/Ingestion.js";
 import { startMcpServer } from "./McpServer.js";
@@ -68,7 +67,6 @@ export const main = async (): Promise<void> => {
 
 		// Open database connection (creates and initializes schema if new)
 		const db = openDatabase({ path: dbPath });
-		const reader = createSqliteReader(db);
 
 		// If database doesn't exist, try to index the project
 		if (!dbExists) {
@@ -117,7 +115,7 @@ export const main = async (): Promise<void> => {
 
 		// Start MCP server
 		console.error("Starting MCP server on stdio...");
-		await startMcpServer(reader);
+		await startMcpServer(db);
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
 		console.error(`Fatal error: ${message}`);

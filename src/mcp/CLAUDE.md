@@ -4,12 +4,33 @@
 
 Exposes the TypeScript code graph as an MCP (Model Context Protocol) server that provides 7 tools for AI coding agents to query and explore code structure. This is the primary interface for the ts-graph-mcp project.
 
+## Architecture: Vertical Slices
+
+Each tool is implemented as a self-contained vertical slice:
+
+```
+src/mcp/tools/
+├── search-nodes/     (query.ts, format.ts, format.test.ts, handler.ts)
+├── get-callers/      (query.ts, format.ts, format.test.ts, handler.ts)
+├── get-callees/      (query.ts, format.ts, format.test.ts, handler.ts)
+├── get-impact/       (query.ts, format.ts, format.test.ts, handler.ts)
+├── find-path/        (query.ts, format.ts, format.test.ts, handler.ts)
+├── get-neighbors/    (query.ts, format.ts, format.test.ts, handler.ts)
+└── get-file-symbols/ (query.ts, format.ts, format.test.ts, handler.ts)
+```
+
+**Each slice contains:**
+- `handler.ts` - Tool definition and execution entry point
+- `query.ts` - Direct SQL queries (no shared abstraction)
+- `format.ts` - Hierarchical text output formatting
+- `format.test.ts` - Unit tests for formatting
+
 ## Key Exports
 
-### `startMcpServer(reader: DbReader): Promise<void>`
+### `startMcpServer(db: Database.Database): Promise<void>`
 **File:** `McpServer.ts`
 
-Initializes and starts the MCP server on stdio transport with 7 registered tools. Uses functional style with inline tool registration. All tool responses use TOON format (Token-Oriented Object Notation) for ~60-70% token reduction, with Mermaid diagrams for visual subgraphs.
+Initializes and starts the MCP server on stdio transport with 7 registered tools. Dispatches tool calls to vertical slice handlers.
 
 **Tools provided:**
 1. `search_nodes` - Search by name pattern with filters (type, module, package, exported)
@@ -33,9 +54,9 @@ CLI entry point that orchestrates database initialization and server startup. Ha
 
 ### Server Architecture
 - **Transport:** Stdio only (designed for MCP protocol)
-- **Response format:** TOON (Token-Oriented Object Notation) + Mermaid diagrams for subgraphs
+- **Response format:** Hierarchical text output (~60-70% token reduction vs JSON)
 - **Error handling:** All tool errors caught and returned as MCP error responses
-- **Validation:** Zod schemas validate all tool inputs before execution
+- **Database access:** Direct SQL via better-sqlite3 (no shared DbReader abstraction)
 
 ### Database Initialization
 - Default database path: `.ts-graph/graph.db`
@@ -43,29 +64,47 @@ CLI entry point that orchestrates database initialization and server startup. Ha
 - Falls back to empty database if no config found
 - Uses `:memory:` for in-memory database (pass `--db :memory:`)
 
-### Tool Response Patterns
-Each tool follows consistent response patterns (encoded as TOON for token efficiency):
-- **Node lists:** `{ count: number, nodes: Node[] }` - uniform arrays compress well
-- **Paths:** `{ found: boolean, path?: {...}, message?: string }`
-- **Subgraphs:** `{ center: Node, nodeCount: number, edgeCount: number, nodes: Node[], edges: Edge[] }` + Mermaid diagram
+### Tool Response Format
+
+All tools return hierarchical text optimized for LLM consumption:
+
+```
+# search_nodes example
+search: User*
+count: 3
+files: 2
+
+file: src/types.ts
+  module: core
+  package: main
+  matches: 2
+  interfaces[1]:
+    User [1-10] exp
+  typeAliases[1]:
+    UserId [12] exp = string
+
+file: src/models/User.ts
+  module: models
+  package: main
+  matches: 1
+  classes[1]:
+    UserService [5-50] exp
+```
 
 ### Dependencies
-- Requires `DbReader` interface (from `../db/DbReader.ts`)
+- Uses `better-sqlite3` for direct database queries
 - Uses `@modelcontextprotocol/sdk` for MCP server implementation
-- Uses `@toon-format/toon` for token-efficient response encoding
-- All graph traversal is delegated to the reader implementation (typically `SqliteReader`)
+- Graph traversals implemented via recursive CTEs in each tool's `query.ts`
 
 ## Integration Points
 
 ### Starting the server
 ```typescript
-import { createSqliteReader } from "../db/sqlite/SqliteReader.js";
 import { openDatabase } from "../db/sqlite/SqliteConnection.js";
 import { startMcpServer } from "./McpServer.js";
 
 const db = openDatabase({ path: "./graph.db" });
-const reader = createSqliteReader(db);
-await startMcpServer(reader);
+await startMcpServer(db);
 ```
 
 ### CLI usage

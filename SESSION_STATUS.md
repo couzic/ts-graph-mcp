@@ -1,76 +1,101 @@
-# Session Status
+# Session Status: Vertical Slice Architecture Migration
 
-Last updated: 2024-12-12
+## Current State
 
-## Current Phase
+**Status:** Phase 5 - Cleanup COMPLETE ✅
 
-**Complete & Operational** - All phases done, MCP server working, documentation added
+---
 
-## Recently Completed
+## Migration Summary
 
-- [x] **TOON Format Integration** (2024-12-12)
-  - Replaced JSON output with TOON (Token-Oriented Object Notation) in all MCP tool responses
-  - ~60-70% token reduction for node/edge arrays
-  - Package: `@toon-format/toon@2.1.0`
-  - Modified: `src/mcp/McpServer.ts` (formatNodesResponse, formatPathResponse, formatSubgraphResponse)
-- [x] Phase 1: Project Scaffold (package.json, tsconfig.json)
-- [x] Phase 2: DB Interface Module
-- [x] Phase 3: Code Ingestion Module
-- [x] Phase 4: Config Module
-- [x] Phase 6: MCP Server Module
-- [x] **Bug Fix: Foreign Key Constraint Failures**
-  - Root cause: USES_TYPE edges pointing to imported types as if local
-  - Solution: Filter dangling edges before database insertion
-  - Added 3 regression tests for cross-file, external deps, cross-package
-- [x] **MCP Server Configuration**
-  - Created `.mcp.json` for project-scope config
-  - Server successfully indexes 263 nodes, 273 edges
-  - All 7 tools working: search_nodes, get_callers, get_callees, get_impact, find_path, get_neighbors, get_file_symbols
-- [x] **Documentation**
-  - `docs/FEATURES.md` - Current capabilities and examples
-  - `docs/ROADMAP.md` - Future vision and enhancement ideas
+### Completed Phases
 
-## Test Status
+| Phase | Description | Status |
+|-------|-------------|--------|
+| Phase 1 | get-file-symbols (proof of concept) | ✅ Complete |
+| Phase 2 | Node-list tools (search-nodes, get-callers, get-callees, get-impact) | ✅ Complete |
+| Phase 3 | find-path tool | ✅ Complete |
+| Phase 4 | get-neighbors tool | ✅ Complete |
+| Phase 5 | Cleanup and documentation | ✅ Complete |
 
-**169 tests passing**
+### Files Created/Migrated
 
-- 24 tests: SubgraphToMermaid
-- 20 tests: ConfigSchema
-- 29 tests: SQLite roundtrip integration
-- 16 tests: IdGenerator
-- 9 tests: ConfigLoader
-- 19 tests: EdgeExtractors
-- 33 tests: NodeExtractors
-- 8 tests: Extractor
-- 11 tests: Ingestion (includes 3 new FK regression tests)
-- 1 test: DanglingEdges (diagnostic)
+```
+src/mcp/tools/
+├── search-nodes/     (query.ts, format.ts, format.test.ts, handler.ts)
+├── get-callers/      (query.ts, format.ts, format.test.ts, handler.ts)
+├── get-callees/      (query.ts, format.ts, format.test.ts, handler.ts)
+├── get-impact/       (query.ts, format.ts, format.test.ts, handler.ts)
+├── find-path/        (query.ts, format.ts, format.test.ts, handler.ts)
+├── get-neighbors/    (query.ts, format.ts, format.test.ts, handler.ts)
+└── get-file-symbols/ (query.ts, format.ts, format.test.ts, handler.ts)
+```
 
-## Key Design Decisions
+### Files Deleted
 
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| SQLite schema | Single `nodes` table with JSON properties | Flexibility for different node types |
-| Edge foreign keys | Filter invalid edges before insert | External deps don't have nodes |
-| Two-pass indexing | All nodes first, then all edges | Handles cross-file references |
-| MCP transport | stdio | Standard, works with Claude Code |
-| Response format | TOON instead of JSON | ~60-70% token reduction for uniform arrays |
+- `src/toon/` folder (30 files) - TOON encoding replaced by direct text formatting
+- `tests/db/integration/ToonEncoding.test.ts` - Tested deprecated encoding
 
-## Files Modified This Session
+### Files Modified
 
-- `src/ingestion/Ingestion.ts` - Two-pass indexing with edge filtering
-- `src/ingestion/Ingestion.test.ts` - Added 3 FK regression tests
-- `src/ingestion/DanglingEdges.test.ts` - Diagnostic test for edge analysis
-- `.mcp.json` - MCP server configuration
-- `ts-graph-mcp.config.json` - Project self-indexing config
-- `docs/FEATURES.md` - Current capabilities documentation
-- `docs/ROADMAP.md` - Future vision and roadmap
+- `src/mcp/McpServer.ts` - Dispatches to tool handlers, takes Database directly
+- `src/mcp/StartServer.ts` - Removed SqliteReader dependency
+- `src/mcp/CLAUDE.md` - Updated to reflect vertical slice architecture
+- `src/ingestion/Ingestion.test.ts` - Replaced reader calls with direct SQL
+- `docs/ARCHITECTURE.md` - Updated architecture diagrams and descriptions
+- `ISSUES.md` - Marked TOON optimization as superseded
 
-## Next Steps (Optional Enhancements)
+---
 
-1. **Phase 7: File Watcher** - Auto-reindex on save
-2. **CLI Tool** - `ts-graph search "pattern"`
-3. **Dead Code Detection** - Find unreachable functions
-4. **Circular Dependency Detection** - Find import cycles
-5. **Export to Neo4j** - Visual graph exploration
+## Remaining Work (Documented)
 
-See `docs/ROADMAP.md` for the full vision.
+### DbReader/SqliteReader Removal
+
+These files are still present but can be deleted after following the test migration plan:
+
+- `src/db/DbReader.ts`
+- `src/db/sqlite/SqliteReader.ts`
+- `tests/db/integration/roundtrip.test.ts`
+
+**See:** `docs/test-migration-plan.md` for detailed instructions on migrating roundtrip tests before deletion.
+
+---
+
+## Architecture Changes
+
+### Before (Horizontal Layers)
+```
+McpServer.ts (all 7 tools) → src/toon/ (shared) → DbReader (shared)
+```
+
+### After (Vertical Slices)
+```
+McpServer.ts → src/mcp/tools/<tool>/handler.ts
+                            ├── query.ts (direct SQL)
+                            └── format.ts (text output)
+```
+
+---
+
+## Test Coverage
+
+**280 tests passing** across 17 test files.
+
+New tests added:
+- 2 edge case tests in `search-nodes/format.test.ts` (complex generics, type field exclusion)
+- All format.test.ts files for each tool
+
+---
+
+## Commands
+
+```bash
+npm run check   # Run tests, build, lint (all passing)
+npm test        # Run tests only
+```
+
+---
+
+## Last Updated
+
+2025-12-13 - Phase 5 complete, all tools migrated to vertical slices

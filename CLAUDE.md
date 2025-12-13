@@ -1,19 +1,18 @@
 # Project Guidelines
 
+@docs/ARCHITECTURE.md
+
+## Documentation
+
+**Update `docs/ARCHITECTURE.md` when making significant changes:**
+- Adding/removing modules or major components
+- Changing data model (node types, edge types)
+- Modifying MCP tools or their parameters
+- Altering the data flow or indexing pipeline
+
 ## Known Issues
 
 **CHECK `ISSUES.md` FOR KNOWN BUGS AND TECHNICAL DEBT.**
-
-## Session Status
-
-**READ `SESSION_STATUS.md` AT START OF EACH SESSION.**
-
-**UPDATE `SESSION_STATUS.md` AT EACH IMPORTANT TRANSITION:**
-- When completing a feature or task
-- When making a design decision
-- When switching focus to a different area
-- Before ending a session
-- When blocked or waiting on user input
 
 ## Code Style
 
