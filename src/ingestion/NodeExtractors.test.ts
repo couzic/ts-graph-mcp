@@ -43,7 +43,7 @@ describe("NodeExtractors", () => {
 	});
 
 	describe("extractFileNode", () => {
-		it("should extract file node with correct properties", () => {
+		it("extracts file node with correct properties", () => {
 			const sourceFile = project.createSourceFile(
 				"src/utils.ts",
 				`export const foo = 1;`,
@@ -65,7 +65,7 @@ describe("NodeExtractors", () => {
 			});
 		});
 
-		it("should extract tsx file with correct extension", () => {
+		it("extracts tsx file with correct extension", () => {
 			const sourceFile = project.createSourceFile(
 				"src/Component.tsx",
 				`export const Component = () => <div />;`,
@@ -80,7 +80,7 @@ describe("NodeExtractors", () => {
 	});
 
 	describe("extractFunctionNodes", () => {
-		it("should extract top-level function with parameters and return type", () => {
+		it("extracts top-level function with parameters and return type", () => {
 			const sourceFile = project.createSourceFile(
 				"src/test.ts",
 				`export function formatDate(date: Date, format: string): string {
@@ -111,7 +111,7 @@ describe("NodeExtractors", () => {
 			});
 		});
 
-		it("should extract async function with async flag", () => {
+		it("extracts async function with async flag", () => {
 			const sourceFile = project.createSourceFile(
 				"src/test.ts",
 				`export async function fetchData(): Promise<void> {
@@ -127,7 +127,7 @@ describe("NodeExtractors", () => {
 			expect(functions[0]?.returnType).toBe("Promise<void>");
 		});
 
-		it("should extract non-exported function", () => {
+		it("extracts non-exported function", () => {
 			const sourceFile = project.createSourceFile(
 				"src/test.ts",
 				`function helper() {}`,
@@ -140,7 +140,7 @@ describe("NodeExtractors", () => {
 			expect(functions[0]?.exported).toBe(false);
 		});
 
-		it("should extract function without explicit return type", () => {
+		it("extracts function without explicit return type", () => {
 			const sourceFile = project.createSourceFile(
 				"src/test.ts",
 				`function calculate(x: number) {
@@ -155,7 +155,7 @@ describe("NodeExtractors", () => {
 			expect(functions[0]?.returnType).toBeUndefined();
 		});
 
-		it("should extract function with no parameters", () => {
+		it("extracts function with no parameters", () => {
 			const sourceFile = project.createSourceFile(
 				"src/test.ts",
 				`function noParams(): void {}`,
@@ -170,7 +170,7 @@ describe("NodeExtractors", () => {
 	});
 
 	describe("extractClassNodes", () => {
-		it("should extract class with extends and implements", () => {
+		it("extracts class with extends and implements", () => {
 			const sourceFile = project.createSourceFile(
 				"src/test.ts",
 				`export class User extends BaseUser implements IUser, ISerializable {
@@ -195,7 +195,7 @@ describe("NodeExtractors", () => {
 			});
 		});
 
-		it("should extract class without extends or implements", () => {
+		it("extracts class without extends or implements", () => {
 			const sourceFile = project.createSourceFile(
 				"src/test.ts",
 				`class SimpleClass {}`,
@@ -209,7 +209,7 @@ describe("NodeExtractors", () => {
 			expect(classes[0]?.implements).toBeUndefined();
 		});
 
-		it("should extract non-exported class", () => {
+		it("extracts non-exported class", () => {
 			const sourceFile = project.createSourceFile(
 				"src/test.ts",
 				`class InternalClass {}`,
@@ -224,7 +224,7 @@ describe("NodeExtractors", () => {
 	});
 
 	describe("extractMethodNodes", () => {
-		it("should extract public method with parameters and return type", () => {
+		it("extracts public method with parameters and return type", () => {
 			const sourceFile = project.createSourceFile(
 				"src/test.ts",
 				`class User {
@@ -255,7 +255,7 @@ describe("NodeExtractors", () => {
 			});
 		});
 
-		it("should extract private method", () => {
+		it("extracts private method", () => {
 			const sourceFile = project.createSourceFile(
 				"src/test.ts",
 				`class User {
@@ -271,7 +271,7 @@ describe("NodeExtractors", () => {
 			expect(methods[0]?.visibility).toBe("private");
 		});
 
-		it("should extract protected method", () => {
+		it("extracts protected method", () => {
 			const sourceFile = project.createSourceFile(
 				"src/test.ts",
 				`class User {
@@ -287,7 +287,7 @@ describe("NodeExtractors", () => {
 			expect(methods[0]?.visibility).toBe("protected");
 		});
 
-		it("should extract static method", () => {
+		it("extracts static method", () => {
 			const sourceFile = project.createSourceFile(
 				"src/test.ts",
 				`class User {
@@ -305,7 +305,7 @@ describe("NodeExtractors", () => {
 			expect(methods[0]?.static).toBe(true);
 		});
 
-		it("should extract async method", () => {
+		it("extracts async method", () => {
 			const sourceFile = project.createSourceFile(
 				"src/test.ts",
 				`class User {
@@ -323,7 +323,7 @@ describe("NodeExtractors", () => {
 	});
 
 	describe("extractInterfaceNodes", () => {
-		it("should extract interface with extends", () => {
+		it("extracts interface with extends", () => {
 			const sourceFile = project.createSourceFile(
 				"src/test.ts",
 				`export interface User extends BaseUser, Serializable {
@@ -347,7 +347,7 @@ describe("NodeExtractors", () => {
 			});
 		});
 
-		it("should extract interface without extends", () => {
+		it("extracts interface without extends", () => {
 			const sourceFile = project.createSourceFile(
 				"src/test.ts",
 				`interface SimpleInterface {
@@ -362,7 +362,7 @@ describe("NodeExtractors", () => {
 			expect(interfaces[0]?.extends).toBeUndefined();
 		});
 
-		it("should extract non-exported interface", () => {
+		it("extracts non-exported interface", () => {
 			const sourceFile = project.createSourceFile(
 				"src/test.ts",
 				`interface InternalInterface {}`,
@@ -377,7 +377,7 @@ describe("NodeExtractors", () => {
 	});
 
 	describe("extractTypeAliasNodes", () => {
-		it("should extract type alias with aliasedType", () => {
+		it("extracts type alias with aliasedType", () => {
 			const sourceFile = project.createSourceFile(
 				"src/test.ts",
 				`export type UserId = string;`,
@@ -399,7 +399,7 @@ describe("NodeExtractors", () => {
 			});
 		});
 
-		it("should extract union type alias", () => {
+		it("extracts union type alias", () => {
 			const sourceFile = project.createSourceFile(
 				"src/test.ts",
 				`type Status = "active" | "inactive" | "pending";`,
@@ -414,7 +414,7 @@ describe("NodeExtractors", () => {
 			);
 		});
 
-		it("should extract non-exported type alias", () => {
+		it("extracts non-exported type alias", () => {
 			const sourceFile = project.createSourceFile(
 				"src/test.ts",
 				`type InternalType = number;`,
@@ -429,7 +429,7 @@ describe("NodeExtractors", () => {
 	});
 
 	describe("extractVariableNodes", () => {
-		it("should extract const variable with isConst flag", () => {
+		it("extracts const variable with isConst flag", () => {
 			const sourceFile = project.createSourceFile(
 				"src/test.ts",
 				`export const API_KEY: string = "abc123";`,
@@ -452,7 +452,7 @@ describe("NodeExtractors", () => {
 			});
 		});
 
-		it("should extract let variable with isConst false", () => {
+		it("extracts let variable with isConst false", () => {
 			const sourceFile = project.createSourceFile(
 				"src/test.ts",
 				`let counter: number = 0;`,
@@ -465,7 +465,7 @@ describe("NodeExtractors", () => {
 			expect(variables[0]?.isConst).toBe(false);
 		});
 
-		it("should extract variable without type annotation", () => {
+		it("extracts variable without type annotation", () => {
 			const sourceFile = project.createSourceFile(
 				"src/test.ts",
 				`const value = 42;`,
@@ -478,7 +478,7 @@ describe("NodeExtractors", () => {
 			expect(variables[0]?.variableType).toBeUndefined();
 		});
 
-		it("should extract multiple variables from one statement", () => {
+		it("extracts multiple variables from one statement", () => {
 			const sourceFile = project.createSourceFile(
 				"src/test.ts",
 				`const x = 1, y = 2, z = 3;`,
@@ -493,7 +493,7 @@ describe("NodeExtractors", () => {
 	});
 
 	describe("extractPropertyNodes", () => {
-		it("should extract class property with type", () => {
+		it("extracts class property with type", () => {
 			const sourceFile = project.createSourceFile(
 				"src/test.ts",
 				`class User {
@@ -520,7 +520,7 @@ describe("NodeExtractors", () => {
 			});
 		});
 
-		it("should extract optional property", () => {
+		it("extracts optional property", () => {
 			const sourceFile = project.createSourceFile(
 				"src/test.ts",
 				`class User {
@@ -536,7 +536,7 @@ describe("NodeExtractors", () => {
 			expect(properties[0]?.optional).toBe(true);
 		});
 
-		it("should extract readonly property", () => {
+		it("extracts readonly property", () => {
 			const sourceFile = project.createSourceFile(
 				"src/test.ts",
 				`class User {
@@ -552,7 +552,7 @@ describe("NodeExtractors", () => {
 			expect(properties[0]?.readonly).toBe(true);
 		});
 
-		it("should extract interface property", () => {
+		it("extracts interface property", () => {
 			const sourceFile = project.createSourceFile(
 				"src/test.ts",
 				`interface User {
@@ -580,7 +580,7 @@ describe("NodeExtractors", () => {
 			});
 		});
 
-		it("should extract property without type annotation", () => {
+		it("extracts property without type annotation", () => {
 			const sourceFile = project.createSourceFile(
 				"src/test.ts",
 				`class User {
@@ -598,7 +598,7 @@ describe("NodeExtractors", () => {
 	});
 
 	describe("extractNodes", () => {
-		it("should extract all node types from a comprehensive source file", () => {
+		it("extracts all node types from a comprehensive source file", () => {
 			const sourceFile = project.createSourceFile(
 				"src/comprehensive.ts",
 				`
@@ -656,7 +656,7 @@ export function createUser(name: string): User {
 			expect(nodesByType.Method).toBe(1);
 		});
 
-		it("should extract file node even for empty file", () => {
+		it("extracts file node even for empty file", () => {
 			const sourceFile = project.createSourceFile("src/empty.ts", "");
 			const context = createContext("src/empty.ts");
 
@@ -666,7 +666,7 @@ export function createUser(name: string): User {
 			expect(nodes[0]?.type).toBe("File");
 		});
 
-		it("should handle file with only comments", () => {
+		it("handles file with only comments", () => {
 			const sourceFile = project.createSourceFile(
 				"src/comments.ts",
 				`
@@ -680,6 +680,82 @@ export function createUser(name: string): User {
 
 			expect(nodes).toHaveLength(1);
 			expect(nodes[0]?.type).toBe("File");
+		});
+	});
+
+	describe("type text normalization integration", () => {
+		// Each function that extracts types should use normalizeTypeText.
+		// The comprehensive normalization tests are in NormalizeTypeText.test.ts.
+		// These tests verify that each extractor applies normalization.
+
+		it("extractFunctionNodes normalizes parameter and return types", () => {
+			const sourceFile = project.createSourceFile(
+				"src/test.ts",
+				`function fn(x: {\n\ta: string;\n}): {\n\tb: number;\n} { return { b: 1 }; }`,
+			);
+			const functions = extractFunctionNodes(sourceFile, createContext());
+			expect(functions[0]?.parameters?.[0]?.type).not.toMatch(/[\n\t]/);
+			expect(functions[0]?.returnType).not.toMatch(/[\n\t]/);
+		});
+
+		it("extractMethodNodes normalizes parameter and return types", () => {
+			const sourceFile = project.createSourceFile(
+				"src/test.ts",
+				`class C { method(x: {\n\ta: string;\n}): {\n\tb: number;\n} { return { b: 1 }; } }`,
+			);
+			const classDecl = sourceFile.getClasses()[0];
+			if (!classDecl) throw new Error("Expected class");
+			const methods = extractMethodNodes(classDecl, createContext());
+			expect(methods[0]?.parameters?.[0]?.type).not.toMatch(/[\n\t]/);
+			expect(methods[0]?.returnType).not.toMatch(/[\n\t]/);
+		});
+
+		it("extractClassNodes normalizes extends and implements", () => {
+			const sourceFile = project.createSourceFile(
+				"src/test.ts",
+				`class C extends Base<{\n\ta: string;\n}> implements I<{\n\tb: number;\n}> {}`,
+			);
+			const classes = extractClassNodes(sourceFile, createContext());
+			expect(classes[0]?.extends).not.toMatch(/[\n\t]/);
+			expect(classes[0]?.implements?.[0]).not.toMatch(/[\n\t]/);
+		});
+
+		it("extractInterfaceNodes normalizes extends", () => {
+			const sourceFile = project.createSourceFile(
+				"src/test.ts",
+				`interface I extends Base<{\n\ta: string;\n}> {}`,
+			);
+			const interfaces = extractInterfaceNodes(sourceFile, createContext());
+			expect(interfaces[0]?.extends?.[0]).not.toMatch(/[\n\t]/);
+		});
+
+		it("extractTypeAliasNodes normalizes aliasedType", () => {
+			const sourceFile = project.createSourceFile(
+				"src/test.ts",
+				`type T = {\n\ta: string;\n\tb: number;\n};`,
+			);
+			const typeAliases = extractTypeAliasNodes(sourceFile, createContext());
+			expect(typeAliases[0]?.aliasedType).not.toMatch(/[\n\t]/);
+		});
+
+		it("extractVariableNodes normalizes variableType", () => {
+			const sourceFile = project.createSourceFile(
+				"src/test.ts",
+				`const x: {\n\ta: string;\n} = { a: "" };`,
+			);
+			const variables = extractVariableNodes(sourceFile, createContext());
+			expect(variables[0]?.variableType).not.toMatch(/[\n\t]/);
+		});
+
+		it("extractPropertyNodes normalizes propertyType", () => {
+			const sourceFile = project.createSourceFile(
+				"src/test.ts",
+				`class C { prop: {\n\ta: string;\n}; }`,
+			);
+			const classDecl = sourceFile.getClasses()[0];
+			if (!classDecl) throw new Error("Expected class");
+			const properties = extractPropertyNodes(classDecl, createContext());
+			expect(properties[0]?.propertyType).not.toMatch(/[\n\t]/);
 		});
 	});
 });

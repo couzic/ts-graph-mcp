@@ -25,6 +25,12 @@ Parses TypeScript source code using ts-morph AST and extracts nodes (symbols) an
 - `generateNodeId` - Create deterministic node IDs: `{relativePath}:{symbolPath}`
 - `parseNodeId` - Parse IDs back into components (handles Windows paths, overloads)
 
+### Type Text Normalization (`normalizeTypeText.ts`)
+
+- `normalizeTypeText` - Collapse multiline type text to single line for LLM-friendly output
+
+Used by all extractors to normalize TypeScript type annotations (parameters, return types, extends/implements, type aliases, variable types, property types). Replaces `\n`, `\t`, and multiple spaces with single spaces.
+
 ## Critical Information
 
 ### Node ID Format
@@ -109,10 +115,11 @@ const result = extractFromFile(filePath, context, {
 
 ## Test Coverage
 
+- 21 tests for `NormalizeTypeText` (whitespace normalization, edge cases)
 - 16 tests for `IdGenerator` (including Windows paths, overloads)
-- 33 tests for `NodeExtractors` (all node types)
+- 40 tests for `NodeExtractors` (all node types + normalization integration)
 - 19 tests for `EdgeExtractors` (all edge types)
 - 8 tests for `Extractor` (orchestration)
-- 8 tests for `Ingestion` (public API, incremental updates)
+- 11 tests for `Ingestion` (public API, incremental updates, FK handling)
 
-Total: 84 tests
+Total: 115 tests

@@ -17,6 +17,7 @@ import type {
 	VariableNode,
 } from "../db/Types.js";
 import { generateNodeId } from "./IdGenerator.js";
+import { normalizeTypeText } from "./normalizeTypeText.js";
 
 export interface ExtractionContext {
 	filePath: string; // Relative file path
@@ -121,12 +122,12 @@ export const extractFunctionNodes = (
 		// Extract parameters
 		const parameters = func.getParameters().map((param) => ({
 			name: param.getName(),
-			type: param.getTypeNode()?.getText(),
+			type: normalizeTypeText(param.getTypeNode()?.getText()),
 		}));
 
 		// Extract return type
 		const returnTypeNode = func.getReturnTypeNode();
-		const returnType = returnTypeNode?.getText();
+		const returnType = normalizeTypeText(returnTypeNode?.getText());
 
 		return {
 			id: generateNodeId(context.filePath, name),
@@ -161,13 +162,15 @@ export const extractClassNodes = (
 
 		// Extract extends clause
 		const extendsClause = classDecl.getExtends();
-		const extendsName = extendsClause?.getText();
+		const extendsName = normalizeTypeText(extendsClause?.getText());
 
 		// Extract implements clauses
 		const implementsClauses = classDecl.getImplements();
 		const implementsNames =
 			implementsClauses.length > 0
-				? implementsClauses.map((impl) => impl.getText())
+				? implementsClauses.map(
+						(impl) => normalizeTypeText(impl.getText()) as string,
+					)
 				: undefined;
 
 		return {
@@ -214,12 +217,12 @@ export const extractMethodNodes = (
 		// Extract parameters
 		const parameters = method.getParameters().map((param) => ({
 			name: param.getName(),
-			type: param.getTypeNode()?.getText(),
+			type: normalizeTypeText(param.getTypeNode()?.getText()),
 		}));
 
 		// Extract return type
 		const returnTypeNode = method.getReturnTypeNode();
-		const returnType = returnTypeNode?.getText();
+		const returnType = normalizeTypeText(returnTypeNode?.getText());
 
 		return {
 			id: generateNodeId(context.filePath, className, name),
@@ -258,7 +261,9 @@ export const extractInterfaceNodes = (
 		const extendsClauses = interfaceDecl.getExtends();
 		const extendsNames =
 			extendsClauses.length > 0
-				? extendsClauses.map((ext) => ext.getText())
+				? extendsClauses.map(
+						(ext) => normalizeTypeText(ext.getText()) as string,
+					)
 				: undefined;
 
 		return {
@@ -292,7 +297,7 @@ export const extractTypeAliasNodes = (
 
 		// Extract aliased type
 		const typeNode = typeAlias.getTypeNode();
-		const aliasedType = typeNode?.getText();
+		const aliasedType = normalizeTypeText(typeNode?.getText());
 
 		return {
 			id: generateNodeId(context.filePath, name),
@@ -333,7 +338,7 @@ export const extractVariableNodes = (
 
 			// Extract type annotation
 			const typeNode = decl.getTypeNode();
-			const variableType = typeNode?.getText();
+			const variableType = normalizeTypeText(typeNode?.getText());
 
 			variables.push({
 				id: generateNodeId(context.filePath, name),
@@ -373,7 +378,7 @@ export const extractPropertyNodes = (
 
 		// Extract property type
 		const typeNode = prop.getTypeNode();
-		const propertyType = typeNode?.getText();
+		const propertyType = normalizeTypeText(typeNode?.getText());
 
 		return {
 			id: generateNodeId(context.filePath, parentName, name),

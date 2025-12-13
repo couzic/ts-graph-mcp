@@ -19,7 +19,10 @@
 
 - Functional style (no classes)
 - Named exports only (no default exports)
-- File naming: PascalCase, named after primary export (no index.ts barrel files)
+- File naming: Match the casing of the primary export (no index.ts barrel files)
+  - Type/interface exports → PascalCase file: `Types.ts` exports `Node`, `Edge`
+  - Function exports → camelCase file: `normalizeTypeText.ts` exports `normalizeTypeText`
+- Tests: Use `describe(functionName.name, ...)` instead of string literals for refactoring safety
 
 ## Project Structure
 

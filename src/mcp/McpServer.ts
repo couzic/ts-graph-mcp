@@ -364,17 +364,175 @@ export async function startMcpServer(reader: DbReader): Promise<void> {
 	await server.connect(transport);
 }
 
+const NODE_TYPE_PLURALS: Record<string, string> = {
+	Function: "functions",
+	Class: "classes",
+	Method: "methods",
+	Interface: "interfaces",
+	TypeAlias: "typeAliases",
+	Variable: "variables",
+	File: "files",
+	Property: "properties",
+};
+
+/**
+ * Default values for optional fields by node type.
+ * TOON requires all objects in an array to have identical keys for condensed format.
+ * Missing optional fields cause TOON to fall back to verbose format.
+ */
+const NODE_TYPE_DEFAULTS: Record<string, Record<string, unknown>> = {
+	Function: { parameters: "", returnType: "", async: false },
+	Method: {
+		parameters: "",
+		returnType: "",
+		async: false,
+		visibility: "",
+		static: false,
+	},
+	Class: { extends: "", implements: "" },
+	Interface: { extends: "" },
+	TypeAlias: { aliasedType: "" },
+	Variable: { variableType: "", isConst: false },
+	File: { extension: "" },
+	Property: {
+		propertyType: "",
+		optional: false,
+		readonly: false,
+		visibility: "",
+		static: false,
+	},
+};
+
+/**
+ * Flatten a node for TOON encoding by converting arrays to strings
+ * and ensuring all optional fields have default values.
+ * This ensures all nodes of the same type have identical keys, enabling table format.
+ */
+function flattenNodeForToon(node: Node): Record<string, unknown> {
+	const result: Record<string, unknown> = {};
+
+	// Start with default values for this node type
+	const defaults = NODE_TYPE_DEFAULTS[node.type] ?? {};
+	for (const [key, defaultValue] of Object.entries(defaults)) {
+		result[key] = defaultValue;
+	}
+
+	// Override with actual values from the node
+	// Skip 'type' field - it's redundant when nodes are grouped by type (functions[], classes[], etc.)
+	for (const [key, value] of Object.entries(node)) {
+		if (key === "type") continue;
+		if (Array.isArray(value)) {
+			// Convert arrays to compact string representation
+			// e.g., parameters: [{name: "x", type: "string"}] -> "x:string"
+			if (key === "parameters") {
+				result[key] = value
+					.map((p: { name: string; type?: string }) =>
+						p.type ? `${p.name}:${p.type}` : p.name,
+					)
+					.join(", ");
+			} else if (key === "implements" || key === "extends") {
+				result[key] = value.join(", ");
+			} else if (key === "importedSymbols") {
+				result[key] = value.join(", ");
+			} else {
+				result[key] = JSON.stringify(value);
+			}
+		} else {
+			result[key] = value;
+		}
+	}
+	return result;
+}
+
+/**
+ * Group nodes by type for TOON-optimal encoding.
+ * Each array contains uniform objects with flattened arrays, enabling condensed table format.
+ */
+export function groupNodesByType(nodes: Node[]) {
+	const groups: Record<string, Record<string, unknown>[]> = {};
+	for (const node of nodes) {
+		const key = NODE_TYPE_PLURALS[node.type] ?? node.type.toLowerCase();
+		if (!groups[key]) groups[key] = [];
+		groups[key].push(flattenNodeForToon(node));
+	}
+	return groups;
+}
+
+/**
+ * Flatten an edge for TOON-optimal encoding.
+ * Ensures all edges have the same keys (missing optional fields get empty string).
+ */
+function flattenEdgeForToon(edge: Edge): Record<string, unknown> {
+	return {
+		source: edge.source,
+		target: edge.target,
+		type: edge.type,
+		callCount: edge.callCount ?? "",
+	};
+}
+
+/**
+ * Format a subgraph for TOON-optimal encoding.
+ * Groups nodes by type (so each array is uniform) and flattens edges.
+ */
+export function formatSubgraphForToon(subgraph: {
+	center: Node;
+	nodes: Node[];
+	edges: Edge[];
+}) {
+	return {
+		center: flattenNodeForToon(subgraph.center),
+		nodeCount: subgraph.nodes.length,
+		edgeCount: subgraph.edges.length,
+		...groupNodesByType(subgraph.nodes),
+		edges: subgraph.edges.map(flattenEdgeForToon),
+	};
+}
+
+/**
+ * Format a path result for TOON-optimal encoding.
+ * Flattens edges so array has uniform schema.
+ */
+export function formatPathForToon(
+	path: {
+		start: string;
+		end: string;
+		nodes: string[];
+		edges: Edge[];
+		length: number;
+	} | null,
+) {
+	if (!path) {
+		return {
+			found: false,
+			message: "No path found between the specified nodes",
+		};
+	}
+	return {
+		found: true,
+		path: {
+			start: path.start,
+			end: path.end,
+			nodes: path.nodes,
+			edges: path.edges.map(flattenEdgeForToon),
+			length: path.length,
+		},
+	};
+}
+
 /**
  * Format a list of nodes as a TOON response (token-efficient format).
+ * Nodes are grouped by type so each array is uniform for optimal compression.
  */
 function formatNodesResponse(nodes: Node[]) {
+	const grouped = groupNodesByType(nodes);
 	return {
 		content: [
 			{
 				type: "text" as const,
 				text: encode({
 					count: nodes.length,
-					nodes,
+					...grouped,
 				}),
 			},
 		],
@@ -393,28 +551,11 @@ function formatPathResponse(
 		length: number;
 	} | null,
 ) {
-	if (!path) {
-		return {
-			content: [
-				{
-					type: "text" as const,
-					text: encode({
-						found: false,
-						message: "No path found between the specified nodes",
-					}),
-				},
-			],
-		};
-	}
-
 	return {
 		content: [
 			{
 				type: "text" as const,
-				text: encode({
-					found: true,
-					path,
-				}),
+				text: encode(formatPathForToon(path)),
 			},
 		],
 	};
@@ -434,13 +575,7 @@ function formatSubgraphResponse(subgraph: {
 		content: [
 			{
 				type: "text" as const,
-				text: encode({
-					center: subgraph.center,
-					nodeCount: subgraph.nodes.length,
-					edgeCount: subgraph.edges.length,
-					nodes: subgraph.nodes,
-					edges: subgraph.edges,
-				}),
+				text: encode(formatSubgraphForToon(subgraph)),
 			},
 			{
 				type: "text" as const,
