@@ -1,9 +1,10 @@
 import { dirname, join, relative } from "node:path";
-import { Project } from "ts-morph";
+import { Project, type SourceFile } from "ts-morph";
 import type { ProjectConfig } from "../config/ConfigSchema.js";
 import type { DbWriter } from "../db/DbWriter.js";
 import type { Edge, IndexResult, Node } from "../db/Types.js";
-import { extractFromSourceFile } from "./extract/extractFromSourceFile.js";
+import { extractEdges } from "./extract/edges/extractEdges.js";
+import { extractNodes } from "./extract/nodes/extractNodes.js";
 import type { NodeExtractionContext as ExtractionContext } from "./extract/nodes/NodeExtractionContext.js";
 
 /**
@@ -96,12 +97,14 @@ export const indexProject = async (
 /**
  * Index a single package.
  *
- * Uses two-pass approach to handle cross-file edges:
- * 1. Extract all files, collecting nodes and edges in memory
- * 2. Insert all nodes first, then all edges
+ * Uses three-pass approach to handle cross-file edges:
+ * 1. Extract nodes from all files
+ * 2. Extract edges from all files (with ALL nodes available for cross-file resolution)
+ * 3. Insert all nodes first, then all edges
  *
- * This ensures target nodes exist before edges reference them,
- * avoiding foreign key constraint failures.
+ * This ensures:
+ * - Cross-file CALLS edges can be resolved (buildSymbolMap sees all nodes)
+ * - Target nodes exist before edges reference them (FK safety)
  */
 const indexPackage = async (
 	moduleName: string,
@@ -112,9 +115,6 @@ const indexPackage = async (
 ): Promise<IndexResult> => {
 	const startTime = Date.now();
 	const errors: Array<{ file: string; message: string }> = [];
-	let filesProcessed = 0;
-	let totalNodes = 0;
-	let totalEdges = 0;
 
 	const absoluteTsConfigPath = join(projectRoot, tsconfigPath);
 	const _packageRoot = dirname(absoluteTsConfigPath);
@@ -124,51 +124,61 @@ const indexPackage = async (
 		tsConfigFilePath: absoluteTsConfigPath,
 	});
 
-	const sourceFiles = project.getSourceFiles();
+	// Filter source files (skip node_modules and .d.ts)
+	const sourceFiles = project.getSourceFiles().filter((sf) => {
+		const absolutePath = sf.getFilePath();
+		return (
+			!absolutePath.includes("node_modules") && !absolutePath.endsWith(".d.ts")
+		);
+	});
 
-	// Pass 1: Extract all files, collect nodes and edges
-	const allNodes: Node[] = [];
-	const allEdges: Edge[] = [];
-
+	// Build contexts for each file
+	const fileContexts: Array<{
+		sourceFile: SourceFile;
+		context: ExtractionContext;
+	}> = [];
 	for (const sourceFile of sourceFiles) {
 		const absolutePath = sourceFile.getFilePath();
-
-		// Skip node_modules and declaration files
-		if (
-			absolutePath.includes("node_modules") ||
-			absolutePath.endsWith(".d.ts")
-		) {
-			continue;
-		}
-
-		try {
-			// Calculate relative path from project root
-			const relativePath = relative(projectRoot, absolutePath);
-
-			const context: ExtractionContext = {
+		const relativePath = relative(projectRoot, absolutePath);
+		fileContexts.push({
+			sourceFile,
+			context: {
 				filePath: relativePath,
 				module: moduleName,
 				package: packageName,
-			};
+			},
+		});
+	}
 
-			const result = extractFromSourceFile(sourceFile, context);
-
-			allNodes.push(...result.nodes);
-			allEdges.push(...result.edges);
-
-			filesProcessed++;
-			totalNodes += result.stats.nodeCount;
-			totalEdges += result.stats.edgeCount;
+	// Pass 1: Extract nodes from all files
+	const allNodes: Node[] = [];
+	for (const { sourceFile, context } of fileContexts) {
+		try {
+			const nodes = extractNodes(sourceFile, context);
+			allNodes.push(...nodes);
 		} catch (e) {
 			errors.push({
-				file: absolutePath,
-				message: (e as Error).message,
+				file: context.filePath,
+				message: `Node extraction failed: ${(e as Error).message}`,
 			});
 		}
 	}
 
-	// Pass 2: Insert all nodes first, then all edges
-	// This ensures target nodes exist before edges reference them
+	// Pass 2: Extract edges from all files (with ALL nodes for cross-file resolution)
+	const allEdges: Edge[] = [];
+	for (const { sourceFile, context } of fileContexts) {
+		try {
+			const edges = extractEdges(sourceFile, allNodes, context);
+			allEdges.push(...edges);
+		} catch (e) {
+			errors.push({
+				file: context.filePath,
+				message: `Edge extraction failed: ${(e as Error).message}`,
+			});
+		}
+	}
+
+	// Pass 3: Insert all nodes first, then all edges
 	try {
 		await dbWriter.addNodes(allNodes);
 
@@ -188,9 +198,9 @@ const indexPackage = async (
 	}
 
 	return {
-		filesProcessed,
-		nodesAdded: totalNodes,
-		edgesAdded: totalEdges,
+		filesProcessed: fileContexts.length,
+		nodesAdded: allNodes.length,
+		edgesAdded: allEdges.length,
 		durationMs: Date.now() - startTime,
 		errors: errors.length > 0 ? errors : undefined,
 	};

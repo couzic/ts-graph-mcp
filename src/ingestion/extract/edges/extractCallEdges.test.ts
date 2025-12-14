@@ -173,4 +173,75 @@ export class User {
 			callCount: 1,
 		});
 	});
+
+	it("extracts cross-file function calls", () => {
+		const project = createProject();
+
+		// File A: utility function to be called
+		// Note: We create the file but don't need to reference it - handler.ts imports from it
+		project.createSourceFile(
+			"utils.ts",
+			`
+export const formatDate = (date: Date): string => {
+  return date.toISOString();
+};
+        `,
+		);
+
+		// File B: handler that calls the utility
+		const handlerFile = project.createSourceFile(
+			"handler.ts",
+			`
+import { formatDate } from './utils';
+
+export const processEvent = (timestamp: Date): string => {
+  return formatDate(timestamp);
+};
+        `,
+		);
+
+		// All nodes from both files (simulating what extractNodes would produce)
+		const nodes: Node[] = [
+			{
+				id: generateNodeId("utils.ts", "formatDate"),
+				type: "Function",
+				name: "formatDate",
+				module: "test-module",
+				package: "test-package",
+				filePath: "utils.ts",
+				startLine: 2,
+				endLine: 4,
+				exported: true,
+			},
+			{
+				id: generateNodeId("handler.ts", "processEvent"),
+				type: "Function",
+				name: "processEvent",
+				module: "test-module",
+				package: "test-package",
+				filePath: "handler.ts",
+				startLine: 4,
+				endLine: 6,
+				exported: true,
+			},
+		];
+
+		// Extract edges from handler.ts (which imports and calls formatDate)
+		const edges = extractCallEdges(handlerFile, nodes, {
+			filePath: "handler.ts",
+			module: "test-module",
+			package: "test-package",
+		});
+
+		// This test SHOULD pass but will FAIL due to the bug
+		// Expected: CALLS edge from processEvent → formatDate
+		// Actual: No edges extracted because buildSymbolMap only includes same-file symbols
+		expect(edges).toHaveLength(1);
+		expect(edges[0]).toEqual({
+			source: generateNodeId("handler.ts", "processEvent"),
+			target: generateNodeId("utils.ts", "formatDate"),
+			type: "CALLS",
+			callCount: 1,
+		});
+	});
 });

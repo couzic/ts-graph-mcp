@@ -54,30 +54,30 @@ Last updated: 2025-12-13
 
 ---
 
-### 9. Cross-File CALLS Edges Not Extracted
+### ~~9. Cross-File CALLS Edges Not Extracted~~ ✅ FIXED
 
-**Status:** Discovered 2025-12-13, needs investigation
+**Status:** Fixed 2025-12-14
 
-**Problem:** CALLS edges between functions in different files (within the same module) are not being extracted.
+**Problem:** CALLS edges between functions in **different files** were not being extracted.
 
-**Evidence:**
+**Root Cause:** The two-pass extraction in `indexPackage` called `extractFromSourceFile` per-file, which only passed that file's nodes to `extractEdges`. This meant `buildSymbolMap` couldn't resolve imported symbols.
 
-| Query | Expected | Actual |
-|-------|----------|--------|
-| `get_callers(encodeNode)` | `groupNodesByType`, `formatSubgraph` | 0 callers |
-| `get_callees(encodeNode)` | `encodeFunction`, `encodeClass`, etc. | 0 callees |
-| `get_callees(startMcpServer)` | `formatNodesResponse`, etc. | ✅ 3 callees (same-file works) |
+**Fix Applied:** Two changes:
 
-**Analysis:**
-- Same-file CALLS work: `startMcpServer` → `formatNodesResponse` (both in `McpServer.ts`)
-- Cross-file CALLS missing: `groupNodesByType` → `encodeNode` (different files)
-- The `encodeNode` function is imported and called, but no CALLS edge is created
+1. **Extracted and enhanced `buildSymbolMap`** (`src/ingestion/extract/edges/buildSymbolMap.ts`):
+   - Now accepts optional `SourceFile` parameter
+   - Parses import declarations and resolves imported symbols to node IDs
+   - Handles aliased imports, default imports, and ESM `.js` extensions
 
-**Location:** Likely in `src/ingestion/EdgeExtractors.ts:extractCallEdges`
+2. **Changed to three-pass architecture** in `Ingestion.ts:110-207`:
+   - Pass 1: Extract ALL nodes from ALL files
+   - Pass 2: Extract edges with complete node list (enables cross-file resolution)
+   - Pass 3: Write to database
 
-**Impact:** `get_callers`, `get_callees`, `find_path`, and `get_impact` tools return incomplete results for cross-file function calls. This significantly reduces the usefulness of the call graph for understanding code dependencies.
-
-**Distinction from Issue #5:** Issue #5 is about cross-MODULE edges. This issue is about cross-FILE edges within the SAME module/package.
+**Verification:** All MCP tools now return cross-file CALLS edges:
+- `get_callers(buildSymbolMap)` → 6 callers from 5 different files
+- `get_callees(extractCallEdges)` → 8 callees from 3 different files
+- `find_path(main, generateNodeId)` → 5-hop path across files
 
 ---
 

@@ -9,6 +9,7 @@ import {
 } from "ts-morph";
 import type { Edge, Node } from "../../../db/Types.js";
 import { generateNodeId } from "../../IdGenerator.js";
+import { buildSymbolMap, type SymbolMap } from "./buildSymbolMap.js";
 import type { EdgeExtractionContext } from "./EdgeExtractionContext.js";
 
 /**
@@ -22,7 +23,8 @@ export const extractCallEdges = (
 	const edges: Edge[] = [];
 
 	// Build a map of function/method names to their node IDs
-	const symbolMap = buildSymbolMap(nodes, context.filePath);
+	// Pass sourceFile to enable cross-file call resolution via imports
+	const symbolMap = buildSymbolMap(nodes, context.filePath, sourceFile);
 
 	// Find all functions and methods
 	const functions = sourceFile.getFunctions();
@@ -66,39 +68,12 @@ export const extractCallEdges = (
 };
 
 /**
- * Build a map of symbol names to node IDs for call resolution.
- */
-const buildSymbolMap = (
-	nodes: Node[],
-	filePath: string,
-): Map<string, string> => {
-	const map = new Map<string, string>();
-
-	for (const node of nodes) {
-		if (node.filePath !== filePath) continue;
-		if (node.type === "File") continue;
-
-		// Extract symbol name from node ID
-		const symbolPath = node.id.substring(filePath.length + 1); // +1 for ':'
-		if (symbolPath) {
-			const parts = symbolPath.split(".");
-			const lastName = parts[parts.length - 1];
-			if (lastName) {
-				map.set(lastName, node.id);
-			}
-		}
-	}
-
-	return map;
-};
-
-/**
  * Extract call expressions from a callable (function, arrow function, or method).
  */
 const extractCallsFromCallable = (
 	callable: FunctionDeclaration | ArrowFunction | MethodDeclaration,
 	callerId: string,
-	symbolMap: Map<string, string>,
+	symbolMap: SymbolMap,
 	edges: Edge[],
 ): void => {
 	// For arrow functions, we need to get either the body block or the expression
