@@ -15,16 +15,6 @@ Persistence layer for the TypeScript code graph. Provides read/write interfaces 
 
 ### Interfaces
 
-#### `DbReader` (`DbReader.ts`)
-Read-only graph queries used by MCP Server:
-- `getCallersOf()` / `getCalleesOf()` - Traverse call graph
-- `getTypeUsages()` - Find where types are used
-- `getImpactedBy()` - Impact analysis (what depends on this?)
-- `getPathBetween()` - Shortest path between nodes
-- `searchNodes()` - Search by name pattern with filters
-- `getNodeById()` / `getFileNodes()` - Direct node lookups
-- `findNeighbors()` - Get neighborhood subgraph
-
 #### `DbWriter` (`DbWriter.ts`)
 Write operations used by Ingestion Module:
 - `addNodes()` / `addEdges()` - Batch upsert operations
@@ -41,19 +31,9 @@ Write operations used by Ingestion Module:
 - `initializeSchema()` - Create tables and indexes
 - Schema design: `nodes` table (JSON properties column), `edges` table (composite PK)
 
-#### `SqliteReader.ts`
-- `createSqliteReader()` - Factory returning DbReader implementation
-- Uses recursive CTEs for graph traversal queries
-
 #### `SqliteWriter.ts`
 - `createSqliteWriter()` - Factory returning DbWriter implementation
 - Prepared statements with transactions for batch operations
-
-### Utilities
-
-#### `SubgraphToMermaid.ts`
-- `subgraphToMermaid()` - Convert Subgraph to Mermaid flowchart syntax
-- Used by MCP Server to generate visual diagrams
 
 ## Critical Information
 
@@ -84,14 +64,6 @@ Both `addNodes()` and `addEdges()` use upsert (insert or update). This allows re
 
 ## Usage Patterns
 
-### Read Operations (MCP Server)
-```typescript
-const reader = createSqliteReader(db);
-const callers = await reader.getCallersOf('src/utils.ts:formatDate');
-const subgraph = await reader.findNeighbors('src/User.ts:User', { distance: 2 });
-const mermaid = subgraphToMermaid(subgraph);
-```
-
 ### Write Operations (Ingestion)
 ```typescript
 const writer = createSqliteWriter(db);
@@ -109,5 +81,9 @@ closeDatabase(db);
 
 ## Related Modules
 
-- Used by: `src/ingestion` (writes), `src/mcp` (reads)
+- Used by: `src/ingestion` (writes via DbWriter), `src/mcp/tools/*` (direct SQL queries in each tool's query.ts)
 - Depends on: `better-sqlite3` (SQLite driver)
+
+## Architecture Notes
+
+Since the migration to vertical slice architecture, read operations are no longer abstracted through a shared interface. Each MCP tool in `src/mcp/tools/*/` implements its own direct SQL queries in its `query.ts` file using recursive CTEs for graph traversal. Only write operations remain abstracted through the `DbWriter` interface.

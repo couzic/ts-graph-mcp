@@ -96,14 +96,13 @@ Each MCP tool folder (`src/mcp/tools/<tool>/`) contains:
 **Key Files**:
 - `Types.ts` - Core data types (Node, Edge, Path, Subgraph, SearchFilters, etc.)
 - `DbWriter.ts` - Write interface for graph mutations (4 methods)
-- `SubgraphToMermaid.ts` - Converts subgraphs to Mermaid flowchart syntax
 
 **SQLite Implementation** (`sqlite/`):
 - `SqliteConnection.ts` - Database lifecycle (open/close with WAL mode)
 - `SqliteSchema.ts` - Schema initialization (tables, indexes, FKs)
 - `SqliteWriter.ts` - Implements DbWriter with prepared statements and transactions
 
-**Note**: Query logic has moved to vertical slice `query.ts` files in `src/mcp/tools/*/`. The `DbReader` abstraction was removed in favor of direct SQL queries per tool.
+**Note**: Query logic lives in each tool's `query.ts` file (`src/mcp/tools/*/query.ts`), using direct SQL queries via better-sqlite3. This vertical slice approach eliminates the need for a shared reader abstraction.
 
 **Design Highlights**:
 - Interface-first design allows pluggable backends (SQLite today, Neo4j/Memgraph future)

@@ -59,12 +59,6 @@ export const ProjectConfigSchema = z.object({
 
 // --- Inferred Types ---
 
-export type PackageConfig = z.infer<typeof PackageConfigSchema>;
-export type ModuleConfig = z.infer<typeof ModuleConfigSchema>;
-export type SqliteStorage = z.infer<typeof SqliteStorageSchema>;
-export type MemgraphStorage = z.infer<typeof MemgraphStorageSchema>;
-export type StorageConfig = z.infer<typeof StorageConfigSchema>;
-export type WatchConfig = z.infer<typeof WatchConfigSchema>;
 export type ProjectConfig = z.infer<typeof ProjectConfigSchema>;
 
 // --- Helper Function ---

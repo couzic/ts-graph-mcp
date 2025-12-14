@@ -6,12 +6,17 @@ Configuration loading and validation for ts-graph-mcp projects. Uses Zod schemas
 
 ### ConfigSchema.ts
 
+**Zod Schemas:**
 - `ProjectConfigSchema` - Top-level Zod schema for the entire project configuration
 - `ModuleConfigSchema` - Schema for a module (contains one or more packages)
 - `PackageConfigSchema` - Schema for a package (name + tsconfig path)
 - `StorageConfigSchema` - Discriminated union for storage backends (sqlite | memgraph)
 - `WatchConfigSchema` - Schema for file watch configuration
-- `ProjectConfig` - TypeScript type inferred from ProjectConfigSchema
+
+**Type Exports:**
+- `ProjectConfig` - TypeScript type inferred from ProjectConfigSchema (only exported type)
+
+**Utilities:**
 - `defineConfig(config)` - Type-safe helper for ts-graph-mcp.config.ts files (validates at runtime)
 
 ### ConfigLoader.ts

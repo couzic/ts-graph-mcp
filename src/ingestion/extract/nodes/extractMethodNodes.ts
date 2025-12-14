@@ -1,8 +1,8 @@
 import { type ClassDeclaration, SyntaxKind } from "ts-morph";
 import type { MethodNode } from "../../../db/Types.js";
 import { generateNodeId } from "../../IdGenerator.js";
-import { normalizeTypeText } from "../../normalizeTypeText.js";
 import type { NodeExtractionContext } from "./NodeExtractionContext.js";
+import { normalizeTypeText } from "./normalizeTypeText.js";
 
 /**
  * Extract method nodes from a class.

@@ -1,8 +1,8 @@
 import { type SourceFile, VariableDeclarationKind } from "ts-morph";
 import type { VariableNode } from "../../../db/Types.js";
 import { generateNodeId } from "../../IdGenerator.js";
-import { normalizeTypeText } from "../../normalizeTypeText.js";
 import type { NodeExtractionContext } from "./NodeExtractionContext.js";
+import { normalizeTypeText } from "./normalizeTypeText.js";
 
 /**
  * Extract variable nodes from a source file.

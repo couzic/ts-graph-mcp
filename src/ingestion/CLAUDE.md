@@ -25,8 +25,7 @@ Parses TypeScript source code using ts-morph AST and extracts nodes (symbols) an
 
 ### ID Generation (`IdGenerator.ts`)
 
-- `generateNodeId` - Create deterministic node IDs: `{relativePath}:{symbolPath}`
-- `parseNodeId` - Parse IDs back into components (handles Windows paths, overloads)
+- `generateNodeId` - Create deterministic node IDs: `{relativePath}:{symbolPath}` (handles Windows paths, overloads)
 
 ### Type Text Normalization (`normalizeTypeText.ts`)
 
@@ -118,7 +117,7 @@ const result = extractFromSourceFile(sourceFile, context);
 ## Test Coverage
 
 - 21 tests for `normalizeTypeText` (whitespace normalization, edge cases)
-- 16 tests for `IdGenerator` (including Windows paths, overloads)
+- 9 tests for `IdGenerator` (ID generation, Windows paths, overloads)
 - 36 tests for node extractors in `extract/nodes/` (all node types, colocated tests)
 - 19 tests for edge extractors in `extract/edges/` (all edge types, colocated tests)
 - 7 tests for `extractFromSourceFile` (orchestration)

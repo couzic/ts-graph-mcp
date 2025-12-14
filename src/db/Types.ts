@@ -179,14 +179,12 @@ export interface TraversalOptions {
 	edgeTypes?: EdgeType[];
 }
 
-export type TraversalDirection = "outgoing" | "incoming" | "both";
-
 export interface NeighborOptions {
 	/** Maximum distance from center node (number of edges) */
 	distance: number;
 
 	/** Direction to traverse edges */
-	direction?: TraversalDirection;
+	direction?: "outgoing" | "incoming" | "both";
 
 	/** Filter by edge type(s). If omitted, all edge types are traversed */
 	edgeTypes?: EdgeType[];

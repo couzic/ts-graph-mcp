@@ -21,59 +21,6 @@ export interface IndexFileOptions {
 }
 
 /**
- * Index a single file.
- * Used for incremental updates.
- * Automatically removes old data for the file first.
- *
- * @param filePath - Absolute path to the file
- * @param dbWriter - Database writer instance
- * @param options - Index options
- */
-export const indexFile = async (
-	filePath: string,
-	dbWriter: DbWriter,
-	options: IndexFileOptions,
-): Promise<void> => {
-	// Remove existing data for this file
-	await dbWriter.removeFileNodes(options.relativePath);
-
-	// Create or reuse project
-	const project =
-		options.project ??
-		new Project({
-			skipAddingFilesFromTsConfig: true,
-		});
-
-	const sourceFile = project.addSourceFileAtPath(filePath);
-
-	const context: ExtractionContext = {
-		filePath: options.relativePath,
-		module: options.module,
-		package: options.package,
-	};
-
-	const result = extractFromSourceFile(sourceFile, context);
-
-	// Write to database
-	await dbWriter.addNodes(result.nodes);
-	await dbWriter.addEdges(result.edges);
-};
-
-/**
- * Remove a file from the index.
- * Used when a file is deleted.
- *
- * @param filePath - Relative file path
- * @param dbWriter - Database writer instance
- */
-export const removeFile = async (
-	filePath: string,
-	dbWriter: DbWriter,
-): Promise<void> => {
-	await dbWriter.removeFileNodes(filePath);
-};
-
-/**
  * Options for indexing an entire project.
  */
 export interface IndexProjectOptions {

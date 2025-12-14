@@ -7,7 +7,7 @@ import type { DbWriter } from "../db/DbWriter.js";
 import { closeDatabase, openDatabase } from "../db/sqlite/SqliteConnection.js";
 import { createSqliteWriter } from "../db/sqlite/SqliteWriter.js";
 import type { Edge, Node } from "../db/Types.js";
-import { indexFile, indexProject, removeFile } from "./Ingestion.js";
+import { indexProject } from "./Ingestion.js";
 
 /**
  * Simple helper to check if a node exists in the database.
@@ -87,105 +87,6 @@ describe("Ingestion", () => {
 		if (existsSync(TEST_DIR)) {
 			rmSync(TEST_DIR, { recursive: true });
 		}
-	});
-
-	describe("indexFile", () => {
-		it("indexes a single TypeScript file", async () => {
-			const filePath = join(TEST_DIR, "utils.ts");
-			writeFileSync(
-				filePath,
-				`
-export function greet(name: string): string {
-  return 'Hello, ' + name;
-}
-        `.trim(),
-			);
-
-			const writer = createMockWriter();
-			await indexFile(filePath, writer, {
-				module: "core",
-				package: "utils",
-				relativePath: "utils.ts",
-			});
-
-			// Should have file node + function node
-			expect(writer.nodes.length).toBeGreaterThanOrEqual(2);
-			expect(writer.nodes.some((n) => n.type === "File")).toBe(true);
-			expect(writer.nodes.some((n) => n.type === "Function")).toBe(true);
-
-			// Should have CONTAINS edge
-			expect(writer.edges.some((e) => e.type === "CONTAINS")).toBe(true);
-		});
-
-		it("removes existing file data before indexing", async () => {
-			const filePath = join(TEST_DIR, "reindex.ts");
-			writeFileSync(filePath, "export const x = 1;");
-
-			const writer = createMockWriter();
-
-			// Index twice
-			await indexFile(filePath, writer, {
-				module: "core",
-				package: "main",
-				relativePath: "reindex.ts",
-			});
-			await indexFile(filePath, writer, {
-				module: "core",
-				package: "main",
-				relativePath: "reindex.ts",
-			});
-
-			// Should have called removeFileNodes
-			expect(writer.removedFiles).toContain("reindex.ts");
-		});
-
-		it("extracts class with methods", async () => {
-			const filePath = join(TEST_DIR, "User.ts");
-			writeFileSync(
-				filePath,
-				`
-export class User {
-  constructor(public name: string) {}
-
-  greet(): string {
-    return 'Hi, ' + this.name;
-  }
-}
-        `.trim(),
-			);
-
-			const writer = createMockWriter();
-			await indexFile(filePath, writer, {
-				module: "domain",
-				package: "models",
-				relativePath: "User.ts",
-			});
-
-			const classNodes = writer.nodes.filter((n) => n.type === "Class");
-			const methodNodes = writer.nodes.filter((n) => n.type === "Method");
-
-			expect(classNodes).toHaveLength(1);
-			expect(methodNodes.length).toBeGreaterThanOrEqual(1);
-		});
-	});
-
-	describe("removeFile", () => {
-		it("removes file from index", async () => {
-			const writer = createMockWriter();
-
-			await removeFile("src/deleted.ts", writer);
-
-			expect(writer.removedFiles).toContain("src/deleted.ts");
-		});
-
-		it("is idempotent (no error if file not indexed)", async () => {
-			const writer = createMockWriter();
-
-			// Should not throw
-			await expect(
-				removeFile("nonexistent.ts", writer),
-			).resolves.toBeUndefined();
-		});
 	});
 
 	describe("indexProject", () => {
