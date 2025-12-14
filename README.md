@@ -126,6 +126,98 @@ The server exposes 7 tools for querying the code graph:
 | `get_neighbors` | Extract subgraph within N edges of center | `nodeId`, `distance` (1-100), `direction` |
 | `get_file_symbols` | List all symbols defined in a file | `filePath` |
 
+### Example Outputs
+
+#### search_nodes
+
+Search for all symbols matching `User*`:
+
+```
+count: 3
+files: 2
+
+file: src/types.ts
+module: core
+package: main
+matches: 2
+
+interfaces[1]:
+  User [1-10] exp
+typeAliases[1]:
+  UserId [12] exp = string
+
+file: src/models/User.ts
+module: models
+package: main
+matches: 1
+
+classes[1]:
+  UserService [5-50] exp extends:BaseService implements:[IUserService]
+```
+
+#### get_callers
+
+Find all callers of `src/db/user.ts:saveUser`:
+
+```
+targetId: src/db/user.ts:saveUser
+count: 2
+
+src/api/handler.ts (1 callers):
+functions[1]:
+  handleRequest [10-25] exp async (req:Request) → Promise<Response>
+
+src/services/UserService.ts (1 callers):
+methods[1]:
+  UserService.create [20-30] async (data:UserData) → Promise<User>
+```
+
+#### find_path
+
+Find path from `src/api.ts:handleRequest` to `src/db.ts:saveData`:
+
+```
+sourceId: src/api.ts:handleRequest
+targetId: src/db.ts:saveData
+found: true
+length: 2
+
+path: src/api.ts:handleRequest --CALLS--> src/service.ts:process --CALLS--> src/db.ts:saveData
+```
+
+#### get_neighbors
+
+Get neighborhood around `src/types.ts:User` with distance 1:
+
+```
+center: src/types.ts:User
+centerType: Interface
+distance: 1
+direction: both
+nodeCount: 2
+edgeCount: 2
+
+src/types.ts (1 nodes):
+interfaces[1]:
+  Admin [25-30] exp extends:[User]
+
+src/services/UserService.ts (1 nodes):
+classes[1]:
+  UserService [5-50] exp
+
+edges[2]:
+  Admin --EXTENDS--> User
+  UserService --USES_TYPE--> User
+
+---mermaid---
+graph LR
+  n0["User"]
+  n1["Admin"]
+  n2["UserService"]
+  n1 -->|extends| n0
+  n2 -->|uses type| n0
+```
+
 ### Node ID Format
 
 All tools reference nodes using a deterministic ID format:
