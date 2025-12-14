@@ -1,9 +1,9 @@
 {
   "modules": [
     {
-      "name": "ts-graph-mcp",
+      "name": "main",
       "packages": [
-        { "name": "main", "tsconfig": "./tsconfig.json" }
+        { "name": "ts-graph-mcp", "tsconfig": "./tsconfig.json" }
       ]
     }
   ]

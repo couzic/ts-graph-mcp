@@ -3,8 +3,8 @@ import { Project } from "ts-morph";
 import type { ProjectConfig } from "../config/ConfigSchema.js";
 import type { DbWriter } from "../db/DbWriter.js";
 import type { Edge, IndexResult, Node } from "../db/Types.js";
-import { extractFromSourceFile } from "./Extractor.js";
-import type { ExtractionContext } from "./NodeExtractors.js";
+import { extractFromSourceFile } from "./extract/extractFromSourceFile.js";
+import type { NodeExtractionContext as ExtractionContext } from "./extract/nodes/NodeExtractionContext.js";
 
 /**
  * Options for indexing a single file.

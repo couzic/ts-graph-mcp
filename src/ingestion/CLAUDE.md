@@ -10,15 +10,18 @@ Parses TypeScript source code using ts-morph AST and extracts nodes (symbols) an
 - `indexFile` - Index a single file incrementally (auto-removes old data first)
 - `removeFile` - Remove file from index (for deletions)
 
-### Core Extraction (`Extractor.ts`)
+### Extraction (`extract/`)
 
+**Orchestrator** (`extract/extractFromSourceFile.ts`)
 - `extractFromSourceFile` - Orchestrates extraction: nodes first, then edges
-- `extractFromFile` - Convenience wrapper that creates ts-morph Project
 
-### AST Extraction (`NodeExtractors.ts`, `EdgeExtractors.ts`)
-
+**Node Extraction** (`extract/nodes/`)
 - `extractNodes` - Extract all node types (File, Function, Class, Method, Interface, TypeAlias, Variable, Property)
+- See `extract/nodes/CLAUDE.md` for detailed node extractor documentation
+
+**Edge Extraction** (`extract/edges/`)
 - `extractEdges` - Extract all edge types (CONTAINS, IMPORTS, CALLS, EXTENDS, IMPLEMENTS, USES_TYPE)
+- See `extract/edges/CLAUDE.md` for detailed edge extractor documentation
 
 ### ID Generation (`IdGenerator.ts`)
 
@@ -106,20 +109,17 @@ const result = await indexProject(config, dbWriter, {
 
 ### Extract Without Persisting
 ```typescript
-const result = extractFromFile(filePath, context, {
-  tsConfigFilePath: "./tsconfig.json",  // Optional: for type resolution
-  project: existingProject              // Optional: reuse Project
-});
+import { extractFromSourceFile } from "./extract/extractFromSourceFile.js";
+
+const result = extractFromSourceFile(sourceFile, context);
 // Returns: { nodes, edges, stats }
 ```
 
 ## Test Coverage
 
-- 21 tests for `NormalizeTypeText` (whitespace normalization, edge cases)
+- 21 tests for `normalizeTypeText` (whitespace normalization, edge cases)
 - 16 tests for `IdGenerator` (including Windows paths, overloads)
-- 40 tests for `NodeExtractors` (all node types + normalization integration)
-- 19 tests for `EdgeExtractors` (all edge types)
-- 8 tests for `Extractor` (orchestration)
+- 36 tests for node extractors in `extract/nodes/` (all node types, colocated tests)
+- 19 tests for edge extractors in `extract/edges/` (all edge types, colocated tests)
+- 7 tests for `extractFromSourceFile` (orchestration)
 - 11 tests for `Ingestion` (public API, incremental updates, FK handling)
-
-Total: 115 tests

@@ -1,7 +1,10 @@
-import { Project, type SourceFile } from "ts-morph";
-import type { Edge, Node } from "../db/Types.js";
-import { extractEdges } from "./EdgeExtractors.js";
-import { type ExtractionContext, extractNodes } from "./NodeExtractors.js";
+import type { Project, SourceFile } from "ts-morph";
+import type { Edge, Node } from "../../db/Types.js";
+import { extractEdges } from "./edges/extractEdges.js";
+import { extractNodes } from "./nodes/extractNodes.js";
+import type { NodeExtractionContext as ExtractionContext } from "./nodes/NodeExtractionContext.js";
+
+export type { ExtractionContext };
 
 /**
  * Statistics from extraction.
@@ -64,28 +67,3 @@ export interface ExtractFromFileOptions {
 	/** tsconfig.json path (optional, for proper type resolution) */
 	tsConfigFilePath?: string;
 }
-
-/**
- * Extract all nodes and edges from a file path.
- *
- * @param filePath - Absolute path to the TypeScript file
- * @param context - Extraction context (relative file path, module, package)
- * @param options - Extraction options
- * @returns Extraction result with nodes, edges, and stats
- */
-export const extractFromFile = (
-	filePath: string,
-	context: ExtractionContext,
-	options?: ExtractFromFileOptions,
-): ExtractionResult => {
-	const project =
-		options?.project ??
-		new Project({
-			tsConfigFilePath: options?.tsConfigFilePath,
-			skipAddingFilesFromTsConfig: true,
-		});
-
-	const sourceFile = project.addSourceFileAtPath(filePath);
-
-	return extractFromSourceFile(sourceFile, context);
-};
