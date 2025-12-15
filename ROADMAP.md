@@ -2,6 +2,70 @@
 
 > **The Vision:** ts-graph-mcp becomes the "LSP for AI agents" - a standard way for AI coding assistants to understand codebases semantically rather than just textually.
 
+## Quick Wins: MCP Tool Quality
+
+These improvements have the highest value-to-effort ratio. They improve AI agent experience with minimal code changes.
+
+### Input Validation & Error Messages
+**Impact: Very High | Effort: Very Low**
+
+All 7 MCP tools silently return empty results for invalid node IDs. Add validation with helpful suggestions.
+
+```typescript
+// Before: empty result, AI agent confused
+searchNodes("nonexistent:foo") → []
+
+// After: actionable error
+searchNodes("nonexistent:foo") → "Node not found: nonexistent:foo. Use search_nodes to find valid IDs."
+```
+
+- Single SQL check before each query: `SELECT 1 FROM nodes WHERE id = ?`
+- Return error message with suggestion to use `search_nodes`
+- Affects: all 7 tools
+
+### Expose Hidden Parameters (get-impact)
+**Impact: High | Effort: Very Low**
+
+The `get-impact` query.ts already supports `edgeTypes` and `moduleFilter` options, but they're not exposed in the MCP interface. Wire them through.
+
+```typescript
+// Enables targeted impact analysis
+get_impact({ nodeId: "...", edgeTypes: ["CALLS"] })        // Only call-chain impact
+get_impact({ nodeId: "...", edgeTypes: ["USES_TYPE"] })    // Only type usage impact
+get_impact({ nodeId: "...", moduleFilter: "api" })         // Impact within module
+```
+
+### Result Limits (search-nodes, get-neighbors)
+**Impact: High | Effort: Low**
+
+Broad searches can return thousands of results, wasting tokens. Add default limits with truncation warnings.
+
+```typescript
+// search-nodes
+{ limit: 100 }  // Default, max 500
+
+// Output when truncated
+"Search results for '*Service' (showing 100 of 342 matches)
+⚠️ Results truncated. Add filters or use a more specific pattern."
+```
+
+### Path Normalization (get-file-symbols)
+**Impact: Medium | Effort: Very Low**
+
+Handle path variations that cause "file not found" errors.
+
+```typescript
+// All these should find the same file:
+"src/utils.ts"           // stored format
+"./src/utils.ts"         // leading ./
+"src\\utils.ts"          // Windows separators
+"/full/path/src/utils.ts" // absolute path
+```
+
+> See [docs/tool-improvements/](./tool-improvements/) for detailed improvement plans per tool.
+
+---
+
 ## Near-term Enhancements
 
 ### File Watcher (Phase 7)
@@ -294,10 +358,11 @@ Want to help build the future of AI-assisted development?
 Pick something from this roadmap that excites you. The codebase is well-tested (170+ tests) and documented. Every module has a CLAUDE.md explaining its purpose and patterns.
 
 **High-impact, low-effort** items are great starting points:
+- Input validation & error messages (affects all tools)
+- Expose hidden parameters in get-impact
+- Result limits for search-nodes
 - Simplified single-module configuration
-- CLI tool
 - Circular dependency detection
-- Export to Neo4j
 
 **Ambitious but transformative:**
 - Semantic search with embeddings

@@ -14,6 +14,9 @@
 
 **CHECK `ISSUES.md` FOR KNOWN BUGS AND TECHNICAL DEBT.**
 
+## Future Evolution
+**CHECK `ROADMAP.md` WHEN ASKED WHAT TO WORK ON NEXT**
+
 ## Code Style
 
 - Functional style (no classes)

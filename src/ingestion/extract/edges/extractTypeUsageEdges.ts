@@ -5,27 +5,38 @@ import {
 	type SourceFile,
 	Node as TsMorphNode,
 } from "ts-morph";
-import type { Edge } from "../../../db/Types.js";
+import type { Edge, Node } from "../../../db/Types.js";
 import { generateNodeId } from "../../IdGenerator.js";
+import { buildSymbolMap, type SymbolMap } from "./buildSymbolMap.js";
 import type { EdgeExtractionContext } from "./EdgeExtractionContext.js";
 
 /**
  * Extract USES_TYPE edges for type references.
+ *
+ * @param sourceFile - The source file AST
+ * @param nodes - All nodes from the codebase (enables cross-file resolution)
+ * @param context - Extraction context (filePath, module, package)
  */
 export const extractTypeUsageEdges = (
 	sourceFile: SourceFile,
+	nodes: Node[],
 	context: EdgeExtractionContext,
 ): Edge[] => {
 	const edges: Edge[] = [];
 
+	// Build symbol map including type imports for cross-file resolution
+	const typeSymbolMap = buildSymbolMap(nodes, context.filePath, sourceFile, {
+		includeTypeImports: true,
+	});
+
 	// Extract type usage from functions
-	extractTypeUsageFromFunctions(sourceFile, context, edges);
+	extractTypeUsageFromFunctions(sourceFile, context, typeSymbolMap, edges);
 
 	// Extract type usage from variables
-	extractTypeUsageFromVariables(sourceFile, context, edges);
+	extractTypeUsageFromVariables(sourceFile, context, typeSymbolMap, edges);
 
 	// Extract type usage from class properties
-	extractTypeUsageFromProperties(sourceFile, context, edges);
+	extractTypeUsageFromProperties(sourceFile, context, typeSymbolMap, edges);
 
 	return edges;
 };
@@ -36,6 +47,7 @@ export const extractTypeUsageEdges = (
 const extractTypeUsageFromFunctions = (
 	sourceFile: SourceFile,
 	context: EdgeExtractionContext,
+	typeSymbolMap: SymbolMap,
 	edges: Edge[],
 ): void => {
 	const functions = sourceFile.getFunctions();
@@ -47,7 +59,7 @@ const extractTypeUsageFromFunctions = (
 		if (!funcName) continue;
 
 		const sourceId = generateNodeId(context.filePath, funcName);
-		extractTypeUsageFromCallable(func, sourceId, context, edges);
+		extractTypeUsageFromCallable(func, sourceId, typeSymbolMap, edges);
 	}
 
 	// Arrow functions
@@ -57,7 +69,7 @@ const extractTypeUsageFromFunctions = (
 
 		if (initializer && TsMorphNode.isArrowFunction(initializer)) {
 			const sourceId = generateNodeId(context.filePath, varName);
-			extractTypeUsageFromCallable(initializer, sourceId, context, edges);
+			extractTypeUsageFromCallable(initializer, sourceId, typeSymbolMap, edges);
 		}
 	}
 
@@ -71,7 +83,7 @@ const extractTypeUsageFromFunctions = (
 		for (const method of methods) {
 			const methodName = method.getName();
 			const sourceId = generateNodeId(context.filePath, className, methodName);
-			extractTypeUsageFromCallable(method, sourceId, context, edges);
+			extractTypeUsageFromCallable(method, sourceId, typeSymbolMap, edges);
 		}
 	}
 };
@@ -82,7 +94,7 @@ const extractTypeUsageFromFunctions = (
 const extractTypeUsageFromCallable = (
 	callable: FunctionDeclaration | ArrowFunction | MethodDeclaration,
 	sourceId: string,
-	context: EdgeExtractionContext,
+	typeSymbolMap: SymbolMap,
 	edges: Edge[],
 ): void => {
 	// Parameter types
@@ -92,13 +104,16 @@ const extractTypeUsageFromCallable = (
 		if (typeNode) {
 			const typeName = extractSimpleTypeName(typeNode.getText());
 			if (typeName && isLocalType(typeName)) {
-				const targetId = generateNodeId(context.filePath, typeName);
-				edges.push({
-					source: sourceId,
-					target: targetId,
-					type: "USES_TYPE",
-					context: "parameter",
-				});
+				// Use symbol map to resolve cross-file types
+				const targetId = typeSymbolMap.get(typeName);
+				if (targetId) {
+					edges.push({
+						source: sourceId,
+						target: targetId,
+						type: "USES_TYPE",
+						context: "parameter",
+					});
+				}
 			}
 		}
 	}
@@ -108,13 +123,16 @@ const extractTypeUsageFromCallable = (
 	if (returnTypeNode) {
 		const typeName = extractSimpleTypeName(returnTypeNode.getText());
 		if (typeName && isLocalType(typeName)) {
-			const targetId = generateNodeId(context.filePath, typeName);
-			edges.push({
-				source: sourceId,
-				target: targetId,
-				type: "USES_TYPE",
-				context: "return",
-			});
+			// Use symbol map to resolve cross-file types
+			const targetId = typeSymbolMap.get(typeName);
+			if (targetId) {
+				edges.push({
+					source: sourceId,
+					target: targetId,
+					type: "USES_TYPE",
+					context: "return",
+				});
+			}
 		}
 	}
 };
@@ -125,6 +143,7 @@ const extractTypeUsageFromCallable = (
 const extractTypeUsageFromVariables = (
 	sourceFile: SourceFile,
 	context: EdgeExtractionContext,
+	typeSymbolMap: SymbolMap,
 	edges: Edge[],
 ): void => {
 	const variables = sourceFile.getVariableDeclarations();
@@ -137,13 +156,16 @@ const extractTypeUsageFromVariables = (
 			const typeName = extractSimpleTypeName(typeNode.getText());
 			if (typeName && isLocalType(typeName)) {
 				const sourceId = generateNodeId(context.filePath, varName);
-				const targetId = generateNodeId(context.filePath, typeName);
-				edges.push({
-					source: sourceId,
-					target: targetId,
-					type: "USES_TYPE",
-					context: "variable",
-				});
+				// Use symbol map to resolve cross-file types
+				const targetId = typeSymbolMap.get(typeName);
+				if (targetId) {
+					edges.push({
+						source: sourceId,
+						target: targetId,
+						type: "USES_TYPE",
+						context: "variable",
+					});
+				}
 			}
 		}
 	}
@@ -155,6 +177,7 @@ const extractTypeUsageFromVariables = (
 const extractTypeUsageFromProperties = (
 	sourceFile: SourceFile,
 	context: EdgeExtractionContext,
+	typeSymbolMap: SymbolMap,
 	edges: Edge[],
 ): void => {
 	const classes = sourceFile.getClasses();
@@ -176,13 +199,16 @@ const extractTypeUsageFromProperties = (
 						className,
 						propName,
 					);
-					const targetId = generateNodeId(context.filePath, typeName);
-					edges.push({
-						source: sourceId,
-						target: targetId,
-						type: "USES_TYPE",
-						context: "property",
-					});
+					// Use symbol map to resolve cross-file types
+					const targetId = typeSymbolMap.get(typeName);
+					if (targetId) {
+						edges.push({
+							source: sourceId,
+							target: targetId,
+							type: "USES_TYPE",
+							context: "property",
+						});
+					}
 				}
 			}
 		}

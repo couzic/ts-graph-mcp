@@ -10,6 +10,7 @@ import { initializeSchema } from "../../src/db/sqlite/SqliteSchema.js";
 import { createSqliteWriter } from "../../src/db/sqlite/SqliteWriter.js";
 import { indexProject } from "../../src/ingestion/Ingestion.js";
 import { queryFileNodes } from "../../src/tools/get-file-symbols/query.js";
+import { queryImpactedNodes } from "../../src/tools/get-impact/query.js";
 import { queryNeighbors } from "../../src/tools/get-neighbors/query.js";
 import { querySearchNodes } from "../../src/tools/search-nodes/query.js";
 
@@ -296,6 +297,83 @@ describe("mixed-types integration", () => {
 			for (const node of topLevelNodes) {
 				expect(node.exported).toBe(true);
 			}
+		});
+	});
+
+	describe("Cross-file USES_TYPE edges (Issue #11)", () => {
+		it("creates USES_TYPE edge from addUser method to User interface across files", () => {
+			// Query edges directly from database
+			const edge = db
+				.prepare(
+					`
+					SELECT source, target, type, context
+					FROM edges
+					WHERE source = ? AND target = ? AND type = ?
+				`,
+				)
+				.get(
+					"src/models.ts:UserService.addUser",
+					"src/types.ts:User",
+					"USES_TYPE",
+				) as { source: string; target: string; type: string; context: string };
+
+			expect(edge).toBeDefined();
+			expect(edge).toMatchObject({
+				source: "src/models.ts:UserService.addUser",
+				target: "src/types.ts:User",
+				type: "USES_TYPE",
+				context: "parameter",
+			});
+		});
+
+		it("creates USES_TYPE edge from users property to User interface across files", () => {
+			const edge = db
+				.prepare(
+					`
+					SELECT source, target, type, context
+					FROM edges
+					WHERE source = ? AND target = ? AND type = ?
+				`,
+				)
+				.get(
+					"src/models.ts:UserService.users",
+					"src/types.ts:User",
+					"USES_TYPE",
+				) as { source: string; target: string; type: string; context: string };
+
+			expect(edge).toBeDefined();
+			expect(edge).toMatchObject({
+				source: "src/models.ts:UserService.users",
+				target: "src/types.ts:User",
+				type: "USES_TYPE",
+				context: "property",
+			});
+		});
+
+		it("get_neighbors shows User interface when querying addUser method", () => {
+			const result = queryNeighbors(
+				db,
+				"src/models.ts:UserService.addUser",
+				1,
+				"outgoing",
+			);
+
+			const neighborIds = result.nodes.map((n) => n.id);
+			expect(neighborIds).toContain("src/types.ts:User");
+
+			const usesTypeEdge = result.edges.find(
+				(e) =>
+					e.type === "USES_TYPE" && e.target === "src/types.ts:User",
+			);
+			expect(usesTypeEdge).toBeDefined();
+		});
+
+		it("get_impact shows models.ts symbols when querying User interface", () => {
+			const result = queryImpactedNodes(db, "src/types.ts:User");
+
+			const impactedIds = result.map((n) => n.id);
+			expect(impactedIds).toContain("src/models.ts:UserService.addUser");
+			expect(impactedIds).toContain("src/models.ts:UserService.users");
 		});
 	});
 });

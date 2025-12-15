@@ -1,5 +1,6 @@
 import { Project } from "ts-morph";
 import { describe, expect, it } from "vitest";
+import type { Node } from "../../../db/Types.js";
 import { generateNodeId } from "../../IdGenerator.js";
 import type { EdgeExtractionContext } from "./EdgeExtractionContext.js";
 import { extractTypeUsageEdges } from "./extractTypeUsageEdges.js";
@@ -28,7 +29,22 @@ export const greet = (user: User): void => {
         `,
 		);
 
-		const edges = extractTypeUsageEdges(sourceFile, defaultContext);
+		// Nodes for same-file types (symbol map needs these)
+		const nodes: Node[] = [
+			{
+				id: generateNodeId("test.ts", "User"),
+				type: "Interface",
+				name: "User",
+				module: "test-module",
+				package: "test-package",
+				filePath: "test.ts",
+				startLine: 2,
+				endLine: 4,
+				exported: true,
+			},
+		];
+
+		const edges = extractTypeUsageEdges(sourceFile, nodes, defaultContext);
 
 		const paramEdge = edges.find(
 			(e) =>
@@ -59,7 +75,21 @@ export const getUser = (): User => {
         `,
 		);
 
-		const edges = extractTypeUsageEdges(sourceFile, defaultContext);
+		const nodes: Node[] = [
+			{
+				id: generateNodeId("test.ts", "User"),
+				type: "Interface",
+				name: "User",
+				module: "test-module",
+				package: "test-package",
+				filePath: "test.ts",
+				startLine: 2,
+				endLine: 4,
+				exported: true,
+			},
+		];
+
+		const edges = extractTypeUsageEdges(sourceFile, nodes, defaultContext);
 
 		const returnEdge = edges.find(
 			(e) =>
@@ -88,7 +118,21 @@ export const user: User = { name: 'Alice' };
         `,
 		);
 
-		const edges = extractTypeUsageEdges(sourceFile, defaultContext);
+		const nodes: Node[] = [
+			{
+				id: generateNodeId("test.ts", "User"),
+				type: "Interface",
+				name: "User",
+				module: "test-module",
+				package: "test-package",
+				filePath: "test.ts",
+				startLine: 2,
+				endLine: 4,
+				exported: true,
+			},
+		];
+
+		const edges = extractTypeUsageEdges(sourceFile, nodes, defaultContext);
 
 		const varEdge = edges.find(
 			(e) =>
@@ -119,7 +163,21 @@ export class User {
         `,
 		);
 
-		const edges = extractTypeUsageEdges(sourceFile, defaultContext);
+		const nodes: Node[] = [
+			{
+				id: generateNodeId("test.ts", "Address"),
+				type: "Interface",
+				name: "Address",
+				module: "test-module",
+				package: "test-package",
+				filePath: "test.ts",
+				startLine: 2,
+				endLine: 4,
+				exported: true,
+			},
+		];
+
+		const edges = extractTypeUsageEdges(sourceFile, nodes, defaultContext);
 
 		const propEdge = edges.find(
 			(e) =>
@@ -132,6 +190,79 @@ export class User {
 			target: generateNodeId("test.ts", "Address"),
 			type: "USES_TYPE",
 			context: "property",
+		});
+	});
+
+	it("extracts cross-file USES_TYPE for imported types", () => {
+		const project = createProject();
+
+		// File A: type definition
+		project.createSourceFile(
+			"types.ts",
+			`
+export interface User {
+  name: string;
+}
+      `,
+		);
+
+		// File B: service that imports and uses the type
+		const serviceFile = project.createSourceFile(
+			"service.ts",
+			`
+import type { User } from './types';
+
+export const greet = (user: User): void => {
+  console.log(user.name);
+};
+      `,
+		);
+
+		// All nodes from both files (simulates the three-pass architecture)
+		const nodes: Node[] = [
+			{
+				id: generateNodeId("types.ts", "User"),
+				type: "Interface",
+				name: "User",
+				module: "test-module",
+				package: "test-package",
+				filePath: "types.ts",
+				startLine: 2,
+				endLine: 4,
+				exported: true,
+			},
+			{
+				id: generateNodeId("service.ts", "greet"),
+				type: "Function",
+				name: "greet",
+				module: "test-module",
+				package: "test-package",
+				filePath: "service.ts",
+				startLine: 4,
+				endLine: 6,
+				exported: true,
+			},
+		];
+
+		const serviceContext: EdgeExtractionContext = {
+			filePath: "service.ts",
+			module: "test-module",
+			package: "test-package",
+		};
+
+		const edges = extractTypeUsageEdges(serviceFile, nodes, serviceContext);
+
+		const crossFileEdge = edges.find(
+			(e) =>
+				e.source === generateNodeId("service.ts", "greet") &&
+				e.target === generateNodeId("types.ts", "User"),
+		);
+		expect(crossFileEdge).toBeDefined();
+		expect(crossFileEdge).toEqual({
+			source: generateNodeId("service.ts", "greet"),
+			target: generateNodeId("types.ts", "User"),
+			type: "USES_TYPE",
+			context: "parameter",
 		});
 	});
 });

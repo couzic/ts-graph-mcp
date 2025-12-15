@@ -54,26 +54,57 @@ Last updated: 2025-12-15
 
 ---
 
-### 11. Cross-File USES_TYPE Edges Not Extracted
+### ~~11. Cross-File USES_TYPE Edges Not Extracted~~ ✅ FIXED
+
+**Status:** Fixed 2025-12-15
+
+**Problem:** USES_TYPE edges between symbols in **different files** were not being extracted.
+
+**Root Cause:** The `extractTypeUsageEdges` function resolved type references using `generateNodeId(context.filePath, typeName)`, which assumed all types were defined in the same file. Imported types were not in the symbol map.
+
+**Fix Applied:** Applied the same pattern as Issue #9:
+
+1. **Added `includeTypeImports` option to `buildSymbolMap`** (`src/ingestion/extract/edges/buildSymbolMap.ts`):
+   - New `BuildSymbolMapOptions` interface with `includeTypeImports` flag
+   - When true, includes type-only imports (`import type { User }`) in the map
+   - Default is false to maintain existing CALLS edge behavior
+
+2. **Modified `extractTypeUsageEdges`** (`src/ingestion/extract/edges/extractTypeUsageEdges.ts`):
+   - Added `nodes: Node[]` parameter
+   - Builds type symbol map with `includeTypeImports: true`
+   - All helper functions now use symbol map instead of `generateNodeId`
+
+3. **Updated `extractEdges`** (`src/ingestion/extract/edges/extractEdges.ts`):
+   - Passes `nodes` array to `extractTypeUsageEdges`
+
+**Verification:** Integration tests in `test-projects/mixed-types/integration.test.ts`:
+- USES_TYPE edge from `addUser` method to `User` interface across files ✓
+- USES_TYPE edge from `users` property to `User` interface across files ✓
+- `get_neighbors(addUser)` → shows `User` from types.ts ✓
+- `get_impact(User)` → shows `addUser` and `users` from models.ts ✓
+
+---
+
+### 12. Cross-File EXTENDS/IMPLEMENTS Edges Not Extracted
 
 **Status:** Documented 2025-12-15, not yet fixed
 
-**Problem:** USES_TYPE edges between symbols in **different files** are not being extracted.
+**Problem:** EXTENDS and IMPLEMENTS edges between classes/interfaces in **different files** are not being extracted.
 
-**Example:** When `UserService.addUser(user: User)` references the `User` interface from another file, no USES_TYPE edge is created from `addUser` to `User`.
+**Example:** When `class AdminUser extends User` where `User` is imported from another file, no EXTENDS edge is created from `AdminUser` to `User`.
 
-**Root Cause:** Same pattern as Issue #9 (CALLS edges). The `extractTypeUsageEdges` function resolves type references to node IDs, but can only find types defined in the same file. Imported types are not in the symbol map.
+**Root Cause:** Same pattern as Issues #9 and #11. The `extractInheritanceEdges` function uses `generateNodeId(context.filePath, ...)` for targets, assuming all base classes/interfaces are defined in the same file.
 
-**Impact:** Medium - `get_neighbors` and `get_impact` tools won't show cross-file type dependencies.
+**Impact:** Medium - `get_neighbors` and `get_impact` tools won't show cross-file inheritance relationships.
 
 **Potential Fix:** Apply the same solution as Issue #9:
-1. Enhance `extractTypeUsageEdges` to accept a `SourceFile` parameter
-2. Parse import declarations to resolve imported type symbols to their node IDs
-3. Handle type-only imports (`import type { User }`)
+1. Enhance `extractInheritanceEdges` to accept a `nodes` array and `SourceFile` parameter
+2. Use `buildSymbolMap` to resolve imported classes/interfaces to their node IDs
+3. Handle both `extends` and `implements` clauses
 
-**Discovered by:** Integration tests in `test-projects/mixed-types/integration.test.ts`
+**Discovered by:** Code review during Issue #11 planning (2025-12-15)
 
-**Workaround:** None currently. Type relationships across files are not tracked.
+**Workaround:** None currently. Inheritance relationships across files are not tracked.
 
 ---
 

@@ -8,6 +8,18 @@ import type { Node } from "../../../db/Types.js";
 export type SymbolMap = Map<string, string>;
 
 /**
+ * Options for building a symbol map.
+ */
+export interface BuildSymbolMapOptions {
+	/**
+	 * Include type-only imports in the map.
+	 * Default: false (skip type-only imports since they can't be called).
+	 * Set to true when building a map for USES_TYPE edge resolution.
+	 */
+	includeTypeImports?: boolean;
+}
+
+/**
  * Build a map of symbol names to node IDs for call resolution.
  *
  * Includes:
@@ -17,12 +29,14 @@ export type SymbolMap = Map<string, string>;
  * @param nodes - All nodes extracted from the codebase
  * @param filePath - The file path to build the symbol map for
  * @param sourceFile - Optional: The source file AST for parsing imports
+ * @param options - Optional: Configuration options
  * @returns A map from symbol names to node IDs
  */
 export const buildSymbolMap = (
 	nodes: Node[],
 	filePath: string,
 	sourceFile?: SourceFile,
+	options?: BuildSymbolMapOptions,
 ): SymbolMap => {
 	const map: SymbolMap = new Map();
 
@@ -31,7 +45,7 @@ export const buildSymbolMap = (
 
 	// Then, add imported symbols if sourceFile is provided
 	if (sourceFile) {
-		addImportedSymbols(map, nodes, filePath, sourceFile);
+		addImportedSymbols(map, nodes, filePath, sourceFile, options);
 	}
 
 	return map;
@@ -68,8 +82,10 @@ const addImportedSymbols = (
 	nodes: Node[],
 	filePath: string,
 	sourceFile: SourceFile,
+	options?: BuildSymbolMapOptions,
 ): void => {
 	const imports = sourceFile.getImportDeclarations();
+	const includeTypeImports = options?.includeTypeImports ?? false;
 
 	for (const importDecl of imports) {
 		const moduleSpecifier = importDecl.getModuleSpecifierValue();
@@ -79,8 +95,8 @@ const addImportedSymbols = (
 			continue;
 		}
 
-		// Skip type-only imports - they can't be called
-		if (importDecl.isTypeOnly()) {
+		// Skip type-only imports unless includeTypeImports is true
+		if (importDecl.isTypeOnly() && !includeTypeImports) {
 			continue;
 		}
 
@@ -90,8 +106,8 @@ const addImportedSymbols = (
 		// Process named imports: import { formatDate, parseDate as pd } from './utils'
 		const namedImports = importDecl.getNamedImports();
 		for (const namedImport of namedImports) {
-			// Skip type-only named imports
-			if (namedImport.isTypeOnly()) {
+			// Skip type-only named imports unless includeTypeImports is true
+			if (namedImport.isTypeOnly() && !includeTypeImports) {
 				continue;
 			}
 

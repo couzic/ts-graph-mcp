@@ -23,7 +23,7 @@ export const extractEdges = (
 	edges.push(...extractImportEdges(sourceFile, context));
 	edges.push(...extractCallEdges(sourceFile, nodes, context));
 	edges.push(...extractInheritanceEdges(sourceFile, context));
-	edges.push(...extractTypeUsageEdges(sourceFile, context));
+	edges.push(...extractTypeUsageEdges(sourceFile, nodes, context));
 
 	return edges;
 };
