@@ -3,8 +3,12 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
 	CONFIG_FILE_NAMES,
+	createDefaultConfig,
+	detectTsconfig,
 	findConfigFile,
 	loadConfig,
+	loadConfigOrDetect,
+	readPackageName,
 } from "./ConfigLoader.js";
 
 const TEST_DIR = "/tmp/ts-graph-rag-config-test";
@@ -125,6 +129,158 @@ describe("ConfigLoader", () => {
 		it("throws when file does not exist", async () => {
 			const configPath = join(TEST_DIR, "nonexistent.json");
 			await expect(loadConfig(configPath)).rejects.toThrow();
+		});
+	});
+
+	describe(readPackageName.name, () => {
+		it("returns name from valid package.json", () => {
+			const packageJson = { name: "my-awesome-project", version: "1.0.0" };
+			writeFileSync(
+				join(TEST_DIR, "package.json"),
+				JSON.stringify(packageJson),
+			);
+
+			const result = readPackageName(TEST_DIR);
+			expect(result).toBe("my-awesome-project");
+		});
+
+		it('returns "default" if package.json missing', () => {
+			const result = readPackageName(TEST_DIR);
+			expect(result).toBe("default");
+		});
+
+		it('returns "default" if package.json has no name field', () => {
+			writeFileSync(
+				join(TEST_DIR, "package.json"),
+				JSON.stringify({ version: "1.0.0" }),
+			);
+
+			const result = readPackageName(TEST_DIR);
+			expect(result).toBe("default");
+		});
+
+		it('returns "default" if package.json has empty name', () => {
+			writeFileSync(
+				join(TEST_DIR, "package.json"),
+				JSON.stringify({ name: "", version: "1.0.0" }),
+			);
+
+			const result = readPackageName(TEST_DIR);
+			expect(result).toBe("default");
+		});
+
+		it('returns "default" if package.json is malformed JSON', () => {
+			writeFileSync(join(TEST_DIR, "package.json"), "{ invalid json }");
+
+			const result = readPackageName(TEST_DIR);
+			expect(result).toBe("default");
+		});
+	});
+
+	describe(detectTsconfig.name, () => {
+		it("returns path when tsconfig.json exists", () => {
+			writeFileSync(join(TEST_DIR, "tsconfig.json"), "{}");
+
+			const result = detectTsconfig(TEST_DIR);
+			expect(result).toBe("./tsconfig.json");
+		});
+
+		it("returns null when tsconfig.json does not exist", () => {
+			const result = detectTsconfig(TEST_DIR);
+			expect(result).toBeNull();
+		});
+	});
+
+	describe(createDefaultConfig.name, () => {
+		it("creates config with correct structure", () => {
+			const result = createDefaultConfig("./tsconfig.json", "my-project");
+
+			expect(result.modules).toHaveLength(1);
+			expect(result.modules[0]?.name).toBe("default");
+			expect(result.modules[0]?.packages).toHaveLength(1);
+			expect(result.modules[0]?.packages[0]?.name).toBe("my-project");
+			expect(result.modules[0]?.packages[0]?.tsconfig).toBe("./tsconfig.json");
+		});
+
+		it('uses "default" module name regardless of package name', () => {
+			const result = createDefaultConfig("./tsconfig.json", "custom-name");
+
+			expect(result.modules[0]?.name).toBe("default");
+			expect(result.modules[0]?.packages[0]?.name).toBe("custom-name");
+		});
+	});
+
+	describe(loadConfigOrDetect.name, () => {
+		it("returns explicit config when config file exists", async () => {
+			const config = {
+				modules: [
+					{
+						name: "core",
+						packages: [{ name: "main", tsconfig: "./tsconfig.json" }],
+					},
+				],
+			};
+			const configPath = join(TEST_DIR, "ts-graph-mcp.config.json");
+			writeFileSync(configPath, JSON.stringify(config));
+
+			const result = await loadConfigOrDetect(TEST_DIR);
+
+			expect(result).not.toBeNull();
+			expect(result?.source).toBe("explicit");
+			expect(result?.configPath).toBe(configPath);
+			expect(result?.config.modules[0]?.name).toBe("core");
+		});
+
+		it("returns auto-detected config when only tsconfig.json exists", async () => {
+			writeFileSync(join(TEST_DIR, "tsconfig.json"), "{}");
+			writeFileSync(
+				join(TEST_DIR, "package.json"),
+				JSON.stringify({ name: "auto-project" }),
+			);
+
+			const result = await loadConfigOrDetect(TEST_DIR);
+
+			expect(result).not.toBeNull();
+			expect(result?.source).toBe("auto-detected");
+			expect(result?.configPath).toBeUndefined();
+			expect(result?.config.modules[0]?.name).toBe("default");
+			expect(result?.config.modules[0]?.packages[0]?.name).toBe("auto-project");
+		});
+
+		it("prefers explicit config over auto-detection", async () => {
+			// Create both config file and tsconfig.json
+			const config = {
+				modules: [
+					{
+						name: "explicit",
+						packages: [{ name: "pkg", tsconfig: "./tsconfig.json" }],
+					},
+				],
+			};
+			writeFileSync(
+				join(TEST_DIR, "ts-graph-mcp.config.json"),
+				JSON.stringify(config),
+			);
+			writeFileSync(join(TEST_DIR, "tsconfig.json"), "{}");
+
+			const result = await loadConfigOrDetect(TEST_DIR);
+
+			expect(result?.source).toBe("explicit");
+			expect(result?.config.modules[0]?.name).toBe("explicit");
+		});
+
+		it("returns null when neither config nor tsconfig.json exists", async () => {
+			const result = await loadConfigOrDetect(TEST_DIR);
+			expect(result).toBeNull();
+		});
+
+		it('uses "default" as package name when package.json has no name', async () => {
+			writeFileSync(join(TEST_DIR, "tsconfig.json"), "{}");
+			// No package.json
+
+			const result = await loadConfigOrDetect(TEST_DIR);
+
+			expect(result?.config.modules[0]?.packages[0]?.name).toBe("default");
 		});
 	});
 });

@@ -105,36 +105,19 @@ Last updated: 2025-12-13
 
 ---
 
-### 8. Missing Test Coverage (Planned but Never Written)
+### 8. Missing Test Coverage
 
-**Status:** Documented, tests pending
+**Status:** In progress
 
-**Problem:** Several test files were defined in `docs/IMPLEMENTATION_PLAN.md` but never implemented. Current test count is 184 tests across 11 files, but key modules remain untested.
+**Remaining gaps:**
 
-**Missing Test Files:**
+| Test Type | Purpose | Priority |
+|-----------|---------|----------|
+| MCP tool integration tests | Test ingestion → query with real TS code | High |
+| Watcher unit tests | Mock ingestion, verify watch API | Medium |
+| Watcher system tests | Real filesystem change detection | Medium |
 
-| Planned File | Purpose | Priority |
-|--------------|---------|----------|
-| `tests/mcp/unit/handlers.test.ts` | MCP handler unit tests with mocked DbReader | High |
-| `tests/mcp/integration/tools.test.ts` | MCP tool integration tests with seeded database | High |
-| `tests/watcher/unit/api.test.ts` | Watcher API unit tests | Medium |
-| `tests/watcher/system/filesystem.test.ts` | Real filesystem change detection tests | Medium |
-
-**Details from IMPLEMENTATION_PLAN.md:**
-
-1. **MCP Server Tests** (High Priority)
-   - Unit tests should mock `DbReader` and verify handler behavior
-   - Integration tests should use a seeded SQLite database
-   - Should cover all 7 MCP tools: `search_nodes`, `get_callers`, `get_callees`, `get_impact`, `find_path`, `get_neighbors`, `get_file_symbols`
-
-2. **Watcher Module Tests** (Medium Priority)
-   - Unit tests should mock ingestion and verify the watch API
-   - System tests should verify real filesystem change detection
-   - Depends on watcher module implementation status
-
-**Risk:** MCP Server (`src/mcp/McpServer.ts`) is actively being modified without test coverage.
-
-**Reference:** See `docs/IMPLEMENTATION_PLAN.md` § Testing Strategy for original test matrix.
+**Note:** Handler unit tests were originally planned but deemed unnecessary - handlers are thin plumbing code (query + format), and both layers have their own unit tests.
 
 ---
 

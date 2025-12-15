@@ -2,7 +2,7 @@
 
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { findConfigFile, loadConfig } from "../config/ConfigLoader.js";
+import { loadConfigOrDetect } from "../config/ConfigLoader.js";
 import { openDatabase } from "../db/sqlite/SqliteConnection.js";
 import { createSqliteWriter } from "../db/sqlite/SqliteWriter.js";
 import { indexProject } from "../ingestion/Ingestion.js";
@@ -72,16 +72,22 @@ export const main = async (): Promise<void> => {
 		if (!dbExists) {
 			console.error("Database not found. Attempting to index project...");
 
-			// Try to find and load config
-			const configPath = findConfigFile(projectRoot);
+			// Try to find config or auto-detect from tsconfig.json
+			const configResult = await loadConfigOrDetect(projectRoot);
 
-			if (configPath) {
-				console.error(`Found config: ${configPath}`);
-				const config = await loadConfig(configPath);
+			if (configResult) {
+				// Log how config was obtained
+				if (configResult.source === "explicit") {
+					console.error(`Using config: ${configResult.configPath}`);
+				} else {
+					console.error(
+						"No config file found. Auto-detected tsconfig.json, using default configuration.",
+					);
+				}
 
 				// Index the project
 				const writer = createSqliteWriter(db);
-				const result = await indexProject(config, writer, {
+				const result = await indexProject(configResult.config, writer, {
 					projectRoot,
 					clearFirst: false,
 				});
@@ -100,10 +106,10 @@ export const main = async (): Promise<void> => {
 				}
 			} else {
 				console.error(
-					"No config file found. Starting server with empty database.",
+					"No config file or tsconfig.json found. Starting server with empty database.",
 				);
 				console.error(
-					"To index your project, create a ts-graph-mcp.config.json file.",
+					"To index your project, either create a ts-graph-mcp.config.json file or ensure tsconfig.json exists.",
 				);
 				console.error(
 					"See https://github.com/couzic/ts-graph-mcp/tree/master/docs/configuration.md for configuration examples.",
