@@ -1,6 +1,6 @@
 # Known Issues
 
-Last updated: 2025-12-13
+Last updated: 2025-12-15
 
 ## Must Fix Before Release
 
@@ -54,6 +54,29 @@ Last updated: 2025-12-13
 
 ---
 
+### 11. Cross-File USES_TYPE Edges Not Extracted
+
+**Status:** Documented 2025-12-15, not yet fixed
+
+**Problem:** USES_TYPE edges between symbols in **different files** are not being extracted.
+
+**Example:** When `UserService.addUser(user: User)` references the `User` interface from another file, no USES_TYPE edge is created from `addUser` to `User`.
+
+**Root Cause:** Same pattern as Issue #9 (CALLS edges). The `extractTypeUsageEdges` function resolves type references to node IDs, but can only find types defined in the same file. Imported types are not in the symbol map.
+
+**Impact:** Medium - `get_neighbors` and `get_impact` tools won't show cross-file type dependencies.
+
+**Potential Fix:** Apply the same solution as Issue #9:
+1. Enhance `extractTypeUsageEdges` to accept a `SourceFile` parameter
+2. Parse import declarations to resolve imported type symbols to their node IDs
+3. Handle type-only imports (`import type { User }`)
+
+**Discovered by:** Integration tests in `test-projects/mixed-types/integration.test.ts`
+
+**Workaround:** None currently. Type relationships across files are not tracked.
+
+---
+
 ### ~~9. Cross-File CALLS Edges Not Extracted~~ ✅ FIXED
 
 **Status:** Fixed 2025-12-14
@@ -87,7 +110,7 @@ Last updated: 2025-12-13
 
 **Status:** Documented 2025-12-13, non-blocking
 
-**Problem:** The `format.test.ts` files in `src/mcp/tools/*/` have good happy-path coverage but lack edge case and negative tests.
+**Problem:** The `format.test.ts` files in `src/tools/*/` have good happy-path coverage but lack edge case and negative tests.
 
 **Gaps Identified:**
 
@@ -107,15 +130,25 @@ Last updated: 2025-12-13
 
 ### 8. Missing Test Coverage
 
-**Status:** In progress
+**Status:** Partially resolved 2025-12-15
+
+**Resolved:**
+
+| Test Type | Status | Details |
+|-----------|--------|---------|
+| MCP tool integration tests | ✅ Done | 51 tests across 3 test projects |
 
 **Remaining gaps:**
 
 | Test Type | Purpose | Priority |
 |-----------|---------|----------|
-| MCP tool integration tests | Test ingestion → query with real TS code | High |
 | Watcher unit tests | Mock ingestion, verify watch API | Medium |
 | Watcher system tests | Real filesystem change detection | Medium |
+
+**Integration tests added:**
+- `test-projects/call-chain/integration.test.ts` (18 tests) - same-file call chains
+- `test-projects/cross-file-calls/integration.test.ts` (14 tests) - cross-file CALLS edges (Issue #9 regression)
+- `test-projects/mixed-types/integration.test.ts` (19 tests) - all node types
 
 **Note:** Handler unit tests were originally planned but deemed unnecessary - handlers are thin plumbing code (query + format), and both layers have their own unit tests.
 
@@ -132,7 +165,7 @@ Last updated: 2025-12-13
 - All optimization goals achieved: ~60-70% token reduction vs JSON
 
 **New Architecture (December 2024):**
-- All 7 MCP tools migrated to vertical slice pattern (`src/mcp/tools/<tool>/`)
+- All 7 MCP tools migrated to vertical slice pattern (`src/tools/<tool>/`)
 - Each tool: `handler.ts` + `query.ts` (direct SQL) + `format.ts` (text output)
 - No shared TOON encoding layer - simpler, more maintainable
 

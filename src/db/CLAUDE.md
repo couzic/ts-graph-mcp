@@ -81,9 +81,9 @@ closeDatabase(db);
 
 ## Related Modules
 
-- Used by: `src/ingestion` (writes via DbWriter), `src/mcp/tools/*` (direct SQL queries in each tool's query.ts)
+- Used by: `src/ingestion` (writes via DbWriter), `src/tools/*` (direct SQL queries in each tool's query.ts)
 - Depends on: `better-sqlite3` (SQLite driver)
 
 ## Architecture Notes
 
-Since the migration to vertical slice architecture, read operations are no longer abstracted through a shared interface. Each MCP tool in `src/mcp/tools/*/` implements its own direct SQL queries in its `query.ts` file using recursive CTEs for graph traversal. Only write operations remain abstracted through the `DbWriter` interface.
+Since the migration to vertical slice architecture, read operations are no longer abstracted through a shared interface. Each MCP tool in `src/tools/*/` implements its own direct SQL queries in its `query.ts` file using recursive CTEs for graph traversal. Only write operations remain abstracted through the `DbWriter` interface.

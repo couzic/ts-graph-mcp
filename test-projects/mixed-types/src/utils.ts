@@ -1,5 +1,8 @@
-// Variable node (const)
+// Variable node (const) without explicit type
 export const DEFAULT_NAME = "Anonymous";
+
+// Variable node (const) with explicit type annotation
+export const MAX_RETRIES: number = 3;
 
 // Function node with explicit return type
 export function greet(name: string): string {

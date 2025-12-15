@@ -9,7 +9,7 @@ Exposes the TypeScript code graph as an MCP (Model Context Protocol) server that
 Each tool is implemented as a self-contained vertical slice:
 
 ```
-src/mcp/tools/
+src/tools/
 ├── search-nodes/     (query.ts, format.ts, format.test.ts, handler.ts)
 ├── get-callers/      (query.ts, format.ts, format.test.ts, handler.ts)
 ├── get-callees/      (query.ts, format.ts, format.test.ts, handler.ts)

@@ -262,8 +262,8 @@ src/
 ├── config/      # Configuration loading and validation
 ├── db/          # Database layer (SQLite implementation)
 ├── ingestion/   # TypeScript AST parsing and graph extraction
-└── mcp/         # MCP server and tool handlers
-    └── tools/   # Vertical slice architecture (one folder per tool)
+├── mcp/         # MCP server entry point and protocol handling
+└── tools/       # MCP tool handlers (vertical slice architecture)
 ```
 
 ### Architecture

@@ -9,37 +9,37 @@ import {
 	executeFindPath,
 	type FindPathParams,
 	findPathDefinition,
-} from "./tools/find-path/handler.js";
+} from "../tools/find-path/handler.js";
 import {
 	executeGetCallees,
 	type GetCalleesParams,
 	getCalleesDefinition,
-} from "./tools/get-callees/handler.js";
+} from "../tools/get-callees/handler.js";
 import {
 	executeGetCallers,
 	type GetCallersParams,
 	getCallersDefinition,
-} from "./tools/get-callers/handler.js";
+} from "../tools/get-callers/handler.js";
 import {
 	executeGetFileSymbols,
 	type GetFileSymbolsParams,
 	getFileSymbolsDefinition,
-} from "./tools/get-file-symbols/handler.js";
+} from "../tools/get-file-symbols/handler.js";
 import {
 	executeGetImpact,
 	type GetImpactParams,
 	getImpactDefinition,
-} from "./tools/get-impact/handler.js";
+} from "../tools/get-impact/handler.js";
 import {
 	executeGetNeighbors,
 	type GetNeighborsParams,
 	getNeighborsDefinition,
-} from "./tools/get-neighbors/handler.js";
+} from "../tools/get-neighbors/handler.js";
 import {
 	executeSearchNodes,
 	type SearchNodesParams,
 	searchNodesDefinition,
-} from "./tools/search-nodes/handler.js";
+} from "../tools/search-nodes/handler.js";
 
 /**
  * Start the MCP server that exposes TypeScript code graph queries as tools.

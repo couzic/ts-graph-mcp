@@ -21,7 +21,7 @@
 ### Files Created/Migrated
 
 ```
-src/mcp/tools/
+src/tools/
 ├── search-nodes/     (query.ts, format.ts, format.test.ts, handler.ts)
 ├── get-callers/      (query.ts, format.ts, format.test.ts, handler.ts)
 ├── get-callees/      (query.ts, format.ts, format.test.ts, handler.ts)
@@ -70,7 +70,7 @@ McpServer.ts (all 7 tools) → src/toon/ (shared) → DbReader (shared)
 
 ### After (Vertical Slices)
 ```
-McpServer.ts → src/mcp/tools/<tool>/handler.ts
+McpServer.ts → src/tools/<tool>/handler.ts
                             ├── query.ts (direct SQL)
                             └── format.ts (text output)
 ```

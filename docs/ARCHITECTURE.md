@@ -75,14 +75,14 @@ The project uses a **vertical slice architecture** where each MCP tool owns its 
 ### Module Dependencies
 
 ```
-mcp/tools/* → db (direct SQL queries via better-sqlite3)
+tools/* → db (direct SQL queries via better-sqlite3)
 ingestion → db (DbWriter)
 ingestion → config (ProjectConfig)
 db → (no dependencies on other modules)
 config → (no dependencies on other modules)
 ```
 
-Each MCP tool folder (`src/mcp/tools/<tool>/`) contains:
+Each MCP tool folder (`src/tools/<tool>/`) contains:
 - `handler.ts` - MCP tool definition and execute function
 - `query.ts` - Direct SQL queries using recursive CTEs
 - `format.ts` - Output formatting for LLM consumption
@@ -102,7 +102,7 @@ Each MCP tool folder (`src/mcp/tools/<tool>/`) contains:
 - `SqliteSchema.ts` - Schema initialization (tables, indexes, FKs)
 - `SqliteWriter.ts` - Implements DbWriter with prepared statements and transactions
 
-**Note**: Query logic lives in each tool's `query.ts` file (`src/mcp/tools/*/query.ts`), using direct SQL queries via better-sqlite3. This vertical slice approach eliminates the need for a shared reader abstraction.
+**Note**: Query logic lives in each tool's `query.ts` file (`src/tools/*/query.ts`), using direct SQL queries via better-sqlite3. This vertical slice approach eliminates the need for a shared reader abstraction.
 
 **Design Highlights**:
 - Interface-first design allows pluggable backends (SQLite today, Neo4j/Memgraph future)
