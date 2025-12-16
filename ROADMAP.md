@@ -62,6 +62,25 @@ Handle path variations that cause "file not found" errors.
 "/full/path/src/utils.ts" // absolute path
 ```
 
+### Improve Tool Descriptions
+**Impact: Medium | Effort: Very Low**
+
+The MCP tool definitions (in `src/tools/*/handler.ts`) have quality gaps that reduce discoverability for AI agents:
+
+**Issues identified:**
+
+| Problem | Example | Fix |
+|---------|---------|-----|
+| **Redundant descriptions** | `get_callers`: "Find all functions/methods that call the target. Returns nodes that call the specified function/method." | Remove redundant second sentence |
+| **Missing output format hints** | No descriptions mention the hierarchical text format | Add: "Returns hierarchical text grouped by file" |
+| **Unclear direction semantics** | `get_neighbors` `direction` param just says "outgoing/incoming/both" | Add: "outgoing = edges where node is source, incoming = edges where node is target" |
+
+**Affected files:**
+- `src/tools/get-callers/handler.ts` - redundant description
+- `src/tools/get-callees/handler.ts` - redundant description
+- `src/tools/get-neighbors/handler.ts` - unclear direction param
+- All 7 tools - missing output format hints
+
 > See [docs/tool-improvements/](./tool-improvements/) for detailed improvement plans per tool.
 
 ---
@@ -361,6 +380,7 @@ Pick something from this roadmap that excites you. The codebase is well-tested (
 - Input validation & error messages (affects all tools)
 - Expose hidden parameters in get-impact
 - Result limits for search-nodes
+- Improve tool descriptions (redundancy, output format hints)
 - Simplified single-module configuration
 - Circular dependency detection
 

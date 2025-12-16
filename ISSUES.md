@@ -48,7 +48,36 @@ Last updated: 2025-12-15
 
 **Problem:** Edges that cross module boundaries are silently dropped during ingestion.
 
-**Details:** See [EDGE_RESOLUTION.md](./EDGE_RESOLUTION.md) for full design discussion and potential solutions.
+**Scope of Current Solution:**
+
+| Scenario | Status |
+|----------|--------|
+| Cross-file (same package) | ✅ Works - three-pass within package |
+| External dependencies (`node_modules`) | ✅ Filtered out intentionally |
+| Cross-package (same module) | ✅ Works - same `indexPackage` call |
+| **Cross-module** | ⚠️ **Edge silently dropped** |
+
+**Root Cause:** The three-pass extraction operates per-module. When Module A is processed, edges targeting Module B have no valid targets yet (B's nodes don't exist). By the time Module B is processed, A's edges are already gone.
+
+**Recommended Fix: Deferred Edge Table**
+
+Insert edges into a "pending" table without FK constraints, then resolve after all modules are indexed:
+
+```sql
+-- During indexing (no FK validation)
+INSERT INTO pending_edges (source, target, type, ...) VALUES (?, ?, ?, ...);
+
+-- After all modules indexed
+INSERT INTO edges
+SELECT * FROM pending_edges p
+WHERE EXISTS (SELECT 1 FROM nodes WHERE id = p.source)
+  AND EXISTS (SELECT 1 FROM nodes WHERE id = p.target);
+```
+
+**Why this approach:**
+- Low memory overhead (no need to hold all nodes in memory)
+- Works with current streaming/per-package architecture
+- Can report which edges couldn't be resolved (useful diagnostics)
 
 **Workaround:** Structure your config so interdependent code is in the same module.
 
