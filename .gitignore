@@ -21,11 +21,11 @@ npm-debug.log*
 # SQLite databases (generated during indexing)
 *.db
 *.db-journal
+*.db-shm
 *.db-wal
 
 # Local config
 *.local.json
-*.db-shm
 
 # TypeScript cache
 *.tsbuildinfo
