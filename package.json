@@ -18,7 +18,7 @@
 		"format": "biome format --write .",
 		"benchmark:setup": "npx tsx test-projects/deep-chain/benchmark/setup.ts",
 		"benchmark": "npx tsx test-projects/deep-chain/benchmark/run.ts",
-		"benchmark:quick": "npx tsx test-projects/deep-chain/benchmark/run.ts --quick"
+		"benchmark:full": "npm run benchmark -- --runs 3"
 	},
 	"keywords": [
 		"typescript",

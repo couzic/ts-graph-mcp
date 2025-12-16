@@ -3,9 +3,9 @@
  * Benchmark runner for deep-chain test project.
  *
  * Usage:
- *   npx tsx benchmark/run.ts              # Run all benchmarks (3 iterations, parallel)
- *   npx tsx benchmark/run.ts --quick      # Single iteration
- *   npx tsx benchmark/run.ts --iterations 5
+ *   npx tsx benchmark/run.ts              # Run benchmarks (1 run, 3 concurrent)
+ *   npx tsx benchmark/run.ts --runs 5     # Multiple runs per prompt/scenario
+ *   npx tsx benchmark/run.ts -r 3         # Short form
  *   npx tsx benchmark/run.ts --prompt P1  # Run specific prompt only
  *   npx tsx benchmark/run.ts --scenario with-mcp  # Run specific scenario only
  *   npx tsx benchmark/run.ts --concurrency 5      # Run with 5 concurrent (default: 3)
@@ -24,15 +24,15 @@ import {
 	type BenchmarkRun,
 	type BenchmarkPrompt,
 	type BenchmarkScenario,
-} from "../../benchmark-lib/index.js";
+} from "../../../benchmark/lib/index.js";
 import { prompts, PROJECT_NAME } from "./prompts.js";
 
-const DEFAULT_ITERATIONS = 3;
+const DEFAULT_RUNS = 1;
 const DEFAULT_CONCURRENCY = 3;
 const DB_PATH = ".ts-graph/graph.db";
 
 interface RunnerOptions {
-	iterations: number;
+	runs: number;
 	promptFilter?: string;
 	scenarioFilter?: string;
 	verbose: boolean;
@@ -53,8 +53,7 @@ function getProjectRoot(): string {
 function parseCliArgs(): RunnerOptions {
 	const { values } = parseArgs({
 		options: {
-			quick: { type: "boolean", default: false },
-			iterations: { type: "string", default: String(DEFAULT_ITERATIONS) },
+			runs: { type: "string", short: "r" },
 			prompt: { type: "string" },
 			scenario: { type: "string" },
 			verbose: { type: "boolean", short: "v", default: false },
@@ -74,10 +73,17 @@ function parseCliArgs(): RunnerOptions {
 		}
 	}
 
+	// Parse runs (default: 1)
+	let runs = DEFAULT_RUNS;
+	if (values.runs !== undefined) {
+		const parsed = Number.parseInt(values.runs, 10);
+		if (!Number.isNaN(parsed) && parsed > 0) {
+			runs = parsed;
+		}
+	}
+
 	return {
-		iterations: values.quick
-			? 1
-			: Number.parseInt(values.iterations ?? String(DEFAULT_ITERATIONS), 10),
+		runs,
 		promptFilter: values.prompt,
 		scenarioFilter: values.scenario,
 		verbose: values.verbose ?? false,
@@ -151,7 +157,7 @@ async function main() {
 	}
 
 	const totalRuns =
-		selectedPrompts.length * selectedScenarios.length * options.iterations;
+		selectedPrompts.length * selectedScenarios.length * options.runs;
 
 	const mode = options.concurrency > 1
 		? `parallel (${options.concurrency} concurrent)`
@@ -162,7 +168,7 @@ async function main() {
 	console.log("=".repeat(60));
 	console.log(`Prompts:    ${selectedPrompts.map((p) => p.id).join(", ")}`);
 	console.log(`Scenarios:  ${selectedScenarios.map((s) => s.id).join(", ")}`);
-	console.log(`Iterations: ${options.iterations}`);
+	console.log(`Runs:       ${options.runs}`);
 	console.log(`Total runs: ${totalRuns}`);
 	console.log(`Mode:       ${mode}`);
 	console.log("=".repeat(60));
@@ -173,7 +179,7 @@ async function main() {
 	let index = 0;
 	for (const prompt of selectedPrompts) {
 		for (const scenario of selectedScenarios) {
-			for (let i = 1; i <= options.iterations; i++) {
+			for (let i = 1; i <= options.runs; i++) {
 				tasks.push({ prompt, scenario, iteration: i, index: ++index });
 			}
 		}
@@ -221,12 +227,12 @@ async function main() {
 		runs,
 		selectedPrompts,
 		selectedScenarios,
-		options.iterations,
+		options.runs,
 		PROJECT_NAME,
 	);
 
-	// Save results
-	const resultsDir = join(import.meta.dirname, "results");
+	// Save results to benchmark/results/deep-chain/
+	const resultsDir = join(import.meta.dirname, "../../../benchmark/results", PROJECT_NAME);
 	const jsonPath = await saveResults(resultsDir, report);
 	console.log(`\nResults saved to: ${jsonPath}`);
 

@@ -29,3 +29,6 @@ npm-debug.log*
 
 # TypeScript cache
 *.tsbuildinfo
+
+# Benchmark results (generated)
+benchmark/results/

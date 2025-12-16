@@ -65,12 +65,13 @@ beforeAll(async () => {
 ```bash
 # From project root
 npm run benchmark:setup    # Pre-index deep-chain (run once)
-npm run benchmark:quick    # Single iteration, 3 concurrent (default)
-npm run benchmark          # Full run (3 iterations, parallel)
+npm run benchmark          # Default: 1 run, 3 concurrent
+npm run benchmark:full     # 3 runs per prompt/scenario
 
-# Adjust concurrency
-npm run benchmark:quick -- --concurrency 5  # 5 concurrent
-npm run benchmark:quick -- --sequential     # One at a time
+# Adjust runs and concurrency
+npm run benchmark -- --runs 5           # 5 runs per prompt/scenario
+npm run benchmark -- --concurrency 5    # 5 concurrent
+npm run benchmark -- --sequential       # One at a time
 ```
 
 ### Claude CLI Configuration
@@ -101,8 +102,20 @@ export CLAUDE_PATH=/home/user/.claude/local/claude
 
 ### Benchmark Infrastructure
 
-Each benchmarkable test project needs:
+**Shared library** at project root (`benchmark/lib/`):
+```
+benchmark/
+├── lib/
+│   ├── index.ts       # Re-exports
+│   ├── types.ts       # Shared interfaces
+│   ├── scenarios.ts   # WITH/WITHOUT MCP configs
+│   ├── report.ts      # Report generator
+│   └── runner.ts      # Claude CLI subprocess handling
+└── results/           # All benchmark results
+    └── <project>/     # Results organized by project name
+```
 
+**Each test project** needs:
 ```
 test-project/
 ├── .mcp.json              # Points to ts-graph-mcp server
@@ -111,12 +124,8 @@ test-project/
 ├── src/
 └── benchmark/
     ├── setup.ts           # Pre-indexes the project
-    ├── run.ts             # Main benchmark runner
-    ├── prompts.ts         # Project-specific prompts
-    ├── scenarios.ts       # WITH/WITHOUT MCP configs
-    ├── report.ts          # Report generator
-    ├── types.ts           # TypeScript interfaces
-    └── results/           # Output JSON files
+    ├── run.ts             # Main runner (imports from root benchmark/)
+    └── prompts.ts         # Project-specific prompts
 ```
 
 ### Current Benchmarks
@@ -149,7 +158,7 @@ test-project/
    }
    ```
 
-2. **Copy benchmark template** from `deep-chain/benchmark/`
+2. **Copy benchmark files** from `deep-chain/benchmark/` (setup.ts, run.ts, prompts.ts)
 
 3. **Customize `prompts.ts`** with project-specific questions
 

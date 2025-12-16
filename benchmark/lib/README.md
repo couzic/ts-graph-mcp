@@ -2,9 +2,26 @@
 
 Shared utilities for running benchmarks across ts-graph-mcp test projects.
 
+## Quick Start
+
+```bash
+# From project root
+npm run benchmark:setup    # Pre-index test project (run once)
+npm run benchmark          # Default: 1 run, 3 concurrent
+npm run benchmark:full     # 3 runs per prompt/scenario
+
+# CLI options
+npm run benchmark -- --runs 5           # 5 runs per prompt/scenario
+npm run benchmark -- --concurrency 5    # 5 concurrent
+npm run benchmark -- --sequential       # One at a time
+npm run benchmark -- --prompt P1        # Run specific prompt
+npm run benchmark -- --scenario with-mcp
+```
+
 ## Usage
 
 ```typescript
+// From test-projects/*/benchmark/run.ts:
 import {
   scenarios,
   generateReport,
@@ -12,7 +29,7 @@ import {
   runBenchmarkIteration,
   checkDatabase,
   saveResults,
-} from "../benchmark-lib/index.js";
+} from "../../../benchmark/lib/index.js";
 ```
 
 ## Modules

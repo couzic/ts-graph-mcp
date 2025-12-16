@@ -7,7 +7,7 @@
  * - P3: get_impact (reverse traversal / impact analysis)
  */
 
-import type { BenchmarkPrompt } from "../../benchmark-lib/types.js";
+import type { BenchmarkPrompt } from "../../../benchmark/lib/types.js";
 
 export const PROJECT_NAME = "deep-chain";
 
