@@ -2,6 +2,25 @@
 
 > **The Vision:** ts-graph-mcp becomes the "LSP for AI agents" - a standard way for AI coding assistants to understand codebases semantically rather than just textually.
 
+## Critical: Must Fix
+
+### Cross-Module Edge Resolution
+**Impact: Critical | Effort: Medium**
+
+**This is blocking monorepo support.** Edges that cross module boundaries are silently dropped during ingestion. Without this fix, we cannot answer questions like:
+- "Which frontend components use this backend type?"
+- "What's the impact of changing this shared utility across modules?"
+- "How does data flow from UI to database?"
+
+**Fix strategy:** Deferred Edge Table (detailed in ISSUES.md #5)
+- Insert edges into pending table without FK constraints during indexing
+- Resolve valid edges after all modules are indexed
+- Report unresolved edges as diagnostics
+
+**Why this matters:** Cross-module analysis is a core value proposition. Monorepos are where graph-based analysis shines over text search.
+
+---
+
 ## Quick Wins: MCP Tool Quality
 
 These improvements have the highest value-to-effort ratio. They improve AI agent experience with minimal code changes.

@@ -4,7 +4,49 @@ Last updated: 2025-12-15
 
 ## Must Fix Before Release
 
-*No critical issues - all resolved!*
+### 5. Cross-Module Edge Resolution
+
+**Status:** High priority - blocking monorepo support
+
+**Problem:** Edges that cross module boundaries are silently dropped during ingestion. This breaks cross-module analysis, which is a core value proposition for monorepo users.
+
+**Impact:** Without this fix, we cannot answer:
+- "Which frontend components use this backend type?"
+- "What's the impact of changing this shared utility across modules?"
+- "How does data flow from UI to database?"
+
+**Scope:**
+
+| Scenario | Status |
+|----------|--------|
+| Cross-file (same package) | ✅ Works - three-pass within package |
+| External dependencies (`node_modules`) | ✅ Filtered out intentionally |
+| Cross-package (same module) | ✅ Works - same `indexPackage` call |
+| **Cross-module** | ❌ **Edge silently dropped - MUST FIX** |
+
+**Root Cause:** The three-pass extraction operates per-module. When Module A is processed, edges targeting Module B have no valid targets yet (B's nodes don't exist). By the time Module B is processed, A's edges are already gone.
+
+**Fix Strategy: Deferred Edge Table**
+
+Insert edges into a "pending" table without FK constraints, then resolve after all modules are indexed:
+
+```sql
+-- During indexing (no FK validation)
+INSERT INTO pending_edges (source, target, type, ...) VALUES (?, ?, ?, ...);
+
+-- After all modules indexed
+INSERT INTO edges
+SELECT * FROM pending_edges p
+WHERE EXISTS (SELECT 1 FROM nodes WHERE id = p.source)
+  AND EXISTS (SELECT 1 FROM nodes WHERE id = p.target);
+```
+
+**Why this approach:**
+- Low memory overhead (no need to hold all nodes in memory)
+- Works with current streaming/per-package architecture
+- Can report which edges couldn't be resolved (useful diagnostics)
+
+**Tracking:** Also documented in ROADMAP.md under "Critical: Must Fix"
 
 ---
 
@@ -42,46 +84,7 @@ Last updated: 2025-12-15
 
 ## Architectural Limitations
 
-### 5. Cross-Module Edge Resolution
-
-**Status:** Documented, not yet fixed
-
-**Problem:** Edges that cross module boundaries are silently dropped during ingestion.
-
-**Scope of Current Solution:**
-
-| Scenario | Status |
-|----------|--------|
-| Cross-file (same package) | ✅ Works - three-pass within package |
-| External dependencies (`node_modules`) | ✅ Filtered out intentionally |
-| Cross-package (same module) | ✅ Works - same `indexPackage` call |
-| **Cross-module** | ⚠️ **Edge silently dropped** |
-
-**Root Cause:** The three-pass extraction operates per-module. When Module A is processed, edges targeting Module B have no valid targets yet (B's nodes don't exist). By the time Module B is processed, A's edges are already gone.
-
-**Recommended Fix: Deferred Edge Table**
-
-Insert edges into a "pending" table without FK constraints, then resolve after all modules are indexed:
-
-```sql
--- During indexing (no FK validation)
-INSERT INTO pending_edges (source, target, type, ...) VALUES (?, ?, ?, ...);
-
--- After all modules indexed
-INSERT INTO edges
-SELECT * FROM pending_edges p
-WHERE EXISTS (SELECT 1 FROM nodes WHERE id = p.source)
-  AND EXISTS (SELECT 1 FROM nodes WHERE id = p.target);
-```
-
-**Why this approach:**
-- Low memory overhead (no need to hold all nodes in memory)
-- Works with current streaming/per-package architecture
-- Can report which edges couldn't be resolved (useful diagnostics)
-
-**Workaround:** Structure your config so interdependent code is in the same module.
-
----
+*(Cross-module edge resolution moved to "Must Fix Before Release" - see Issue #5 above)*
 
 ### ~~11. Cross-File USES_TYPE Edges Not Extracted~~ ✅ FIXED
 
@@ -234,6 +237,31 @@ See [docs/toon-optimization/](./docs/toon-optimization/) for historical analysis
 ---
 
 ## Nice to Have
+
+### 13. `find_path` Should Return Multiple Paths
+
+**Status:** Enhancement - not blocking, current behavior is valid for many use cases
+
+**Problem:** Currently `find_path` returns only the shortest path between two nodes. In real codebases, there can be multiple paths connecting two nodes (e.g., `Controller` reaches `Database` through both `Service` and `Cache`).
+
+**Why it matters:**
+- Understanding all connection routes is valuable for impact analysis
+- "How many ways can data flow from A to B?" is a valid question
+- Single shortest path may miss important indirect dependencies
+
+**Potential solutions:**
+1. Add a `limit` parameter to return top N shortest paths
+2. Create a new `find_paths` tool alongside existing `find_path`
+3. Add an `all: boolean` parameter to get all paths up to maxDepth
+
+**Tradeoffs:**
+- Multiple paths can be expensive to compute (factorial complexity)
+- Need to decide: K-shortest-paths algorithm or all paths with maxDepth limit?
+- Output format needs to distinguish between paths clearly
+
+**Priority:** Enhancement - nice to have but not critical
+
+---
 
 ### 7. Missing JSDoc on Some Exports
 

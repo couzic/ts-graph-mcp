@@ -483,11 +483,11 @@ npm run check  # Runs: test → build → lint:fix
 
 ### 1. Cross-Module Edge Resolution
 
-**Status**: Documented architectural limitation
+**Status**: Known issue with planned fix (see ISSUES.md #5, ROADMAP.md)
 
-Edges that cross module boundaries are silently dropped during ingestion. This occurs because two-pass indexing operates on individual modules, and cross-module references don't have corresponding nodes in the current extraction context.
+Edges that cross module boundaries are currently dropped during ingestion. This is a **high-priority bug** blocking monorepo support, not an accepted limitation.
 
-**Workaround**: Structure your config so interdependent code is in the same module.
+**Fix strategy**: Deferred Edge Table - collect edges during indexing, resolve after all modules are indexed. See ISSUES.md for implementation details.
 
 ### 2. Output Format Optimization
 

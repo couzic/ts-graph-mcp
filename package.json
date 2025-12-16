@@ -15,7 +15,10 @@
 		"dev": "tsc --watch",
 		"lint": "biome check .",
 		"lint:fix": "biome check --write .",
-		"format": "biome format --write ."
+		"format": "biome format --write .",
+		"benchmark:setup": "npx tsx test-projects/deep-chain/benchmark/setup.ts",
+		"benchmark": "npx tsx test-projects/deep-chain/benchmark/run.ts",
+		"benchmark:quick": "npx tsx test-projects/deep-chain/benchmark/run.ts --quick"
 	},
 	"keywords": [
 		"typescript",
