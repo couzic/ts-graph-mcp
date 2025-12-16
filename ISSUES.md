@@ -169,6 +169,8 @@ WHERE EXISTS (SELECT 1 FROM nodes WHERE id = p.source)
 
 ## Technical Debt
 
+> **Per-tool improvement plans:** Each MCP tool has a `FUTURE_IMPROVEMENTS.md` file in `src/tools/*/` documenting priority improvements, test gaps, and implementation roadmaps.
+
 ### 10. Format Test Quality Gaps
 
 **Status:** Documented 2025-12-13, non-blocking

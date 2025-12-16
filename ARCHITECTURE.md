@@ -517,9 +517,6 @@ The `DbWriter` interface exists for writes, but query logic is embedded in each 
 
 ## Further Reading
 
-- **[ISSUES.md](../ISSUES.md)** - Known bugs and technical debt
-- **[docs/configuration.md](./configuration.md)** - Configuration file reference
-- **[docs/FEATURES.md](./FEATURES.md)** - Feature documentation
-- **[docs/ROADMAP.md](./ROADMAP.md)** - Development roadmap
-- **[docs/api/](./api/)** - API documentation
-- **[docs/toon-optimization/](./toon-optimization/)** - TOON output optimization analysis
+- **[ISSUES.md](ISSUES.md)** - Known bugs and technical debt
+- **[docs/configuration.md](docs/configuration.md)** - Configuration file reference
+- **[ROADMAP.md](ROADMAP.md)** - Development roadmap

@@ -100,7 +100,7 @@ The MCP tool definitions (in `src/tools/*/handler.ts`) have quality gaps that re
 - `src/tools/get-neighbors/handler.ts` - unclear direction param
 - All 7 tools - missing output format hints
 
-> See [docs/tool-improvements/](./tool-improvements/) for detailed improvement plans per tool.
+> See `src/tools/*/FUTURE_IMPROVEMENTS.md` for detailed improvement plans per tool.
 
 ---
 

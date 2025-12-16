@@ -1,10 +1,10 @@
 # Project Guidelines
 
-@docs/ARCHITECTURE.md
+@ARCHITECTURE.md
 
 ## Documentation
 
-**Update `docs/ARCHITECTURE.md` when making significant changes:**
+**Update `ARCHITECTURE.md` when making significant changes:**
 - Adding/removing modules or major components
 - Changing data model (node types, edge types)
 - Modifying MCP tools or their parameters

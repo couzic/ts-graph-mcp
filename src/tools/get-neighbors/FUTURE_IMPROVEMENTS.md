@@ -181,8 +181,38 @@ Edges: 23 (12 CALLS, 8 USES_TYPE, 3 EXTENDS)
    - Mermaid diagram correctness
 3. **Missing integration tests** for combined parameters
 
+## Output Format Optimizations (from historical analysis)
+
+These optimizations were identified in historical TOON format analysis. Some have been implemented, some remain:
+
+### Already Implemented ✅
+
+- **Center node deduplication**: Center node is excluded from neighbor arrays (line 318-319 in format.ts)
+- **Smart callCount handling**: Only included for CALLS edges when > 1 (lines 195-201 in format.ts)
+
+### Not Yet Implemented ❌
+
+1. **Remove derivable counts**:
+   - `nodeCount` and `edgeCount` can be derived by counting elements in the response
+   - Estimated savings: ~25 characters per response
+   - Would align with other tools that don't include these redundant counts
+
+2. **Simplify file node representation**:
+   - Current: Full node details with extension, id, name, startLine, endLine, exported
+   - Proposed: Just file path (extension derivable, id=filePath for files, startLine always 1)
+   - Estimated savings: ~100-150 characters per file node
+
+3. **Reduce field redundancy**:
+   - `filePath` derivable from `id` (part before colon)
+   - `name` derivable from `id` (part after colon)
+   - `module`/`package` repeated for same-file nodes (could hoist to file-level header)
+   - Estimated savings: ~40% token reduction for multi-node same-file responses
+
+**Note**: These optimizations target token efficiency but should be balanced against readability and ease of parsing by LLMs.
+
 ## Implementation Roadmap
 
 1. **Phase 1** (P1-P2): Comprehensive input validation
 2. **Phase 2** (P3-P4): Edge type filtering and result size limits
 3. **Phase 3** (P5-P6): Mermaid enhancements and statistics
+4. **Phase 4** (Output format): Implement remaining token optimizations from historical analysis

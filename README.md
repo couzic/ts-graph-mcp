@@ -268,7 +268,7 @@ src/
 
 ### Architecture
 
-The project uses a vertical slice architecture where each MCP tool owns its complete stack (handler, query logic, formatting). See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed technical documentation.
+The project uses a vertical slice architecture where each MCP tool owns its complete stack (handler, query logic, formatting). See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed technical documentation.
 
 ### Code Style
 
