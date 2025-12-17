@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true
+  },
+  "files": [],
+  "references": [
+    { "path": "./modules/shared/packages/types" },
+    { "path": "./modules/shared/packages/utils" },
+    { "path": "./modules/frontend/packages/ui" },
+    { "path": "./modules/frontend/packages/state" },
+    { "path": "./modules/backend/packages/services" },
+    { "path": "./modules/backend/packages/api" }
+  ]
+}

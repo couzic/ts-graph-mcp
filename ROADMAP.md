@@ -96,14 +96,31 @@ ts-graph export --format neo4j
 ts-graph export --format mermaid > architecture.md
 ```
 
-### Export to Graph Databases
-**Impact: High | Effort: Low**
+### Database Backend Abstraction
+**Impact: High | Effort: Medium**
 
-Visual exploration in dedicated graph tools.
+Enable swapping SQLite for graph databases like Neo4j or Memgraph.
 
-- **Neo4j** - Industry standard, beautiful visualizations
-- **Memgraph** - Real-time, great for large codebases
-- Export as Cypher statements or CSV
+**Current state:**
+- SQLite is the only implementation
+- `DbWriter` interface exists for writes
+- Query logic is embedded in each tool's `query.ts` using SQLite-specific recursive CTEs
+
+**Target state:**
+- Abstract query logic into a `DbReader` interface
+- Implement for SQLite (current) and graph databases
+- Graph databases use native traversal instead of recursive CTEs
+
+**Why graph databases?**
+- **Neo4j** - Industry standard, mature ecosystem, great tooling
+- **Memgraph** - Optimized for real-time queries, excellent for large codebases
+- Native graph traversal is more efficient for deep queries (no CTE recursion limits)
+
+**Migration path:**
+1. Define `DbReader` interface matching current query patterns
+2. Extract SQLite queries into `SqliteReader` implementation
+3. Add Neo4j/Memgraph implementation
+4. Configuration switch for storage backend type
 
 ### Simplified Single-Module Configuration
 **Impact: High | Effort: Low**

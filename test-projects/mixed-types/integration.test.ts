@@ -13,6 +13,7 @@ import { queryFileNodes } from "../../src/tools/get-file-symbols/query.js";
 import { queryImpactedNodes } from "../../src/tools/get-impact/query.js";
 import { queryNeighbors } from "../../src/tools/get-neighbors/query.js";
 import { querySearchNodes } from "../../src/tools/search-nodes/query.js";
+import { queryEdges } from "../../src/db/queryEdges.js";
 
 /**
  * Integration tests for mixed-types test project.
@@ -302,20 +303,12 @@ describe("mixed-types integration", () => {
 
 	describe("Cross-file USES_TYPE edges (Issue #11)", () => {
 		it("creates USES_TYPE edge from addUser method to User interface across files", () => {
-			// Query edges directly from database
-			const edge = db
-				.prepare(
-					`
-					SELECT source, target, type, context
-					FROM edges
-					WHERE source = ? AND target = ? AND type = ?
-				`,
-				)
-				.get(
-					"src/models.ts:UserService.addUser",
-					"src/types.ts:User",
-					"USES_TYPE",
-				) as { source: string; target: string; type: string; context: string };
+			const edges = queryEdges(db, {
+				sourceId: "src/models.ts:UserService.addUser",
+				targetId: "src/types.ts:User",
+				type: "USES_TYPE",
+			});
+			const edge = edges[0];
 
 			expect(edge).toBeDefined();
 			expect(edge).toMatchObject({
@@ -327,19 +320,12 @@ describe("mixed-types integration", () => {
 		});
 
 		it("creates USES_TYPE edge from users property to User interface across files", () => {
-			const edge = db
-				.prepare(
-					`
-					SELECT source, target, type, context
-					FROM edges
-					WHERE source = ? AND target = ? AND type = ?
-				`,
-				)
-				.get(
-					"src/models.ts:UserService.users",
-					"src/types.ts:User",
-					"USES_TYPE",
-				) as { source: string; target: string; type: string; context: string };
+			const edges = queryEdges(db, {
+				sourceId: "src/models.ts:UserService.users",
+				targetId: "src/types.ts:User",
+				type: "USES_TYPE",
+			});
+			const edge = edges[0];
 
 			expect(edge).toBeDefined();
 			expect(edge).toMatchObject({

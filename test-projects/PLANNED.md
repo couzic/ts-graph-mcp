@@ -14,11 +14,10 @@ This document tracks test projects to be created for integration testing and ben
 
 | Project | Structure | What It Tests | Status |
 |---------|-----------|---------------|--------|
-| ~~`call-chain`~~ | L1: Single file | Same-file CALLS chain | **Retired** - replaced by `deep-chain` |
-| ~~`cross-file-calls`~~ | L1: 3 files | Cross-file CALLS, call count | **Retired** - redundant with unit tests in `extractCallEdges.test.ts` |
+| `deep-chain` | L1: 10 files | Deep cross-file call chain (10 hops) | **Active** - 20 tests |
 | `mixed-types` | L1: 3 files | All 8 node types | **Merge** into `type-system` when implemented |
-| `deep-chain` | L1: 10 files | Deep cross-file call chain (10 hops) | **Active** - primary benchmark for traversal |
-| `web-app` | L2: 3 modules, 1 pkg each | Cross-module edges, Issue #5 regression | **Active** - 15 tests, all passing |
+| `web-app` | L2: 3 modules, 1 pkg each | Cross-module edges, Issue #5 regression | **Active** - 15 tests |
+| `monorepo` | L3: 3 modules, 2 pkg each | Cross-package + cross-module edges | **Active** - 30 tests |
 
 ### Migration Notes
 
@@ -38,35 +37,7 @@ This document tracks test projects to be created for integration testing and ben
 
 ## Planned Projects
 
-### 1. `deep-chain` (Priority: High)
-
-**Purpose:** Stress-test deep transitive traversal across files.
-
-**Structure:** L1 - Single package, 10 files
-```
-src/
-├── step01.ts  → exports entry(), calls step02()
-├── step02.ts  → exports step02(), calls step03()
-├── ...
-└── step10.ts  → exports step10(), returns result
-```
-
-**Tests:**
-- `get_callees(entry, maxDepth: 10)` - finds all 10 functions
-- `get_callers(step10, maxDepth: 10)` - finds entry through 9 intermediates
-- `find_path(entry, step10)` - returns 10-node path
-- Recursive CTE performance at depth
-
-**Benchmark Prompts:**
-- "What functions does `entry` call transitively?"
-- "Trace the call path from `entry` to `step10`"
-- "What's the deepest function in the call chain starting from `entry`?"
-
-**Why MCP wins:** Without MCP, Claude must read 10 files sequentially. With `get_callees` → instant.
-
----
-
-### 2. `shared-utils` (Priority: High)
+### 1. `shared-utils` (Priority: High)
 
 **Purpose:** Test wide fan-in pattern (many callers to few utilities).
 
@@ -101,7 +72,7 @@ src/
 
 ---
 
-### 3. `type-system` (Priority: High)
+### 2. `type-system` (Priority: High)
 
 **Purpose:** Test type-related edges (EXTENDS, IMPLEMENTS, USES_TYPE).
 
@@ -135,7 +106,7 @@ src/
 
 ---
 
-### 4. `layered-api` (Priority: Medium)
+### 3. `layered-api` (Priority: Medium)
 
 **Purpose:** Test realistic layered architecture pattern.
 
@@ -172,7 +143,7 @@ src/
 
 ---
 
-### 5. `property-access` (Priority: Medium)
+### 4. `property-access` (Priority: Medium)
 
 **Purpose:** Test READS_PROPERTY and WRITES_PROPERTY edges.
 
@@ -208,7 +179,7 @@ src/
 
 ---
 
-### 6. `event-system` (Priority: Medium)
+### 5. `event-system` (Priority: Medium)
 
 **Purpose:** Test hub patterns and `get_neighbors` tool.
 
@@ -243,7 +214,7 @@ src/
 
 ---
 
-### 7. `multi-package` (Priority: High)
+### 6. `multi-package` (Priority: High)
 
 **Purpose:** Test cross-package relationships within a module.
 
@@ -294,143 +265,52 @@ defineConfig({
 
 ---
 
-### ~~8. `web-app`~~ ✅ IMPLEMENTED (renamed from `monorepo`)
-
-**Status:** Implemented 2025-12-17, Issue #5 fixed
-
-**Purpose:** Test cross-module edges. Now serves as regression test for Issue #5.
-
-**Structure:** L2 - Multi-module (3 modules, 1 package each)
-
-**Tests (15 passing):**
-- Cross-module CALLS edges (backend → shared)
-- Cross-module USES_TYPE edges (frontend → shared, backend → shared)
-- Cross-module IMPORTS edges
-- `get_impact` analysis across modules
-- Module filtering with `search_nodes`
-
-See `test-projects/web-app/` for implementation.
-
-Note: This is a simplified multi-module structure. For a true monorepo test with
-multiple packages per module, see the `monorepo` project below.
-
----
-
-### 9. `monorepo` (Priority: Medium)
-
-**Purpose:** Test true monorepo structure with multiple packages per module.
-
-**Structure:** L3 - Multi-module monorepo (3 modules, 2+ packages each)
-```
-modules/
-├── shared/
-│   └── packages/
-│       ├── types/         → core types (User, Config)
-│       └── utils/         → shared utilities (formatDate, validate)
-├── frontend/
-│   └── packages/
-│       ├── ui/            → UI components
-│       └── state/         → state management, uses types
-└── backend/
-    └── packages/
-        ├── api/           → API handlers
-        └── services/      → business logic, uses types + utils
-```
-
-**Config:**
-```typescript
-defineConfig({
-  modules: [
-    {
-      name: "shared",
-      packages: [
-        { name: "types", tsconfig: "./modules/shared/packages/types/tsconfig.json" },
-        { name: "utils", tsconfig: "./modules/shared/packages/utils/tsconfig.json" }
-      ]
-    },
-    {
-      name: "frontend",
-      packages: [
-        { name: "ui", tsconfig: "./modules/frontend/packages/ui/tsconfig.json" },
-        { name: "state", tsconfig: "./modules/frontend/packages/state/tsconfig.json" }
-      ]
-    },
-    {
-      name: "backend",
-      packages: [
-        { name: "api", tsconfig: "./modules/backend/packages/api/tsconfig.json" },
-        { name: "services", tsconfig: "./modules/backend/packages/services/tsconfig.json" }
-      ]
-    }
-  ]
-})
-```
-
-**Tests:**
-- Cross-package edges within same module (e.g., backend/api → backend/services)
-- Cross-module edges between packages (e.g., backend/services → shared/utils)
-- Package filtering: `search_nodes({ pattern: "*", package: "utils" })`
-- Module + package filtering combined
-- `get_impact` at package granularity
-
-**Benchmark Prompts:**
-- "What packages in frontend use the shared utils?"
-- "If I change the types package, what other packages are affected?"
-- "Show dependencies between packages across modules"
-
-**Why this matters:** True monorepos have multiple packages per module. This tests the full L3 structure.
-
----
-
 ## Coverage Matrix
 
 ### By MCP Tool
 
-| Tool | Covered By |
-|------|------------|
-| `search_nodes` | shared-utils, multi-package, web-app ✅, monorepo |
-| `get_callers` | deep-chain, shared-utils |
-| `get_callees` | deep-chain, layered-api |
-| `get_impact` | shared-utils, type-system, property-access, multi-package, web-app ✅, monorepo |
-| `find_path` | deep-chain, layered-api |
-| `get_neighbors` | event-system, layered-api |
-| `get_file_symbols` | All (implicit) |
+| Tool | Existing | Planned |
+|------|----------|---------|
+| `search_nodes` | deep-chain, web-app, monorepo | shared-utils, multi-package |
+| `get_callers` | deep-chain, monorepo | shared-utils |
+| `get_callees` | deep-chain | layered-api |
+| `get_impact` | web-app, monorepo | shared-utils, type-system, property-access, multi-package |
+| `find_path` | deep-chain | layered-api |
+| `get_neighbors` | monorepo | event-system, layered-api |
+| `get_file_symbols` | All (implicit) | - |
 
 ### By Edge Type
 
-| Edge | Covered By |
-|------|------------|
-| CALLS | deep-chain, shared-utils, layered-api, event-system, web-app ✅ |
-| IMPORTS | multi-package, web-app ✅, monorepo |
-| CONTAINS | All (implicit) |
-| USES_TYPE | type-system, multi-package, web-app ✅, monorepo |
-| EXTENDS | type-system |
-| IMPLEMENTS | type-system |
-| READS_PROPERTY | property-access |
-| WRITES_PROPERTY | property-access |
+| Edge | Existing | Planned |
+|------|----------|---------|
+| CALLS | deep-chain, web-app, monorepo | shared-utils, layered-api, event-system |
+| IMPORTS | web-app, monorepo | multi-package |
+| CONTAINS | All (implicit) | - |
+| USES_TYPE | web-app, monorepo | type-system, multi-package |
+| EXTENDS | - | type-system |
+| IMPLEMENTS | - | type-system |
+| READS_PROPERTY | - | property-access |
+| WRITES_PROPERTY | - | property-access |
 
 ### By Project Structure
 
-| Level | Projects |
-|-------|----------|
-| L1: Single package | deep-chain, shared-utils, type-system, layered-api, property-access, event-system |
-| L2: Multi-package | multi-package |
-| L2: Multi-module (1 pkg/module) | ~~web-app~~ ✅ |
-| L3: Multi-module (multi-pkg) | monorepo |
+| Level | Existing | Planned |
+|-------|----------|---------|
+| L1: Single package | deep-chain, mixed-types | shared-utils, type-system, layered-api, property-access, event-system |
+| L2: Multi-package | - | multi-package |
+| L2: Multi-module (1 pkg/module) | web-app | - |
+| L3: Multi-module (multi-pkg) | monorepo | - |
 
 ---
 
 ## Implementation Priority
 
-1. ~~**Critical:** `web-app` - Cross-module edges, Issue #5 regression~~ ✅ DONE
-2. ~~**High:** `deep-chain` - Simple to build, high benchmark value~~ ✅ DONE
-3. **High:** `shared-utils` - Tests `get_impact`, common real-world pattern
-4. **High:** `type-system` - Tests missing edge types (EXTENDS, IMPLEMENTS)
-5. **High:** `multi-package` - L2 multi-package within single module
-6. **Medium:** `monorepo` - True L3 structure (multi-pkg per module)
-7. **Medium:** `layered-api` - Realistic architecture pattern
-8. **Medium:** `property-access` - Tests READS/WRITES_PROPERTY edges
-9. **Medium:** `event-system` - Tests `get_neighbors` hub pattern
+1. **High:** `shared-utils` - Tests `get_impact`, common real-world pattern
+2. **High:** `type-system` - Tests missing edge types (EXTENDS, IMPLEMENTS)
+3. **High:** `multi-package` - L2 multi-package within single module
+4. **Medium:** `layered-api` - Realistic architecture pattern
+5. **Medium:** `property-access` - Tests READS/WRITES_PROPERTY edges
+6. **Medium:** `event-system` - Tests `get_neighbors` hub pattern
 
 ---
 

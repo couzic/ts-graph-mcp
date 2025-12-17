@@ -16,6 +16,7 @@ import { queryFileNodes } from "../../src/tools/get-file-symbols/query.js";
 import { queryImpactedNodes } from "../../src/tools/get-impact/query.js";
 import { queryNeighbors } from "../../src/tools/get-neighbors/query.js";
 import { querySearchNodes } from "../../src/tools/search-nodes/query.js";
+import { queryEdges } from "../../src/db/queryEdges.js";
 
 /**
  * Integration tests for deep-chain test project.
@@ -289,16 +290,7 @@ describe("deep-chain integration", () => {
 
 	describe("cross-file edge verification", () => {
 		it("creates CALLS edges across all 10 files", () => {
-			const edges = db
-				.prepare(
-					`
-				SELECT source, target, type, call_count
-				FROM edges
-				WHERE type = 'CALLS'
-				ORDER BY source
-			`,
-				)
-				.all();
+			const edges = queryEdges(db, { type: "CALLS" });
 
 			expect(edges).toHaveLength(9);
 
@@ -316,8 +308,7 @@ describe("deep-chain integration", () => {
 
 			for (const [source, target] of expectedEdges) {
 				const edge = edges.find(
-					(e: { source: string; target: string }) =>
-						e.source === source && e.target === target,
+					(e) => e.source === source && e.target === target,
 				);
 				expect(edge).toBeDefined();
 			}

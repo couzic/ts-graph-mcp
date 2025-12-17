@@ -13,6 +13,14 @@ Persistence layer for the TypeScript code graph. Provides read/write interfaces 
 - `Path` - Shortest path result between two nodes
 - `SearchFilters`, `TraversalOptions`, `NeighborOptions` - Query configuration types
 
+### Query Functions
+
+#### `queryEdges()` (`queryEdges.ts`)
+Database-agnostic edge query function for use in integration tests:
+- `queryEdges(db, filters?)` - Query edges with optional filters (type, sourcePattern, targetPattern, sourceId, targetId, context)
+- Uses glob patterns (`*foo*`) not SQL LIKE patterns
+- Returns `Edge[]` with camelCase properties (callCount, isTypeOnly, etc.)
+
 ### Interfaces
 
 #### `DbWriter` (`DbWriter.ts`)

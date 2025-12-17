@@ -55,3 +55,21 @@ Each document has a specific purpose — keep them focused:
 ## Verification
 
 **Always run `npm run check` to verify changes are correct.** This runs tests, build, and lint in sequence.
+
+## Database Abstraction
+
+Integration tests MUST be database-agnostic. When we switch to Neo4j/Memgraph, all tests must still pass.
+
+**Rules:**
+- ❌ NEVER use `db.prepare()`, raw SQL, or SQLite-specific APIs in tests
+- ✅ Use query functions: `querySearchNodes()`, `queryCallers()`, `queryCallees()`, `queryEdges()`, etc.
+- ✅ Use `DbWriter` interface for writes: `writer.addNodes()`, `writer.addEdges()`
+
+**Query functions** (import from `src/`):
+- `querySearchNodes(db, pattern, filters?)` - Search nodes by name pattern
+- `queryCallers(db, nodeId, options?)` - Find callers of a function
+- `queryCallees(db, nodeId, maxDepth?)` - Find callees of a function
+- `queryEdges(db, filters?)` - Query edges with filters (type, sourcePattern, targetPattern, etc.)
+- `queryImpactedNodes(db, nodeId, options?)` - Impact analysis
+- `queryPath(db, sourceId, targetId)` - Find shortest path
+- `queryNeighbors(db, nodeId, distance, direction?)` - Get neighborhood subgraph

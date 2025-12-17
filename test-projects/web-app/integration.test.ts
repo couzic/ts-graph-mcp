@@ -1,15 +1,16 @@
 import type Database from "better-sqlite3";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import type { ProjectConfig } from "../../dist/config/ConfigSchema.js";
 import {
 	closeDatabase,
 	openDatabase,
-} from "../../dist/db/sqlite/SqliteConnection.js";
-import { initializeSchema } from "../../dist/db/sqlite/SqliteSchema.js";
-import { createSqliteWriter } from "../../dist/db/sqlite/SqliteWriter.js";
-import { indexProject } from "../../dist/ingestion/Ingestion.js";
-import { queryImpactedNodes } from "../../dist/tools/get-impact/query.js";
-import { querySearchNodes } from "../../dist/tools/search-nodes/query.js";
+} from "../../src/db/sqlite/SqliteConnection.js";
+import { initializeSchema } from "../../src/db/sqlite/SqliteSchema.js";
+import { createSqliteWriter } from "../../src/db/sqlite/SqliteWriter.js";
+import { indexProject } from "../../src/ingestion/Ingestion.js";
+import { queryEdges } from "../../src/db/queryEdges.js";
+import { queryImpactedNodes } from "../../src/tools/get-impact/query.js";
+import { querySearchNodes } from "../../src/tools/search-nodes/query.js";
+import config from "./ts-graph-mcp.config.js";
 
 /**
  * Integration tests for web-app test project.
@@ -36,27 +37,8 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 		db = openDatabase({ path: ":memory:" });
 		initializeSchema(db);
 
-		const projectRoot = import.meta.dirname;
-		const config: ProjectConfig = {
-			modules: [
-				{
-					name: "shared",
-					packages: [{ name: "shared", tsconfig: "./shared/tsconfig.json" }],
-				},
-				{
-					name: "frontend",
-					packages: [
-						{ name: "frontend", tsconfig: "./frontend/tsconfig.json" },
-					],
-				},
-				{
-					name: "backend",
-					packages: [{ name: "backend", tsconfig: "./backend/tsconfig.json" }],
-				},
-			],
-		};
 		const writer = createSqliteWriter(db);
-		await indexProject(config, writer, { projectRoot });
+		await indexProject(config, writer, { projectRoot: import.meta.dirname });
 	});
 
 	afterAll(() => {
@@ -108,22 +90,11 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 		 */
 
 		it("creates USES_TYPE edge from frontend formatUserName to shared User", () => {
-			const edges = db
-				.prepare(
-					`
-					SELECT source, target, type, context
-					FROM edges
-					WHERE type = 'USES_TYPE'
-					  AND source LIKE '%formatUserName%'
-					  AND target LIKE '%User'
-				`,
-				)
-				.all() as Array<{
-				source: string;
-				target: string;
-				type: string;
-				context: string | null;
-			}>;
+			const edges = queryEdges(db, {
+				type: "USES_TYPE",
+				sourcePattern: "*formatUserName*",
+				targetPattern: "*User",
+			});
 
 			expect(edges.length).toBeGreaterThan(0);
 			expect(edges[0]?.target).toContain("shared");
@@ -142,22 +113,11 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 		 *   backend:getConfig → shared:Config (return type)
 		 */
 		it("creates USES_TYPE edge from backend getUser to shared User", () => {
-			const edges = db
-				.prepare(
-					`
-					SELECT source, target, type, context
-					FROM edges
-					WHERE type = 'USES_TYPE'
-					  AND source LIKE '%getUser%'
-					  AND target LIKE '%User'
-				`,
-				)
-				.all() as Array<{
-				source: string;
-				target: string;
-				type: string;
-				context: string | null;
-			}>;
+			const edges = queryEdges(db, {
+				type: "USES_TYPE",
+				sourcePattern: "*getUser*",
+				targetPattern: "*User",
+			});
 
 			expect(edges.length).toBeGreaterThan(0);
 			expect(edges[0]?.target).toContain("shared");
@@ -165,22 +125,11 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 		});
 
 		it("creates USES_TYPE edge from backend getConfig to shared Config", () => {
-			const edges = db
-				.prepare(
-					`
-					SELECT source, target, type, context
-					FROM edges
-					WHERE type = 'USES_TYPE'
-					  AND source LIKE '%getConfig%'
-					  AND target LIKE '%Config'
-				`,
-				)
-				.all() as Array<{
-				source: string;
-				target: string;
-				type: string;
-				context: string | null;
-			}>;
+			const edges = queryEdges(db, {
+				type: "USES_TYPE",
+				sourcePattern: "*getConfig*",
+				targetPattern: "*Config",
+			});
 
 			expect(edges.length).toBeGreaterThan(0);
 			expect(edges[0]?.target).toContain("shared");
@@ -198,48 +147,26 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 		 *   backend:listUsers → shared:createUser
 		 */
 		it("creates CALLS edge from backend getUser to shared createUser", () => {
-			const edges = db
-				.prepare(
-					`
-					SELECT source, target, type, call_count
-					FROM edges
-					WHERE type = 'CALLS'
-					  AND source LIKE '%getUser%'
-					  AND target LIKE '%createUser%'
-				`,
-				)
-				.all() as Array<{
-				source: string;
-				target: string;
-				type: string;
-				call_count: number;
-			}>;
+			const edges = queryEdges(db, {
+				type: "CALLS",
+				sourcePattern: "*getUser*",
+				targetPattern: "*createUser*",
+			});
 
 			expect(edges.length).toBeGreaterThan(0);
 			expect(edges[0]?.target).toContain("shared");
 		});
 
 		it("creates CALLS edge from backend listUsers to shared createUser with call_count 2", () => {
-			const edges = db
-				.prepare(
-					`
-					SELECT source, target, type, call_count
-					FROM edges
-					WHERE type = 'CALLS'
-					  AND source LIKE '%listUsers%'
-					  AND target LIKE '%createUser%'
-				`,
-				)
-				.all() as Array<{
-				source: string;
-				target: string;
-				type: string;
-				call_count: number;
-			}>;
+			const edges = queryEdges(db, {
+				type: "CALLS",
+				sourcePattern: "*listUsers*",
+				targetPattern: "*createUser*",
+			});
 
 			expect(edges.length).toBeGreaterThan(0);
 			expect(edges[0]?.target).toContain("shared");
-			expect(edges[0]?.call_count).toBe(2);
+			expect(edges[0]?.callCount).toBe(2);
 		});
 	});
 
@@ -344,22 +271,7 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 		 * Helps debug why module filtering might not work.
 		 */
 		it("logs all nodes and their modules for debugging", () => {
-			const allNodes = db
-				.prepare(
-					`
-					SELECT id, name, type, module, package, file_path
-					FROM nodes
-					ORDER BY module, file_path, name
-				`,
-				)
-				.all() as Array<{
-				id: string;
-				name: string;
-				type: string;
-				module: string;
-				package: string;
-				file_path: string;
-			}>;
+			const allNodes = querySearchNodes(db, "*");
 
 			console.log("\n=== Node Summary ===");
 			console.log(`Total nodes: ${allNodes.length}`);
@@ -378,7 +290,7 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 			for (const [module, nodes] of Object.entries(byModule)) {
 				console.log(`  ${module}: ${nodes.length} nodes`);
 				for (const n of nodes.slice(0, 5)) {
-					console.log(`    - ${n.type} ${n.name} (${n.file_path})`);
+					console.log(`    - ${n.type} ${n.name} (${n.filePath})`);
 				}
 				if (nodes.length > 5) {
 					console.log(`    ... and ${nodes.length - 5} more`);
@@ -388,13 +300,13 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 			// Check if any nodes should be in "shared" but aren't
 			const shouldBeShared = allNodes.filter(
 				(n) =>
-					n.file_path.startsWith("shared/") || n.id.startsWith("shared/"),
+					n.filePath.startsWith("shared/") || n.id.startsWith("shared/"),
 			);
 			console.log(
 				`\nNodes with 'shared' in path (expected module=shared): ${shouldBeShared.length}`,
 			);
 			for (const n of shouldBeShared) {
-				console.log(`  ${n.module}/${n.package}: ${n.name} (${n.file_path})`);
+				console.log(`  ${n.module}/${n.package}: ${n.name} (${n.filePath})`);
 			}
 
 			expect(allNodes.length).toBeGreaterThan(0);
@@ -405,15 +317,7 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 		 * Useful for debugging Issue #5.
 		 */
 		it("logs all edges for debugging", () => {
-			const allEdges = db
-				.prepare(
-					`
-					SELECT source, target, type
-					FROM edges
-					ORDER BY type, source
-				`,
-				)
-				.all() as Array<{ source: string; target: string; type: string }>;
+			const allEdges = queryEdges(db, {});
 
 			// Count edges by type
 			const edgeCounts = allEdges.reduce(

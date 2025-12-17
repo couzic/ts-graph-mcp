@@ -255,6 +255,35 @@ npm run lint         # Check code with Biome
 npm run lint:fix     # Auto-fix linting issues
 ```
 
+### Benchmarks
+
+Run benchmarks to test MCP tool performance:
+
+```bash
+npm run benchmark:quick   # Quick benchmark run
+npm run benchmark         # Full benchmark suite
+```
+
+#### Claude CLI Configuration
+
+The benchmark runner spawns the `claude` CLI. By default, it uses `npx @anthropic-ai/claude-code` which works but is slower (~500ms startup).
+
+For faster runs, set `CLAUDE_PATH` to your Claude installation:
+
+```bash
+# Find your claude path
+type claude  # e.g., "claude is aliased to '/home/user/.claude/local/claude'"
+
+# Run with explicit path (faster)
+CLAUDE_PATH=/home/user/.claude/local/claude npm run benchmark:quick
+```
+
+Or add to your shell profile:
+
+```bash
+export CLAUDE_PATH=/home/user/.claude/local/claude
+```
+
 ### Project Structure
 
 ```
