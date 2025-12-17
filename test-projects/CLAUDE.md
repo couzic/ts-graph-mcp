@@ -104,16 +104,18 @@ export CLAUDE_PATH=/home/user/.claude/local/claude
 ```
 benchmark/
 ├── lib/
-│   ├── index.ts       # Re-exports
-│   ├── types.ts       # Shared interfaces
+│   ├── index.ts       # Re-exports all modules
+│   ├── types.ts       # BenchmarkConfig, BenchmarkPrompt, etc.
 │   ├── scenarios.ts   # WITH/WITHOUT MCP configs
 │   ├── report.ts      # Report generator
-│   └── runner.ts      # Claude CLI subprocess handling
+│   ├── runner.ts      # Claude CLI subprocess handling
+│   ├── setup.ts       # Shared setup script
+│   └── run.ts         # Shared runner script
 └── results/           # All benchmark results
     └── <project>/     # Results organized by project name
 ```
 
-**Each test project** needs:
+**Each test project only needs ONE file:**
 ```
 test-project/
 ├── .mcp.json              # Points to ts-graph-mcp server
@@ -121,9 +123,7 @@ test-project/
 ├── tsconfig.json
 ├── src/
 └── benchmark/
-    ├── setup.ts           # Pre-indexes the project
-    ├── run.ts             # Main runner (imports from root benchmark/)
-    └── prompts.ts         # Project-specific prompts
+    └── prompts.ts         # THE ONLY FILE YOU NEED TO CREATE
 ```
 
 ### Current Benchmarks
@@ -156,13 +156,36 @@ test-project/
    }
    ```
 
-2. **Copy benchmark files** from `deep-chain/benchmark/` (setup.ts, run.ts, prompts.ts)
+2. **Create `benchmark/prompts.ts`** - this is the only file you need:
+   ```typescript
+   import type { BenchmarkConfig, BenchmarkPrompt } from "../../../benchmark/lib/types.js";
 
-3. **Customize `prompts.ts`** with project-specific questions
+   export const config: BenchmarkConfig = {
+     projectName: "my-project",
+     projectRoot: import.meta.dirname + "/..",
+     tsconfig: "tsconfig.json",
+   };
 
-4. **Run setup** to pre-index: `npx tsx benchmark/setup.ts`
+   export const prompts: BenchmarkPrompt[] = [
+     {
+       id: "P1",
+       name: "Test prompt",
+       prompt: "What does function X do?",
+       expectedContains: ["expected", "keywords"],
+       expectedTool: "get_callees",
+     },
+   ];
+   ```
 
-5. **Run benchmarks**: `npx tsx benchmark/run.ts`
+3. **Run setup** to pre-index:
+   ```bash
+   npx tsx benchmark/lib/setup.ts test-projects/my-project
+   ```
+
+4. **Run benchmarks**:
+   ```bash
+   npx tsx benchmark/lib/run.ts test-projects/my-project
+   ```
 
 ### Why MCP Wins
 

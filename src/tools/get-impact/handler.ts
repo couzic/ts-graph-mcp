@@ -1,4 +1,5 @@
 import type Database from "better-sqlite3";
+import { validateNodeExists } from "../shared/validateNodeExists.js";
 import { formatImpactNodes } from "./format.js";
 import { queryImpactedNodes } from "./query.js";
 
@@ -46,6 +47,11 @@ export function executeGetImpact(
 	db: Database.Database,
 	params: GetImpactParams,
 ): string {
+	const validation = validateNodeExists(db, params.nodeId);
+	if (!validation.valid) {
+		return validation.error;
+	}
+
 	const nodes = queryImpactedNodes(db, params.nodeId, {
 		maxDepth: params.maxDepth,
 	});

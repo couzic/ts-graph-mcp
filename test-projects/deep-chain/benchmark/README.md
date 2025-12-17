@@ -12,7 +12,8 @@ npm run benchmark:setup
 
 # 2. Run benchmarks
 npm run benchmark:quick   # Single iteration (fast check)
-npm run benchmark         # Full run (3 iterations each)
+npm run benchmark         # Full run (includes setup)
+npm run benchmark:full    # 3 iterations per prompt/scenario
 ```
 
 ## Setup
@@ -36,18 +37,20 @@ Run `npm run benchmark:setup` once before benchmarking (or after changing source
 ## CLI Options
 
 ```bash
-npx tsx benchmark/run.ts                    # Default (3 iterations)
-npx tsx benchmark/run.ts --quick            # Single iteration
-npx tsx benchmark/run.ts --iterations 5     # 5 iterations
-npx tsx benchmark/run.ts --prompt P1        # Only run P1
-npx tsx benchmark/run.ts --scenario with-mcp # Only WITH MCP
-npx tsx benchmark/run.ts --verbose          # Show detailed output
+# Run from project root using shared runner:
+npx tsx benchmark/lib/run.ts test-projects/deep-chain                # Default (1 iteration)
+npx tsx benchmark/lib/run.ts test-projects/deep-chain --runs 5       # 5 iterations
+npx tsx benchmark/lib/run.ts test-projects/deep-chain --prompt P1    # Only run P1
+npx tsx benchmark/lib/run.ts test-projects/deep-chain --scenario with-mcp  # Only WITH MCP
+npx tsx benchmark/lib/run.ts test-projects/deep-chain --verbose      # Show detailed output
+npx tsx benchmark/lib/run.ts test-projects/deep-chain --sequential   # Run one at a time
 ```
 
 ## Output
 
 Results are saved to the **project root**: `benchmark/results/deep-chain/`
 - `run-{timestamp}.json` - Raw benchmark data
+- `run-{timestamp}.md` - Markdown report
 - Console shows summary with comparison
 
 ## Expected Results
@@ -69,14 +72,11 @@ MCP tools should provide:
 
 ```
 benchmark/
-├── README.md           # This file
-├── setup.ts            # Pre-indexes deep-chain into SQLite
-├── run.ts              # Main benchmark runner
-├── prompts.ts          # P1, P2, P3 prompt definitions
+└── prompts.ts          # P1, P2, P3 prompt definitions + config
 ```
 
-Shared utilities are imported from `<project-root>/benchmark/lib/`.
+All runner logic is in the shared library at `<project-root>/benchmark/lib/`.
 
 ## Adding to Other Test Projects
 
-See `test-projects/CLAUDE.md` for instructions on adding benchmarks to other projects.
+See `test-projects/CLAUDE.md` or `benchmark/lib/README.md` for instructions.

@@ -1,36 +1,31 @@
 #!/usr/bin/env npx tsx
 /**
- * Benchmark runner for deep-chain test project.
+ * Shared benchmark runner for test projects.
  *
  * Usage:
- *   npx tsx benchmark/run.ts              # Run benchmarks (1 run, 3 concurrent)
- *   npx tsx benchmark/run.ts --runs 5     # Multiple runs per prompt/scenario
- *   npx tsx benchmark/run.ts -r 3         # Short form
- *   npx tsx benchmark/run.ts --prompt P1  # Run specific prompt only
- *   npx tsx benchmark/run.ts --scenario with-mcp  # Run specific scenario only
- *   npx tsx benchmark/run.ts --concurrency 5      # Run with 5 concurrent (default: 3)
- *   npx tsx benchmark/run.ts --sequential         # Run one at a time
+ *   npx tsx benchmark/lib/run.ts test-projects/deep-chain
+ *   npx tsx benchmark/lib/run.ts test-projects/deep-chain --runs 5
+ *   npx tsx benchmark/lib/run.ts test-projects/deep-chain --prompt P1
+ *   npx tsx benchmark/lib/run.ts test-projects/deep-chain --scenario with-mcp
+ *   npx tsx benchmark/lib/run.ts test-projects/deep-chain --concurrency 5
+ *   npx tsx benchmark/lib/run.ts test-projects/deep-chain --sequential
+ *
+ * The test project must have a benchmark/prompts.ts that exports:
+ *   - config: BenchmarkConfig
+ *   - prompts: BenchmarkPrompt[]
  */
 
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
-import {
-	scenarios,
-	generateReport,
-	formatReportMarkdown,
-	printComparison,
-	runBenchmarkIteration,
-	checkDatabase,
-	saveResults,
-	type BenchmarkRun,
-	type BenchmarkPrompt,
-	type BenchmarkScenario,
-} from "../../../benchmark/lib/index.js";
-import { prompts, PROJECT_NAME } from "./prompts.js";
+import { scenarios } from "./scenarios.js";
+import { generateReport, formatReportMarkdown, printComparison } from "./report.js";
+import { runBenchmarkIteration, checkDatabase, saveResults } from "./runner.js";
+import type { BenchmarkRun, BenchmarkPrompt, BenchmarkConfig } from "./types.js";
+import type { BenchmarkScenario } from "./types.js";
 
 const DEFAULT_RUNS = 1;
 const DEFAULT_CONCURRENCY = 3;
-const DB_PATH = ".ts-graph/graph.db";
+const DEFAULT_DB_PATH = ".ts-graph/graph.db";
 
 interface RunnerOptions {
 	runs: number;
@@ -47,12 +42,9 @@ interface BenchmarkTask {
 	index: number;
 }
 
-function getProjectRoot(): string {
-	return join(import.meta.dirname, "..");
-}
-
-function parseCliArgs(): RunnerOptions {
-	const { values } = parseArgs({
+function parseCliArgs(): { projectPath?: string; options: RunnerOptions } {
+	const { values, positionals } = parseArgs({
+		allowPositionals: true,
 		options: {
 			runs: { type: "string", short: "r" },
 			prompt: { type: "string" },
@@ -84,11 +76,14 @@ function parseCliArgs(): RunnerOptions {
 	}
 
 	return {
-		runs,
-		promptFilter: values.prompt,
-		scenarioFilter: values.scenario,
-		verbose: values.verbose ?? false,
-		concurrency,
+		projectPath: positionals[0],
+		options: {
+			runs,
+			promptFilter: values.prompt,
+			scenarioFilter: values.scenario,
+			verbose: values.verbose ?? false,
+			concurrency,
+		},
 	};
 }
 
@@ -131,12 +126,18 @@ async function runWithConcurrency<T, R>(
 	return results;
 }
 
-async function main() {
-	const options = parseCliArgs();
-	const projectRoot = getProjectRoot();
+/**
+ * Run benchmarks for a test project.
+ */
+export async function runBenchmarks(
+	config: BenchmarkConfig,
+	prompts: BenchmarkPrompt[],
+	options: RunnerOptions,
+): Promise<void> {
+	const dbPath = config.dbPath ?? DEFAULT_DB_PATH;
 
 	// Check database exists
-	checkDatabase(projectRoot, DB_PATH);
+	checkDatabase(config.projectRoot, dbPath);
 
 	// Filter prompts and scenarios
 	const selectedPrompts = options.promptFilter
@@ -157,11 +158,10 @@ async function main() {
 		process.exit(1);
 	}
 
-	const totalTasks =
-		selectedPrompts.length * selectedScenarios.length * options.runs;
+	const totalTasks = selectedPrompts.length * selectedScenarios.length * options.runs;
 
 	console.log("=".repeat(60));
-	console.log(`BENCHMARK: ${PROJECT_NAME}`);
+	console.log(`BENCHMARK: ${config.projectName}`);
 	console.log("=".repeat(60));
 	console.log(`Prompts:      ${selectedPrompts.map((p) => p.id).join(", ")}`);
 	console.log(`Scenarios:    ${selectedScenarios.map((s) => s.id).join(", ")}`);
@@ -198,7 +198,7 @@ async function main() {
 			prompt,
 			scenario,
 			iteration,
-			projectRoot,
+			config.projectRoot,
 			options.verbose,
 		);
 
@@ -226,11 +226,11 @@ async function main() {
 		selectedPrompts,
 		selectedScenarios,
 		options.runs,
-		PROJECT_NAME,
+		config.projectName,
 	);
 
-	// Save results to benchmark/results/deep-chain/
-	const resultsDir = join(import.meta.dirname, "../../../benchmark/results", PROJECT_NAME);
+	// Save results to benchmark/results/<project>/
+	const resultsDir = join(import.meta.dirname, "../results", config.projectName);
 	const markdown = formatReportMarkdown(report);
 	const { jsonPath, mdPath } = await saveResults(resultsDir, report, markdown);
 	console.log(`\nResults saved to:`);
@@ -252,7 +252,64 @@ async function main() {
 	printComparison(report, selectedPrompts);
 }
 
-main().catch((err) => {
-	console.error("Benchmark failed:", err);
-	process.exit(1);
-});
+/**
+ * CLI entry point: loads config and prompts from test project and runs benchmarks.
+ */
+async function main() {
+	const { projectPath, options } = parseCliArgs();
+
+	if (!projectPath) {
+		console.error("Usage: npx tsx benchmark/lib/run.ts <test-project-path> [options]");
+		console.error("");
+		console.error("Options:");
+		console.error("  --runs, -r <n>       Number of iterations per prompt/scenario (default: 1)");
+		console.error("  --prompt <id>        Run specific prompt only (e.g., P1)");
+		console.error("  --scenario <id>      Run specific scenario only (e.g., with-mcp)");
+		console.error("  --concurrency, -c <n> Number of parallel tasks (default: 3)");
+		console.error("  --sequential         Run one task at a time");
+		console.error("  --verbose, -v        Show detailed execution info");
+		console.error("");
+		console.error("Example:");
+		console.error("  npx tsx benchmark/lib/run.ts test-projects/deep-chain --runs 3");
+		process.exit(1);
+	}
+
+	const fullProjectPath = resolve(projectPath);
+	const promptsPath = join(fullProjectPath, "benchmark", "prompts.js");
+
+	// Dynamic import of the test project's prompts.ts (compiled to .js)
+	let module: { config: BenchmarkConfig; prompts: BenchmarkPrompt[] };
+	try {
+		module = await import(promptsPath);
+	} catch {
+		console.error(`ERROR: Could not load ${promptsPath}`);
+		console.error("");
+		console.error("Make sure the test project has benchmark/prompts.ts that exports:");
+		console.error("  export const config: BenchmarkConfig = { ... }");
+		console.error("  export const prompts: BenchmarkPrompt[] = [ ... ]");
+		console.error("");
+		console.error("And that the project has been built (npm run build)");
+		process.exit(1);
+	}
+
+	if (!module.config) {
+		console.error(`ERROR: ${promptsPath} does not export a 'config' object`);
+		process.exit(1);
+	}
+
+	if (!module.prompts || module.prompts.length === 0) {
+		console.error(`ERROR: ${promptsPath} does not export a 'prompts' array`);
+		process.exit(1);
+	}
+
+	await runBenchmarks(module.config, module.prompts, options);
+}
+
+// Only run main if this is the entry point
+const isMainModule = import.meta.url === `file://${process.argv[1]}`;
+if (isMainModule) {
+	main().catch((err) => {
+		console.error("Benchmark failed:", err);
+		process.exit(1);
+	});
+}

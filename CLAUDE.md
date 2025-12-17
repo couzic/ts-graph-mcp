@@ -2,20 +2,31 @@
 
 @ARCHITECTURE.md
 
-## Documentation
+## Documentation Strategy
+
+Each document has a specific purpose — keep them focused:
+
+| Document | Purpose | Rule |
+|----------|---------|------|
+| `ARCHITECTURE.md` | How the system works now | Update when adding features, changing patterns |
+| `ISSUES.md` | Active bugs and tech debt | Only open issues; remove when fixed |
+| `ROADMAP.md` | Future plans | Only upcoming work; remove when done |
+| Module `CLAUDE.md` | AI context for that module | Must-know info for working in that module |
+
+**When completing work:**
+- Remove items from ISSUES.md/ROADMAP.md
+- Document the resulting patterns in ARCHITECTURE.md
+- Don't track completion history (no CHANGELOG until release)
+
+**Quick references:**
+- **Known bugs/debt** → check `ISSUES.md`
+- **What to work on next** → check `ROADMAP.md`
 
 **Update `ARCHITECTURE.md` when making significant changes:**
 - Adding/removing modules or major components
 - Changing data model (node types, edge types)
 - Modifying MCP tools or their parameters
 - Altering the data flow or indexing pipeline
-
-## Known Issues
-
-**CHECK `ISSUES.md` FOR KNOWN BUGS AND TECHNICAL DEBT.**
-
-## Future Evolution
-**CHECK `ROADMAP.md` WHEN ASKED WHAT TO WORK ON NEXT**
 
 ## Code Style
 

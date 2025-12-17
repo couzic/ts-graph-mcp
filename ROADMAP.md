@@ -2,49 +2,9 @@
 
 > **The Vision:** ts-graph-mcp becomes the "LSP for AI agents" - a standard way for AI coding assistants to understand codebases semantically rather than just textually.
 
-## Critical: Must Fix
-
-### Memory Scalability for Large Codebases (Issue #14)
-**Impact: Critical | Effort: Medium**
-
-**This blocks support for very large codebases (10K+ files).**
-
-The Issue #5 fix (cross-module edge resolution) introduced a memory scalability regression. The current three-phase architecture collects ALL nodes and edges in memory before writing to the database.
-
-**Problem:**
-- 10K files × 50 symbols/file = 500K nodes in memory
-- Edge count 5-10x node count = 2.5M-5M edges in memory
-- Estimated peak memory: 2-4 GB (unacceptable)
-
-**Fix:** Streaming with Deferred Edge Resolution (detailed in ISSUES.md #14)
-1. Stream nodes to DB immediately, keep only ID set in memory
-2. Stream edges to `pending_edges` table (no FK constraints)
-3. SQL join to resolve and promote valid edges
-
-**Target:** <100 MB peak memory for 10K file codebase
-
----
-
 ## Quick Wins: MCP Tool Quality
 
 These improvements have the highest value-to-effort ratio. They improve AI agent experience with minimal code changes.
-
-### Input Validation & Error Messages
-**Impact: Very High | Effort: Very Low**
-
-All 7 MCP tools silently return empty results for invalid node IDs. Add validation with helpful suggestions.
-
-```typescript
-// Before: empty result, AI agent confused
-searchNodes("nonexistent:foo") → []
-
-// After: actionable error
-searchNodes("nonexistent:foo") → "Node not found: nonexistent:foo. Use search_nodes to find valid IDs."
-```
-
-- Single SQL check before each query: `SELECT 1 FROM nodes WHERE id = ?`
-- Return error message with suggestion to use `search_nodes`
-- Affects: all 7 tools
 
 ### Expose Hidden Parameters (get-impact)
 **Impact: High | Effort: Very Low**
@@ -397,10 +357,9 @@ Agent:
 
 Want to help build the future of AI-assisted development?
 
-Pick something from this roadmap that excites you. The codebase is well-tested (170+ tests) and documented. Every module has a CLAUDE.md explaining its purpose and patterns.
+Pick something from this roadmap that excites you. The codebase is well-tested (350+ tests) and documented. Every module has a CLAUDE.md explaining its purpose and patterns.
 
 **High-impact, low-effort** items are great starting points:
-- Input validation & error messages (affects all tools)
 - Expose hidden parameters in get-impact
 - Result limits for search-nodes
 - Improve tool descriptions (redundancy, output format hints)

@@ -1,4 +1,5 @@
 import type Database from "better-sqlite3";
+import { validateNodeExists } from "../shared/validateNodeExists.js";
 import { formatPath } from "./format.js";
 import { queryPath } from "./query.js";
 
@@ -44,6 +45,16 @@ export function executeFindPath(
 	db: Database.Database,
 	params: FindPathParams,
 ): string {
+	const sourceValidation = validateNodeExists(db, params.sourceId, "sourceId");
+	if (!sourceValidation.valid) {
+		return sourceValidation.error;
+	}
+
+	const targetValidation = validateNodeExists(db, params.targetId, "targetId");
+	if (!targetValidation.valid) {
+		return targetValidation.error;
+	}
+
 	const path = queryPath(db, params.sourceId, params.targetId);
 	return formatPath(params.sourceId, params.targetId, path);
 }

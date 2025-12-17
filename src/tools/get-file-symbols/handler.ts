@@ -1,4 +1,5 @@
 import type Database from "better-sqlite3";
+import { validateFileExists } from "../shared/validateNodeExists.js";
 import { formatFileSymbols } from "./format.js";
 import { queryFileNodes } from "./query.js";
 
@@ -39,6 +40,11 @@ export function executeGetFileSymbols(
 	db: Database.Database,
 	params: GetFileSymbolsParams,
 ): string {
+	const validation = validateFileExists(db, params.filePath);
+	if (!validation.valid) {
+		return validation.error;
+	}
+
 	const nodes = queryFileNodes(db, params.filePath);
 	return formatFileSymbols(params.filePath, nodes);
 }

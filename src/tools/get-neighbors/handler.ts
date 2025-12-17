@@ -1,4 +1,5 @@
 import type Database from "better-sqlite3";
+import { validateNodeExists } from "../shared/validateNodeExists.js";
 import { formatNeighbors } from "./format.js";
 import { type Direction, queryNeighbors } from "./query.js";
 
@@ -53,6 +54,11 @@ export function executeGetNeighbors(
 	db: Database.Database,
 	params: GetNeighborsParams,
 ): string {
+	const validation = validateNodeExists(db, params.nodeId);
+	if (!validation.valid) {
+		return validation.error;
+	}
+
 	const distance = Math.min(Math.max(params.distance ?? 1, 1), 100);
 	const direction = params.direction ?? "both";
 

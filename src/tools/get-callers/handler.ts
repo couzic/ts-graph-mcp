@@ -1,4 +1,5 @@
 import type Database from "better-sqlite3";
+import { validateNodeExists } from "../shared/validateNodeExists.js";
 import { formatCallers } from "./format.js";
 import { type QueryCallersOptions, queryCallers } from "./query.js";
 
@@ -46,6 +47,11 @@ export function executeGetCallers(
 	db: Database.Database,
 	params: GetCallersParams,
 ): string {
+	const validation = validateNodeExists(db, params.nodeId);
+	if (!validation.valid) {
+		return validation.error;
+	}
+
 	const options: QueryCallersOptions = {};
 	if (params.maxDepth !== undefined) {
 		options.maxDepth = params.maxDepth;

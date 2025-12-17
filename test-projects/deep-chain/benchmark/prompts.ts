@@ -7,9 +7,17 @@
  * - P3: get_impact (reverse traversal / impact analysis)
  */
 
-import type { BenchmarkPrompt } from "../../../benchmark/lib/types.js";
+import type { BenchmarkConfig, BenchmarkPrompt } from "../../../benchmark/lib/types.js";
 
-export const PROJECT_NAME = "deep-chain";
+/**
+ * Configuration for the deep-chain benchmark.
+ * This is all that's needed - the shared library handles everything else.
+ */
+export const config: BenchmarkConfig = {
+	projectName: "deep-chain",
+	projectRoot: import.meta.dirname + "/..",
+	tsconfig: "tsconfig.json",
+};
 
 export const prompts: BenchmarkPrompt[] = [
 	{

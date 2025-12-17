@@ -1,4 +1,5 @@
 import type Database from "better-sqlite3";
+import { validateNodeExists } from "../shared/validateNodeExists.js";
 import { formatCallees } from "./format.js";
 import { queryCallees } from "./query.js";
 
@@ -46,6 +47,11 @@ export function executeGetCallees(
 	db: Database.Database,
 	params: GetCalleesParams,
 ): string {
+	const validation = validateNodeExists(db, params.nodeId);
+	if (!validation.valid) {
+		return validation.error;
+	}
+
 	const maxDepth = params.maxDepth ?? 100;
 	const nodes = queryCallees(db, params.nodeId, maxDepth);
 	return formatCallees(params.nodeId, nodes);

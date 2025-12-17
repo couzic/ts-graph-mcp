@@ -421,7 +421,9 @@ await dbWriter.addEdges(edges);
 
 ## MCP Tools
 
-The MCP server exposes 7 tools for querying the code graph:
+The MCP server exposes 7 tools for querying the code graph.
+
+**Input Validation**: Tools that accept `nodeId` or `filePath` parameters validate existence before querying. Invalid inputs return actionable error messages with suggestions (e.g., "Use search_nodes to find valid IDs"). Shared validators live in `src/tools/shared/validateNodeExists.ts`.
 
 ### 1. `search_nodes`
 

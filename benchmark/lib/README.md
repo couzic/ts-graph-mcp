@@ -9,6 +9,7 @@ Shared utilities for running benchmarks across ts-graph-mcp test projects.
 npm run benchmark:setup    # Pre-index test project (run once)
 npm run benchmark          # Default: 1 run, 3 concurrent
 npm run benchmark:full     # 3 runs per prompt/scenario
+npm run benchmark:quick    # Skip setup, just run (if already indexed)
 
 # CLI options
 npm run benchmark -- --runs 5           # 5 runs per prompt/scenario
@@ -18,24 +19,83 @@ npm run benchmark -- --prompt P1        # Run specific prompt
 npm run benchmark -- --scenario with-mcp
 ```
 
-## Usage
+## Adding Benchmarks to a New Test Project
+
+**You only need ONE file: `benchmark/prompts.ts`**
 
 ```typescript
-// From test-projects/*/benchmark/run.ts:
-import {
-  scenarios,
-  generateReport,
-  printComparison,
-  runBenchmarkIteration,
-  checkDatabase,
-  saveResults,
-} from "../../../benchmark/lib/index.js";
+// test-projects/my-project/benchmark/prompts.ts
+import type { BenchmarkConfig, BenchmarkPrompt } from "../../../benchmark/lib/types.js";
+
+export const config: BenchmarkConfig = {
+  projectName: "my-project",
+  projectRoot: import.meta.dirname + "/..",
+  tsconfig: "tsconfig.json",
+};
+
+export const prompts: BenchmarkPrompt[] = [
+  {
+    id: "P1",
+    name: "Test prompt",
+    prompt: "What does function X do?",
+    expectedContains: ["expected", "answer", "keywords"],
+    expectedTool: "get_callees",  // Which MCP tool should be used
+  },
+];
+```
+
+Then run:
+
+```bash
+# Setup (index the project)
+npx tsx benchmark/lib/setup.ts test-projects/my-project
+
+# Run benchmarks
+npx tsx benchmark/lib/run.ts test-projects/my-project
+```
+
+## Configuration Options
+
+The `BenchmarkConfig` interface:
+
+| Field | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `projectName` | Yes | - | Unique name (used in results directory) |
+| `projectRoot` | Yes | - | Absolute path to test project |
+| `tsconfig` | Yes | - | Relative path to tsconfig.json |
+| `moduleName` | No | `projectName` | Module name for indexing |
+| `packageName` | No | `"main"` | Package name for indexing |
+| `dbPath` | No | `".ts-graph/graph.db"` | Database path |
+
+## Architecture
+
+```
+benchmark/
+├── lib/
+│   ├── index.ts       # Re-exports all modules
+│   ├── types.ts       # BenchmarkConfig, BenchmarkPrompt, BenchmarkRun, etc.
+│   ├── scenarios.ts   # WITH/WITHOUT MCP configurations
+│   ├── report.ts      # Report generation and markdown formatting
+│   ├── runner.ts      # Claude CLI subprocess handling
+│   ├── setup.ts       # Shared setup script (indexes a test project)
+│   └── run.ts         # Shared runner script (runs benchmarks)
+└── results/           # All benchmark results
+    └── <project>/     # Results organized by project name
+
+test-projects/
+└── <project>/
+    ├── .mcp.json              # MCP server configuration
+    ├── tsconfig.json
+    ├── src/                   # Source files to index
+    └── benchmark/
+        └── prompts.ts         # THE ONLY FILE YOU NEED TO CREATE
 ```
 
 ## Modules
 
 ### `types.ts`
 TypeScript interfaces for benchmark data structures:
+- `BenchmarkConfig` - Test project configuration
 - `BenchmarkPrompt` - Prompt definition with expected answers
 - `BenchmarkScenario` - WITH/WITHOUT MCP configurations
 - `BenchmarkRun` - Single run result
@@ -60,9 +120,12 @@ Benchmark execution utilities:
 - `checkDatabase()` - Verify pre-indexed database exists
 - `saveResults()` - Save JSON results
 
-## Adding Benchmarks to a Test Project
+### `setup.ts`
+Shared setup script:
+- `setupBenchmark(config)` - Index a test project
+- CLI: `npx tsx benchmark/lib/setup.ts <project-path>`
 
-1. Create `benchmark/prompts.ts` with project-specific prompts
-2. Create `benchmark/setup.ts` to pre-index the project
-3. Create `benchmark/run.ts` importing from this library
-4. See `deep-chain/benchmark/` for a complete example
+### `run.ts`
+Shared runner script:
+- `runBenchmarks(config, prompts, options)` - Run benchmarks
+- CLI: `npx tsx benchmark/lib/run.ts <project-path> [options]`

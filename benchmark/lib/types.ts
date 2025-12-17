@@ -3,6 +3,25 @@
  * Used by all test project benchmarks.
  */
 
+/**
+ * Configuration for a benchmark test project.
+ * This is the minimal config needed to add benchmarks to a test project.
+ */
+export interface BenchmarkConfig {
+	/** Unique name for this test project (used in results directory) */
+	projectName: string;
+	/** Absolute path to the test project root */
+	projectRoot: string;
+	/** Relative path to tsconfig.json from projectRoot */
+	tsconfig: string;
+	/** Module name for the project config (defaults to projectName) */
+	moduleName?: string;
+	/** Package name for the project config (defaults to "main") */
+	packageName?: string;
+	/** Relative path to database from projectRoot (defaults to ".ts-graph/graph.db") */
+	dbPath?: string;
+}
+
 export interface ClaudeJsonOutput {
 	type: "result";
 	subtype: "success" | "error";
