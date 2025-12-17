@@ -1,6 +1,5 @@
 import { Project } from "ts-morph";
 import { describe, expect, it } from "vitest";
-import type { Node } from "../../../db/Types.js";
 import { generateNodeId } from "../../IdGenerator.js";
 import type { EdgeExtractionContext } from "./EdgeExtractionContext.js";
 import { extractCallEdges } from "./extractCallEdges.js";
@@ -24,32 +23,7 @@ export const calculate = (x: number, y: number): number => add(x, y);
         `,
 		);
 
-		const nodes: Node[] = [
-			{
-				id: generateNodeId("test.ts", "add"),
-				type: "Function",
-				name: "add",
-				module: "test-module",
-				package: "test-package",
-				filePath: "test.ts",
-				startLine: 2,
-				endLine: 2,
-				exported: true,
-			},
-			{
-				id: generateNodeId("test.ts", "calculate"),
-				type: "Function",
-				name: "calculate",
-				module: "test-module",
-				package: "test-package",
-				filePath: "test.ts",
-				startLine: 3,
-				endLine: 3,
-				exported: true,
-			},
-		];
-
-		const edges = extractCallEdges(sourceFile, nodes, defaultContext);
+		const edges = extractCallEdges(sourceFile, defaultContext);
 
 		expect(edges).toHaveLength(1);
 		expect(edges[0]).toEqual({
@@ -74,32 +48,7 @@ export const doWork = () => {
         `,
 		);
 
-		const nodes: Node[] = [
-			{
-				id: generateNodeId("test.ts", "log"),
-				type: "Function",
-				name: "log",
-				module: "test-module",
-				package: "test-package",
-				filePath: "test.ts",
-				startLine: 2,
-				endLine: 2,
-				exported: true,
-			},
-			{
-				id: generateNodeId("test.ts", "doWork"),
-				type: "Function",
-				name: "doWork",
-				module: "test-module",
-				package: "test-package",
-				filePath: "test.ts",
-				startLine: 3,
-				endLine: 7,
-				exported: true,
-			},
-		];
-
-		const edges = extractCallEdges(sourceFile, nodes, defaultContext);
+		const edges = extractCallEdges(sourceFile, defaultContext);
 
 		expect(edges).toHaveLength(1);
 		expect(edges[0]).toEqual({
@@ -127,43 +76,7 @@ export class User {
         `,
 		);
 
-		const nodes: Node[] = [
-			{
-				id: generateNodeId("test.ts", "validate"),
-				type: "Function",
-				name: "validate",
-				module: "test-module",
-				package: "test-package",
-				filePath: "test.ts",
-				startLine: 2,
-				endLine: 2,
-				exported: true,
-			},
-			{
-				id: generateNodeId("test.ts", "User"),
-				type: "Class",
-				name: "User",
-				module: "test-module",
-				package: "test-package",
-				filePath: "test.ts",
-				startLine: 4,
-				endLine: 10,
-				exported: true,
-			},
-			{
-				id: generateNodeId("test.ts", "User", "isValid"),
-				type: "Method",
-				name: "isValid",
-				module: "test-module",
-				package: "test-package",
-				filePath: "test.ts",
-				startLine: 7,
-				endLine: 9,
-				exported: false,
-			},
-		];
-
-		const edges = extractCallEdges(sourceFile, nodes, defaultContext);
+		const edges = extractCallEdges(sourceFile, defaultContext);
 
 		expect(edges).toHaveLength(1);
 		expect(edges[0]).toEqual({
@@ -200,42 +113,13 @@ export const processEvent = (timestamp: Date): string => {
         `,
 		);
 
-		// All nodes from both files (simulating what extractNodes would produce)
-		const nodes: Node[] = [
-			{
-				id: generateNodeId("utils.ts", "formatDate"),
-				type: "Function",
-				name: "formatDate",
-				module: "test-module",
-				package: "test-package",
-				filePath: "utils.ts",
-				startLine: 2,
-				endLine: 4,
-				exported: true,
-			},
-			{
-				id: generateNodeId("handler.ts", "processEvent"),
-				type: "Function",
-				name: "processEvent",
-				module: "test-module",
-				package: "test-package",
-				filePath: "handler.ts",
-				startLine: 4,
-				endLine: 6,
-				exported: true,
-			},
-		];
-
-		// Extract edges from handler.ts (which imports and calls formatDate)
-		const edges = extractCallEdges(handlerFile, nodes, {
+		// Cross-file calls work via buildImportMap (ts-morph import resolution)
+		const edges = extractCallEdges(handlerFile, {
 			filePath: "handler.ts",
 			module: "test-module",
 			package: "test-package",
 		});
 
-		// This test SHOULD pass but will FAIL due to the bug
-		// Expected: CALLS edge from processEvent → formatDate
-		// Actual: No edges extracted because buildSymbolMap only includes same-file symbols
 		expect(edges).toHaveLength(1);
 		expect(edges[0]).toEqual({
 			source: generateNodeId("handler.ts", "processEvent"),

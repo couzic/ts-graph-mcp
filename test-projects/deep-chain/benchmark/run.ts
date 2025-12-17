@@ -17,6 +17,7 @@ import { parseArgs } from "node:util";
 import {
 	scenarios,
 	generateReport,
+	formatReportMarkdown,
 	printComparison,
 	runBenchmarkIteration,
 	checkDatabase,
@@ -156,21 +157,17 @@ async function main() {
 		process.exit(1);
 	}
 
-	const totalRuns =
+	const totalTasks =
 		selectedPrompts.length * selectedScenarios.length * options.runs;
-
-	const mode = options.concurrency > 1
-		? `parallel (${options.concurrency} concurrent)`
-		: "sequential";
 
 	console.log("=".repeat(60));
 	console.log(`BENCHMARK: ${PROJECT_NAME}`);
 	console.log("=".repeat(60));
-	console.log(`Prompts:    ${selectedPrompts.map((p) => p.id).join(", ")}`);
-	console.log(`Scenarios:  ${selectedScenarios.map((s) => s.id).join(", ")}`);
-	console.log(`Runs:       ${options.runs}`);
-	console.log(`Total runs: ${totalRuns}`);
-	console.log(`Mode:       ${mode}`);
+	console.log(`Prompts:      ${selectedPrompts.map((p) => p.id).join(", ")}`);
+	console.log(`Scenarios:    ${selectedScenarios.map((s) => s.id).join(", ")}`);
+	console.log(`Iterations:   ${options.runs} per prompt/scenario`);
+	console.log(`Total tasks:  ${totalTasks}`);
+	console.log(`Concurrency:  ${options.concurrency} parallel`);
 	console.log("=".repeat(60));
 	console.log("");
 
@@ -189,10 +186,12 @@ async function main() {
 	const executeTask = async (task: BenchmarkTask): Promise<BenchmarkRun> => {
 		const { prompt, scenario, iteration, index: taskIndex } = task;
 
+		// Show progress when task starts
+		const taskLabel = `[${taskIndex}/${totalTasks}] ${prompt.id} | ${scenario.id}`;
 		if (options.concurrency === 1) {
-			console.log(
-				`[${taskIndex}/${totalRuns}] ${prompt.id} | ${scenario.id} | iteration ${iteration}`,
-			);
+			console.log(`${taskLabel} | iteration ${iteration}`);
+		} else {
+			console.log(`${taskLabel} starting...`);
 		}
 
 		const run = await runBenchmarkIteration(
@@ -209,17 +208,16 @@ async function main() {
 				: "⚠️ (invalid)"
 			: "❌ (error)";
 
+		const duration = (run.durationMs / 1000).toFixed(1);
 		console.log(
-			`[${taskIndex}/${totalRuns}] ${prompt.id} | ${scenario.id} | iter ${iteration} → ${status} ${run.durationMs}ms | $${run.costUsd.toFixed(4)} | ${run.numTurns} turns`,
+			`${taskLabel} → ${status} ${duration}s | $${run.costUsd.toFixed(2)} | ${run.numTurns} turns`,
 		);
 
 		return run;
 	};
 
-	// Run tasks (always use runWithConcurrency, concurrency=1 is sequential)
-	if (options.concurrency > 1) {
-		console.log(`Starting ${totalRuns} runs with ${options.concurrency} concurrent...\n`);
-	}
+	// Run tasks
+	console.log(`Running ${totalTasks} tasks (${options.concurrency} parallel)...\n`);
 	const runs = await runWithConcurrency(tasks, options.concurrency, executeTask);
 
 	// Generate report
@@ -233,8 +231,11 @@ async function main() {
 
 	// Save results to benchmark/results/deep-chain/
 	const resultsDir = join(import.meta.dirname, "../../../benchmark/results", PROJECT_NAME);
-	const jsonPath = await saveResults(resultsDir, report);
-	console.log(`\nResults saved to: ${jsonPath}`);
+	const markdown = formatReportMarkdown(report);
+	const { jsonPath, mdPath } = await saveResults(resultsDir, report, markdown);
+	console.log(`\nResults saved to:`);
+	console.log(`  JSON: ${jsonPath}`);
+	console.log(`  MD:   ${mdPath}`);
 
 	// Print summary to console
 	console.log("\n" + "=".repeat(60));

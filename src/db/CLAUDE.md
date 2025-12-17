@@ -56,8 +56,11 @@ Common edge metadata (call_count, is_type_only, imported_symbols, context) store
 ### Traversal Depth
 Default max depth is 100 for most traversals (1 for type usage). Recursive CTEs prevent infinite loops and cycle detection is built-in.
 
-### Foreign Key Cascades
-Edges cascade-delete when nodes are removed. This ensures graph consistency when re-indexing files.
+### Edge Cleanup (No FK Constraints)
+Edges are explicitly deleted before nodes in `removeFileNodes()`. The schema intentionally has **no foreign key constraints** on the edges table. This design enables:
+- Parallel package indexing (no ordering dependencies)
+- Backend-agnostic code (Neo4j/Memgraph don't use FK constraints)
+- Dangling edges are harmless (queries use JOINs which filter them out)
 
 ### Upsert Semantics
 Both `addNodes()` and `addEdges()` use upsert (insert or update). This allows re-indexing files without manual cleanup.

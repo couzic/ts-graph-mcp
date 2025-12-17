@@ -59,9 +59,9 @@ Every extraction requires `ExtractionContext`:
 ### Extraction Order
 
 1. **Nodes first** - Extract all symbols from AST
-2. **Edges second** - Extract relationships (requires nodes for CONTAINS edges)
+2. **Edges second** - Extract relationships using import maps for cross-file resolution
 
-This order is critical because edge extraction needs the node list to build CONTAINS edges and symbol maps.
+This order maintains a clean two-pass architecture. Edge extraction uses `buildImportMap` for cross-file resolution (no global nodes array needed).
 
 ### Edge Types
 

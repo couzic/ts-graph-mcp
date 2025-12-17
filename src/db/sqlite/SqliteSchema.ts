@@ -36,9 +36,7 @@ CREATE TABLE IF NOT EXISTS edges (
   is_type_only INTEGER,
   imported_symbols TEXT,
   context TEXT,
-  PRIMARY KEY (source, target, type),
-  FOREIGN KEY (source) REFERENCES nodes(id) ON DELETE CASCADE,
-  FOREIGN KEY (target) REFERENCES nodes(id) ON DELETE CASCADE
+  PRIMARY KEY (source, target, type)
 )`;
 
 const INDEXES = [
@@ -63,9 +61,6 @@ const INDEXES = [
  * @param db - better-sqlite3 database instance
  */
 export const initializeSchema = (db: Database.Database): void => {
-	// Enable foreign keys
-	db.pragma("foreign_keys = ON");
-
 	// Create tables
 	db.exec(NODES_TABLE);
 	db.exec(EDGES_TABLE);

@@ -13,18 +13,43 @@ export const extractImportEdges = (
 	const edges: Edge[] = [];
 	const sourceId = generateNodeId(context.filePath);
 
+	// Derive the project root from the source file paths
+	const sourceAbsolutePath = sourceFile.getFilePath().replace(/\\/g, "/");
+	const projectRoot = deriveProjectRoot(sourceAbsolutePath, context.filePath);
+
 	const imports = sourceFile.getImportDeclarations();
 
 	for (const importDecl of imports) {
 		const moduleSpecifier = importDecl.getModuleSpecifierValue();
 
-		// Skip external modules (don't start with . or /)
-		if (!moduleSpecifier.startsWith(".") && !moduleSpecifier.startsWith("/")) {
+		// Use ts-morph to resolve the import (handles path aliases like @shared/*)
+		const resolvedSourceFile = importDecl.getModuleSpecifierSourceFile();
+
+		let targetPath: string;
+
+		if (resolvedSourceFile) {
+			// ts-morph resolved the import - get the relative path
+			const targetAbsolutePath = resolvedSourceFile
+				.getFilePath()
+				.replace(/\\/g, "/");
+			targetPath = targetAbsolutePath.startsWith(projectRoot)
+				? targetAbsolutePath.slice(projectRoot.length)
+				: targetAbsolutePath;
+		} else if (
+			moduleSpecifier.startsWith(".") ||
+			moduleSpecifier.startsWith("/")
+		) {
+			// Fallback for relative imports (for in-memory/test files)
+			const resolved = resolveRelativeImport(context.filePath, moduleSpecifier);
+			if (!resolved) {
+				continue; // Couldn't resolve relative import
+			}
+			targetPath = resolved;
+		} else {
+			// External module - skip
 			continue;
 		}
 
-		// Resolve relative path to target file
-		const targetPath = resolveImportPath(context.filePath, moduleSpecifier);
 		const targetId = generateNodeId(targetPath);
 
 		// Collect imported symbols
@@ -57,43 +82,70 @@ export const extractImportEdges = (
 };
 
 /**
- * Resolve import path relative to current file.
+ * Resolve a relative import path to a target file path.
+ * Used as fallback for in-memory/test files when ts-morph can't resolve.
+ *
+ * @param sourceFilePath - The file containing the import
+ * @param moduleSpecifier - The import path (e.g., './utils' or '../shared/types')
+ * @returns The resolved target file path, or undefined if not found
  */
-const resolveImportPath = (
-	currentFilePath: string,
-	importPath: string,
-): string => {
-	// Remove file extension from import path if present
-	let cleanImportPath = importPath.replace(
-		/\.(js|ts|tsx|jsx|mjs|mts|cjs|cts)$/,
-		"",
-	);
+const resolveRelativeImport = (
+	sourceFilePath: string,
+	moduleSpecifier: string,
+): string | undefined => {
+	// Get the directory of the source file
+	const lastSlash = sourceFilePath.lastIndexOf("/");
+	const sourceDir =
+		lastSlash >= 0 ? sourceFilePath.substring(0, lastSlash) : "";
 
-	// Handle relative imports
-	if (importPath.startsWith(".")) {
-		const lastSlash = currentFilePath.lastIndexOf("/");
-		const currentDir =
-			lastSlash >= 0 ? currentFilePath.substring(0, lastSlash) : "";
-		const parts = currentDir ? currentDir.split("/") : [];
+	// Resolve the relative path
+	const parts = (
+		sourceDir ? `${sourceDir}/${moduleSpecifier}` : moduleSpecifier
+	)
+		.split("/")
+		.filter((p) => p !== ".");
 
-		// Split import path and process .. and .
-		const importParts = cleanImportPath.split("/");
-		for (const part of importParts) {
-			if (part === "..") {
-				parts.pop();
-			} else if (part === ".") {
-				// skip
-			} else if (part) {
-				parts.push(part);
-			}
+	// Process .. to go up directories
+	const resolved: string[] = [];
+	for (const part of parts) {
+		if (part === "..") {
+			resolved.pop();
+		} else {
+			resolved.push(part);
 		}
-
-		cleanImportPath =
-			parts.length > 0
-				? parts.join("/")
-				: importParts[importParts.length - 1] || "";
 	}
 
-	// Add .ts extension
-	return `${cleanImportPath}.ts`;
+	const basePath = resolved.join("/");
+
+	// Convert JS extensions to TS (ESM pattern: import from .js but source is .ts)
+	// .js → .ts, .jsx → .tsx
+	if (basePath.endsWith(".js")) {
+		return `${basePath.slice(0, -3)}.ts`;
+	}
+	if (basePath.endsWith(".jsx")) {
+		return `${basePath.slice(0, -4)}.tsx`;
+	}
+
+	// For extensionless imports, add .ts: import './utils' → target is 'utils.ts'
+	if (!basePath.match(/\.[jt]sx?$/)) {
+		return `${basePath}.ts`;
+	}
+
+	return basePath;
+};
+
+/**
+ * Derive the project root from an absolute path and its known relative path.
+ * Example: absolute="/home/user/project/src/file.ts", relative="src/file.ts"
+ *          => projectRoot="/home/user/project/"
+ */
+const deriveProjectRoot = (
+	absolutePath: string,
+	relativePath: string,
+): string => {
+	if (absolutePath.endsWith(relativePath)) {
+		return absolutePath.slice(0, absolutePath.length - relativePath.length);
+	}
+	// Fallback: if paths don't match, return empty (will use absolute paths)
+	return "";
 };

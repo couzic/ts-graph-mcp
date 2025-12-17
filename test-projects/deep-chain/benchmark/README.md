@@ -46,7 +46,7 @@ npx tsx benchmark/run.ts --verbose          # Show detailed output
 
 ## Output
 
-Results are saved to `benchmark/results/`:
+Results are saved to the **project root**: `benchmark/results/deep-chain/`
 - `run-{timestamp}.json` - Raw benchmark data
 - Console shows summary with comparison
 
@@ -73,13 +73,10 @@ benchmark/
 ├── setup.ts            # Pre-indexes deep-chain into SQLite
 ├── run.ts              # Main benchmark runner
 ├── prompts.ts          # P1, P2, P3 prompt definitions
-├── scenarios.ts        # WITH/WITHOUT MCP tool configurations
-├── report.ts           # Summary and markdown report generator
-├── types.ts            # TypeScript interfaces
-└── results/            # JSON output files (gitignored)
 ```
+
+Shared utilities are imported from `<project-root>/benchmark/lib/`.
 
 ## Adding to Other Test Projects
 
 See `test-projects/CLAUDE.md` for instructions on adding benchmarks to other projects.
-The `scenarios.ts`, `report.ts`, and `types.ts` files are reusable across projects.

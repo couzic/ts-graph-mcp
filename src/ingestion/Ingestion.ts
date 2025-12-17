@@ -1,8 +1,8 @@
 import { dirname, join, relative } from "node:path";
-import { Project, type SourceFile } from "ts-morph";
+import { Project } from "ts-morph";
 import type { ProjectConfig } from "../config/ConfigSchema.js";
 import type { DbWriter } from "../db/DbWriter.js";
-import type { Edge, IndexResult, Node } from "../db/Types.js";
+import type { IndexResult } from "../db/Types.js";
 import { extractEdges } from "./extract/edges/extractEdges.js";
 import { extractNodes } from "./extract/nodes/extractNodes.js";
 import type { NodeExtractionContext as ExtractionContext } from "./extract/nodes/NodeExtractionContext.js";
@@ -35,6 +35,11 @@ export interface IndexProjectOptions {
  * Index an entire project based on config.
  * Parses all packages defined in config.
  *
+ * Streams nodes and edges to the database per-file:
+ * - For each file: extract nodes → write to DB → extract edges → write to DB
+ * - No global accumulation needed since edge extractors use buildImportMap
+ * - Queries use JOINs to filter dangling edges, no pre-filtering required
+ *
  * @param config - Project configuration
  * @param dbWriter - Database writer instance
  * @param options - Index options
@@ -48,20 +53,19 @@ export const indexProject = async (
 	const startTime = Date.now();
 	const errors: Array<{ file: string; message: string }> = [];
 	let filesProcessed = 0;
-	let totalNodes = 0;
-	let totalEdges = 0;
+	let nodesAdded = 0;
+	let edgesAdded = 0;
 
 	// Clear database if requested
 	if (options.clearFirst) {
 		await dbWriter.clearAll();
 	}
 
-	// Process each module
+	// Process each package, streaming nodes and edges to DB
 	for (const module of config.modules) {
-		// Process each package in the module
 		for (const pkg of module.packages) {
 			try {
-				const result = await indexPackage(
+				const result = await processPackage(
 					module.name,
 					pkg.name,
 					pkg.tsconfig,
@@ -70,8 +74,8 @@ export const indexProject = async (
 				);
 
 				filesProcessed += result.filesProcessed;
-				totalNodes += result.nodesAdded;
-				totalEdges += result.edgesAdded;
+				nodesAdded += result.nodesAdded;
+				edgesAdded += result.edgesAdded;
 
 				if (result.errors) {
 					errors.push(...result.errors);
@@ -79,7 +83,7 @@ export const indexProject = async (
 			} catch (e) {
 				errors.push({
 					file: pkg.tsconfig,
-					message: `Failed to index package: ${(e as Error).message}`,
+					message: `Failed to process package: ${(e as Error).message}`,
 				});
 			}
 		}
@@ -87,121 +91,111 @@ export const indexProject = async (
 
 	return {
 		filesProcessed,
-		nodesAdded: totalNodes,
-		edgesAdded: totalEdges,
+		nodesAdded,
+		edgesAdded,
 		durationMs: Date.now() - startTime,
 		errors: errors.length > 0 ? errors : undefined,
 	};
 };
 
 /**
- * Index a single package.
- *
- * Uses three-pass approach to handle cross-file edges:
- * 1. Extract nodes from all files
- * 2. Extract edges from all files (with ALL nodes available for cross-file resolution)
- * 3. Insert all nodes first, then all edges
- *
- * This ensures:
- * - Cross-file CALLS edges can be resolved (buildSymbolMap sees all nodes)
- * - Target nodes exist before edges reference them (FK safety)
+ * Result from processing a package (extracting and writing nodes/edges).
  */
-const indexPackage = async (
+interface PackageProcessResult {
+	filesProcessed: number;
+	nodesAdded: number;
+	edgesAdded: number;
+	errors?: Array<{ file: string; message: string }>;
+}
+
+/**
+ * Process a single package by streaming nodes and edges to the database.
+ *
+ * For each file:
+ * 1. Extract nodes → write to DB
+ * 2. Extract edges → write to DB
+ *
+ * No global accumulation - edge extractors use buildImportMap for cross-file resolution.
+ *
+ * Memory efficiency: O(1) per file (~100MB peak regardless of project size).
+ * Each file's import map contains ~100 entries max vs millions if we held all nodes.
+ */
+const processPackage = async (
 	moduleName: string,
 	packageName: string,
 	tsconfigPath: string,
 	projectRoot: string,
 	dbWriter: DbWriter,
-): Promise<IndexResult> => {
-	const startTime = Date.now();
+): Promise<PackageProcessResult> => {
 	const errors: Array<{ file: string; message: string }> = [];
+	let filesProcessed = 0;
+	let nodesAdded = 0;
+	let edgesAdded = 0;
 
 	const absoluteTsConfigPath = join(projectRoot, tsconfigPath);
-	const _packageRoot = dirname(absoluteTsConfigPath);
+	const packageRoot = dirname(absoluteTsConfigPath);
 
 	// Create ts-morph project with tsconfig
 	const project = new Project({
 		tsConfigFilePath: absoluteTsConfigPath,
 	});
 
-	// Filter source files (skip node_modules and .d.ts)
+	// Filter source files:
+	// - Only include files within this package's directory tree
+	// - Skip node_modules and .d.ts files
+	//
+	// This prevents files from other packages (pulled in via imports) from
+	// being extracted with wrong module/package metadata. Each package
+	// should only extract its own files.
 	const sourceFiles = project.getSourceFiles().filter((sf) => {
 		const absolutePath = sf.getFilePath();
+		// Only include files within this package's directory
+		if (!absolutePath.startsWith(packageRoot)) {
+			return false;
+		}
 		return (
 			!absolutePath.includes("node_modules") && !absolutePath.endsWith(".d.ts")
 		);
 	});
 
-	// Build contexts for each file
-	const fileContexts: Array<{
-		sourceFile: SourceFile;
-		context: ExtractionContext;
-	}> = [];
+	// Process each file: extract nodes → write → extract edges → write
 	for (const sourceFile of sourceFiles) {
 		const absolutePath = sourceFile.getFilePath();
 		const relativePath = relative(projectRoot, absolutePath);
-		fileContexts.push({
-			sourceFile,
-			context: {
-				filePath: relativePath,
-				module: moduleName,
-				package: packageName,
-			},
-		});
-	}
+		const context: ExtractionContext = {
+			filePath: relativePath,
+			module: moduleName,
+			package: packageName,
+		};
 
-	// Pass 1: Extract nodes from all files
-	const allNodes: Node[] = [];
-	for (const { sourceFile, context } of fileContexts) {
 		try {
+			// Extract and write nodes
 			const nodes = extractNodes(sourceFile, context);
-			allNodes.push(...nodes);
+			if (nodes.length > 0) {
+				await dbWriter.addNodes(nodes);
+				nodesAdded += nodes.length;
+			}
+
+			// Extract and write edges
+			const edges = extractEdges(sourceFile, context);
+			if (edges.length > 0) {
+				await dbWriter.addEdges(edges);
+				edgesAdded += edges.length;
+			}
+
+			filesProcessed++;
 		} catch (e) {
 			errors.push({
-				file: context.filePath,
-				message: `Node extraction failed: ${(e as Error).message}`,
+				file: relativePath,
+				message: `File processing failed: ${(e as Error).message}`,
 			});
 		}
-	}
-
-	// Pass 2: Extract edges from all files (with ALL nodes for cross-file resolution)
-	const allEdges: Edge[] = [];
-	for (const { sourceFile, context } of fileContexts) {
-		try {
-			const edges = extractEdges(sourceFile, allNodes, context);
-			allEdges.push(...edges);
-		} catch (e) {
-			errors.push({
-				file: context.filePath,
-				message: `Edge extraction failed: ${(e as Error).message}`,
-			});
-		}
-	}
-
-	// Pass 3: Insert all nodes first, then all edges
-	try {
-		await dbWriter.addNodes(allNodes);
-
-		// Filter out edges with dangling targets (e.g., imported types from external modules)
-		// These edges reference nodes that don't exist because we skip node_modules
-		const nodeIds = new Set(allNodes.map((n) => n.id));
-		const validEdges = allEdges.filter(
-			(e) => nodeIds.has(e.source) && nodeIds.has(e.target),
-		);
-
-		await dbWriter.addEdges(validEdges);
-	} catch (e) {
-		errors.push({
-			file: tsconfigPath,
-			message: `Failed to write to database: ${(e as Error).message}`,
-		});
 	}
 
 	return {
-		filesProcessed: fileContexts.length,
-		nodesAdded: allNodes.length,
-		edgesAdded: allEdges.length,
-		durationMs: Date.now() - startTime,
+		filesProcessed,
+		nodesAdded,
+		edgesAdded,
 		errors: errors.length > 0 ? errors : undefined,
 	};
 };

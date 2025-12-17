@@ -97,8 +97,12 @@ export function formatReportMarkdown(report: BenchmarkReport): string {
 
 	lines.push("");
 
-	// Comparison section
-	lines.push("## Comparison: WITH MCP vs WITHOUT MCP");
+	// Comparison section - show MCP benefits vs baseline (no MCP)
+	lines.push("## 📊 MCP Benefits");
+	lines.push("");
+	lines.push(
+		"_Improvements from using MCP tools vs manual file reading._",
+	);
 	lines.push("");
 
 	const promptIds = [...new Set(report.summaries.map((s) => s.promptId))];
@@ -112,40 +116,50 @@ export function formatReportMarkdown(report: BenchmarkReport): string {
 		);
 
 		if (withMcp && withoutMcp) {
-			const timeDiff =
+			// Calculate improvements (how much better MCP is)
+			const speedup =
 				withMcp.avgDurationMs > 0
-					? ((withoutMcp.avgDurationMs - withMcp.avgDurationMs) /
-							withMcp.avgDurationMs) *
+					? withoutMcp.avgDurationMs / withMcp.avgDurationMs
+					: 1;
+			const costReduction =
+				withoutMcp.avgCostUsd > 0
+					? ((withMcp.avgCostUsd - withoutMcp.avgCostUsd) /
+							withoutMcp.avgCostUsd) *
 						100
 					: 0;
-			const costDiff =
-				withMcp.avgCostUsd > 0
-					? ((withoutMcp.avgCostUsd - withMcp.avgCostUsd) / withMcp.avgCostUsd) *
+			const turnReduction =
+				withoutMcp.avgTurns > 0
+					? ((withMcp.avgTurns - withoutMcp.avgTurns) / withoutMcp.avgTurns) *
 						100
 					: 0;
 
+			// Calculate absolute differences
+			const timeDelta = withMcp.avgDurationMs - withoutMcp.avgDurationMs;
+			const costDelta = withMcp.avgCostUsd - withoutMcp.avgCostUsd;
+			const turnDelta = withMcp.avgTurns - withoutMcp.avgTurns;
+
 			lines.push(`### ${promptId}: ${withMcp.promptName}`);
 			lines.push("");
-			lines.push("| Metric | WITH MCP | WITHOUT MCP | Difference |");
-			lines.push("|--------|----------|-------------|------------|");
+			lines.push("| Metric | Without MCP | With MCP | Δ | Improvement |");
+			lines.push("|:-------|------------:|---------:|--:|:------------|");
 			lines.push(
-				`| Duration | ${withMcp.avgDurationMs.toFixed(0)}ms | ${withoutMcp.avgDurationMs.toFixed(0)}ms | ${timeDiff > 0 ? "+" : ""}${timeDiff.toFixed(1)}% |`,
+				`| ⏱️ Time | ${(withoutMcp.avgDurationMs / 1000).toFixed(1)}s | ${(withMcp.avgDurationMs / 1000).toFixed(1)}s | ${(timeDelta / 1000).toFixed(1)}s | ✅ **${speedup.toFixed(1)}×** faster |`,
 			);
 			lines.push(
-				`| Cost | $${withMcp.avgCostUsd.toFixed(4)} | $${withoutMcp.avgCostUsd.toFixed(4)} | ${costDiff > 0 ? "+" : ""}${costDiff.toFixed(1)}% |`,
+				`| 💰 Cost | $${withoutMcp.avgCostUsd.toFixed(2)} | $${withMcp.avgCostUsd.toFixed(2)} | ${costDelta >= 0 ? "" : "-"}$${Math.abs(costDelta).toFixed(2)} | ✅ **${costReduction.toFixed(0)}%** |`,
 			);
 			lines.push(
-				`| Turns | ${withMcp.avgTurns.toFixed(1)} | ${withoutMcp.avgTurns.toFixed(1)} | - |`,
+				`| 🔄 Turns | ${withoutMcp.avgTurns.toFixed(0)} | ${withMcp.avgTurns.toFixed(0)} | ${turnDelta.toFixed(0)} | ✅ **${turnReduction.toFixed(0)}%** |`,
 			);
 			lines.push("");
 		}
 	}
 
 	// Raw data section
-	lines.push("## Raw Data");
+	lines.push("## 📋 Raw Data");
 	lines.push("");
 	lines.push("| # | Prompt | Scenario | Duration | Cost | Turns | Valid |");
-	lines.push("|---|--------|----------|----------|------|-------|-------|");
+	lines.push("|--:|--------|----------|----------|------|------:|:-----:|");
 
 	for (let i = 0; i < report.runs.length; i++) {
 		const r = report.runs[i];
@@ -165,7 +179,7 @@ export function printComparison(
 	prompts: BenchmarkPrompt[],
 ): void {
 	console.log("\n" + "-".repeat(60));
-	console.log("COMPARISON (WITH MCP vs WITHOUT MCP)");
+	console.log("MCP BENEFITS");
 	console.log("-".repeat(60));
 
 	for (const prompt of prompts) {
@@ -177,21 +191,20 @@ export function printComparison(
 		);
 
 		if (withMcp && withoutMcp) {
-			const timeDiff =
-				((withoutMcp.avgDurationMs - withMcp.avgDurationMs) /
-					withMcp.avgDurationMs) *
-				100;
-			const costDiff =
-				((withoutMcp.avgCostUsd - withMcp.avgCostUsd) / withMcp.avgCostUsd) *
-				100;
+			const speedup =
+				withMcp.avgDurationMs > 0
+					? withoutMcp.avgDurationMs / withMcp.avgDurationMs
+					: 1;
+			const costSavings =
+				withoutMcp.avgCostUsd > 0
+					? ((withoutMcp.avgCostUsd - withMcp.avgCostUsd) /
+							withoutMcp.avgCostUsd) *
+						100
+					: 0;
 
 			console.log(`${prompt.id} (${prompt.name}):`);
-			console.log(
-				`  Time: ${timeDiff > 0 ? "+" : ""}${timeDiff.toFixed(1)}% ${timeDiff > 0 ? "(MCP faster)" : "(MCP slower)"}`,
-			);
-			console.log(
-				`  Cost: ${costDiff > 0 ? "+" : ""}${costDiff.toFixed(1)}% ${costDiff > 0 ? "(MCP cheaper)" : "(MCP more expensive)"}`,
-			);
+			console.log(`  Speed: ${speedup.toFixed(1)}× faster`);
+			console.log(`  Cost:  ${costSavings.toFixed(0)}% cheaper`);
 		}
 	}
 }

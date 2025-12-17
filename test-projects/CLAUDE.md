@@ -16,20 +16,19 @@ Sample TypeScript codebases for integration testing and benchmarking.
 - Primary benchmark for `get_callees`, `get_callers`, `find_path` at depth
 - 20 integration tests
 
-### `cross-file-calls/`
-Cross-file function calls with multiple scenarios:
-- Direct cross-file calls (`caller` → `helper`)
-- Multiple callers to same target
-- Call count tracking (`multiCaller` calls `helper` twice)
-- Transitive chains across 3 files (`chain` → `intermediate` → `helper`)
-
-**Regression test for Issue #9** (cross-file CALLS edges not extracted). 14 integration tests.
-
 ### `mixed-types/`
 All 8 node types: Function, Class, Method, Interface, TypeAlias, Variable, Property, File.
 - Tests node extraction completeness and type-specific properties
 - Will be merged into `type-system` when that project is implemented (see PLANNED.md)
 - 23 integration tests
+
+### `web-app/`
+Multi-module web app with 3 modules (shared, frontend, backend), 1 package each.
+- Tests cross-module edges (CALLS, USES_TYPE, IMPORTS)
+- Tests module filtering with `search_nodes`
+- Tests `get_impact` analysis across modules
+- **Regression test for Issue #5** (cross-module edge resolution). 15 integration tests.
+- Note: This is a simplified structure. See PLANNED.md for a full monorepo test.
 
 ## Planned Projects
 
@@ -37,7 +36,6 @@ See **PLANNED.md** for the full roadmap of test projects to be created, includin
 - `type-system` - EXTENDS, IMPLEMENTS, USES_TYPE edges
 - `shared-utils` - Wide fan-in pattern, `get_impact` testing
 - `multi-package` - L2 multi-package structure
-- `monorepo` - L3 multi-module (regression test for Issue #5)
 
 ## Adding Test Projects
 
@@ -133,8 +131,8 @@ test-project/
 | Project | Status | Prompts | Primary Tools Tested |
 |---------|--------|---------|---------------------|
 | `deep-chain` | ✅ Ready | P1, P2, P3 | `get_callees`, `find_path`, `get_impact` |
-| `cross-file-calls` | 🔜 Planned | - | `get_callers`, call_count |
 | `mixed-types` | 🔜 Planned | - | `search_nodes`, type filters |
+| `web-app` | 🔜 Planned | - | `get_impact`, cross-module edges |
 
 ### Sample Results (deep-chain)
 
@@ -172,6 +170,6 @@ test-project/
 - WITHOUT MCP: Claude reads 10 files sequentially to trace call chain
 - WITH MCP: Single `get_callees(entry, maxDepth: 10)` → instant answer
 
-**cross-file-calls example:**
-- WITHOUT MCP: Claude greps for function calls, reads files, counts manually
-- WITH MCP: `get_callers(helper)` returns all callers with call counts
+**web-app example:**
+- WITHOUT MCP: Claude traces imports across modules, reads multiple files
+- WITH MCP: `get_impact(sharedType)` shows cross-module dependents instantly

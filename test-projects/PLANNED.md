@@ -15,9 +15,10 @@ This document tracks test projects to be created for integration testing and ben
 | Project | Structure | What It Tests | Status |
 |---------|-----------|---------------|--------|
 | ~~`call-chain`~~ | L1: Single file | Same-file CALLS chain | **Retired** - replaced by `deep-chain` |
-| `cross-file-calls` | L1: 3 files | Cross-file CALLS, call count, Issue #9 regression | **Keep** - unique call_count tests |
+| ~~`cross-file-calls`~~ | L1: 3 files | Cross-file CALLS, call count | **Retired** - redundant with unit tests in `extractCallEdges.test.ts` |
 | `mixed-types` | L1: 3 files | All 8 node types | **Merge** into `type-system` when implemented |
-| `deep-chain` | L1: 10 files | Deep cross-file call chain (10 hops) | **New** - replaces `call-chain` |
+| `deep-chain` | L1: 10 files | Deep cross-file call chain (10 hops) | **Active** - primary benchmark for traversal |
+| `web-app` | L2: 3 modules, 1 pkg each | Cross-module edges, Issue #5 regression | **Active** - 15 tests, all passing |
 
 ### Migration Notes
 
@@ -293,31 +294,47 @@ defineConfig({
 
 ---
 
-### 8. `monorepo` (Priority: Critical - Regression for Issue #5)
+### ~~8. `web-app`~~ ✅ IMPLEMENTED (renamed from `monorepo`)
 
-**Purpose:** Test cross-module edges. Currently FAILS (Issue #5), becomes regression test when fixed.
+**Status:** Implemented 2025-12-17, Issue #5 fixed
 
-**Structure:** L3 - Multi-module monorepo
+**Purpose:** Test cross-module edges. Now serves as regression test for Issue #5.
+
+**Structure:** L2 - Multi-module (3 modules, 1 package each)
+
+**Tests (15 passing):**
+- Cross-module CALLS edges (backend → shared)
+- Cross-module USES_TYPE edges (frontend → shared, backend → shared)
+- Cross-module IMPORTS edges
+- `get_impact` analysis across modules
+- Module filtering with `search_nodes`
+
+See `test-projects/web-app/` for implementation.
+
+Note: This is a simplified multi-module structure. For a true monorepo test with
+multiple packages per module, see the `monorepo` project below.
+
+---
+
+### 9. `monorepo` (Priority: Medium)
+
+**Purpose:** Test true monorepo structure with multiple packages per module.
+
+**Structure:** L3 - Multi-module monorepo (3 modules, 2+ packages each)
 ```
 modules/
 ├── shared/
 │   └── packages/
-│       └── types/
-│           ├── tsconfig.json
-│           └── src/
-│               └── common.ts  → shared types (User, Config)
+│       ├── types/         → core types (User, Config)
+│       └── utils/         → shared utilities (formatDate, validate)
 ├── frontend/
 │   └── packages/
-│       └── ui/
-│           ├── tsconfig.json
-│           └── src/
-│               └── UserCard.ts → imports User from @shared/types
+│       ├── ui/            → UI components
+│       └── state/         → state management, uses types
 └── backend/
     └── packages/
-        └── api/
-            ├── tsconfig.json
-            └── src/
-                └── userApi.ts → imports User from @shared/types
+        ├── api/           → API handlers
+        └── services/      → business logic, uses types + utils
 ```
 
 **Config:**
@@ -326,32 +343,42 @@ defineConfig({
   modules: [
     {
       name: "shared",
-      packages: [{ name: "types", tsconfig: "./modules/shared/packages/types/tsconfig.json" }]
+      packages: [
+        { name: "types", tsconfig: "./modules/shared/packages/types/tsconfig.json" },
+        { name: "utils", tsconfig: "./modules/shared/packages/utils/tsconfig.json" }
+      ]
     },
     {
       name: "frontend",
-      packages: [{ name: "ui", tsconfig: "./modules/frontend/packages/ui/tsconfig.json" }]
+      packages: [
+        { name: "ui", tsconfig: "./modules/frontend/packages/ui/tsconfig.json" },
+        { name: "state", tsconfig: "./modules/frontend/packages/state/tsconfig.json" }
+      ]
     },
     {
       name: "backend",
-      packages: [{ name: "api", tsconfig: "./modules/backend/packages/api/tsconfig.json" }]
+      packages: [
+        { name: "api", tsconfig: "./modules/backend/packages/api/tsconfig.json" },
+        { name: "services", tsconfig: "./modules/backend/packages/services/tsconfig.json" }
+      ]
     }
   ]
 })
 ```
 
-**Tests (Expected to FAIL until Issue #5 is fixed):**
-- Cross-module USES_TYPE: `frontend/UserCard → shared/User`
-- Cross-module USES_TYPE: `backend/userApi → shared/User`
-- `get_impact(shared/User)` - should show frontend AND backend dependents
-- `search_nodes({ pattern: "*", module: "frontend" })` - module filtering
+**Tests:**
+- Cross-package edges within same module (e.g., backend/api → backend/services)
+- Cross-module edges between packages (e.g., backend/services → shared/utils)
+- Package filtering: `search_nodes({ pattern: "*", package: "utils" })`
+- Module + package filtering combined
+- `get_impact` at package granularity
 
 **Benchmark Prompts:**
-- "What frontend components use the shared `User` type?"
-- "If I change `User` in shared, what modules are affected?"
-- "Show dependencies between modules"
+- "What packages in frontend use the shared utils?"
+- "If I change the types package, what other packages are affected?"
+- "Show dependencies between packages across modules"
 
-**Why this is critical:** Cross-module analysis is THE value proposition for monorepos. This project serves as the regression test for Issue #5.
+**Why this matters:** True monorepos have multiple packages per module. This tests the full L3 structure.
 
 ---
 
@@ -361,10 +388,10 @@ defineConfig({
 
 | Tool | Covered By |
 |------|------------|
-| `search_nodes` | shared-utils, multi-package, monorepo |
+| `search_nodes` | shared-utils, multi-package, web-app ✅, monorepo |
 | `get_callers` | deep-chain, shared-utils |
 | `get_callees` | deep-chain, layered-api |
-| `get_impact` | shared-utils, type-system, property-access, multi-package, monorepo |
+| `get_impact` | shared-utils, type-system, property-access, multi-package, web-app ✅, monorepo |
 | `find_path` | deep-chain, layered-api |
 | `get_neighbors` | event-system, layered-api |
 | `get_file_symbols` | All (implicit) |
@@ -373,10 +400,10 @@ defineConfig({
 
 | Edge | Covered By |
 |------|------------|
-| CALLS | deep-chain, shared-utils, layered-api, event-system |
-| IMPORTS | multi-package, monorepo |
+| CALLS | deep-chain, shared-utils, layered-api, event-system, web-app ✅ |
+| IMPORTS | multi-package, web-app ✅, monorepo |
 | CONTAINS | All (implicit) |
-| USES_TYPE | type-system, multi-package, monorepo |
+| USES_TYPE | type-system, multi-package, web-app ✅, monorepo |
 | EXTENDS | type-system |
 | IMPLEMENTS | type-system |
 | READS_PROPERTY | property-access |
@@ -388,20 +415,22 @@ defineConfig({
 |-------|----------|
 | L1: Single package | deep-chain, shared-utils, type-system, layered-api, property-access, event-system |
 | L2: Multi-package | multi-package |
-| L3: Multi-module | monorepo |
+| L2: Multi-module (1 pkg/module) | ~~web-app~~ ✅ |
+| L3: Multi-module (multi-pkg) | monorepo |
 
 ---
 
 ## Implementation Priority
 
-1. **Critical:** `monorepo` - Regression test for Issue #5
-2. **High:** `deep-chain` - Simple to build, high benchmark value
+1. ~~**Critical:** `web-app` - Cross-module edges, Issue #5 regression~~ ✅ DONE
+2. ~~**High:** `deep-chain` - Simple to build, high benchmark value~~ ✅ DONE
 3. **High:** `shared-utils` - Tests `get_impact`, common real-world pattern
 4. **High:** `type-system` - Tests missing edge types (EXTENDS, IMPLEMENTS)
-5. **High:** `multi-package` - L2 structure coverage
-6. **Medium:** `layered-api` - Realistic architecture pattern
-7. **Medium:** `property-access` - Tests READS/WRITES_PROPERTY edges
-8. **Medium:** `event-system` - Tests `get_neighbors` hub pattern
+5. **High:** `multi-package` - L2 multi-package within single module
+6. **Medium:** `monorepo` - True L3 structure (multi-pkg per module)
+7. **Medium:** `layered-api` - Realistic architecture pattern
+8. **Medium:** `property-access` - Tests READS/WRITES_PROPERTY edges
+9. **Medium:** `event-system` - Tests `get_neighbors` hub pattern
 
 ---
 

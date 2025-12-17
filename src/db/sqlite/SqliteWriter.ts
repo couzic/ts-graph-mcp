@@ -59,6 +59,14 @@ export const createSqliteWriter = (db: Database.Database): DbWriter => {
     DELETE FROM nodes WHERE file_path = ?
   `);
 
+	// Delete edges where source or target belongs to the file
+	// Node IDs: file node = "path", symbol nodes = "path:symbol"
+	const deleteEdgesByFileStmt = db.prepare(`
+    DELETE FROM edges
+    WHERE source = @filePath OR source LIKE @filePrefix
+       OR target = @filePath OR target LIKE @filePrefix
+  `);
+
 	// Transaction wrappers for batch operations
 	const addNodesTransaction = db.transaction((nodes: Node[]) => {
 		for (const node of nodes) {
@@ -104,7 +112,12 @@ export const createSqliteWriter = (db: Database.Database): DbWriter => {
 		},
 
 		async removeFileNodes(filePath: string): Promise<void> {
-			// Foreign key cascade will delete related edges
+			// Explicitly delete edges first (no FK cascade)
+			deleteEdgesByFileStmt.run({
+				filePath,
+				filePrefix: `${filePath}:%`,
+			});
+			// Then delete nodes
 			deleteNodesByFileStmt.run(filePath);
 		},
 

@@ -64,7 +64,7 @@ export async function runClaude(
 				// Disable caching for fair comparison
 				DISABLE_PROMPT_CACHING: "1",
 			},
-			stdio: ["inherit", "pipe", "pipe"],
+			stdio: ["ignore", "pipe", "pipe"],
 		});
 
 		let stdout = "";
@@ -190,18 +190,32 @@ export function checkDatabase(projectRoot: string, dbPath: string): void {
 	}
 }
 
+export interface SaveResultsOutput {
+	jsonPath: string;
+	mdPath?: string;
+}
+
 /**
- * Save benchmark results to a JSON file.
+ * Save benchmark results to JSON and optionally markdown files.
  */
 export async function saveResults(
 	resultsDir: string,
 	report: object,
-): Promise<string> {
+	markdown?: string,
+): Promise<SaveResultsOutput> {
 	await mkdir(resultsDir, { recursive: true });
 	const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+
 	const jsonPath = join(resultsDir, `run-${timestamp}.json`);
 	await writeFile(jsonPath, JSON.stringify(report, null, 2));
-	return jsonPath;
+
+	let mdPath: string | undefined;
+	if (markdown) {
+		mdPath = join(resultsDir, `run-${timestamp}.md`);
+		await writeFile(mdPath, markdown);
+	}
+
+	return { jsonPath, mdPath };
 }
 
 /**

@@ -41,11 +41,11 @@ export const extractFromSourceFile = (
 	sourceFile: SourceFile,
 	context: ExtractionContext,
 ): ExtractionResult => {
-	// Extract nodes first
+	// Extract nodes
 	const nodes = extractNodes(sourceFile, context);
 
-	// Extract edges (needs nodes for CONTAINS edges)
-	const edges = extractEdges(sourceFile, nodes, context);
+	// Extract edges (all edge extractors now use AST directly via import maps)
+	const edges = extractEdges(sourceFile, context);
 
 	return {
 		nodes,

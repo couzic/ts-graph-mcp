@@ -5,40 +5,100 @@ import {
 	type SourceFile,
 	Node as TsMorphNode,
 } from "ts-morph";
-import type { Edge, Node } from "../../../db/Types.js";
+import type { Edge } from "../../../db/Types.js";
 import { generateNodeId } from "../../IdGenerator.js";
-import { buildSymbolMap, type SymbolMap } from "./buildSymbolMap.js";
+import { buildImportMap } from "./buildImportMap.js";
 import type { EdgeExtractionContext } from "./EdgeExtractionContext.js";
+
+/**
+ * A map from type names to their node IDs.
+ * Combines local types and imported types.
+ */
+type TypeMap = Map<string, string>;
 
 /**
  * Extract USES_TYPE edges for type references.
  *
+ * Uses a simplified approach that doesn't require a global nodes array:
+ * - Local types: Extracted from the current file's AST
+ * - Imported types: Resolved via ts-morph + import map (including type-only imports)
+ *
  * @param sourceFile - The source file AST
- * @param nodes - All nodes from the codebase (enables cross-file resolution)
  * @param context - Extraction context (filePath, module, package)
  */
 export const extractTypeUsageEdges = (
 	sourceFile: SourceFile,
-	nodes: Node[],
 	context: EdgeExtractionContext,
 ): Edge[] => {
 	const edges: Edge[] = [];
 
-	// Build symbol map including type imports for cross-file resolution
-	const typeSymbolMap = buildSymbolMap(nodes, context.filePath, sourceFile, {
-		includeTypeImports: true,
-	});
+	// Build combined type map from local definitions + imports (including type-only)
+	const typeMap = buildCombinedTypeMap(sourceFile, context.filePath);
 
 	// Extract type usage from functions
-	extractTypeUsageFromFunctions(sourceFile, context, typeSymbolMap, edges);
+	extractTypeUsageFromFunctions(sourceFile, context, typeMap, edges);
 
 	// Extract type usage from variables
-	extractTypeUsageFromVariables(sourceFile, context, typeSymbolMap, edges);
+	extractTypeUsageFromVariables(sourceFile, context, typeMap, edges);
 
 	// Extract type usage from class properties
-	extractTypeUsageFromProperties(sourceFile, context, typeSymbolMap, edges);
+	extractTypeUsageFromProperties(sourceFile, context, typeMap, edges);
 
 	return edges;
+};
+
+/**
+ * Build a combined type map from local definitions and imports.
+ * This is the simplified approach that doesn't need the global nodes array.
+ */
+const buildCombinedTypeMap = (
+	sourceFile: SourceFile,
+	filePath: string,
+): TypeMap => {
+	const map: TypeMap = new Map();
+
+	// 1. Add local types (defined in this file)
+	addLocalTypes(map, sourceFile, filePath);
+
+	// 2. Add imported types (including type-only imports)
+	const importMap = buildImportMap(sourceFile, filePath, {
+		includeTypeImports: true,
+	});
+	for (const [name, targetId] of importMap) {
+		map.set(name, targetId);
+	}
+
+	return map;
+};
+
+/**
+ * Add type symbols defined in the current file to the map.
+ * Constructs IDs directly as filePath:symbolName.
+ */
+const addLocalTypes = (
+	map: TypeMap,
+	sourceFile: SourceFile,
+	filePath: string,
+): void => {
+	// Interfaces
+	for (const iface of sourceFile.getInterfaces()) {
+		const name = iface.getName();
+		map.set(name, `${filePath}:${name}`);
+	}
+
+	// Type aliases
+	for (const typeAlias of sourceFile.getTypeAliases()) {
+		const name = typeAlias.getName();
+		map.set(name, `${filePath}:${name}`);
+	}
+
+	// Classes (can be used as types)
+	for (const classDecl of sourceFile.getClasses()) {
+		const name = classDecl.getName();
+		if (name) {
+			map.set(name, `${filePath}:${name}`);
+		}
+	}
 };
 
 /**
@@ -47,7 +107,7 @@ export const extractTypeUsageEdges = (
 const extractTypeUsageFromFunctions = (
 	sourceFile: SourceFile,
 	context: EdgeExtractionContext,
-	typeSymbolMap: SymbolMap,
+	typeMap: TypeMap,
 	edges: Edge[],
 ): void => {
 	const functions = sourceFile.getFunctions();
@@ -59,7 +119,7 @@ const extractTypeUsageFromFunctions = (
 		if (!funcName) continue;
 
 		const sourceId = generateNodeId(context.filePath, funcName);
-		extractTypeUsageFromCallable(func, sourceId, typeSymbolMap, edges);
+		extractTypeUsageFromCallable(func, sourceId, typeMap, edges);
 	}
 
 	// Arrow functions
@@ -69,7 +129,7 @@ const extractTypeUsageFromFunctions = (
 
 		if (initializer && TsMorphNode.isArrowFunction(initializer)) {
 			const sourceId = generateNodeId(context.filePath, varName);
-			extractTypeUsageFromCallable(initializer, sourceId, typeSymbolMap, edges);
+			extractTypeUsageFromCallable(initializer, sourceId, typeMap, edges);
 		}
 	}
 
@@ -83,7 +143,7 @@ const extractTypeUsageFromFunctions = (
 		for (const method of methods) {
 			const methodName = method.getName();
 			const sourceId = generateNodeId(context.filePath, className, methodName);
-			extractTypeUsageFromCallable(method, sourceId, typeSymbolMap, edges);
+			extractTypeUsageFromCallable(method, sourceId, typeMap, edges);
 		}
 	}
 };
@@ -94,7 +154,7 @@ const extractTypeUsageFromFunctions = (
 const extractTypeUsageFromCallable = (
 	callable: FunctionDeclaration | ArrowFunction | MethodDeclaration,
 	sourceId: string,
-	typeSymbolMap: SymbolMap,
+	typeMap: TypeMap,
 	edges: Edge[],
 ): void => {
 	// Parameter types
@@ -104,8 +164,7 @@ const extractTypeUsageFromCallable = (
 		if (typeNode) {
 			const typeName = extractSimpleTypeName(typeNode.getText());
 			if (typeName && isLocalType(typeName)) {
-				// Use symbol map to resolve cross-file types
-				const targetId = typeSymbolMap.get(typeName);
+				const targetId = typeMap.get(typeName);
 				if (targetId) {
 					edges.push({
 						source: sourceId,
@@ -123,8 +182,7 @@ const extractTypeUsageFromCallable = (
 	if (returnTypeNode) {
 		const typeName = extractSimpleTypeName(returnTypeNode.getText());
 		if (typeName && isLocalType(typeName)) {
-			// Use symbol map to resolve cross-file types
-			const targetId = typeSymbolMap.get(typeName);
+			const targetId = typeMap.get(typeName);
 			if (targetId) {
 				edges.push({
 					source: sourceId,
@@ -143,7 +201,7 @@ const extractTypeUsageFromCallable = (
 const extractTypeUsageFromVariables = (
 	sourceFile: SourceFile,
 	context: EdgeExtractionContext,
-	typeSymbolMap: SymbolMap,
+	typeMap: TypeMap,
 	edges: Edge[],
 ): void => {
 	const variables = sourceFile.getVariableDeclarations();
@@ -156,8 +214,7 @@ const extractTypeUsageFromVariables = (
 			const typeName = extractSimpleTypeName(typeNode.getText());
 			if (typeName && isLocalType(typeName)) {
 				const sourceId = generateNodeId(context.filePath, varName);
-				// Use symbol map to resolve cross-file types
-				const targetId = typeSymbolMap.get(typeName);
+				const targetId = typeMap.get(typeName);
 				if (targetId) {
 					edges.push({
 						source: sourceId,
@@ -177,7 +234,7 @@ const extractTypeUsageFromVariables = (
 const extractTypeUsageFromProperties = (
 	sourceFile: SourceFile,
 	context: EdgeExtractionContext,
-	typeSymbolMap: SymbolMap,
+	typeMap: TypeMap,
 	edges: Edge[],
 ): void => {
 	const classes = sourceFile.getClasses();
@@ -199,8 +256,7 @@ const extractTypeUsageFromProperties = (
 						className,
 						propName,
 					);
-					// Use symbol map to resolve cross-file types
-					const targetId = typeSymbolMap.get(typeName);
+					const targetId = typeMap.get(typeName);
 					if (targetId) {
 						edges.push({
 							source: sourceId,

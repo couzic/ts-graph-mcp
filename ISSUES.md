@@ -1,56 +1,82 @@
 # Known Issues
 
-Last updated: 2025-12-15
+Last updated: 2025-12-17
 
-## Must Fix Before Release
+## Must Fix
 
-### 5. Cross-Module Edge Resolution
+### 14. Memory Scalability: Three-Phase Indexing Holds All Nodes in Memory
 
-**Status:** High priority - blocking monorepo support
+**Status:** Partially resolved - edge extraction refactored (2025-12-17)
 
-**Problem:** Edges that cross module boundaries are silently dropped during ingestion. This breaks cross-module analysis, which is a core value proposition for monorepo users.
+**Problem:** The Issue #5 fix changed `indexProject` from per-package streaming writes to a three-phase approach that collects ALL nodes in memory before writing. For very large codebases (10K+ files), this could exhaust memory.
 
-**Impact:** Without this fix, we cannot answer:
-- "Which frontend components use this backend type?"
-- "What's the impact of changing this shared utility across modules?"
-- "How does data flow from UI to database?"
+**Progress (2025-12-17):**
 
-**Scope:**
+1. ✅ **Edge extraction no longer needs global nodes array** - All edge extractors refactored:
+   - `extractCallEdges` and `extractTypeUsageEdges` use `buildImportMap` for cross-file resolution
+   - `extractImportEdges` and `extractContainsEdges` extract directly from AST
+   - `extractEdges(sourceFile, context)` signature simplified (no `nodes` parameter)
+   - Memory footprint: O(imports in current file) instead of O(all nodes)
+   - Resolves imports via ts-morph (no node lookups)
+   - Constructs target IDs directly: `targetPath:symbolName`
 
-| Scenario | Status |
-|----------|--------|
-| Cross-file (same package) | ✅ Works - three-pass within package |
-| External dependencies (`node_modules`) | ✅ Filtered out intentionally |
-| Cross-package (same module) | ✅ Works - same `indexPackage` call |
-| **Cross-module** | ❌ **Edge silently dropped - MUST FIX** |
+2. ✅ **FK constraints removed** - Schema no longer has foreign key constraints on edges table:
+   - Enables parallel package processing
+   - No ordering dependencies
+   - Dangling edges filtered out by queries (JOINs)
 
-**Root Cause:** The three-pass extraction operates per-module. When Module A is processed, edges targeting Module B have no valid targets yet (B's nodes don't exist). By the time Module B is processed, A's edges are already gone.
+**Remaining work for streaming:**
+- Refactor `indexProject` to write nodes/edges immediately per-file
+- Remove `allNodes` and `allEdges` accumulation arrays
+- Add progress callbacks for long-running indexing
 
-**Fix Strategy: Deferred Edge Table**
+**Memory comparison (10K files, 500K nodes, 2.5M edges):**
 
-Insert edges into a "pending" table without FK constraints, then resolve after all modules are indexed:
+| Approach | Peak Memory |
+|----------|-------------|
+| Current (all in memory) | ~2-4 GB |
+| After streaming refactor | ~50-100 MB |
 
-```sql
--- During indexing (no FK validation)
-INSERT INTO pending_edges (source, target, type, ...) VALUES (?, ?, ?, ...);
-
--- After all modules indexed
-INSERT INTO edges
-SELECT * FROM pending_edges p
-WHERE EXISTS (SELECT 1 FROM nodes WHERE id = p.source)
-  AND EXISTS (SELECT 1 FROM nodes WHERE id = p.target);
-```
-
-**Why this approach:**
-- Low memory overhead (no need to hold all nodes in memory)
-- Works with current streaming/per-package architecture
-- Can report which edges couldn't be resolved (useful diagnostics)
-
-**Tracking:** Also documented in ROADMAP.md under "Critical: Must Fix"
+**Tracking:** See SIMPLIFIED_INGESTION.md for full architecture proposal
 
 ---
 
 ## Resolved Issues
+
+### ~~5. Cross-Module Edge Resolution~~ ✅ FIXED
+
+**Status:** Fixed 2025-12-17
+
+**Problem:** Edges that cross module boundaries were silently dropped during ingestion.
+
+**Root Cause (discovered during fix):** Two separate bugs:
+1. **Source file scope leak:** ts-morph would pull in files from other packages via imports, causing nodes to get wrong module metadata
+2. **Per-package edge filtering:** Dangling edge filter ran per-package, dropping cross-module edges
+
+**Fix Applied:** Refactored `indexProject` in `src/ingestion/Ingestion.ts` to use three-phase architecture:
+
+1. **Phase 1:** Extract nodes from ALL packages (builds complete symbol table)
+2. **Phase 2:** Extract edges from ALL packages (with complete node set for cross-module resolution)
+3. **Phase 3:** Filter dangling edges and write to database
+
+Additional fix: Added package directory filtering to prevent source file scope leak.
+
+**Verification:** Integration test in `test-projects/web-app/integration.test.ts` with 15 tests covering:
+- Cross-module CALLS edges (backend → shared)
+- Cross-module USES_TYPE edges (frontend → shared, backend → shared)
+- Cross-module IMPORTS edges
+- `get_impact` analysis across modules
+
+**Scope now:**
+
+| Scenario | Status |
+|----------|--------|
+| Cross-file (same package) | ✅ Works |
+| External dependencies (`node_modules`) | ✅ Filtered out intentionally |
+| Cross-package (same module) | ✅ Works |
+| Cross-module | ✅ **Works** |
+
+---
 
 ### ~~1. SQL Injection Risk in Filter Builders~~ ✅ FIXED
 
@@ -211,9 +237,9 @@ WHERE EXISTS (SELECT 1 FROM nodes WHERE id = p.source)
 | Watcher system tests | Real filesystem change detection | Medium |
 
 **Integration tests added:**
-- `test-projects/call-chain/integration.test.ts` (18 tests) - same-file call chains
-- `test-projects/cross-file-calls/integration.test.ts` (14 tests) - cross-file CALLS edges (Issue #9 regression)
-- `test-projects/mixed-types/integration.test.ts` (19 tests) - all node types
+- `test-projects/deep-chain/integration.test.ts` (20 tests) - deep cross-file call chains
+- `test-projects/mixed-types/integration.test.ts` (23 tests) - all node types
+- `test-projects/web-app/integration.test.ts` (15 tests) - cross-module edges (Issue #5 regression)
 
 **Note:** Handler unit tests were originally planned but deemed unnecessary - handlers are thin plumbing code (query + format), and both layers have their own unit tests.
 
@@ -239,6 +265,55 @@ See [docs/toon-optimization/](./docs/toon-optimization/) for historical analysis
 ---
 
 ## Nice to Have
+
+### 15. Configuration Too Verbose: Support Flat Package List
+
+**Status:** Enhancement - documented 2025-12-17
+
+**Problem:** The current configuration requires wrapping every package in a module, even when modules aren't needed:
+
+```typescript
+// Current - verbose
+export default defineConfig({
+  modules: [
+    {
+      name: "shared",
+      packages: [{ name: "shared", tsconfig: "./shared/tsconfig.json" }],
+    },
+    {
+      name: "frontend",
+      packages: [{ name: "frontend", tsconfig: "./frontend/tsconfig.json" }],
+    },
+  ],
+});
+```
+
+For simple projects or when module grouping isn't meaningful, a flat package list would be cleaner:
+
+```typescript
+// Proposed - simpler
+export default defineConfig({
+  packages: [
+    { name: "shared", tsconfig: "./shared/tsconfig.json" },
+    { name: "frontend", tsconfig: "./frontend/tsconfig.json" },
+  ],
+});
+```
+
+**Why it matters:**
+- Most projects don't need module grouping
+- Current format has redundant `name` fields (module name often matches package name)
+- Simpler configs are easier to understand and maintain
+- Reduces barrier to adoption
+
+**Proposed solution:**
+1. Accept either `modules` (current) or `packages` (new flat format)
+2. When `packages` is used, auto-generate a single module named "default" containing all packages
+3. Validate that only one of `modules` or `packages` is provided
+
+**Impact:** Low - purely a DX improvement, no functional change
+
+---
 
 ### 13. `find_path` Should Return Multiple Paths
 

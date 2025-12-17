@@ -4,20 +4,24 @@
 
 ## Critical: Must Fix
 
-### Cross-Module Edge Resolution
+### Memory Scalability for Large Codebases (Issue #14)
 **Impact: Critical | Effort: Medium**
 
-**This is blocking monorepo support.** Edges that cross module boundaries are silently dropped during ingestion. Without this fix, we cannot answer questions like:
-- "Which frontend components use this backend type?"
-- "What's the impact of changing this shared utility across modules?"
-- "How does data flow from UI to database?"
+**This blocks support for very large codebases (10K+ files).**
 
-**Fix strategy:** Deferred Edge Table (detailed in ISSUES.md #5)
-- Insert edges into pending table without FK constraints during indexing
-- Resolve valid edges after all modules are indexed
-- Report unresolved edges as diagnostics
+The Issue #5 fix (cross-module edge resolution) introduced a memory scalability regression. The current three-phase architecture collects ALL nodes and edges in memory before writing to the database.
 
-**Why this matters:** Cross-module analysis is a core value proposition. Monorepos are where graph-based analysis shines over text search.
+**Problem:**
+- 10K files × 50 symbols/file = 500K nodes in memory
+- Edge count 5-10x node count = 2.5M-5M edges in memory
+- Estimated peak memory: 2-4 GB (unacceptable)
+
+**Fix:** Streaming with Deferred Edge Resolution (detailed in ISSUES.md #14)
+1. Stream nodes to DB immediately, keep only ID set in memory
+2. Stream edges to `pending_edges` table (no FK constraints)
+3. SQL join to resolve and promote valid edges
+
+**Target:** <100 MB peak memory for 10K file codebase
 
 ---
 

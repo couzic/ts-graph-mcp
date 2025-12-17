@@ -1,6 +1,5 @@
 import { Project } from "ts-morph";
 import { describe, expect, it } from "vitest";
-import type { Node } from "../../../db/Types.js";
 import { generateNodeId } from "../../IdGenerator.js";
 import type { EdgeExtractionContext } from "./EdgeExtractionContext.js";
 import { extractTypeUsageEdges } from "./extractTypeUsageEdges.js";
@@ -29,22 +28,7 @@ export const greet = (user: User): void => {
         `,
 		);
 
-		// Nodes for same-file types (symbol map needs these)
-		const nodes: Node[] = [
-			{
-				id: generateNodeId("test.ts", "User"),
-				type: "Interface",
-				name: "User",
-				module: "test-module",
-				package: "test-package",
-				filePath: "test.ts",
-				startLine: 2,
-				endLine: 4,
-				exported: true,
-			},
-		];
-
-		const edges = extractTypeUsageEdges(sourceFile, nodes, defaultContext);
+		const edges = extractTypeUsageEdges(sourceFile, defaultContext);
 
 		const paramEdge = edges.find(
 			(e) =>
@@ -75,21 +59,7 @@ export const getUser = (): User => {
         `,
 		);
 
-		const nodes: Node[] = [
-			{
-				id: generateNodeId("test.ts", "User"),
-				type: "Interface",
-				name: "User",
-				module: "test-module",
-				package: "test-package",
-				filePath: "test.ts",
-				startLine: 2,
-				endLine: 4,
-				exported: true,
-			},
-		];
-
-		const edges = extractTypeUsageEdges(sourceFile, nodes, defaultContext);
+		const edges = extractTypeUsageEdges(sourceFile, defaultContext);
 
 		const returnEdge = edges.find(
 			(e) =>
@@ -118,21 +88,7 @@ export const user: User = { name: 'Alice' };
         `,
 		);
 
-		const nodes: Node[] = [
-			{
-				id: generateNodeId("test.ts", "User"),
-				type: "Interface",
-				name: "User",
-				module: "test-module",
-				package: "test-package",
-				filePath: "test.ts",
-				startLine: 2,
-				endLine: 4,
-				exported: true,
-			},
-		];
-
-		const edges = extractTypeUsageEdges(sourceFile, nodes, defaultContext);
+		const edges = extractTypeUsageEdges(sourceFile, defaultContext);
 
 		const varEdge = edges.find(
 			(e) =>
@@ -163,21 +119,7 @@ export class User {
         `,
 		);
 
-		const nodes: Node[] = [
-			{
-				id: generateNodeId("test.ts", "Address"),
-				type: "Interface",
-				name: "Address",
-				module: "test-module",
-				package: "test-package",
-				filePath: "test.ts",
-				startLine: 2,
-				endLine: 4,
-				exported: true,
-			},
-		];
-
-		const edges = extractTypeUsageEdges(sourceFile, nodes, defaultContext);
+		const edges = extractTypeUsageEdges(sourceFile, defaultContext);
 
 		const propEdge = edges.find(
 			(e) =>
@@ -218,39 +160,14 @@ export const greet = (user: User): void => {
       `,
 		);
 
-		// All nodes from both files (simulates the three-pass architecture)
-		const nodes: Node[] = [
-			{
-				id: generateNodeId("types.ts", "User"),
-				type: "Interface",
-				name: "User",
-				module: "test-module",
-				package: "test-package",
-				filePath: "types.ts",
-				startLine: 2,
-				endLine: 4,
-				exported: true,
-			},
-			{
-				id: generateNodeId("service.ts", "greet"),
-				type: "Function",
-				name: "greet",
-				module: "test-module",
-				package: "test-package",
-				filePath: "service.ts",
-				startLine: 4,
-				endLine: 6,
-				exported: true,
-			},
-		];
-
 		const serviceContext: EdgeExtractionContext = {
 			filePath: "service.ts",
 			module: "test-module",
 			package: "test-package",
 		};
 
-		const edges = extractTypeUsageEdges(serviceFile, nodes, serviceContext);
+		// Cross-file resolution works via buildImportMap (ts-morph import resolution)
+		const edges = extractTypeUsageEdges(serviceFile, serviceContext);
 
 		const crossFileEdge = edges.find(
 			(e) =>

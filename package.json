@@ -16,8 +16,8 @@
 		"lint": "biome check .",
 		"lint:fix": "biome check --write .",
 		"format": "biome format --write .",
-		"benchmark:setup": "npx tsx test-projects/deep-chain/benchmark/setup.ts",
-		"benchmark": "npx tsx test-projects/deep-chain/benchmark/run.ts",
+		"benchmark:setup": "npm run build && npx tsx test-projects/deep-chain/benchmark/setup.ts",
+		"benchmark": "npm run benchmark:setup && npx tsx test-projects/deep-chain/benchmark/run.ts",
 		"benchmark:full": "npm run benchmark -- --runs 3"
 	},
 	"keywords": [
