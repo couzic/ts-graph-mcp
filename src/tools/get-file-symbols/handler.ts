@@ -12,11 +12,14 @@ export interface GetFileSymbolsParams {
 
 /**
  * MCP tool definition for get_file_symbols.
+ *
+ * @deprecated Use LSP `documentSymbol` instead.
+ * LSP provides real-time results without pre-indexing.
  */
 export const getFileSymbolsDefinition = {
 	name: "get_file_symbols",
 	description:
-		"Get all symbols (functions, classes, interfaces, etc.) defined in a file. Returns all nodes in the specified file.",
+		"[DEPRECATED: Use LSP documentSymbol instead] Get all symbols (functions, classes, interfaces, etc.) defined in a file. Returns all nodes in the specified file.",
 	inputSchema: {
 		type: "object" as const,
 		properties: {

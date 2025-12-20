@@ -178,7 +178,7 @@ The schema intentionally omits FK constraints on edges table for three key reaso
 
 ### `/src/mcp/` - MCP Server
 
-**Purpose**: Exposes the code graph as an MCP server with 7 tools.
+**Purpose**: Exposes the code graph as an MCP server with 7 tools (6 active, 1 deprecated).
 
 **Key Files**:
 - `McpServer.ts` - Server implementation with 7 tool registrations
@@ -421,7 +421,7 @@ await dbWriter.addEdges(edges);
 
 ## MCP Tools
 
-The MCP server exposes 7 tools for querying the code graph.
+The MCP server exposes 7 tools for querying the code graph (6 active, 1 deprecated — see [LSP Tool Overlap](#lsp-tool-overlap)).
 
 **Input Validation**: Tools that accept `nodeId` or `filePath` parameters validate existence before querying. Invalid inputs return actionable error messages with suggestions (e.g., "Use search_nodes to find valid IDs"). Shared validators live in `src/tools/shared/validateNodeExists.ts`.
 
@@ -477,7 +477,9 @@ The MCP server exposes 7 tools for querying the code graph.
 - `distance` (optional): Maximum edge distance (1-100, default: 1)
 - `direction` (optional): `"outgoing"` | `"incoming"` | `"both"` (default: "both")
 
-### 7. `get_file_symbols`
+### 7. `get_file_symbols` ⚠️ DEPRECATED
+
+> **DEPRECATED.** Use LSP `documentSymbol` instead — real-time, no pre-indexing required.
 
 **Purpose**: List all symbols defined in a file.
 
@@ -542,6 +544,58 @@ Always run `npm run check` before committing:
 ```bash
 npm run check  # Runs: test → build → lint:fix
 ```
+
+## LSP Tool Overlap
+
+Claude Code 2.0.74+ includes a built-in LSP (Language Server Protocol) tool. This section documents the overlap and differentiators.
+
+### LSP Capabilities
+
+The built-in LSP tool provides:
+- `goToDefinition` - Find where a symbol is defined
+- `findReferences` - Find all references to a symbol
+- `hover` - Get documentation and type info
+- `documentSymbol` - Get all symbols in a file
+- `workspaceSymbol` - Search for symbols across the workspace
+- `goToImplementation` - Find interface implementations
+- `incomingCalls` - Find direct callers of a function
+- `outgoingCalls` - Find direct callees of a function
+
+### Feature Comparison
+
+| Feature | LSP Tool | ts-graph-mcp | Overlap |
+|---------|----------|--------------|---------|
+| Symbols in file | `documentSymbol` | ~~`get_file_symbols`~~ | **Full** - DEPRECATED |
+| Search symbols | `workspaceSymbol` | `search_nodes` | **Partial** - ts-graph has module/package/exported filters |
+| Direct callers | `incomingCalls` | `get_callers(maxDepth=1)` | **Partial** - ts-graph has transitive traversal |
+| Direct callees | `outgoingCalls` | `get_callees(maxDepth=1)` | **Partial** - ts-graph has transitive traversal |
+| Definition lookup | `goToDefinition` | ❌ | None |
+| Hover docs | `hover` | ❌ | None |
+| **Transitive call graph** | ❌ | `get_callers/callees(maxDepth=N)` | **Unique** |
+| **Impact analysis** | ❌ | `get_impact` | **Unique** |
+| **Path finding** | ❌ | `find_path` | **Unique** |
+| **Neighborhood subgraph** | ❌ | `get_neighbors` + Mermaid | **Unique** |
+
+### Deprecation Status
+
+**DEPRECATED:**
+- `get_file_symbols` - Use LSP `documentSymbol` instead. Real-time, no pre-indexing required.
+
+### When to Use Each
+
+**Use LSP when:**
+- You need real-time, up-to-date information (no indexing lag)
+- Simple point-to-point queries (definition, direct references)
+- Working with a single function's immediate context
+
+**Use ts-graph-mcp when:**
+- You need **transitive** analysis (callers of callers, all downstream dependencies)
+- **Impact analysis** (what breaks if I change this?)
+- **Path finding** (how does data flow from A to B?)
+- **Architectural queries** (filter by module/package, visualize neighborhoods)
+- Working with **pre-indexed** data for consistent snapshots
+
+---
 
 ## Known Limitations
 

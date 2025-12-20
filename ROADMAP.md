@@ -1,6 +1,41 @@
 # ts-graph-mcp Roadmap
 
-> **The Vision:** ts-graph-mcp becomes the "LSP for AI agents" - a standard way for AI coding assistants to understand codebases semantically rather than just textually.
+> **The Vision:** ts-graph-mcp provides **graph-based code analysis** that complements LSP — transitive traversals, impact analysis, and architectural queries that point-to-point LSP tools cannot offer.
+
+---
+
+## Deprecation: LSP Overlap
+
+Claude Code 2.0.74+ includes a built-in LSP tool with `documentSymbol`, `workspaceSymbol`, `incomingCalls`, and `outgoingCalls`. This creates overlap with some ts-graph-mcp features.
+
+### Deprecated Tools
+
+| Tool | LSP Equivalent | Status |
+|------|----------------|--------|
+| `get_file_symbols` | `documentSymbol` | **DEPRECATED** |
+
+### Retained (Unique Value)
+
+These tools remain because they offer capabilities LSP lacks:
+
+| Tool | Unique Value | LSP Cannot Do This |
+|------|--------------|-------------------|
+| `get_callers` | **Transitive** (maxDepth=N) | LSP `incomingCalls` is single-hop only |
+| `get_callees` | **Transitive** (maxDepth=N) | LSP `outgoingCalls` is single-hop only |
+| `search_nodes` | Module/package/exported **filters** | LSP `workspaceSymbol` has no filters |
+| `get_impact` | **Impact analysis** across all edge types | No LSP equivalent |
+| `find_path` | **Path finding** between symbols | No LSP equivalent |
+| `get_neighbors` | **Subgraph extraction** + Mermaid diagrams | No LSP equivalent |
+
+### Removal Plan
+
+**When removed:**
+- Remove `get_file_symbols` tool entirely
+- Remove `src/tools/get-file-symbols/` directory
+- Update MCP server registration
+- Update tool count in documentation (7 → 6 tools)
+
+---
 
 ## Quick Wins: MCP Tool Quality
 
@@ -32,19 +67,6 @@ Broad searches can return thousands of results, wasting tokens. Add default limi
 ⚠️ Results truncated. Add filters or use a more specific pattern."
 ```
 
-### Path Normalization (get-file-symbols)
-**Impact: Medium | Effort: Very Low**
-
-Handle path variations that cause "file not found" errors.
-
-```typescript
-// All these should find the same file:
-"src/utils.ts"           // stored format
-"./src/utils.ts"         // leading ./
-"src\\utils.ts"          // Windows separators
-"/full/path/src/utils.ts" // absolute path
-```
-
 ### Improve Tool Descriptions
 **Impact: Medium | Effort: Very Low**
 
@@ -62,7 +84,7 @@ The MCP tool definitions (in `src/tools/*/handler.ts`) have quality gaps that re
 - `src/tools/get-callers/handler.ts` - redundant description
 - `src/tools/get-callees/handler.ts` - redundant description
 - `src/tools/get-neighbors/handler.ts` - unclear direction param
-- All 7 tools - missing output format hints
+- All 6 non-deprecated tools - missing output format hints
 
 > See `src/tools/*/FUTURE_IMPROVEMENTS.md` for detailed improvement plans per tool.
 
