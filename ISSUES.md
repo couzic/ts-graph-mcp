@@ -56,30 +56,16 @@ Currently returns only shortest path. Could add a `limit` parameter for top N pa
 
 ## Technical Debt
 
-### 16. Duplicate Code Across Tool Slices
+### 22. Missing Unit Tests for Shared Tool Utilities
 
-**Impact:** Medium (maintainability)
+**Impact:** Low (test coverage)
 
-The vertical slice architecture led to significant code duplication that should be extracted to a shared module.
+The new `src/tools/shared/` module created during Issue #16 refactoring lacks unit tests for:
 
-**Query layer duplication** (`src/tools/*/query.ts`):
-- `rowToNode()` — identical function in 6 files (search-nodes, get-callers, get-callees, get-impact, get-neighbors, get-file-symbols)
-- `NodeRow` interface — defined 6 times
-- `EdgeRow` interface — defined in find-path and get-neighbors
+- `rowConverters.ts` — `rowToNode()`, `rowToEdge()` functions
+- `nodeFormatters.ts` — 11 formatter functions (`extractSymbol`, `formatLines`, `formatFunction`, `formatClass`, `formatMethod`, `formatInterface`, `formatTypeAlias`, `formatVariable`, `formatProperty`, `formatFile`, `formatNode`, `groupByType`, `groupByFile`)
 
-**Format layer duplication** (`src/tools/*/format.ts`):
-- `TYPE_PLURALS` map — identical in 5+ files
-- 10 formatter functions duplicated: `extractSymbol()`, `formatLines()`, `formatFunction()`, `formatClass()`, `formatMethod()`, `formatInterface()`, `formatTypeAlias()`, `formatVariable()`, `formatProperty()`, `formatFile()`, `formatNode()`, `groupByType()`
-
-**Fix approach:**
-
-Create `src/tools/shared/` directory:
-- `rowConverters.ts` — exports `rowToNode()`, `rowToEdge()` with unit tests
-- `QueryTypes.ts` — exports `NodeRow`, `EdgeRow` interfaces
-- `nodeFormatters.ts` — exports all shared formatter functions with unit tests
-- `formatConstants.ts` — exports `TYPE_PLURALS` and type ordering
-
-Estimated reduction: ~500+ lines of duplication.
+Note: `QueryTypes.ts` and `formatConstants.ts` are just interfaces/constants — no tests needed.
 
 ---
 

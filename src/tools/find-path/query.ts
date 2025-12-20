@@ -1,32 +1,7 @@
 import type Database from "better-sqlite3";
-import type { Edge, EdgeType } from "../../db/Types.js";
-
-/**
- * Edge data returned from database row.
- */
-interface EdgeRow {
-	source: string;
-	target: string;
-	type: string;
-	call_count: number | null;
-	is_type_only: number | null;
-	imported_symbols: string | null;
-	context: string | null;
-}
-
-const rowToEdge = (row: EdgeRow): Edge => {
-	const edge: Edge = {
-		source: row.source,
-		target: row.target,
-		type: row.type as EdgeType,
-	};
-	if (row.call_count != null) edge.callCount = row.call_count;
-	if (row.is_type_only != null) edge.isTypeOnly = row.is_type_only === 1;
-	if (row.imported_symbols != null)
-		edge.importedSymbols = JSON.parse(row.imported_symbols) as string[];
-	if (row.context != null) edge.context = row.context as Edge["context"];
-	return edge;
-};
+import type { Edge } from "../../db/Types.js";
+import type { EdgeRow } from "../shared/QueryTypes.js";
+import { rowToEdge } from "../shared/rowConverters.js";
 
 /**
  * Path result from the query.

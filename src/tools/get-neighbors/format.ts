@@ -1,19 +1,11 @@
 import type { Edge, EdgeType, Node, NodeType } from "../../db/Types.js";
+import { TYPE_ORDER, TYPE_PLURALS } from "../shared/formatConstants.js";
+import {
+	extractSymbol,
+	formatLines,
+	formatNode,
+} from "../shared/nodeFormatters.js";
 import type { Direction, NeighborResult } from "./query.js";
-
-/**
- * Node type to plural key mapping.
- */
-const TYPE_PLURALS: Record<NodeType, string> = {
-	Function: "functions",
-	Class: "classes",
-	Method: "methods",
-	Interface: "interfaces",
-	TypeAlias: "typeAliases",
-	Variable: "variables",
-	File: "files",
-	Property: "properties",
-};
 
 /**
  * Edge type labels for Mermaid diagrams.
@@ -28,22 +20,6 @@ const EDGE_LABELS: Record<EdgeType, string> = {
 	READS_PROPERTY: "reads",
 	WRITES_PROPERTY: "writes",
 };
-
-/**
- * Extract symbol name from full node ID.
- * Example: "src/db/Types.ts:BaseNode" → "BaseNode"
- */
-function extractSymbol(nodeId: string): string {
-	const colonIndex = nodeId.indexOf(":");
-	return colonIndex >= 0 ? nodeId.slice(colonIndex + 1) : nodeId;
-}
-
-/**
- * Format line range as compact notation.
- */
-function formatLines(startLine: number, endLine: number): string {
-	return startLine === endLine ? `${startLine}` : `${startLine}-${endLine}`;
-}
 
 /**
  * Format center node data (type-specific properties).
@@ -113,76 +89,6 @@ function formatCenterData(node: Node): string[] {
 	}
 
 	return lines;
-}
-
-/**
- * Format a node for the neighbor list (compact single-line format).
- */
-function formatNode(node: Node): string {
-	const symbol = extractSymbol(node.id);
-	const lines = formatLines(node.startLine, node.endLine);
-	const exp = node.exported ? " exp" : "";
-
-	switch (node.type) {
-		case "Function": {
-			const async = node.async ? " async" : "";
-			const params =
-				node.parameters?.map((p) => `${p.name}:${p.type ?? "?"}`).join(",") ??
-				"";
-			const returns = node.returnType ?? "void";
-			return `${symbol} [${lines}]${exp}${async} (${params}) → ${returns}`;
-		}
-
-		case "Class": {
-			const ext = node.extends ? ` extends:${node.extends}` : "";
-			const impl = node.implements?.length
-				? ` impl:[${node.implements.join(",")}]`
-				: "";
-			return `${symbol} [${lines}]${exp}${ext}${impl}`;
-		}
-
-		case "Method": {
-			const vis =
-				node.visibility && node.visibility !== "public"
-					? ` ${node.visibility}`
-					: "";
-			const stat = node.static ? " static" : "";
-			const async = node.async ? " async" : "";
-			const params =
-				node.parameters?.map((p) => `${p.name}:${p.type ?? "?"}`).join(",") ??
-				"";
-			const returns = node.returnType ?? "void";
-			return `${symbol} [${lines}]${vis}${stat}${async} (${params}) → ${returns}`;
-		}
-
-		case "Interface": {
-			const ext = node.extends?.length
-				? ` extends:[${node.extends.join(",")}]`
-				: "";
-			return `${symbol} [${lines}]${exp}${ext}`;
-		}
-
-		case "TypeAlias": {
-			const alias = node.aliasedType ? ` = ${node.aliasedType}` : "";
-			return `${symbol} [${lines}]${exp}${alias}`;
-		}
-
-		case "Variable": {
-			const con = node.isConst ? " const" : "";
-			const typ = node.variableType ? `: ${node.variableType}` : "";
-			return `${symbol} [${lines}]${exp}${con}${typ}`;
-		}
-
-		case "Property": {
-			const opt = node.optional ? "?" : "";
-			const ro = node.readonly ? " ro" : "";
-			const typ = node.propertyType ?? "unknown";
-			return `${symbol}${opt} [${lines}]${ro}: ${typ}`;
-		}
-
-		case "File":
-			return `${symbol} [${lines}]`;
-	}
 }
 
 /**
@@ -324,16 +230,8 @@ export function formatNeighbors(
 	// Group neighbors by file, then by type
 	if (neighborNodes.length > 0) {
 		const fileGroups = groupByFileAndType(neighborNodes);
-		const typeOrder: NodeType[] = [
-			"Interface",
-			"TypeAlias",
-			"Class",
-			"Function",
-			"Variable",
-			"Method",
-			"Property",
-			"File",
-		];
+		// Include File type for neighbors (unlike other tools that exclude it)
+		const typeOrder: NodeType[] = [...TYPE_ORDER, "File"];
 
 		for (const [filePath, typeGroups] of fileGroups) {
 			let fileNodeCount = 0;

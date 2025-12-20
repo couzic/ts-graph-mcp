@@ -1,67 +1,11 @@
 import type Database from "better-sqlite3";
-import type { Edge, EdgeType, Node, NodeType } from "../../db/Types.js";
-
-/**
- * Database row types for query results.
- */
-interface NodeRow {
-	id: string;
-	type: string;
-	name: string;
-	module: string;
-	package: string;
-	file_path: string;
-	start_line: number;
-	end_line: number;
-	exported: number;
-	properties: string;
-}
-
-interface EdgeRow {
-	source: string;
-	target: string;
-	type: string;
-	call_count: number | null;
-	is_type_only: number | null;
-	imported_symbols: string | null;
-	context: string | null;
-}
-
-/**
- * Convert database row to Node type.
- */
-function rowToNode(row: NodeRow): Node {
-	const properties = JSON.parse(row.properties) as Record<string, unknown>;
-	return {
-		id: row.id,
-		type: row.type as NodeType,
-		name: row.name,
-		module: row.module,
-		package: row.package,
-		filePath: row.file_path,
-		startLine: row.start_line,
-		endLine: row.end_line,
-		exported: row.exported === 1,
-		...properties,
-	} as Node;
-}
-
-/**
- * Convert database row to Edge type.
- */
-function rowToEdge(row: EdgeRow): Edge {
-	const edge: Edge = {
-		source: row.source,
-		target: row.target,
-		type: row.type as EdgeType,
-	};
-	if (row.call_count != null) edge.callCount = row.call_count;
-	if (row.is_type_only != null) edge.isTypeOnly = row.is_type_only === 1;
-	if (row.imported_symbols != null)
-		edge.importedSymbols = JSON.parse(row.imported_symbols) as string[];
-	if (row.context != null) edge.context = row.context as Edge["context"];
-	return edge;
-}
+import type { Edge, Node } from "../../db/Types.js";
+import {
+	type EdgeRow,
+	type NodeRow,
+	rowToEdge,
+	rowToNode,
+} from "../shared/rowConverters.js";
 
 /**
  * Traversal direction options.
