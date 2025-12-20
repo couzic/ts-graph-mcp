@@ -56,19 +56,6 @@ Currently returns only shortest path. Could add a `limit` parameter for top N pa
 
 ## Technical Debt
 
-### 22. Missing Unit Tests for Shared Tool Utilities
-
-**Impact:** Low (test coverage)
-
-The new `src/tools/shared/` module created during Issue #16 refactoring lacks unit tests for:
-
-- `rowConverters.ts` — `rowToNode()`, `rowToEdge()` functions
-- `nodeFormatters.ts` — 11 formatter functions (`extractSymbol`, `formatLines`, `formatFunction`, `formatClass`, `formatMethod`, `formatInterface`, `formatTypeAlias`, `formatVariable`, `formatProperty`, `formatFile`, `formatNode`, `groupByType`, `groupByFile`)
-
-Note: `QueryTypes.ts` and `formatConstants.ts` are just interfaces/constants — no tests needed.
-
----
-
 ### 18. Magic Numbers for Traversal Depth Limits
 
 **Impact:** Low (maintainability)
