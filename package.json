@@ -16,10 +16,10 @@
 		"lint": "biome check .",
 		"lint:fix": "biome check --write .",
 		"format": "biome format --write .",
-		"benchmark:setup": "npm run build && npx tsx benchmark/lib/setup.ts sample-projects/deep-chain",
-		"benchmark": "npm run benchmark:setup && npx tsx benchmark/lib/run.ts sample-projects/deep-chain",
-		"benchmark:full": "npm run benchmark -- --runs 3",
-		"benchmark:quick": "npx tsx benchmark/lib/run.ts sample-projects/deep-chain"
+		"benchmark:deep-chain": "npm run build && npx tsx benchmark/lib/setup.ts sample-projects/deep-chain && npx tsx benchmark/lib/run.ts sample-projects/deep-chain",
+		"benchmark:layered-api": "npm run build && npx tsx benchmark/lib/setup.ts sample-projects/layered-api && npx tsx benchmark/lib/run.ts sample-projects/layered-api",
+		"benchmark:monorepo": "npm run build && npx tsx benchmark/lib/setup.ts sample-projects/monorepo && npx tsx benchmark/lib/run.ts sample-projects/monorepo",
+		"benchmark:all": "npm run benchmark:deep-chain && npm run benchmark:layered-api && npm run benchmark:monorepo"
 	},
 	"keywords": [
 		"typescript",
