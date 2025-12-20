@@ -97,6 +97,27 @@ beforeAll(async () => {
 });
 ```
 
+## Testing Strategy
+
+**Integration tests** and **benchmarks** serve different purposes:
+
+| Aspect | Integration Tests | Benchmarks |
+|--------|------------------|------------|
+| **Purpose** | Verify MCP tool **correctness** | Measure Claude Code **agent performance** |
+| **Question answered** | "Does the code work for this structure?" | "Does MCP help Claude with this query type?" |
+| **Coverage approach** | Every unique structure needs tests | Only representative query types needed |
+| **Cost** | Free (in-memory SQLite) | $2-5 per run (real Claude API) |
+
+**Why not all projects need benchmarks:**
+- Integration tests guard against regressions in extraction/query code
+- Benchmarks prove MCP's value proposition (cost savings, fewer turns)
+- Once value is proven for a query type (e.g., deep traversal), re-proving with structural variants adds no signal
+
+**Current strategy:**
+- `deep-chain` benchmarks prove value for **deep transitive traversal**
+- `monorepo` benchmarks prove value for **cross-module/package analysis**
+- `mixed-types` and `web-app` have full integration test coverage but no benchmarks (their query patterns are already covered)
+
 ## Benchmarking
 
 **Goal:** Measure time/accuracy for Claude Code to answer codebase questions with vs without MCP tools.
@@ -152,12 +173,10 @@ test-project/
 
 ### Current Benchmarks
 
-| Project | Status | Prompts | Primary Tools Tested |
-|---------|--------|---------|---------------------|
-| `deep-chain` | ✅ Ready | P1, P2, P3 | `get_callees`, `find_path`, `get_impact` |
-| `monorepo` | ✅ Ready | P1, P2, P3, P4 | `get_callers`, `get_impact`, `get_neighbors` |
-| `mixed-types` | 🔜 Planned | - | `search_nodes`, type filters |
-| `web-app` | 🔜 Planned | - | `get_impact`, cross-module edges |
+| Project | Prompts | Query Types Covered |
+|---------|---------|---------------------|
+| `deep-chain` | P1, P2, P3 | Deep transitive traversal (`get_callees`, `find_path`, `get_impact`) |
+| `monorepo` | P1, P2, P3, P4 | Cross-module/package analysis (`get_callers`, `get_impact`, `get_neighbors`) |
 
 ### Sample Results (deep-chain)
 

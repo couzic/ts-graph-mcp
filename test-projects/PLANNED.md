@@ -8,6 +8,39 @@ This document tracks test projects to be created for integration testing and ben
 2. **Benchmarking** - Compare Claude Code performance with vs without MCP tools
 3. **Regression Testing** - Catch bugs when they're fixed (e.g., Issue #5 cross-module edges)
 
+## Benchmark Strategy
+
+**Not all test projects need benchmarks.** Integration tests and benchmarks serve different purposes:
+
+| Aspect | Integration Tests | Benchmarks |
+|--------|------------------|------------|
+| **Purpose** | Verify tool correctness | Measure Claude Code agent performance |
+| **Coverage** | Every unique structure | Only representative query patterns |
+| **Cost** | Free (in-memory SQLite) | $2-5 per run (real Claude API) |
+
+**Benchmark coverage goal:** Prove MCP value for each **distinct query pattern**, not for every structural variant.
+
+### Current Benchmark Coverage
+
+| Query Pattern | Covered By | Status |
+|--------------|------------|--------|
+| Deep transitive traversal | `deep-chain` | ✅ Done |
+| Cross-module/package analysis | `monorepo` | ✅ Done |
+| Wide fan-in (many→one) | `shared-utils` | 🔜 Planned |
+| Type hierarchy analysis | `type-system` | 🔜 Planned |
+| Realistic layered paths | `layered-api` | 🔜 Planned |
+
+### Projects That Need Benchmarks
+
+| Project | Needs Benchmark? | Reason |
+|---------|-----------------|--------|
+| `shared-utils` | ✅ Yes | New pattern: wide fan-in, tests `search_nodes` |
+| `type-system` | ✅ Yes | New pattern: EXTENDS/IMPLEMENTS edges |
+| `layered-api` | ✅ Yes | New pattern: realistic multi-layer paths |
+| `property-access` | ❌ No | Covered by `shared-utils` (impact analysis) |
+| `event-system` | ❌ No | Covered by `monorepo` (`get_neighbors`) |
+| `multi-package` | ❌ No | Covered by `monorepo` (cross-package) |
+
 ---
 
 ## Existing Projects
@@ -37,9 +70,11 @@ This document tracks test projects to be created for integration testing and ben
 
 ## Planned Projects
 
-### 1. `shared-utils` (Priority: High)
+### 1. `shared-utils` (Priority: High) 📊
 
 **Purpose:** Test wide fan-in pattern (many callers to few utilities).
+
+**Benchmark:** ✅ Yes — New query pattern (wide fan-in, `search_nodes` discovery)
 
 **Structure:** L1 - Single package, ~15 files
 ```
@@ -72,9 +107,11 @@ src/
 
 ---
 
-### 2. `type-system` (Priority: High)
+### 2. `type-system` (Priority: High) 📊
 
 **Purpose:** Test type-related edges (EXTENDS, IMPLEMENTS, USES_TYPE).
+
+**Benchmark:** ✅ Yes — New query pattern (type hierarchy traversal)
 
 **Structure:** L1 - Single package, ~10 files
 ```
@@ -106,9 +143,11 @@ src/
 
 ---
 
-### 3. `layered-api` (Priority: Medium)
+### 3. `layered-api` (Priority: High) 📊
 
 **Purpose:** Test realistic layered architecture pattern.
+
+**Benchmark:** ✅ Yes — New query pattern (multi-layer path finding)
 
 **Structure:** L1 - Single package, ~25 files
 ```
@@ -147,6 +186,8 @@ src/
 
 **Purpose:** Test READS_PROPERTY and WRITES_PROPERTY edges.
 
+**Benchmark:** ❌ No — Impact analysis pattern covered by `shared-utils`
+
 **Structure:** L1 - Single package, ~8 files
 ```
 src/
@@ -183,6 +224,8 @@ src/
 
 **Purpose:** Test hub patterns and `get_neighbors` tool.
 
+**Benchmark:** ❌ No — `get_neighbors` pattern covered by `monorepo`
+
 **Structure:** L1 - Single package, ~12 files
 ```
 src/
@@ -214,9 +257,11 @@ src/
 
 ---
 
-### 6. `multi-package` (Priority: High)
+### 6. `multi-package` (Priority: Medium)
 
 **Purpose:** Test cross-package relationships within a module.
+
+**Benchmark:** ❌ No — Cross-package pattern covered by `monorepo`
 
 **Structure:** L2 - Multi-package (single module)
 ```
@@ -305,12 +350,17 @@ defineConfig({
 
 ## Implementation Priority
 
-1. **High:** `shared-utils` - Tests `get_impact`, common real-world pattern
-2. **High:** `type-system` - Tests missing edge types (EXTENDS, IMPLEMENTS)
-3. **High:** `multi-package` - L2 multi-package within single module
-4. **Medium:** `layered-api` - Realistic architecture pattern
-5. **Medium:** `property-access` - Tests READS/WRITES_PROPERTY edges
-6. **Medium:** `event-system` - Tests `get_neighbors` hub pattern
+### With Benchmarks (new query patterns)
+
+1. **`shared-utils`** - Wide fan-in pattern, tests `search_nodes` + `get_impact`
+2. **`type-system`** - Type hierarchy, tests EXTENDS/IMPLEMENTS edges
+3. **`layered-api`** - Realistic paths, tests `find_path` in multi-layer architecture
+
+### Integration Tests Only (query patterns already benchmarked)
+
+4. **`multi-package`** - L2 structure (cross-package covered by `monorepo`)
+5. **`property-access`** - READS/WRITES edges (impact analysis covered by `shared-utils`)
+6. **`event-system`** - Hub pattern (`get_neighbors` covered by `monorepo`)
 
 ---
 
