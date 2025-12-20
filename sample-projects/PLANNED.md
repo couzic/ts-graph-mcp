@@ -26,18 +26,18 @@ This document tracks test projects to be created for integration testing and ben
 |--------------|------------|--------|
 | Deep transitive traversal | `deep-chain` | ✅ Done |
 | Cross-module/package analysis | `monorepo` | ✅ Done |
-| Wide fan-in (many→one) | `shared-utils` | 🔜 Planned |
+| Wide fan-in (many→one) | `monorepo` | ✅ Done (P3: validateEmail utility usage) |
 | Type hierarchy analysis | `type-system` | 🔜 Planned |
-| Realistic layered paths | `layered-api` | 🔜 Planned |
+| Realistic layered paths | `layered-api` | ✅ Done |
 
 ### Projects That Need Benchmarks
 
 | Project | Needs Benchmark? | Reason |
 |---------|-----------------|--------|
-| `shared-utils` | ✅ Yes | New pattern: wide fan-in, tests `search_nodes` |
+| `shared-utils` | ❌ No | Covered by `monorepo` P3 (utility usage pattern) |
 | `type-system` | ✅ Yes | New pattern: EXTENDS/IMPLEMENTS edges |
-| `layered-api` | ✅ Yes | New pattern: realistic multi-layer paths |
-| `property-access` | ❌ No | Covered by `shared-utils` (impact analysis) |
+| `layered-api` | ✅ Done | Implemented with 3 benchmark prompts |
+| `property-access` | ❌ No | Covered by `monorepo` (impact analysis) |
 | `event-system` | ❌ No | Covered by `monorepo` (`get_neighbors`) |
 | `multi-package` | ❌ No | Covered by `monorepo` (cross-package) |
 
@@ -51,6 +51,7 @@ This document tracks test projects to be created for integration testing and ben
 | `mixed-types` | L1: 3 files | All 8 node types | **Merge** into `type-system` when implemented |
 | `web-app` | L2: 3 modules, 1 pkg each | Cross-module edges, Issue #5 regression | **Active** - 15 tests |
 | `monorepo` | L3: 3 modules, 2 pkg each | Cross-package + cross-module edges | **Active** - 30 tests |
+| `layered-api` | L1: 5-layer architecture | Multi-layer paths (routes→controllers→services→repos→db) | **Active** - 19 tests |
 
 ### Migration Notes
 
@@ -143,46 +144,7 @@ src/
 
 ---
 
-### 3. `layered-api` (Priority: High) 📊
-
-**Purpose:** Test realistic layered architecture pattern.
-
-**Benchmark:** ✅ Yes — New query pattern (multi-layer path finding)
-
-**Structure:** L1 - Single package, ~25 files
-```
-src/
-├── routes/
-│   ├── userRoutes.ts    → calls UserController
-│   └── orderRoutes.ts   → calls OrderController
-├── controllers/
-│   ├── UserController.ts  → calls UserService
-│   └── OrderController.ts → calls OrderService
-├── services/
-│   ├── UserService.ts   → calls UserRepository
-│   └── OrderService.ts  → calls OrderRepository, UserService
-├── repositories/
-│   ├── UserRepository.ts  → calls Database
-│   └── OrderRepository.ts → calls Database
-└── db/
-    └── Database.ts      → leaf node
-```
-
-**Tests:**
-- `find_path(userRoutes, Database)` - 5-hop path through layers
-- `get_neighbors(UserService, distance: 2)` - local ecosystem
-- Layer boundary verification
-
-**Benchmark Prompts:**
-- "How does a user request reach the database?"
-- "What's the dependency graph around `UserService`?"
-- "What code is between the routes and the database?"
-
-**Why MCP wins:** `find_path` reveals data flow instantly; manual tracing requires reading 5+ files.
-
----
-
-### 4. `property-access` (Priority: Medium)
+### 3. `property-access` (Priority: Medium)
 
 **Purpose:** Test READS_PROPERTY and WRITES_PROPERTY edges.
 
@@ -220,7 +182,7 @@ src/
 
 ---
 
-### 5. `event-system` (Priority: Medium)
+### 4. `event-system` (Priority: Medium)
 
 **Purpose:** Test hub patterns and `get_neighbors` tool.
 
@@ -257,7 +219,7 @@ src/
 
 ---
 
-### 6. `multi-package` (Priority: Medium)
+### 5. `multi-package` (Priority: Medium)
 
 **Purpose:** Test cross-package relationships within a module.
 
@@ -318,17 +280,17 @@ defineConfig({
 |------|----------|---------|
 | `search_nodes` | deep-chain, web-app, monorepo | shared-utils, multi-package |
 | `get_callers` | deep-chain, monorepo | shared-utils |
-| `get_callees` | deep-chain | layered-api |
+| `get_callees` | deep-chain, layered-api | - |
 | `get_impact` | web-app, monorepo | shared-utils, type-system, property-access, multi-package |
-| `find_path` | deep-chain | layered-api |
-| `get_neighbors` | monorepo | event-system, layered-api |
+| `find_path` | deep-chain, layered-api | - |
+| `get_neighbors` | monorepo, layered-api | event-system |
 | `get_file_symbols` | All (implicit) | - |
 
 ### By Edge Type
 
 | Edge | Existing | Planned |
 |------|----------|---------|
-| CALLS | deep-chain, web-app, monorepo | shared-utils, layered-api, event-system |
+| CALLS | deep-chain, web-app, monorepo, layered-api | shared-utils, event-system |
 | IMPORTS | web-app, monorepo | multi-package |
 | CONTAINS | All (implicit) | - |
 | USES_TYPE | web-app, monorepo | type-system, multi-package |
@@ -341,7 +303,7 @@ defineConfig({
 
 | Level | Existing | Planned |
 |-------|----------|---------|
-| L1: Single package | deep-chain, mixed-types | shared-utils, type-system, layered-api, property-access, event-system |
+| L1: Single package | deep-chain, mixed-types, layered-api | shared-utils, type-system, property-access, event-system |
 | L2: Multi-package | - | multi-package |
 | L2: Multi-module (1 pkg/module) | web-app | - |
 | L3: Multi-module (multi-pkg) | monorepo | - |
@@ -354,13 +316,12 @@ defineConfig({
 
 1. **`shared-utils`** - Wide fan-in pattern, tests `search_nodes` + `get_impact`
 2. **`type-system`** - Type hierarchy, tests EXTENDS/IMPLEMENTS edges
-3. **`layered-api`** - Realistic paths, tests `find_path` in multi-layer architecture
 
 ### Integration Tests Only (query patterns already benchmarked)
 
-4. **`multi-package`** - L2 structure (cross-package covered by `monorepo`)
-5. **`property-access`** - READS/WRITES edges (impact analysis covered by `shared-utils`)
-6. **`event-system`** - Hub pattern (`get_neighbors` covered by `monorepo`)
+3. **`multi-package`** - L2 structure (cross-package covered by `monorepo`)
+4. **`property-access`** - READS/WRITES edges (impact analysis covered by `shared-utils`)
+5. **`event-system`** - Hub pattern (`get_neighbors` covered by `monorepo`)
 
 ---
 
