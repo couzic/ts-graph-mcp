@@ -9,11 +9,15 @@ import {
 import { initializeSchema } from "../../src/db/sqlite/SqliteSchema.js";
 import { createSqliteWriter } from "../../src/db/sqlite/SqliteWriter.js";
 import { indexProject } from "../../src/ingestion/Ingestion.js";
-import { queryFileNodes } from "../../src/tools/get-file-symbols/query.js";
 import { queryImpactedNodes } from "../../src/tools/get-impact/query.js";
 import { queryNeighbors } from "../../src/tools/get-neighbors/query.js";
-import { querySearchNodes } from "../../src/tools/search-nodes/query.js";
+import { querySearchNodes } from "../../src/tools/search/query.js";
 import { queryEdges } from "../../src/db/queryEdges.js";
+
+// Helper to get all nodes in a file (replacement for deprecated queryFileNodes)
+function queryFileNodes(db: Database.Database, filePath: string) {
+	return querySearchNodes(db, "*").filter((n) => n.filePath === filePath);
+}
 
 /**
  * Integration tests for mixed-types test project.
@@ -53,7 +57,7 @@ describe("mixed-types integration", () => {
 		});
 
 		it("filters by nodeType Interface to return only User", () => {
-			const result = querySearchNodes(db, "User*", { nodeType: "Interface" });
+			const result = querySearchNodes(db, "User*", { type: "Interface" });
 
 			expect(result).toHaveLength(1);
 			expect(result[0]?.name).toBe("User");
@@ -127,7 +131,7 @@ describe("mixed-types integration", () => {
 
 	describe("Property nodes from interfaces", () => {
 		it("extracts id and name properties from User interface and users from UserService", () => {
-			const result = querySearchNodes(db, "*", { nodeType: "Property" });
+			const result = querySearchNodes(db, "*", { type: "Property" });
 
 			const names = result.map((n) => n.name);
 			expect(names).toContain("id");
@@ -274,7 +278,7 @@ describe("mixed-types integration", () => {
 
 	describe("File nodes", () => {
 		it("extracts File nodes for all source files", () => {
-			const result = querySearchNodes(db, "*.ts", { nodeType: "File" });
+			const result = querySearchNodes(db, "*.ts", { type: "File" });
 
 			const fileNames = result.map((n) => n.name).sort();
 			expect(fileNames).toContain("models.ts");

@@ -1,6 +1,7 @@
 import type { Node } from "../../db/Types.js";
 import { TYPE_ORDER, TYPE_PLURALS } from "../shared/formatConstants.js";
 import {
+	formatLocation,
 	formatNode,
 	groupByFile,
 	groupByType,
@@ -9,7 +10,10 @@ import {
 /**
  * Format search results for LLM consumption.
  *
- * Output format groups nodes by file, then by type within each file:
+ * Output format groups nodes by file, then by type within each file.
+ * Each node includes offset/limit for direct use with Read tool.
+ *
+ * Example:
  * ```
  * count: 42
  * files: 5
@@ -21,20 +25,16 @@ import {
  *
  * interfaces[10]:
  *   BaseNode [24-51] exp
+ *     offset: 24, limit: 28
  *   FunctionNode [54-59] exp extends:[BaseNode]
+ *     offset: 54, limit: 6
  *   ...
  *
  * properties[7]:
  *   BaseNode.id [26]: string
+ *     offset: 26, limit: 1
  *   ...
- *
- * file: src/utils/helpers.ts
- * ...
  * ```
- *
- * Derivation rules (for LLM to reconstruct full data):
- * - Full ID = filePath + ":" + symbol (e.g., "src/db/Types.ts:BaseNode")
- * - name = last segment of symbol after "." (e.g., "id" from "BaseNode.id")
  */
 export function formatSearchResults(nodes: Node[]): string {
 	if (nodes.length === 0) {
@@ -72,6 +72,9 @@ export function formatSearchResults(nodes: Node[]): string {
 
 			for (const node of typeNodes) {
 				lines.push(`  ${formatNode(node)}`);
+				// Add Read tool parameters
+				const location = formatLocation(node);
+				lines.push(`    offset: ${location.offset}, limit: ${location.limit}`);
 			}
 
 			lines.push("");

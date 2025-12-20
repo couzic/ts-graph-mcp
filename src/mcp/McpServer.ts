@@ -21,11 +21,6 @@ import {
 	getCallersDefinition,
 } from "../tools/get-callers/handler.js";
 import {
-	executeGetFileSymbols,
-	type GetFileSymbolsParams,
-	getFileSymbolsDefinition,
-} from "../tools/get-file-symbols/handler.js";
-import {
 	executeGetImpact,
 	type GetImpactParams,
 	getImpactDefinition,
@@ -36,10 +31,10 @@ import {
 	getNeighborsDefinition,
 } from "../tools/get-neighbors/handler.js";
 import {
-	executeSearchNodes,
-	type SearchNodesParams,
-	searchNodesDefinition,
-} from "../tools/search-nodes/handler.js";
+	executeSearch,
+	type SearchParams,
+	searchDefinition,
+} from "../tools/search/handler.js";
 
 /**
  * Start the MCP server that exposes TypeScript code graph queries as tools.
@@ -59,17 +54,16 @@ export async function startMcpServer(db: Database.Database): Promise<void> {
 		},
 	);
 
-	// Tool 1: search_nodes
+	// Tool 1: search
 	server.setRequestHandler(ListToolsRequestSchema, async () => {
 		return {
 			tools: [
-				searchNodesDefinition,
+				searchDefinition,
 				getCallersDefinition,
 				getCalleesDefinition,
 				getImpactDefinition,
 				findPathDefinition,
 				getNeighborsDefinition,
-				getFileSymbolsDefinition,
 			],
 		};
 	});
@@ -80,9 +74,9 @@ export async function startMcpServer(db: Database.Database): Promise<void> {
 
 		try {
 			switch (name) {
-				case "search_nodes": {
-					const params = args as unknown as SearchNodesParams;
-					const result = executeSearchNodes(db, params);
+				case "search": {
+					const params = args as unknown as SearchParams;
+					const result = executeSearch(db, params);
 					return {
 						content: [{ type: "text" as const, text: result }],
 					};
@@ -123,14 +117,6 @@ export async function startMcpServer(db: Database.Database): Promise<void> {
 				case "get_neighbors": {
 					const params = args as unknown as GetNeighborsParams;
 					const result = executeGetNeighbors(db, params);
-					return {
-						content: [{ type: "text" as const, text: result }],
-					};
-				}
-
-				case "get_file_symbols": {
-					const params = args as unknown as GetFileSymbolsParams;
-					const result = executeGetFileSymbols(db, params);
 					return {
 						content: [{ type: "text" as const, text: result }],
 					};

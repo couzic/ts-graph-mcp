@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Exposes the TypeScript code graph as an MCP (Model Context Protocol) server that provides 7 tools for AI coding agents to query and explore code structure. This is the primary interface for the ts-graph-mcp project.
+Exposes the TypeScript code graph as an MCP (Model Context Protocol) server that provides 6 tools for AI coding agents to query and explore code structure. This is the primary interface for the ts-graph-mcp project.
 
 ## Architecture: Vertical Slices
 
@@ -10,13 +10,13 @@ Each tool is implemented as a self-contained vertical slice:
 
 ```
 src/tools/
-├── search-nodes/     (query.ts, format.ts, format.test.ts, handler.ts)
-├── get-callers/      (query.ts, format.ts, format.test.ts, handler.ts)
-├── get-callees/      (query.ts, format.ts, format.test.ts, handler.ts)
-├── get-impact/       (query.ts, format.ts, format.test.ts, handler.ts)
-├── find-path/        (query.ts, format.ts, format.test.ts, handler.ts)
-├── get-neighbors/    (query.ts, format.ts, format.test.ts, handler.ts)
-└── get-file-symbols/ (query.ts, format.ts, format.test.ts, handler.ts)
+├── search/          (query.ts, format.ts, format.test.ts, handler.ts)
+├── get-callers/     (query.ts, format.ts, format.test.ts, handler.ts)
+├── get-callees/     (query.ts, format.ts, format.test.ts, handler.ts)
+├── get-impact/      (query.ts, format.ts, format.test.ts, handler.ts)
+├── find-path/       (query.ts, format.ts, format.test.ts, handler.ts)
+├── get-neighbors/   (query.ts, format.ts, format.test.ts, handler.ts)
+└── shared/          (SymbolQuery.ts, resolveSymbol.ts, resolveSymbol.test.ts)
 ```
 
 **Each slice contains:**
@@ -25,21 +25,24 @@ src/tools/
 - `format.ts` - Hierarchical text output formatting
 - `format.test.ts` - Unit tests for formatting
 
+**Shared utilities:**
+- `SymbolQuery.ts` - Type definitions for symbol queries with optional filters
+- `resolveSymbol.ts` - Resolves symbol names to node IDs using file/module/package filters
+
 ## Key Exports
 
 ### `startMcpServer(db: Database.Database): Promise<void>`
 **File:** `McpServer.ts`
 
-Initializes and starts the MCP server on stdio transport with 7 registered tools. Dispatches tool calls to vertical slice handlers.
+Initializes and starts the MCP server on stdio transport with 6 registered tools. Dispatches tool calls to vertical slice handlers.
 
 **Tools provided:**
-1. `search_nodes` - Search by name pattern with filters (type, module, package, exported)
-2. `get_callers` - Find all callers of a function/method (supports transitive traversal)
-3. `get_callees` - Find all callees of a function/method (supports transitive traversal)
-4. `get_impact` - Impact analysis - all code affected by changes to a node
-5. `find_path` - Find shortest path between two nodes (BFS)
-6. `get_neighbors` - Find all nodes within N edges (with direction control)
-7. `get_file_symbols` - Get all symbols defined in a file
+1. `search` - Search symbols by name pattern with filters (type, module, package, exported) and pagination (offset, limit)
+2. `get_callers` - Find all callers of a symbol (supports transitive traversal via maxDepth)
+3. `get_callees` - Find all callees of a symbol (supports transitive traversal via maxDepth)
+4. `get_impact` - Impact analysis - all code affected by changes to a symbol
+5. `find_path` - Find shortest path between two symbols (BFS with maxDepth, maxPaths)
+6. `get_neighbors` - Find all nodes within N edges of a symbol (with direction control, Mermaid output)
 
 ### `main(): Promise<void>`
 **File:** `StartServer.ts`
@@ -69,9 +72,10 @@ CLI entry point that orchestrates database initialization and server startup. Ha
 All tools return hierarchical text optimized for LLM consumption:
 
 ```
-# search_nodes example
+# search example (with pagination)
 search: User*
 count: 3
+showing: 3 (offset: 0, limit: 100)
 files: 2
 
 file: src/types.ts
@@ -122,7 +126,8 @@ ts-graph-mcp --db :memory:
 ## Important Notes
 
 - **Logging:** All logs go to stderr to avoid interfering with stdio transport
-- **Node IDs:** All tools expect node IDs in format `{relativePath}:{symbolPath}` (e.g., `src/utils.ts:formatDate`)
+- **Symbol queries:** All tools accept symbol names with optional filters (file, module, package) instead of raw node IDs. The `resolveSymbol()` utility handles ambiguity resolution and provides clear error messages when symbols don't exist or match multiple nodes.
 - **Auto-indexing:** Only happens on first run when database doesn't exist
 - **No file watching:** Server doesn't auto-refresh on code changes (use external tooling or restart server)
 - **Tool execution:** All tools are read-only - no mutations to the code graph via MCP interface
+- **Pagination:** The `search` tool supports offset/limit parameters for handling large result sets efficiently

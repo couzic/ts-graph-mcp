@@ -79,7 +79,7 @@ describe(querySearchNodes.name, () => {
 		const fooClass = cls("Foo");
 		await writer.addNodes([fooFn, fooClass]);
 
-		const result = querySearchNodes(db, "*", { nodeType: "Function" });
+		const result = querySearchNodes(db, "*", { type: "Function" });
 
 		expect(result).toHaveLength(1);
 		expect(result[0]?.id).toBe(fooFn.id);
@@ -143,7 +143,7 @@ describe(querySearchNodes.name, () => {
 		await writer.addNodes([mod1FooFn, mod1FooClass, mod2FooFn]);
 
 		const result = querySearchNodes(db, "foo*", {
-			nodeType: "Function",
+			type: "Function",
 			module: "mod1",
 		});
 
@@ -171,7 +171,7 @@ describe(querySearchNodes.name, () => {
 		await writer.addNodes([fooFn, fooClass, fooInterface]);
 
 		const result = querySearchNodes(db, "*", {
-			nodeType: ["Function", "Class"],
+			type: ["Function", "Class"],
 		});
 
 		expect(result).toHaveLength(2);
@@ -259,5 +259,72 @@ describe(querySearchNodes.name, () => {
 		expect(names).toContain("fn1");
 		expect(names).toContain("fn2");
 		expect(names).not.toContain("fn10"); // ? matches exactly one character
+	});
+
+	it("limits results with limit parameter", async () => {
+		const writer = createSqliteWriter(db);
+		const nodes = [fn("fn1"), fn("fn2"), fn("fn3"), fn("fn4"), fn("fn5")];
+		await writer.addNodes(nodes);
+
+		const result = querySearchNodes(db, "fn*", { limit: 3 });
+
+		expect(result).toHaveLength(3);
+		// Should return first 3 results (alphabetically sorted)
+		const names = result.map((n) => n.name);
+		expect(names).toEqual(["fn1", "fn2", "fn3"]);
+	});
+
+	it("skips results with offset parameter", async () => {
+		const writer = createSqliteWriter(db);
+		const nodes = [fn("fn1"), fn("fn2"), fn("fn3"), fn("fn4"), fn("fn5")];
+		await writer.addNodes(nodes);
+
+		const result = querySearchNodes(db, "fn*", { offset: 2 });
+
+		expect(result).toHaveLength(3);
+		// Should skip first 2 results (fn1, fn2)
+		const names = result.map((n) => n.name);
+		expect(names).toEqual(["fn3", "fn4", "fn5"]);
+	});
+
+	it("combines offset and limit for pagination", async () => {
+		const writer = createSqliteWriter(db);
+		const nodes = [
+			fn("fn1"),
+			fn("fn2"),
+			fn("fn3"),
+			fn("fn4"),
+			fn("fn5"),
+			fn("fn6"),
+			fn("fn7"),
+		];
+		await writer.addNodes(nodes);
+
+		const result = querySearchNodes(db, "fn*", { offset: 2, limit: 3 });
+
+		expect(result).toHaveLength(3);
+		// Skip first 2, return next 3
+		const names = result.map((n) => n.name);
+		expect(names).toEqual(["fn3", "fn4", "fn5"]);
+	});
+
+	it("handles offset beyond results", async () => {
+		const writer = createSqliteWriter(db);
+		const nodes = [fn("fn1"), fn("fn2"), fn("fn3")];
+		await writer.addNodes(nodes);
+
+		const result = querySearchNodes(db, "fn*", { offset: 10 });
+
+		expect(result).toEqual([]);
+	});
+
+	it("handles limit larger than results", async () => {
+		const writer = createSqliteWriter(db);
+		const nodes = [fn("fn1"), fn("fn2"), fn("fn3")];
+		await writer.addNodes(nodes);
+
+		const result = querySearchNodes(db, "fn*", { limit: 100 });
+
+		expect(result).toHaveLength(3);
 	});
 });

@@ -1,7 +1,24 @@
 import { describe, expect, it } from "vitest";
 import type { Node } from "../../db/Types.js";
+import type { SymbolLocation } from "../shared/resolveSymbol.js";
 import { formatNeighbors } from "./format.js";
 import type { NeighborResult } from "./query.js";
+
+/**
+ * Helper to convert a Node to SymbolLocation for testing.
+ */
+function nodeToSymbolLocation(node: Node): SymbolLocation {
+	return {
+		id: node.id,
+		name: node.name,
+		type: node.type,
+		file: node.filePath,
+		offset: node.startLine,
+		limit: node.endLine - node.startLine + 1,
+		module: node.module,
+		package: node.package,
+	};
+}
 
 describe(formatNeighbors.name, () => {
 	it("formats basic neighbor result with header info", () => {
@@ -33,14 +50,24 @@ describe(formatNeighbors.name, () => {
 			edges: [],
 		};
 
-		const output = formatNeighbors(result, 1, "both");
+		const centerLoc = nodeToSymbolLocation(result.center);
+		const output = formatNeighbors(result, centerLoc, 1, "both", [
+			"text",
+			"mermaid",
+		]);
 
-		expect(output).toContain("center: src/types.ts:User");
-		expect(output).toContain("centerType: Interface");
+		expect(output).toContain("target:");
+		expect(output).toContain("name: User");
+		expect(output).toContain("type: Interface");
+		expect(output).toContain("file: src/types.ts");
+		expect(output).toContain("offset: 10");
+		expect(output).toContain("limit: 11");
+		expect(output).toContain("module: test");
+		expect(output).toContain("package: main");
 		expect(output).toContain("distance: 1");
 		expect(output).toContain("direction: both");
-		expect(output).toContain("nodeCount: 0"); // center excluded
-		expect(output).toContain("edgeCount: 0");
+		expect(output).toContain("neighbors[0]:"); // center excluded
+		expect(output).toContain("edges[0]:");
 	});
 
 	it("excludes center node from grouped neighbor list", () => {
@@ -81,10 +108,14 @@ describe(formatNeighbors.name, () => {
 			],
 		};
 
-		const output = formatNeighbors(result, 1, "incoming");
+		const centerLoc = nodeToSymbolLocation(result.center);
+		const output = formatNeighbors(result, centerLoc, 1, "incoming", [
+			"text",
+			"mermaid",
+		]);
 
 		// Should show 1 neighbor (not 2, since center is excluded)
-		expect(output).toContain("nodeCount: 1");
+		expect(output).toContain("neighbors[1]:");
 		expect(output).toContain("interfaces[1]:");
 		expect(output).toContain("Admin [25-30] exp extends:[User]");
 		// Center should NOT appear in the interfaces list
@@ -114,14 +145,16 @@ describe(formatNeighbors.name, () => {
 			edges: [],
 		};
 
-		const output = formatNeighbors(result, 1, "outgoing");
+		const centerLoc = nodeToSymbolLocation(result.center);
+		const output = formatNeighbors(result, centerLoc, 1, "outgoing", [
+			"text",
+			"mermaid",
+		]);
 
-		expect(output).toContain("centerType: Function");
-		expect(output).toContain("line: 5-15");
-		expect(output).toContain("exported: true");
-		expect(output).toContain("async: true");
-		expect(output).toContain("params: (date:Date, format:string)");
-		expect(output).toContain("returns: string");
+		expect(output).toContain("target:");
+		expect(output).toContain("name: formatDate");
+		expect(output).toContain("type: Function");
+		expect(output).toContain("file: src/utils.ts");
 	});
 
 	it("formats class node with inheritance info", () => {
@@ -143,11 +176,16 @@ describe(formatNeighbors.name, () => {
 			edges: [],
 		};
 
-		const output = formatNeighbors(result, 2, "both");
+		const centerLoc = nodeToSymbolLocation(result.center);
+		const output = formatNeighbors(result, centerLoc, 2, "both", [
+			"text",
+			"mermaid",
+		]);
 
-		expect(output).toContain("centerType: Class");
-		expect(output).toContain("extends: BaseService");
-		expect(output).toContain("implements: [IUserService, IDisposable]");
+		expect(output).toContain("target:");
+		expect(output).toContain("name: UserService");
+		expect(output).toContain("offset: 1");
+		expect(output).toContain("limit: 50");
 	});
 
 	it("formats edges with source and target symbols", () => {
@@ -188,7 +226,11 @@ describe(formatNeighbors.name, () => {
 			],
 		};
 
-		const output = formatNeighbors(result, 1, "outgoing");
+		const centerLoc = nodeToSymbolLocation(result.center);
+		const output = formatNeighbors(result, centerLoc, 1, "outgoing", [
+			"text",
+			"mermaid",
+		]);
 
 		expect(output).toContain("edges[1]:");
 		expect(output).toContain("src/file.ts --CONTAINS--> myFunc");
@@ -232,7 +274,11 @@ describe(formatNeighbors.name, () => {
 			],
 		};
 
-		const output = formatNeighbors(result, 1, "outgoing");
+		const centerLoc = nodeToSymbolLocation(result.center);
+		const output = formatNeighbors(result, centerLoc, 1, "outgoing", [
+			"text",
+			"mermaid",
+		]);
 
 		expect(output).toContain("caller --CALLS(5)--> callee");
 	});
@@ -274,7 +320,11 @@ describe(formatNeighbors.name, () => {
 			],
 		};
 
-		const output = formatNeighbors(result, 1, "both");
+		const centerLoc = nodeToSymbolLocation(result.center);
+		const output = formatNeighbors(result, centerLoc, 1, "both", [
+			"text",
+			"mermaid",
+		]);
 
 		expect(output).toContain("---mermaid---");
 		expect(output).toContain("graph LR");
@@ -312,9 +362,13 @@ describe(formatNeighbors.name, () => {
 			edges: [],
 		};
 
-		const output = formatNeighbors(result, 1, "both");
+		const centerLoc = nodeToSymbolLocation(result.center);
+		const output = formatNeighbors(result, centerLoc, 1, "both", [
+			"text",
+			"mermaid",
+		]);
 
-		expect(output).toContain("nodeCount: 0");
+		expect(output).toContain("neighbors[0]:");
 		expect(output).toContain("(no neighbors found)");
 	});
 
@@ -374,9 +428,13 @@ describe(formatNeighbors.name, () => {
 			edges: [],
 		};
 
-		const output = formatNeighbors(result, 2, "both");
+		const centerLoc = nodeToSymbolLocation(result.center);
+		const output = formatNeighbors(result, centerLoc, 2, "both", [
+			"text",
+			"mermaid",
+		]);
 
-		expect(output).toContain("nodeCount: 3"); // excludes center
+		expect(output).toContain("neighbors[3]:"); // excludes center
 		expect(output).toContain("src/a.ts (1 nodes):");
 		expect(output).toContain("functions[1]:");
 		expect(output).toContain("helper [15-20]");
@@ -404,10 +462,16 @@ describe(formatNeighbors.name, () => {
 			edges: [],
 		};
 
-		const output = formatNeighbors(result, 1, "both");
+		const centerLoc = nodeToSymbolLocation(result.center);
+		const output = formatNeighbors(result, centerLoc, 1, "both", [
+			"text",
+			"mermaid",
+		]);
 
-		expect(output).toContain("centerType: TypeAlias");
-		expect(output).toContain("aliasedType: string | number");
+		expect(output).toContain("target:");
+		expect(output).toContain("name: ID");
+		expect(output).toContain("offset: 1");
+		expect(output).toContain("limit: 1");
 	});
 
 	it("formats variable with const and type info", () => {
@@ -429,10 +493,15 @@ describe(formatNeighbors.name, () => {
 			edges: [],
 		};
 
-		const output = formatNeighbors(result, 1, "both");
+		const centerLoc = nodeToSymbolLocation(result.center);
+		const output = formatNeighbors(result, centerLoc, 1, "both", [
+			"text",
+			"mermaid",
+		]);
 
-		expect(output).toContain("centerType: Variable");
-		expect(output).toContain("const: true");
-		expect(output).toContain("type: string");
+		expect(output).toContain("target:");
+		expect(output).toContain("name: API_URL");
+		expect(output).toContain("offset: 5");
+		expect(output).toContain("limit: 1");
 	});
 });

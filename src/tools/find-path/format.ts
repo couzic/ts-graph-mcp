@@ -1,38 +1,100 @@
 import type { Edge } from "../../db/Types.js";
+import { extractSymbol } from "../shared/nodeFormatters.js";
+import type { SymbolLocation } from "../shared/resolveSymbol.js";
 import type { PathResult } from "./query.js";
+
+/**
+ * Format a not_found result.
+ */
+export function formatNotFound(
+	symbolLabel: string,
+	suggestions?: string[],
+): string {
+	const lines: string[] = [];
+	lines.push(`error: ${symbolLabel} not found`);
+
+	if (suggestions && suggestions.length > 0) {
+		lines.push("");
+		lines.push("Did you mean:");
+		for (const suggestion of suggestions) {
+			lines.push(`  - ${suggestion}`);
+		}
+	}
+
+	return lines.join("\n");
+}
+
+/**
+ * Format an ambiguous result.
+ */
+export function formatAmbiguous(
+	symbolLabel: string,
+	candidates: SymbolLocation[],
+): string {
+	const lines: string[] = [];
+	lines.push(
+		`error: ${symbolLabel} is ambiguous (${candidates.length} matches)`,
+	);
+	lines.push("");
+	lines.push("Specify file, module, or package to disambiguate:");
+
+	for (const candidate of candidates) {
+		const symbol = extractSymbol(candidate.id);
+		lines.push(`  - ${symbol} (${candidate.type})`);
+		lines.push(`    file: ${candidate.file}`);
+		lines.push(
+			`    module: ${candidate.module}, package: ${candidate.package}`,
+		);
+		lines.push(`    offset: ${candidate.offset}, limit: ${candidate.limit}`);
+	}
+
+	return lines.join("\n");
+}
 
 /**
  * Format a path result for LLM consumption.
  *
  * Uses a compact linear notation that shows the path as a chain:
  * ```
- * sourceId: src/api.ts:handleRequest
- * targetId: src/db.ts:saveData
+ * from: formatDate (Function)
+ *   file: src/utils.ts
+ *   offset: 15, limit: 6
+ *
+ * to: saveData (Function)
+ *   file: src/db.ts
+ *   offset: 42, limit: 8
+ *
  * found: true
  * length: 2
  *
- * path: src/api.ts:handleRequest --CALLS--> src/service.ts:process --CALLS--> src/db.ts:saveData
+ * path: formatDate --CALLS--> process --CALLS--> saveData
  * ```
  *
- * This format eliminates redundancy:
- * - No separate start/end fields (derivable from path endpoints)
- * - No edge source/target (derivable from position in chain)
- * - Single-line path notation for quick scanning
- *
- * @param sourceId - The source node ID that was queried
- * @param targetId - The target node ID that was queried
+ * @param from - The source symbol location
+ * @param to - The target symbol location
  * @param path - The path result, or null if no path found
  * @returns Formatted string for LLM consumption
  */
 export function formatPath(
-	sourceId: string,
-	targetId: string,
+	from: SymbolLocation,
+	to: SymbolLocation,
 	path: PathResult | null,
 ): string {
 	const lines: string[] = [];
 
-	lines.push(`sourceId: ${sourceId}`);
-	lines.push(`targetId: ${targetId}`);
+	// From section
+	const fromSymbol = extractSymbol(from.id);
+	lines.push(`from: ${fromSymbol} (${from.type})`);
+	lines.push(`  file: ${from.file}`);
+	lines.push(`  offset: ${from.offset}, limit: ${from.limit}`);
+	lines.push("");
+
+	// To section
+	const toSymbol = extractSymbol(to.id);
+	lines.push(`to: ${toSymbol} (${to.type})`);
+	lines.push(`  file: ${to.file}`);
+	lines.push(`  offset: ${to.offset}, limit: ${to.limit}`);
+	lines.push("");
 
 	if (!path) {
 		lines.push("found: false");
@@ -45,7 +107,7 @@ export function formatPath(
 	lines.push(`length: ${path.edges.length}`);
 	lines.push("");
 
-	// Build the linear path chain
+	// Build the linear path chain (using symbol names, not full IDs)
 	const pathChain = buildPathChain(path.nodes, path.edges);
 	lines.push(`path: ${pathChain}`);
 
@@ -55,18 +117,22 @@ export function formatPath(
 /**
  * Build a linear path chain showing nodes connected by edge types.
  *
- * Example: "A --CALLS--> B --IMPORTS--> C"
+ * Example: "formatDate --CALLS--> process --CALLS--> saveData"
  */
 function buildPathChain(nodes: string[], edges: Edge[]): string {
 	if (nodes.length === 0) return "(empty path)";
-	if (nodes.length === 1) return nodes[0] ?? "(unknown)";
+	if (nodes.length === 1) {
+		const node = nodes[0];
+		return node ? extractSymbol(node) : "(unknown)";
+	}
 
 	const parts: string[] = [];
 	for (let i = 0; i < nodes.length; i++) {
 		const node = nodes[i];
 		if (node === undefined) continue;
 
-		parts.push(node);
+		// Extract symbol name from full ID
+		parts.push(extractSymbol(node));
 
 		// Add edge arrow if there's a next node
 		if (i < edges.length) {

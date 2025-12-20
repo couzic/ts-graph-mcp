@@ -4,11 +4,11 @@ import { formatSearchResults } from "./format.js";
 import { querySearchNodes } from "./query.js";
 
 /**
- * Input parameters for search_nodes tool.
+ * Input parameters for search tool.
  */
-export interface SearchNodesParams {
+export interface SearchParams {
 	pattern: string;
-	nodeType?:
+	type?:
 		| "Function"
 		| "Class"
 		| "Method"
@@ -20,38 +20,48 @@ export interface SearchNodesParams {
 	module?: string;
 	package?: string;
 	exported?: boolean;
+	offset?: number;
+	limit?: number;
 }
 
 /**
- * MCP tool definition for search_nodes.
+ * MCP tool definition for search.
  */
-export const searchNodesDefinition = {
-	name: "search_nodes",
+export const searchDefinition = {
+	name: "search",
 	description:
-		"Search for nodes by name pattern. Supports glob patterns (*, ?). Returns matching nodes with their metadata.",
+		"Search for symbols by pattern with optional filters. Returns matching nodes with metadata and Read tool parameters.",
 	inputSchema: {
 		type: "object" as const,
 		properties: {
 			pattern: {
 				type: "string",
-				description: "Search pattern (e.g., 'handle*', 'User*Service')",
+				description: "Glob pattern (e.g., 'handle*', 'User*Service')",
 			},
-			nodeType: {
+			type: {
 				type: "string",
 				description:
-					"Optional: Filter by node type (Function, Class, Method, Interface, TypeAlias, Variable, File, Property)",
+					"Filter by type (Function, Class, Method, Interface, TypeAlias, Variable, Property)",
 			},
 			module: {
 				type: "string",
-				description: "Optional: Filter by module name",
+				description: "Filter by module name",
 			},
 			package: {
 				type: "string",
-				description: "Optional: Filter by package name",
+				description: "Filter by package name",
 			},
 			exported: {
 				type: "boolean",
-				description: "Optional: Filter by export status",
+				description: "Filter by export status",
+			},
+			offset: {
+				type: "number",
+				description: "Skip first N results (pagination)",
+			},
+			limit: {
+				type: "number",
+				description: "Max results to return (default: 100)",
 			},
 		},
 		required: ["pattern"],
@@ -59,20 +69,20 @@ export const searchNodesDefinition = {
 };
 
 /**
- * Execute the search_nodes tool.
+ * Execute the search tool.
  *
  * @param db - Database connection
  * @param params - Tool parameters
  * @returns Formatted string for LLM consumption
  */
-export function executeSearchNodes(
+export function executeSearch(
 	db: Database.Database,
-	params: SearchNodesParams,
+	params: SearchParams,
 ): string {
 	const filters: SearchFilters = {};
 
-	if (params.nodeType) {
-		filters.nodeType = params.nodeType;
+	if (params.type) {
+		filters.type = params.type;
 	}
 	if (params.module) {
 		filters.module = params.module;
@@ -82,6 +92,12 @@ export function executeSearchNodes(
 	}
 	if (params.exported !== undefined) {
 		filters.exported = params.exported;
+	}
+	if (params.offset !== undefined) {
+		filters.offset = params.offset;
+	}
+	if (params.limit !== undefined) {
+		filters.limit = params.limit;
 	}
 
 	const nodes = querySearchNodes(db, params.pattern, filters);

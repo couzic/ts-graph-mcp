@@ -1,12 +1,34 @@
 import { describe, expect, it } from "vitest";
 import type { Node } from "../../db/Types.js";
+import type { SymbolLocation } from "../shared/resolveSymbol.js";
 import { formatCallees } from "./format.js";
+
+// Helper to create a test SymbolLocation
+function createSource(
+	nodeId: string,
+	name?: string,
+	type = "Function",
+): SymbolLocation {
+	const file = nodeId.split(":")[0] ?? "src/test.ts";
+	const actualName = name ?? nodeId.split(":")[1] ?? "test";
+	return {
+		name: actualName,
+		type,
+		file,
+		offset: 10,
+		limit: 10,
+		module: "test",
+		package: "main",
+		id: nodeId,
+	};
+}
 
 describe(formatCallees.name, () => {
 	it("formats empty node list", () => {
-		const result = formatCallees("src/test.ts:foo", []);
-		expect(result).toContain("sourceId: src/test.ts:foo");
-		expect(result).toContain("count: 0");
+		const result = formatCallees(createSource("src/test.ts:foo"), []);
+		expect(result).toContain("source:");
+		expect(result).toContain("name: foo");
+		expect(result).toContain("callees[0]:");
 		expect(result).toContain("(no callees found)");
 	});
 
@@ -27,12 +49,11 @@ describe(formatCallees.name, () => {
 			},
 		];
 
-		const result = formatCallees("src/main.ts:run", nodes);
-		expect(result).toContain("sourceId: src/main.ts:run");
-		expect(result).toContain("count: 1");
-		expect(result).toContain(
-			"=== src/utils.ts (module: core, package: main) ===",
-		);
+		const result = formatCallees(createSource("src/main.ts:run"), nodes);
+		expect(result).toContain("source:");
+		expect(result).toContain("name: run");
+		expect(result).toContain("callees[1]:");
+		expect(result).toContain("src/utils.ts (1 callees):");
 		expect(result).toContain("functions[1]:");
 		expect(result).toContain("helper [10-15] exp (x:number) → string");
 	});
@@ -74,16 +95,19 @@ describe(formatCallees.name, () => {
 			},
 		];
 
-		const result = formatCallees("src/api/handler.ts:createUser", nodes);
-		expect(result).toContain("count: 3");
+		const result = formatCallees(
+			createSource("src/api/handler.ts:createUser"),
+			nodes,
+		);
+		expect(result).toContain("callees[3]:");
 
 		// Check file headers exist
-		expect(result).toContain("=== src/db/user.ts");
-		expect(result).toContain("=== src/utils/logger.ts");
+		expect(result).toContain("src/db/user.ts (2 callees):");
+		expect(result).toContain("src/utils/logger.ts (1 callees):");
 
 		// Check functions are grouped by file
-		const dbUserIndex = result.indexOf("=== src/db/user.ts");
-		const loggerIndex = result.indexOf("=== src/utils/logger.ts");
+		const dbUserIndex = result.indexOf("src/db/user.ts");
+		const loggerIndex = result.indexOf("src/utils/logger.ts");
 
 		expect(result.indexOf("saveUser", dbUserIndex)).toBeLessThan(loggerIndex);
 		expect(result.indexOf("validateUser", dbUserIndex)).toBeLessThan(
@@ -129,7 +153,7 @@ describe(formatCallees.name, () => {
 			},
 		];
 
-		const result = formatCallees("src/main.ts:main", nodes);
+		const result = formatCallees(createSource("src/main.ts:main"), nodes);
 
 		// Interfaces come before classes, classes before functions
 		const interfaceIndex = result.indexOf("interfaces[");
@@ -161,7 +185,7 @@ describe(formatCallees.name, () => {
 			},
 		];
 
-		const result = formatCallees("src/main.ts:main", nodes);
+		const result = formatCallees(createSource("src/main.ts:main"), nodes);
 		expect(result).toContain(
 			"fetchData [10-20] exp async (url:string,opts:RequestOptions) → Promise<Data>",
 		);
@@ -187,7 +211,7 @@ describe(formatCallees.name, () => {
 			},
 		];
 
-		const result = formatCallees("src/api.ts:createUser", nodes);
+		const result = formatCallees(createSource("src/api.ts:createUser"), nodes);
 		expect(result).toContain(
 			"User.save [15-20] private static async () → Promise<void>",
 		);
@@ -210,7 +234,7 @@ describe(formatCallees.name, () => {
 			},
 		];
 
-		const result = formatCallees("src/main.ts:main", nodes);
+		const result = formatCallees(createSource("src/main.ts:main"), nodes);
 		expect(result).toContain(
 			"User [10-50] exp extends:BaseEntity implements:[Serializable,Comparable]",
 		);
@@ -232,7 +256,7 @@ describe(formatCallees.name, () => {
 			},
 		];
 
-		const result = formatCallees("src/main.ts:main", nodes);
+		const result = formatCallees(createSource("src/main.ts:main"), nodes);
 		expect(result).toContain("FunctionNode [54-59] exp extends:[BaseNode]");
 	});
 
@@ -252,7 +276,7 @@ describe(formatCallees.name, () => {
 			},
 		];
 
-		const result = formatCallees("src/main.ts:main", nodes);
+		const result = formatCallees(createSource("src/main.ts:main"), nodes);
 		expect(result).toContain("UserId [1] exp = string | number");
 	});
 
@@ -273,7 +297,7 @@ describe(formatCallees.name, () => {
 			},
 		];
 
-		const result = formatCallees("src/main.ts:main", nodes);
+		const result = formatCallees(createSource("src/main.ts:main"), nodes);
 		expect(result).toContain("API_URL [1] exp const: string");
 	});
 
@@ -295,7 +319,7 @@ describe(formatCallees.name, () => {
 			},
 		];
 
-		const result = formatCallees("src/main.ts:main", nodes);
+		const result = formatCallees(createSource("src/main.ts:main"), nodes);
 		expect(result).toContain("User.email? [6] ro: string");
 	});
 
@@ -314,7 +338,7 @@ describe(formatCallees.name, () => {
 			},
 		];
 
-		const result = formatCallees("src/main.ts:main", nodes);
+		const result = formatCallees(createSource("src/main.ts:main"), nodes);
 		expect(result).toContain("x [5]");
 		expect(result).not.toContain("5-5");
 	});
@@ -356,11 +380,11 @@ describe(formatCallees.name, () => {
 			},
 		];
 
-		const result = formatCallees("src/main.ts:main", nodes);
+		const result = formatCallees(createSource("src/main.ts:main"), nodes);
 
-		const aIndex = result.indexOf("=== src/a.ts");
-		const mIndex = result.indexOf("=== src/m.ts");
-		const zIndex = result.indexOf("=== src/z.ts");
+		const aIndex = result.indexOf("src/a.ts (1 callees):");
+		const mIndex = result.indexOf("src/m.ts (1 callees):");
+		const zIndex = result.indexOf("src/z.ts (1 callees):");
 
 		expect(aIndex).toBeLessThan(mIndex);
 		expect(mIndex).toBeLessThan(zIndex);
@@ -403,10 +427,10 @@ describe(formatCallees.name, () => {
 			},
 		];
 
-		const result = formatCallees("src/main.ts:main", nodes);
+		const result = formatCallees(createSource("src/main.ts:main"), nodes);
 
 		// Should only have one file header
-		const matches = result.match(/=== src\/user\.ts/g);
+		const matches = result.match(/src\/user\.ts \(3 callees\):/g);
 		expect(matches).toHaveLength(1);
 
 		// Should have all three type sections

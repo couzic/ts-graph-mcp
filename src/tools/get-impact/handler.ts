@@ -1,5 +1,6 @@
 import type Database from "better-sqlite3";
-import { validateNodeExists } from "../shared/validateNodeExists.js";
+import { formatAmbiguous, formatNotFound } from "../shared/errorFormatters.js";
+import { resolveSymbol } from "../shared/resolveSymbol.js";
 import { formatImpactNodes } from "./format.js";
 import { queryImpactedNodes } from "./query.js";
 
@@ -7,7 +8,10 @@ import { queryImpactedNodes } from "./query.js";
  * Input parameters for get_impact tool.
  */
 export interface GetImpactParams {
-	nodeId: string;
+	symbol: string;
+	file?: string;
+	module?: string;
+	package?: string;
 	maxDepth?: number;
 }
 
@@ -21,10 +25,21 @@ export const getImpactDefinition = {
 	inputSchema: {
 		type: "object" as const,
 		properties: {
-			nodeId: {
+			symbol: {
 				type: "string",
-				description:
-					"Node ID to analyze impact for (e.g., 'src/types.ts:User')",
+				description: "Symbol name (e.g., 'formatDate', 'User.save')",
+			},
+			file: {
+				type: "string",
+				description: "Narrow scope to a file",
+			},
+			module: {
+				type: "string",
+				description: "Narrow scope to a module",
+			},
+			package: {
+				type: "string",
+				description: "Narrow scope to a package",
 			},
 			maxDepth: {
 				type: "number",
@@ -32,7 +47,7 @@ export const getImpactDefinition = {
 					"Optional: Maximum traversal depth for transitive dependencies (1-100)",
 			},
 		},
-		required: ["nodeId"],
+		required: ["symbol"],
 	},
 };
 
@@ -47,13 +62,19 @@ export function executeGetImpact(
 	db: Database.Database,
 	params: GetImpactParams,
 ): string {
-	const validation = validateNodeExists(db, params.nodeId);
-	if (!validation.valid) {
-		return validation.error;
+	const result = resolveSymbol(db, params);
+
+	if (result.status === "not_found") {
+		return formatNotFound(params.symbol, result.suggestions);
 	}
 
-	const nodes = queryImpactedNodes(db, params.nodeId, {
+	if (result.status === "ambiguous") {
+		return formatAmbiguous(params.symbol, result.candidates);
+	}
+
+	const nodeId = result.node.id;
+	const nodes = queryImpactedNodes(db, nodeId, {
 		maxDepth: params.maxDepth,
 	});
-	return formatImpactNodes(params.nodeId, nodes);
+	return formatImpactNodes(result.node, nodes);
 }

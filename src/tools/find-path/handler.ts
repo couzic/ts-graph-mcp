@@ -1,14 +1,17 @@
 import type Database from "better-sqlite3";
-import { validateNodeExists } from "../shared/validateNodeExists.js";
-import { formatPath } from "./format.js";
+import { resolveSymbol } from "../shared/resolveSymbol.js";
+import type { SymbolQuery } from "../shared/SymbolQuery.js";
+import { formatAmbiguous, formatNotFound, formatPath } from "./format.js";
 import { queryPath } from "./query.js";
 
 /**
  * Input parameters for find_path tool.
  */
 export interface FindPathParams {
-	sourceId: string;
-	targetId: string;
+	from: SymbolQuery;
+	to: SymbolQuery;
+	maxDepth?: number;
+	maxPaths?: number;
 }
 
 /**
@@ -21,16 +24,62 @@ export const findPathDefinition = {
 	inputSchema: {
 		type: "object" as const,
 		properties: {
-			sourceId: {
-				type: "string",
-				description: "Starting node ID (e.g., 'src/api/handler.ts:createUser')",
+			from: {
+				type: "object",
+				description: "Source symbol query",
+				properties: {
+					symbol: {
+						type: "string",
+						description: "Symbol name (e.g., 'formatDate', 'User.save')",
+					},
+					file: {
+						type: "string",
+						description: "Narrow scope to a file",
+					},
+					module: {
+						type: "string",
+						description: "Narrow scope to a module",
+					},
+					package: {
+						type: "string",
+						description: "Narrow scope to a package",
+					},
+				},
+				required: ["symbol"],
 			},
-			targetId: {
-				type: "string",
-				description: "Ending node ID (e.g., 'src/db/user.ts:saveUser')",
+			to: {
+				type: "object",
+				description: "Target symbol query",
+				properties: {
+					symbol: {
+						type: "string",
+						description: "Symbol name (e.g., 'formatDate', 'User.save')",
+					},
+					file: {
+						type: "string",
+						description: "Narrow scope to a file",
+					},
+					module: {
+						type: "string",
+						description: "Narrow scope to a module",
+					},
+					package: {
+						type: "string",
+						description: "Narrow scope to a package",
+					},
+				},
+				required: ["symbol"],
+			},
+			maxDepth: {
+				type: "number",
+				description: "Maximum path length (1-100, default: 20)",
+			},
+			maxPaths: {
+				type: "number",
+				description: "Maximum paths to return (1-10, default: 3)",
 			},
 		},
-		required: ["sourceId", "targetId"],
+		required: ["from", "to"],
 	},
 };
 
@@ -45,16 +94,40 @@ export function executeFindPath(
 	db: Database.Database,
 	params: FindPathParams,
 ): string {
-	const sourceValidation = validateNodeExists(db, params.sourceId, "sourceId");
-	if (!sourceValidation.valid) {
-		return sourceValidation.error;
+	// Resolve 'from' symbol
+	const fromResult = resolveSymbol(db, params.from);
+	if (fromResult.status === "not_found") {
+		return formatNotFound(
+			`from.symbol: ${params.from.symbol}`,
+			fromResult.suggestions,
+		);
+	}
+	if (fromResult.status === "ambiguous") {
+		return formatAmbiguous(
+			`from.symbol: ${params.from.symbol}`,
+			fromResult.candidates,
+		);
 	}
 
-	const targetValidation = validateNodeExists(db, params.targetId, "targetId");
-	if (!targetValidation.valid) {
-		return targetValidation.error;
+	// Resolve 'to' symbol
+	const toResult = resolveSymbol(db, params.to);
+	if (toResult.status === "not_found") {
+		return formatNotFound(
+			`to.symbol: ${params.to.symbol}`,
+			toResult.suggestions,
+		);
+	}
+	if (toResult.status === "ambiguous") {
+		return formatAmbiguous(
+			`to.symbol: ${params.to.symbol}`,
+			toResult.candidates,
+		);
 	}
 
-	const path = queryPath(db, params.sourceId, params.targetId);
-	return formatPath(params.sourceId, params.targetId, path);
+	const sourceId = fromResult.node.id;
+	const targetId = toResult.node.id;
+
+	// Query path(s)
+	const path = queryPath(db, sourceId, targetId);
+	return formatPath(fromResult.node, toResult.node, path);
 }

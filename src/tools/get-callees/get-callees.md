@@ -16,8 +16,30 @@ Answer: "What does this function call?" Find both direct and transitive callees.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `nodeId` | string | Yes | Source function ID (e.g., `src/main.ts:startServer`) |
+| `symbol` | string | Yes | Source symbol name (e.g., `startServer`, `indexProject`) |
+| `file` | string | No | Narrow scope to a specific file |
+| `module` | string | No | Narrow scope to a specific module |
+| `package` | string | No | Narrow scope to a specific package |
 | `maxDepth` | number | No | Traversal depth 1-100 (default: 100) |
+
+### Symbol Resolution
+
+If multiple symbols match the name, the tool returns candidates for disambiguation. Use `file`, `module`, or `package` to narrow scope.
+
+**Disambiguation example:**
+
+```
+Multiple matches for "process":
+candidates:
+  - process (Function) in src/worker.ts
+    offset: 20, limit: 30
+    module: core, package: worker
+  - process (Method) in src/Queue.ts
+    offset: 45, limit: 12
+    module: core, package: queue
+
+Narrow your query with: file, module, or package parameter
+```
 
 ### Depth Examples
 
@@ -28,17 +50,25 @@ Answer: "What does this function call?" Find both direct and transitive callees.
 ## Output Format
 
 ```
-sourceId: src/ingestion/Ingestion.ts:indexProject
+source: indexProject (Function)
+file: src/ingestion/Ingestion.ts
+offset: 50 limit: 150
 count: 2
 
 src/db/DbWriter.ts (1 callees):
   functions[1]:
     clearAll [15-20] exp async () → Promise<void>
+      offset: 15 limit: 6
 
 src/ingestion/Ingestion.ts (1 callees):
   functions[1]:
     indexPackage [109-207] async (...) → Promise<IndexResult>
+      offset: 109 limit: 99
 ```
+
+### Read Tool Parameters
+
+Each callee includes `offset` and `limit` fields that can be passed directly to the Read tool.
 
 ## Examples
 
@@ -46,7 +76,7 @@ src/ingestion/Ingestion.ts (1 callees):
 
 ```json
 {
-  "nodeId": "src/mcp/McpServer.ts:startServer",
+  "symbol": "startServer",
   "maxDepth": 1
 }
 ```
@@ -55,7 +85,17 @@ src/ingestion/Ingestion.ts (1 callees):
 
 ```json
 {
-  "nodeId": "src/ingestion/Ingestion.ts:indexProject"
+  "symbol": "indexProject",
+  "module": "ingestion"
+}
+```
+
+### Disambiguate with file
+
+```json
+{
+  "symbol": "process",
+  "file": "src/worker.ts"
 }
 ```
 

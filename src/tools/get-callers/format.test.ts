@@ -1,16 +1,58 @@
 import { describe, expect, it } from "vitest";
 import type { Node } from "../../db/Types.js";
+import type { SymbolLocation } from "../shared/resolveSymbol.js";
 import { formatCallers } from "./format.js";
+
+// Helper to create a test SymbolLocation
+function createTarget(
+	nodeId: string,
+	name = "formatDate",
+	type = "Function",
+): SymbolLocation {
+	const file = nodeId.split(":")[0] ?? "src/test.ts";
+	return {
+		name,
+		type,
+		file,
+		offset: 15,
+		limit: 6,
+		module: "test",
+		package: "main",
+		id: nodeId,
+	};
+}
 
 describe(formatCallers.name, () => {
 	it("formats empty caller list", () => {
-		const result = formatCallers("src/utils.ts:formatDate", []);
-		expect(result).toContain("targetId: src/utils.ts:formatDate");
-		expect(result).toContain("count: 0");
+		const target: SymbolLocation = {
+			name: "formatDate",
+			type: "Function",
+			file: "src/utils.ts",
+			offset: 15,
+			limit: 6,
+			module: "utils",
+			package: "main",
+			id: "src/utils.ts:formatDate",
+		};
+		const result = formatCallers(target, []);
+		expect(result).toContain("target:");
+		expect(result).toContain("name: formatDate");
+		expect(result).toContain("file: src/utils.ts");
+		expect(result).toContain("callers[0]:");
 		expect(result).toContain("(no callers found)");
 	});
 
 	it("formats single caller function", () => {
+		const target: SymbolLocation = {
+			name: "formatDate",
+			type: "Function",
+			file: "src/utils.ts",
+			offset: 15,
+			limit: 6,
+			module: "utils",
+			package: "main",
+			id: "src/utils.ts:formatDate",
+		};
 		const nodes: Node[] = [
 			{
 				id: "src/api/handler.ts:handleRequest",
@@ -28,14 +70,16 @@ describe(formatCallers.name, () => {
 			},
 		];
 
-		const result = formatCallers("src/utils.ts:formatDate", nodes);
-		expect(result).toContain("targetId: src/utils.ts:formatDate");
-		expect(result).toContain("count: 1");
+		const result = formatCallers(target, nodes);
+		expect(result).toContain("target:");
+		expect(result).toContain("name: formatDate");
+		expect(result).toContain("callers[1]:");
 		expect(result).toContain("src/api/handler.ts (1 callers):");
 		expect(result).toContain("functions[1]:");
 		expect(result).toContain(
 			"handleRequest [10-25] exp async (req:Request) → Promise<Response>",
 		);
+		expect(result).toContain("offset: 10, limit: 16");
 	});
 
 	it("groups callers by file", () => {
@@ -64,7 +108,10 @@ describe(formatCallers.name, () => {
 			},
 		];
 
-		const result = formatCallers("src/db/user.ts:saveUser", nodes);
+		const result = formatCallers(
+			createTarget("src/db/user.ts:saveUser", "saveUser"),
+			nodes,
+		);
 		expect(result).toContain("src/api/handler.ts (1 callers):");
 		expect(result).toContain("src/services/UserService.ts (1 callers):");
 	});
@@ -108,7 +155,10 @@ describe(formatCallers.name, () => {
 			},
 		];
 
-		const result = formatCallers("src/utils.ts:formatDate", nodes);
+		const result = formatCallers(
+			createTarget("src/utils.ts:formatDate"),
+			nodes,
+		);
 		expect(result).toContain("src/api/handler.ts (3 callers):");
 		expect(result).toContain("functions[2]:");
 		expect(result).toContain("methods[1]:");
@@ -139,7 +189,10 @@ describe(formatCallers.name, () => {
 			},
 		];
 
-		const result = formatCallers("src/db/user.ts:saveUser", nodes);
+		const result = formatCallers(
+			createTarget("src/db/user.ts:saveUser", "saveUser"),
+			nodes,
+		);
 		expect(result).toContain("methods[1]:");
 		expect(result).toContain(
 			"User.save [20-25] private static async () → Promise<void>",
@@ -172,7 +225,10 @@ describe(formatCallers.name, () => {
 			},
 		];
 
-		const result = formatCallers("src/target.ts:myFunc", nodes);
+		const result = formatCallers(
+			createTarget("src/target.ts:myFunc", "myFunc"),
+			nodes,
+		);
 		const aIndex = result.indexOf("src/a.ts");
 		const zIndex = result.indexOf("src/z.ts");
 		expect(aIndex).toBeLessThan(zIndex);
@@ -193,7 +249,10 @@ describe(formatCallers.name, () => {
 			},
 		];
 
-		const result = formatCallers("src/target.ts:myFunc", nodes);
+		const result = formatCallers(
+			createTarget("src/target.ts:myFunc", "myFunc"),
+			nodes,
+		);
 		expect(result).toContain("x [5]");
 		expect(result).not.toContain("5-5");
 	});
@@ -219,7 +278,10 @@ describe(formatCallers.name, () => {
 			},
 		];
 
-		const result = formatCallers("src/http.ts:fetch", nodes);
+		const result = formatCallers(
+			createTarget("src/http.ts:fetch", "fetch"),
+			nodes,
+		);
 		expect(result).toContain(
 			"makeRequest [10-20] exp (url:string,options:RequestOptions) → Response",
 		);
@@ -262,8 +324,11 @@ describe(formatCallers.name, () => {
 			},
 		];
 
-		const result = formatCallers("src/target.ts:myFunc", nodes);
-		expect(result).toContain("count: 3");
+		const result = formatCallers(
+			createTarget("src/target.ts:myFunc", "myFunc"),
+			nodes,
+		);
+		expect(result).toContain("callers[3]:");
 		expect(result).toContain("src/file.ts (3 callers):");
 		expect(result).toContain("functions[2]:");
 		expect(result).toContain("methods[1]:");

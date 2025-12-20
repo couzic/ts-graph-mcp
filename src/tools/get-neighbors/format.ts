@@ -2,10 +2,13 @@ import type { Edge, EdgeType, Node, NodeType } from "../../db/Types.js";
 import { TYPE_ORDER, TYPE_PLURALS } from "../shared/formatConstants.js";
 import {
 	extractSymbol,
-	formatLines,
+	formatLocation,
 	formatNode,
 } from "../shared/nodeFormatters.js";
+import type { SymbolLocation } from "../shared/resolveSymbol.js";
 import type { Direction, NeighborResult } from "./query.js";
+
+export type OutputType = "text" | "mermaid";
 
 /**
  * Edge type labels for Mermaid diagrams.
@@ -20,76 +23,6 @@ const EDGE_LABELS: Record<EdgeType, string> = {
 	READS_PROPERTY: "reads",
 	WRITES_PROPERTY: "writes",
 };
-
-/**
- * Format center node data (type-specific properties).
- */
-function formatCenterData(node: Node): string[] {
-	const lines: string[] = [];
-	const lineRange = formatLines(node.startLine, node.endLine);
-	lines.push(`  line: ${lineRange}`);
-
-	if (node.exported) lines.push("  exported: true");
-
-	switch (node.type) {
-		case "Function":
-			if (node.async) lines.push("  async: true");
-			if (node.parameters?.length) {
-				const params = node.parameters
-					.map((p) => `${p.name}:${p.type ?? "?"}`)
-					.join(", ");
-				lines.push(`  params: (${params})`);
-			}
-			if (node.returnType) lines.push(`  returns: ${node.returnType}`);
-			break;
-
-		case "Class":
-			if (node.extends) lines.push(`  extends: ${node.extends}`);
-			if (node.implements?.length)
-				lines.push(`  implements: [${node.implements.join(", ")}]`);
-			break;
-
-		case "Method":
-			if (node.visibility && node.visibility !== "public")
-				lines.push(`  visibility: ${node.visibility}`);
-			if (node.static) lines.push("  static: true");
-			if (node.async) lines.push("  async: true");
-			if (node.parameters?.length) {
-				const params = node.parameters
-					.map((p) => `${p.name}:${p.type ?? "?"}`)
-					.join(", ");
-				lines.push(`  params: (${params})`);
-			}
-			if (node.returnType) lines.push(`  returns: ${node.returnType}`);
-			break;
-
-		case "Interface":
-			if (node.extends?.length)
-				lines.push(`  extends: [${node.extends.join(", ")}]`);
-			break;
-
-		case "TypeAlias":
-			if (node.aliasedType) lines.push(`  aliasedType: ${node.aliasedType}`);
-			break;
-
-		case "Variable":
-			if (node.isConst) lines.push("  const: true");
-			if (node.variableType) lines.push(`  type: ${node.variableType}`);
-			break;
-
-		case "Property":
-			if (node.optional) lines.push("  optional: true");
-			if (node.readonly) lines.push("  readonly: true");
-			if (node.propertyType) lines.push(`  type: ${node.propertyType}`);
-			break;
-
-		case "File":
-			if (node.extension) lines.push(`  extension: ${node.extension}`);
-			break;
-	}
-
-	return lines;
-}
 
 /**
  * Format an edge with only relevant metadata.
@@ -167,22 +100,27 @@ function generateMermaid(nodes: Node[], edges: Edge[]): string {
  *
  * Output format:
  * ```
- * center: src/db/Types.ts:Node
- * centerType: TypeAlias
- * centerData:
- *   line: 104-112
- *   exported: true
- *   aliasedType: | FunctionNode | ClassNode | ...
+ * target:
+ *   name: Node
+ *   type: TypeAlias
+ *   file: src/db/Types.ts
+ *   offset: 104
+ *   limit: 9
+ *   module: core
+ *   package: main
+ *
  * distance: 1
  * direction: both
- * nodeCount: 2
- * edgeCount: 1
+ * neighbors[2]:
+ * edges[1]:
  *
  * src/db/Types.ts (2 nodes):
  *   files[1]:
  *     Types.ts [1-233]
+ *       offset: 1, limit: 233
  *   typeAliases[1]:
  *     Node [104-112] exp = | FunctionNode | ClassNode
+ *       offset: 104, limit: 9
  *
  * edges[1]:
  *   Types.ts --CONTAINS--> Node
@@ -195,36 +133,47 @@ function generateMermaid(nodes: Node[], edges: Edge[]): string {
  * ```
  *
  * Key optimizations:
- * - Center node shown once with full details (not duplicated in groups)
+ * - Target node shown once with location (offset/limit for Read tool)
  * - Nodes grouped hierarchically by file, then by type
+ * - All nodes include offset/limit for Read tool compatibility
  * - Edges use symbol names (not full IDs) for readability
  * - Only relevant edge metadata included (callCount only for CALLS)
+ * - Mermaid diagram only included if requested via outputTypes
  *
  * @param result - The neighbor query result
+ * @param target - The target (center) node location
  * @param distance - Query distance parameter
  * @param direction - Query direction parameter
+ * @param outputTypes - Which output formats to include
  * @returns Formatted string for LLM consumption
  */
 export function formatNeighbors(
 	result: NeighborResult,
+	target: SymbolLocation,
 	distance: number,
 	direction: Direction,
+	outputTypes: OutputType[],
 ): string {
-	const { center, nodes, edges } = result;
+	const { nodes, edges } = result;
 	const lines: string[] = [];
 
-	// Header with center node info
-	lines.push(`center: ${center.id}`);
-	lines.push(`centerType: ${center.type}`);
-	lines.push("centerData:");
-	lines.push(...formatCenterData(center));
+	// Header - machine-readable location for Read tool
+	lines.push("target:");
+	lines.push(`  name: ${target.name}`);
+	lines.push(`  type: ${target.type}`);
+	lines.push(`  file: ${target.file}`);
+	lines.push(`  offset: ${target.offset}`);
+	lines.push(`  limit: ${target.limit}`);
+	lines.push(`  module: ${target.module}`);
+	lines.push(`  package: ${target.package}`);
+	lines.push("");
 	lines.push(`distance: ${distance}`);
 	lines.push(`direction: ${direction}`);
 
-	// Exclude center from neighbor nodes
-	const neighborNodes = nodes.filter((n) => n.id !== center.id);
-	lines.push(`nodeCount: ${neighborNodes.length}`);
-	lines.push(`edgeCount: ${edges.length}`);
+	// Exclude target from neighbor nodes
+	const neighborNodes = nodes.filter((n) => n.id !== target.id);
+	lines.push(`neighbors[${neighborNodes.length}]:`);
+	lines.push(`edges[${edges.length}]:`);
 	lines.push("");
 
 	// Group neighbors by file, then by type
@@ -249,7 +198,9 @@ export function formatNeighbors(
 				lines.push(`  ${plural}[${typeNodes.length}]:`);
 
 				for (const node of typeNodes) {
+					const loc = formatLocation(node);
 					lines.push(`    ${formatNode(node)}`);
+					lines.push(`      offset: ${loc.offset}, limit: ${loc.limit}`);
 				}
 			}
 			lines.push("");
@@ -268,9 +219,11 @@ export function formatNeighbors(
 		lines.push("");
 	}
 
-	// Mermaid diagram
-	lines.push("---mermaid---");
-	lines.push(generateMermaid(nodes, edges));
+	// Mermaid diagram (only if requested)
+	if (outputTypes.includes("mermaid")) {
+		lines.push("---mermaid---");
+		lines.push(generateMermaid(nodes, edges));
+	}
 
-	return lines.join("\n");
+	return lines.join("\n").trimEnd();
 }

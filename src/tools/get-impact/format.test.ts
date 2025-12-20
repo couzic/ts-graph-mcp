@@ -1,16 +1,44 @@
 import { describe, expect, it } from "vitest";
 import type { Node } from "../../db/Types.js";
+import type { SymbolLocation } from "../shared/resolveSymbol.js";
 import { formatImpactNodes } from "./format.js";
+
+/**
+ * Helper to create a SymbolLocation for testing.
+ */
+function createSymbolLocation(
+	id: string,
+	type = "TypeAlias",
+	file = "src/test.ts",
+): SymbolLocation {
+	const parts = id.split(":");
+	const name = parts[parts.length - 1] ?? id;
+	return {
+		id,
+		name,
+		type,
+		file,
+		offset: 1,
+		limit: 10,
+		module: "test",
+		package: "test",
+	};
+}
 
 describe(formatImpactNodes.name, () => {
 	it("formats empty node list", () => {
-		const result = formatImpactNodes("src/types.ts:User", []);
-		expect(result).toContain("targetId: src/types.ts:User");
-		expect(result).toContain("count: 0");
+		const target = createSymbolLocation("src/types.ts:User");
+		const result = formatImpactNodes(target, []);
+		expect(result).toContain("target:");
+		expect(result).toContain("name: User");
+		expect(result).toContain("type: TypeAlias");
+		expect(result).toContain("file: src/test.ts");
+		expect(result).toContain("impacted[0]:");
 		expect(result).toContain("(no impacted code found)");
 	});
 
 	it("groups nodes by file", () => {
+		const target = createSymbolLocation("src/types.ts:User");
 		const nodes: Node[] = [
 			{
 				id: "src/a.ts:foo",
@@ -36,13 +64,15 @@ describe(formatImpactNodes.name, () => {
 			},
 		];
 
-		const result = formatImpactNodes("src/types.ts:User", nodes);
-		expect(result).toContain("targetId: src/types.ts:User");
+		const result = formatImpactNodes(target, nodes);
+		expect(result).toContain("target:");
+		expect(result).toContain("name: User");
 		expect(result).toContain("src/a.ts (1 impacted):");
 		expect(result).toContain("src/b.ts (1 impacted):");
 	});
 
 	it("groups nodes by type within each file", () => {
+		const target = createSymbolLocation("src/types.ts:User");
 		const nodes: Node[] = [
 			{
 				id: "src/test.ts:MyInterface",
@@ -79,7 +109,7 @@ describe(formatImpactNodes.name, () => {
 			},
 		];
 
-		const result = formatImpactNodes("src/types.ts:User", nodes);
+		const result = formatImpactNodes(target, nodes);
 		expect(result).toContain("src/test.ts (3 impacted):");
 		expect(result).toContain("interfaces[1]:");
 		expect(result).toContain("classes[1]:");
@@ -114,7 +144,8 @@ describe(formatImpactNodes.name, () => {
 			},
 		];
 
-		const result = formatImpactNodes("src/types.ts:User", nodes);
+		const target = createSymbolLocation("src/types.ts:User");
+		const result = formatImpactNodes(target, nodes);
 		expect(result).toContain(
 			"greet [10-15] exp async (name:string,age:number) → Promise<string>",
 		);
@@ -147,7 +178,8 @@ describe(formatImpactNodes.name, () => {
 			},
 		];
 
-		const result = formatImpactNodes("src/types.ts:User", nodes);
+		const target = createSymbolLocation("src/types.ts:User");
+		const result = formatImpactNodes(target, nodes);
 		expect(result).toContain("BaseNode [24-51] exp");
 		expect(result).toContain("FunctionNode [54-59] exp extends:[BaseNode]");
 	});
@@ -184,7 +216,8 @@ describe(formatImpactNodes.name, () => {
 			},
 		];
 
-		const result = formatImpactNodes("src/types.ts:User", nodes);
+		const target = createSymbolLocation("src/types.ts:User");
+		const result = formatImpactNodes(target, nodes);
 		expect(result).toContain("properties[2]:");
 		expect(result).toContain("User.name [5]: string");
 		expect(result).toContain("User.email? [6] ro: string");
@@ -207,7 +240,8 @@ describe(formatImpactNodes.name, () => {
 			},
 		];
 
-		const result = formatImpactNodes("src/types.ts:Entity", nodes);
+		const target = createSymbolLocation("src/types.ts:Entity");
+		const result = formatImpactNodes(target, nodes);
 		expect(result).toContain(
 			"User [10-50] exp extends:BaseEntity implements:[Serializable,Comparable]",
 		);
@@ -233,7 +267,8 @@ describe(formatImpactNodes.name, () => {
 			},
 		];
 
-		const result = formatImpactNodes("src/types.ts:User", nodes);
+		const target = createSymbolLocation("src/types.ts:User");
+		const result = formatImpactNodes(target, nodes);
 		expect(result).toContain(
 			"User.save [20-25] private static async () → Promise<void>",
 		);
@@ -255,7 +290,8 @@ describe(formatImpactNodes.name, () => {
 			},
 		];
 
-		const result = formatImpactNodes("src/types.ts:User", nodes);
+		const target = createSymbolLocation("src/types.ts:User");
+		const result = formatImpactNodes(target, nodes);
 		expect(result).toContain("UserId [1] exp = string | number");
 	});
 
@@ -276,7 +312,8 @@ describe(formatImpactNodes.name, () => {
 			},
 		];
 
-		const result = formatImpactNodes("src/types.ts:Config", nodes);
+		const target = createSymbolLocation("src/types.ts:Config");
+		const result = formatImpactNodes(target, nodes);
 		expect(result).toContain("API_URL [1] exp const: string");
 	});
 
@@ -295,7 +332,8 @@ describe(formatImpactNodes.name, () => {
 			},
 		];
 
-		const result = formatImpactNodes("src/types.ts:User", nodes);
+		const target = createSymbolLocation("src/types.ts:User");
+		const result = formatImpactNodes(target, nodes);
 		expect(result).toContain("x [5]");
 		expect(result).not.toContain("5-5");
 	});
@@ -326,8 +364,9 @@ describe(formatImpactNodes.name, () => {
 			},
 		];
 
-		const result = formatImpactNodes("src/types.ts:User", nodes);
-		expect(result).toContain("count: 2");
+		const target = createSymbolLocation("src/types.ts:User");
+		const result = formatImpactNodes(target, nodes);
+		expect(result).toContain("impacted[2]:");
 	});
 
 	it("shows per-file impacted counts", () => {
@@ -367,7 +406,8 @@ describe(formatImpactNodes.name, () => {
 			},
 		];
 
-		const result = formatImpactNodes("src/types.ts:User", nodes);
+		const target = createSymbolLocation("src/types.ts:User");
+		const result = formatImpactNodes(target, nodes);
 		expect(result).toContain("src/test.ts (3 impacted):");
 	});
 
@@ -408,7 +448,8 @@ describe(formatImpactNodes.name, () => {
 			},
 		];
 
-		const result = formatImpactNodes("src/types.ts:User", nodes);
+		const target = createSymbolLocation("src/types.ts:User");
+		const result = formatImpactNodes(target, nodes);
 
 		// Check both files appear
 		expect(result).toContain("src/a.ts (2 impacted):");

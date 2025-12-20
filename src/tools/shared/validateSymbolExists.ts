@@ -12,13 +12,13 @@ export interface ValidationSuccess {
 export type ValidationResult = ValidationError | ValidationSuccess;
 
 /**
- * Validates that a node exists in the database.
- * Returns a ValidationResult with an actionable error message if the node doesn't exist.
+ * Validates that a symbol exists in the database.
+ * Returns a ValidationResult with an actionable error message if the symbol doesn't exist.
  */
-export function validateNodeExists(
+export function validateSymbolExists(
 	db: Database.Database,
 	nodeId: string,
-	paramName = "nodeId",
+	paramName = "symbol",
 ): ValidationResult {
 	const exists = db
 		.prepare<[string], { found: 1 }>(
@@ -29,7 +29,7 @@ export function validateNodeExists(
 	if (!exists) {
 		return {
 			valid: false,
-			error: `Node not found: ${nodeId}\n\nThe ${paramName} "${nodeId}" does not exist in the graph.\nUse search_nodes to find valid node IDs.`,
+			error: `Symbol not found: ${nodeId}\n\nThe ${paramName} "${nodeId}" does not exist in the graph.\nUse search to find valid symbols.`,
 		};
 	}
 
@@ -53,7 +53,7 @@ export function validateFileExists(
 	if (!exists) {
 		return {
 			valid: false,
-			error: `File not found: ${filePath}\n\nNo symbols found for file "${filePath}".\nCheck the path is relative (e.g., "src/utils.ts" not "./src/utils.ts").\nUse search_nodes with pattern "*" and filter by module/package to explore available files.`,
+			error: `File not found: ${filePath}\n\nNo symbols found for file "${filePath}".\nCheck the path is relative (e.g., "src/utils.ts" not "./src/utils.ts").\nUse search with pattern "*" and filter by module/package to explore available files.`,
 		};
 	}
 

@@ -1,98 +1,99 @@
-import type { Node, NodeType } from "../../db/Types.js";
+import type { Node } from "../../db/Types.js";
 import { TYPE_ORDER, TYPE_PLURALS } from "../shared/formatConstants.js";
-import { formatNode } from "../shared/nodeFormatters.js";
+import {
+	formatLocation,
+	formatNode,
+	groupByFile,
+	groupByType,
+} from "../shared/nodeFormatters.js";
+import type { SymbolLocation } from "../shared/resolveSymbol.js";
 
 /**
- * Group nodes by file path, then by type within each file.
- */
-interface FileGroup {
-	filePath: string;
-	module: string;
-	package: string;
-	nodesByType: Map<NodeType, Node[]>;
-}
-
-function groupByFileAndType(nodes: Node[]): FileGroup[] {
-	const fileMap = new Map<string, FileGroup>();
-
-	for (const node of nodes) {
-		let group = fileMap.get(node.filePath);
-		if (!group) {
-			group = {
-				filePath: node.filePath,
-				module: node.module,
-				package: node.package,
-				nodesByType: new Map(),
-			};
-			fileMap.set(node.filePath, group);
-		}
-
-		const existing = group.nodesByType.get(node.type) ?? [];
-		existing.push(node);
-		group.nodesByType.set(node.type, existing);
-	}
-
-	return Array.from(fileMap.values()).sort((a, b) =>
-		a.filePath.localeCompare(b.filePath),
-	);
-}
-
-/**
- * Format callees for LLM consumption using hierarchical file grouping.
+ * Format callees for LLM consumption with hierarchical grouping.
  *
  * Output format:
  * ```
- * sourceId: src/api/handler.ts:createUser
- * count: 5
+ * source:
+ *   name: formatDate
+ *   type: Function
+ *   file: src/utils.ts
+ *   offset: 15
+ *   limit: 6
+ *   module: core
+ *   package: main
  *
- * === src/db/user.ts (module: core, package: main) ===
+ * callees[12]:
  *
- * functions[2]:
- *   saveUser [10-15] exp (user:User) → Promise<void>
- *   validateUser [20-25] (user:User) → boolean
+ * src/api/handler.ts (3 callees):
+ *   functions[2]:
+ *     handleRequest [10-25] exp async (req:Request) → Promise<Response>
+ *       offset: 10, limit: 16
+ *     validateInput [30-35] (data:unknown) → boolean
+ *       offset: 30, limit: 6
+ *   methods[1]:
+ *     ApiClient.fetch [40-50] private async (url:string) → Promise<Data>
+ *       offset: 40, limit: 11
  *
- * === src/utils/logger.ts (module: core, package: main) ===
- *
- * functions[1]:
- *   logInfo [5-7] exp (msg:string) → void
+ * src/services/UserService.ts (2 callees):
+ *   ...
  * ```
  */
-export function formatCallees(sourceId: string, nodes: Node[]): string {
-	if (nodes.length === 0) {
-		return `sourceId: ${sourceId}\ncount: 0\n\n(no callees found)`;
-	}
-
+export function formatCallees(source: SymbolLocation, nodes: Node[]): string {
 	const lines: string[] = [];
 
-	// Header
-	lines.push(`sourceId: ${sourceId}`);
-	lines.push(`count: ${nodes.length}`);
+	// Header - machine-readable location for Read tool
+	lines.push("source:");
+	lines.push(`  name: ${source.name}`);
+	lines.push(`  type: ${source.type}`);
+	lines.push(`  file: ${source.file}`);
+	lines.push(`  offset: ${source.offset}`);
+	lines.push(`  limit: ${source.limit}`);
+	lines.push(`  module: ${source.module}`);
+	lines.push(`  package: ${source.package}`);
 	lines.push("");
 
-	// Group by file, then by type
-	const fileGroups = groupByFileAndType(nodes);
-
-	for (const fileGroup of fileGroups) {
-		// File header
-		lines.push(
-			`=== ${fileGroup.filePath} (module: ${fileGroup.module}, package: ${fileGroup.package}) ===`,
-		);
+	if (nodes.length === 0) {
+		lines.push("callees[0]:");
 		lines.push("");
+		lines.push("(no callees found)");
+		return lines.join("\n");
+	}
 
-		// Output types in order
+	lines.push(`callees[${nodes.length}]:`);
+	lines.push("");
+
+	// Group by file
+	const fileGroups = groupByFile(nodes);
+
+	// Sort files alphabetically for consistent output
+	const sortedFiles = Array.from(fileGroups.keys()).sort();
+
+	for (const filePath of sortedFiles) {
+		const fileNodes = fileGroups.get(filePath);
+		if (!fileNodes || fileNodes.length === 0) continue;
+
+		// File header
+		lines.push(`${filePath} (${fileNodes.length} callees):`);
+
+		// Group by type within the file
+		const typeGroups = groupByType(fileNodes);
+
+		// Output in consistent order (skip File nodes - they're metadata)
 		for (const type of TYPE_ORDER) {
-			const typeNodes = fileGroup.nodesByType.get(type);
+			const typeNodes = typeGroups.get(type);
 			if (!typeNodes || typeNodes.length === 0) continue;
 
 			const plural = TYPE_PLURALS[type];
-			lines.push(`${plural}[${typeNodes.length}]:`);
+			lines.push(`  ${plural}[${typeNodes.length}]:`);
 
 			for (const node of typeNodes) {
-				lines.push(`  ${formatNode(node)}`);
+				const loc = formatLocation(node);
+				lines.push(`    ${formatNode(node)}`);
+				lines.push(`      offset: ${loc.offset}, limit: ${loc.limit}`);
 			}
-
-			lines.push("");
 		}
+
+		lines.push("");
 	}
 
 	return lines.join("\n").trimEnd();

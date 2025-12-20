@@ -1,5 +1,6 @@
 import type Database from "better-sqlite3";
-import { validateNodeExists } from "../shared/validateNodeExists.js";
+import { formatAmbiguous, formatNotFound } from "../shared/errorFormatters.js";
+import { resolveSymbol } from "../shared/resolveSymbol.js";
 import { formatCallers } from "./format.js";
 import { type QueryCallersOptions, queryCallers } from "./query.js";
 
@@ -7,7 +8,10 @@ import { type QueryCallersOptions, queryCallers } from "./query.js";
  * Input parameters for get_callers tool.
  */
 export interface GetCallersParams {
-	nodeId: string;
+	symbol: string;
+	file?: string;
+	module?: string;
+	package?: string;
 	maxDepth?: number;
 }
 
@@ -21,10 +25,21 @@ export const getCallersDefinition = {
 	inputSchema: {
 		type: "object" as const,
 		properties: {
-			nodeId: {
+			symbol: {
 				type: "string",
-				description:
-					"Node ID of the function/method (e.g., 'src/utils.ts:formatDate')",
+				description: "Symbol name (e.g., 'formatDate', 'User.save')",
+			},
+			file: {
+				type: "string",
+				description: "Narrow scope to a file",
+			},
+			module: {
+				type: "string",
+				description: "Narrow scope to a module",
+			},
+			package: {
+				type: "string",
+				description: "Narrow scope to a package",
 			},
 			maxDepth: {
 				type: "number",
@@ -32,7 +47,7 @@ export const getCallersDefinition = {
 					"Optional: Maximum traversal depth for transitive callers (1-100)",
 			},
 		},
-		required: ["nodeId"],
+		required: ["symbol"],
 	},
 };
 
@@ -47,16 +62,23 @@ export function executeGetCallers(
 	db: Database.Database,
 	params: GetCallersParams,
 ): string {
-	const validation = validateNodeExists(db, params.nodeId);
-	if (!validation.valid) {
-		return validation.error;
+	const result = resolveSymbol(db, params);
+
+	if (result.status === "not_found") {
+		return formatNotFound(params.symbol, result.suggestions);
 	}
 
+	if (result.status === "ambiguous") {
+		return formatAmbiguous(params.symbol, result.candidates);
+	}
+
+	// result.status === "unique"
+	const nodeId = result.node.id;
 	const options: QueryCallersOptions = {};
 	if (params.maxDepth !== undefined) {
 		options.maxDepth = params.maxDepth;
 	}
 
-	const nodes = queryCallers(db, params.nodeId, options);
-	return formatCallers(params.nodeId, nodes);
+	const nodes = queryCallers(db, nodeId, options);
+	return formatCallers(result.node, nodes);
 }

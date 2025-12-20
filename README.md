@@ -6,7 +6,7 @@ A Model Context Protocol (MCP) server that extracts TypeScript code structure in
 
 ts-graph-mcp parses TypeScript source code using AST analysis and builds a graph database of your codebase structure. The graph captures code symbols (functions, classes, interfaces, types, variables) and their relationships (calls, imports, type usage, inheritance).
 
-AI agents can then query this graph through 7 specialized MCP tools to:
+AI agents can then query this graph through 6 specialized MCP tools to:
 
 - Search for symbols by name patterns
 - Traverse call graphs (who calls this? what does this call?)
@@ -14,7 +14,9 @@ AI agents can then query this graph through 7 specialized MCP tools to:
 - Find paths between symbols
 - Extract neighborhood subgraphs with visual diagrams
 
-All tool responses use a hierarchical text format optimized for LLM consumption, achieving approximately 60-70% token reduction compared to JSON.
+All tools use a **symbol-based query pattern** - reference code elements by name with optional filters (`file`, `module`, `package`) for disambiguation. Tool outputs are machine-readable and include `offset` and `limit` fields that integrate directly with the Read tool without computation.
+
+Responses use a hierarchical text format optimized for LLM consumption, achieving approximately 60-70% token reduction compared to JSON.
 
 ## Quick Start
 
@@ -114,21 +116,31 @@ export default defineConfig({
 
 ## MCP Tools
 
-The server exposes 7 tools for querying the code graph:
+The server exposes 6 tools for querying the code graph:
 
 | Tool | Purpose | Key Parameters |
 |------|---------|----------------|
-| `search_nodes` | Search for symbols by name pattern | `pattern` (glob), `nodeType`, `module`, `package`, `exported` |
-| `get_callers` | Find all functions/methods that call the target | `nodeId`, `maxDepth` (1-100) |
-| `get_callees` | Find all functions/methods that the source calls | `nodeId`, `maxDepth` (1-100) |
-| `get_impact` | Impact analysis - find all code affected by changes | `nodeId`, `maxDepth` (1-100) |
-| `find_path` | Find shortest path between two nodes | `sourceId`, `targetId` |
-| `get_neighbors` | Extract subgraph within N edges of center | `nodeId`, `distance` (1-100), `direction` |
-| `get_file_symbols` | List all symbols defined in a file | `filePath` |
+| `search` | Search for symbols by name pattern | `pattern` (glob), `type`, `module`, `package`, `exported` |
+| `get_callers` | Find all functions/methods that call the target | `symbol`, `file?`, `module?`, `package?`, `maxDepth?` |
+| `get_callees` | Find all functions/methods that the source calls | `symbol`, `file?`, `module?`, `package?`, `maxDepth?` |
+| `get_impact` | Impact analysis - find all code affected by changes | `symbol`, `file?`, `module?`, `package?`, `maxDepth?` |
+| `find_path` | Find shortest path between two symbols | `from: {symbol, ...}`, `to: {symbol, ...}`, `maxDepth?`, `maxPaths?` |
+| `get_neighbors` | Extract subgraph within N edges of center | `symbol`, `file?`, `module?`, `package?`, `distance?`, `direction?`, `outputTypes?` |
+
+### Symbol-Based Queries
+
+All tools use a **SymbolQuery pattern** for inputs:
+
+- **Required**: `symbol` - Symbol name (e.g., `"formatDate"`, `"User.save"`)
+- **Optional filters**: `file`, `module`, `package` - Narrow scope when symbol name is ambiguous
+
+If multiple symbols match, the tool returns candidates with their location details, allowing you to refine your query with additional filters.
 
 ### Example Outputs
 
-#### search_nodes
+All outputs include `offset` and `limit` fields that can be passed directly to the Read tool.
+
+#### search
 
 Search for all symbols matching `User*`:
 
@@ -142,9 +154,11 @@ package: main
 matches: 2
 
 interfaces[1]:
-  User [1-10] exp
+  User
+    offset: 0, limit: 11
 typeAliases[1]:
-  UserId [12] exp = string
+  UserId = string
+    offset: 11, limit: 2
 
 file: src/models/User.ts
 module: models
@@ -152,46 +166,71 @@ package: main
 matches: 1
 
 classes[1]:
-  UserService [5-50] exp extends:BaseService implements:[IUserService]
+  UserService extends:BaseService implements:[IUserService]
+    offset: 4, limit: 47
 ```
 
 #### get_callers
 
-Find all callers of `src/db/user.ts:saveUser`:
+Find all callers of `saveUser`:
 
-```
-targetId: src/db/user.ts:saveUser
+```bash
+# Input
+{ symbol: "saveUser" }
+
+# Output
+target: saveUser (Function)
+file: src/db/user.ts
+offset: 15, limit: 8
 count: 2
 
 src/api/handler.ts (1 callers):
 functions[1]:
-  handleRequest [10-25] exp async (req:Request) → Promise<Response>
+  handleRequest async (req:Request) → Promise<Response>
+    offset: 9, limit: 17
+    callCount: 1, depth: 1
 
 src/services/UserService.ts (1 callers):
 methods[1]:
-  UserService.create [20-30] async (data:UserData) → Promise<User>
+  UserService.create async (data:UserData) → Promise<User>
+    offset: 19, limit: 12
+    callCount: 2, depth: 1
 ```
 
 #### find_path
 
-Find path from `src/api.ts:handleRequest` to `src/db.ts:saveData`:
+Find path from `handleRequest` to `saveData`:
 
-```
-sourceId: src/api.ts:handleRequest
-targetId: src/db.ts:saveData
-found: true
-length: 2
+```bash
+# Input
+{ from: { symbol: "handleRequest" }, to: { symbol: "saveData" } }
 
-path: src/api.ts:handleRequest --CALLS--> src/service.ts:process --CALLS--> src/db.ts:saveData
+# Output
+from: handleRequest (Function) in src/api.ts
+to: saveData (Function) in src/db.ts
+found: 1 path
+length: 3
+
+path[1]:
+  handleRequest (src/api.ts)
+    --CALLS-->
+  process (src/service.ts)
+    --CALLS-->
+  saveData (src/db.ts)
 ```
 
 #### get_neighbors
 
-Get neighborhood around `src/types.ts:User` with distance 1:
+Get neighborhood around `User` interface with distance 1:
 
-```
-center: src/types.ts:User
-centerType: Interface
+```bash
+# Input
+{ symbol: "User", distance: 1, outputTypes: ["text", "mermaid"] }
+
+# Output
+center: User (Interface)
+file: src/types.ts
+offset: 0, limit: 11
 distance: 1
 direction: both
 nodeCount: 2
@@ -199,11 +238,13 @@ edgeCount: 2
 
 src/types.ts (1 nodes):
 interfaces[1]:
-  Admin [25-30] exp extends:[User]
+  Admin extends:[User]
+    offset: 24, limit: 7
 
 src/services/UserService.ts (1 nodes):
 classes[1]:
-  UserService [5-50] exp
+  UserService
+    offset: 4, limit: 47
 
 edges[2]:
   Admin --EXTENDS--> User
@@ -217,21 +258,6 @@ graph LR
   n1 -->|extends| n0
   n2 -->|uses type| n0
 ```
-
-### Node ID Format
-
-All tools reference nodes using a deterministic ID format:
-
-```
-{filePath}:{symbolPath}
-```
-
-Examples:
-
-- File: `src/utils.ts`
-- Function: `src/utils.ts:formatDate`
-- Method: `src/models/User.ts:User.save`
-- Property: `src/models/User.ts:User.name`
 
 ### Supported Node Types
 

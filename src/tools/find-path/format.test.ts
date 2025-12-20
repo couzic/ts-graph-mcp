@@ -1,20 +1,47 @@
 import { describe, expect, it } from "vitest";
 import type { Edge } from "../../db/Types.js";
+import type { SymbolLocation } from "../shared/resolveSymbol.js";
 import { formatPath } from "./format.js";
 import type { PathResult } from "./query.js";
 
+/**
+ * Helper to create a SymbolLocation for testing.
+ */
+function createSymbolLocation(
+	id: string,
+	type = "Function",
+	file = "src/test.ts",
+): SymbolLocation {
+	const parts = id.split(":");
+	const name = parts[parts.length - 1] ?? id;
+	return {
+		id,
+		name,
+		type,
+		file,
+		offset: 1,
+		limit: 10,
+		module: "test",
+		package: "test",
+	};
+}
+
 describe(formatPath.name, () => {
 	it("formats null path as not found", () => {
-		const result = formatPath("src/a.ts:foo", "src/b.ts:bar", null);
+		const from = createSymbolLocation("src/a.ts:foo");
+		const to = createSymbolLocation("src/b.ts:bar");
+		const result = formatPath(from, to, null);
 
-		expect(result).toContain("sourceId: src/a.ts:foo");
-		expect(result).toContain("targetId: src/b.ts:bar");
+		expect(result).toContain("from: foo (Function)");
+		expect(result).toContain("to: bar (Function)");
 		expect(result).toContain("found: false");
 		expect(result).toContain("(no path exists between these nodes)");
 		expect(result).not.toContain("length:");
 	});
 
 	it("formats simple two-node path", () => {
+		const from = createSymbolLocation("src/a.ts:foo");
+		const to = createSymbolLocation("src/b.ts:bar");
 		const path: PathResult = {
 			nodes: ["src/a.ts:foo", "src/b.ts:bar"],
 			edges: [
@@ -26,16 +53,18 @@ describe(formatPath.name, () => {
 			],
 		};
 
-		const result = formatPath("src/a.ts:foo", "src/b.ts:bar", path);
+		const result = formatPath(from, to, path);
 
-		expect(result).toContain("sourceId: src/a.ts:foo");
-		expect(result).toContain("targetId: src/b.ts:bar");
+		expect(result).toContain("from: foo (Function)");
+		expect(result).toContain("to: bar (Function)");
 		expect(result).toContain("found: true");
 		expect(result).toContain("length: 1");
-		expect(result).toContain("path: src/a.ts:foo --CALLS--> src/b.ts:bar");
+		expect(result).toContain("path: foo --CALLS--> bar");
 	});
 
 	it("formats three-node path with multiple edge types", () => {
+		const from = createSymbolLocation("src/a.ts:A");
+		const to = createSymbolLocation("src/c.ts:C");
 		const path: PathResult = {
 			nodes: ["src/a.ts:A", "src/b.ts:B", "src/c.ts:C"],
 			edges: [
@@ -52,16 +81,16 @@ describe(formatPath.name, () => {
 			],
 		};
 
-		const result = formatPath("src/a.ts:A", "src/c.ts:C", path);
+		const result = formatPath(from, to, path);
 
 		expect(result).toContain("found: true");
 		expect(result).toContain("length: 2");
-		expect(result).toContain(
-			"path: src/a.ts:A --CALLS--> src/b.ts:B --IMPORTS--> src/c.ts:C",
-		);
+		expect(result).toContain("path: A --CALLS--> B --IMPORTS--> C");
 	});
 
 	it("formats long path correctly", () => {
+		const from = createSymbolLocation("src/a.ts:start");
+		const to = createSymbolLocation("src/e.ts:end");
 		const path: PathResult = {
 			nodes: [
 				"src/a.ts:start",
@@ -78,7 +107,7 @@ describe(formatPath.name, () => {
 			] as Edge[],
 		};
 
-		const result = formatPath("src/a.ts:start", "src/e.ts:end", path);
+		const result = formatPath(from, to, path);
 
 		expect(result).toContain("length: 4");
 		expect(result).toContain("--CALLS-->");
@@ -87,20 +116,24 @@ describe(formatPath.name, () => {
 	});
 
 	it("handles single-node path (source equals target)", () => {
+		const from = createSymbolLocation("src/a.ts:foo");
+		const to = createSymbolLocation("src/a.ts:foo");
 		const path: PathResult = {
 			nodes: ["src/a.ts:foo"],
 			edges: [],
 		};
 
-		const result = formatPath("src/a.ts:foo", "src/a.ts:foo", path);
+		const result = formatPath(from, to, path);
 
 		expect(result).toContain("found: true");
 		expect(result).toContain("length: 0");
-		expect(result).toContain("path: src/a.ts:foo");
+		expect(result).toContain("path: foo");
 		expect(result).not.toContain("-->");
 	});
 
 	it("handles IMPLEMENTS edge type", () => {
+		const from = createSymbolLocation("src/interface.ts:IFoo");
+		const to = createSymbolLocation("src/class.ts:Foo");
 		const path: PathResult = {
 			nodes: ["src/interface.ts:IFoo", "src/class.ts:Foo"],
 			edges: [
@@ -112,16 +145,14 @@ describe(formatPath.name, () => {
 			],
 		};
 
-		const result = formatPath(
-			"src/interface.ts:IFoo",
-			"src/class.ts:Foo",
-			path,
-		);
+		const result = formatPath(from, to, path);
 
 		expect(result).toContain("--IMPLEMENTS-->");
 	});
 
 	it("handles CONTAINS edge type", () => {
+		const from = createSymbolLocation("src/file.ts", "File");
+		const to = createSymbolLocation("src/file.ts:MyClass", "Class");
 		const path: PathResult = {
 			nodes: ["src/file.ts", "src/file.ts:MyClass"],
 			edges: [
@@ -133,12 +164,14 @@ describe(formatPath.name, () => {
 			],
 		};
 
-		const result = formatPath("src/file.ts", "src/file.ts:MyClass", path);
+		const result = formatPath(from, to, path);
 
 		expect(result).toContain("--CONTAINS-->");
 	});
 
 	it("preserves node ID format with colons", () => {
+		const from = createSymbolLocation("src/models/User.ts:User.save", "Method");
+		const to = createSymbolLocation("src/db/Repo.ts:Repo.insert", "Method");
 		const path: PathResult = {
 			nodes: ["src/models/User.ts:User.save", "src/db/Repo.ts:Repo.insert"],
 			edges: [
@@ -150,16 +183,10 @@ describe(formatPath.name, () => {
 			],
 		};
 
-		const result = formatPath(
-			"src/models/User.ts:User.save",
-			"src/db/Repo.ts:Repo.insert",
-			path,
-		);
+		const result = formatPath(from, to, path);
 
-		expect(result).toContain("sourceId: src/models/User.ts:User.save");
-		expect(result).toContain("targetId: src/db/Repo.ts:Repo.insert");
-		expect(result).toContain(
-			"path: src/models/User.ts:User.save --CALLS--> src/db/Repo.ts:Repo.insert",
-		);
+		expect(result).toContain("from: User.save (Method)");
+		expect(result).toContain("to: Repo.insert (Method)");
+		expect(result).toContain("path: User.save --CALLS--> Repo.insert");
 	});
 });

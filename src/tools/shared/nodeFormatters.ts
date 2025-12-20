@@ -20,6 +20,21 @@ export function formatLines(startLine: number, endLine: number): string {
 }
 
 /**
+ * Returns location data formatted for direct use with the Read tool.
+ * offset = startLine (1-indexed)
+ * limit = number of lines
+ */
+export function formatLocation(node: { startLine: number; endLine: number }): {
+	offset: number;
+	limit: number;
+} {
+	return {
+		offset: node.startLine,
+		limit: node.endLine - node.startLine + 1,
+	};
+}
+
+/**
  * Format a function node for output.
  */
 export function formatFunction(node: Node & { type: "Function" }): string {

@@ -12,11 +12,15 @@ import { indexProject } from "../../src/ingestion/Ingestion.js";
 import { queryCallees } from "../../src/tools/get-callees/query.js";
 import { queryCallers } from "../../src/tools/get-callers/query.js";
 import { queryPath } from "../../src/tools/find-path/query.js";
-import { queryFileNodes } from "../../src/tools/get-file-symbols/query.js";
 import { queryImpactedNodes } from "../../src/tools/get-impact/query.js";
 import { queryNeighbors } from "../../src/tools/get-neighbors/query.js";
-import { querySearchNodes } from "../../src/tools/search-nodes/query.js";
+import { querySearchNodes } from "../../src/tools/search/query.js";
 import { queryEdges } from "../../src/db/queryEdges.js";
+
+// Helper to get all nodes in a file (replacement for deprecated queryFileNodes)
+function queryFileNodes(db: Database.Database, filePath: string) {
+	return querySearchNodes(db, "*").filter((n) => n.filePath === filePath);
+}
 
 /**
  * Integration tests for deep-chain test project.
@@ -248,7 +252,7 @@ describe("deep-chain integration", () => {
 
 	describe(querySearchNodes.name, () => {
 		it("finds all step functions with step* pattern (filtered by type)", () => {
-			const result = querySearchNodes(db, "step*", { nodeType: "Function" });
+			const result = querySearchNodes(db, "step*", { type: "Function" });
 
 			expect(result).toHaveLength(9);
 			const names = result.map((n) => n.name).sort();

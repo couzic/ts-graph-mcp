@@ -21,10 +21,8 @@ export function querySearchNodes(
 	const conditions: string[] = ["name GLOB ?"];
 	const params: (string | number)[] = [globToSqlite(pattern)];
 
-	if (filters?.nodeType) {
-		const types = Array.isArray(filters.nodeType)
-			? filters.nodeType
-			: [filters.nodeType];
+	if (filters?.type) {
+		const types = Array.isArray(filters.type) ? filters.type : [filters.type];
 		conditions.push(`type IN (${types.map(() => "?").join(", ")})`);
 		params.push(...types);
 	}
@@ -50,7 +48,18 @@ export function querySearchNodes(
 		params.push(filters.exported ? 1 : 0);
 	}
 
-	const sql = `SELECT * FROM nodes WHERE ${conditions.join(" AND ")}`;
+	let sql = `SELECT * FROM nodes WHERE ${conditions.join(" AND ")}`;
+
+	// Add pagination (LIMIT must come before OFFSET in SQLite)
+	if (filters?.limit !== undefined) {
+		sql += ` LIMIT ${filters.limit}`;
+	} else {
+		sql += " LIMIT 100"; // default limit
+	}
+	if (filters?.offset !== undefined) {
+		sql += ` OFFSET ${filters.offset}`;
+	}
+
 	const stmt = db.prepare<(string | number)[], NodeRow>(sql);
 	const rows = stmt.all(...params);
 	return rows.map(rowToNode);

@@ -1,6 +1,6 @@
 # get_impact
 
-Impact analysis: find all code affected by changes to a target node.
+Impact analysis: find all code affected by changes to a target symbol.
 
 ## Purpose
 
@@ -16,13 +16,19 @@ Answer: "If I change this, what else breaks?" Essential for safe refactoring.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `nodeId` | string | Yes | Node to analyze (e.g., `src/db/Types.ts:Node`) |
+| `symbol` | string | Yes | Symbol name (e.g., `formatDate`, `User.save`) |
+| `file` | string | No | Narrow scope to a file |
+| `module` | string | No | Narrow scope to a module |
+| `package` | string | No | Narrow scope to a package |
 | `maxDepth` | number | No | Traversal depth 1-100 (default: 100) |
 
 ## Output Format
 
 ```
-targetId: src/db/Types.ts:Node
+target: Node (Interface)
+file: src/db/Types.ts
+offset: 15
+limit: 25
 count: 42
 
 src/tools/get-callers/format.ts (8 impacted):
@@ -47,28 +53,35 @@ Unlike `get_callers` (CALLS only), impact analysis follows ALL incoming edges:
 ### Impact of a core type
 
 ```json
-{ "nodeId": "src/db/Types.ts:Node" }
+{ "symbol": "Node", "module": "db" }
 ```
 → Shows 42+ impacted nodes (high risk change)
 
 ### Impact of interface
 
 ```json
-{ "nodeId": "src/db/DbWriter.ts:DbWriter" }
+{ "symbol": "DbWriter" }
 ```
 → Shows all functions with `DbWriter` parameter
+
+### Impact in specific file
+
+```json
+{ "symbol": "formatDate", "file": "src/utils.ts" }
+```
+→ Scoped to specific symbol location
 
 ### Direct dependents only
 
 ```json
-{ "nodeId": "src/utils.ts:helper", "maxDepth": 1 }
+{ "symbol": "helper", "maxDepth": 1 }
 ```
 → Immediate dependencies only
 
 ### Dead code check
 
 ```json
-{ "nodeId": "src/deprecated.ts:oldFunction" }
+{ "symbol": "oldFunction", "file": "src/deprecated.ts" }
 ```
 → count: 0 means safe to delete
 
@@ -76,13 +89,13 @@ Unlike `get_callers` (CALLS only), impact analysis follows ALL incoming edges:
 
 1. **Before changing a function:**
    ```json
-   { "nodeId": "src/utils.ts:formatDate" }
+   { "symbol": "formatDate" }
    ```
    Review all dependents
 
 2. **Before changing an interface:**
    ```json
-   { "nodeId": "src/db/Types.ts:Node" }
+   { "symbol": "Node" }
    ```
    Understand full impact
 

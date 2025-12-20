@@ -12,28 +12,20 @@ Claude Code 2.0.74+ includes a built-in LSP tool with `documentSymbol`, `workspa
 
 | Tool | LSP Equivalent | Status |
 |------|----------------|--------|
-| `get_file_symbols` | `documentSymbol` | **DEPRECATED** |
+| `get_file_symbols` | `documentSymbol` | **REMOVED** (deleted in API redesign) |
 
 ### Retained (Unique Value)
 
-These tools remain because they offer capabilities LSP lacks:
+These 6 tools remain because they offer capabilities LSP lacks:
 
 | Tool | Unique Value | LSP Cannot Do This |
 |------|--------------|-------------------|
 | `get_callers` | **Transitive** (maxDepth=N) | LSP `incomingCalls` is single-hop only |
 | `get_callees` | **Transitive** (maxDepth=N) | LSP `outgoingCalls` is single-hop only |
-| `search_nodes` | Module/package/exported **filters** | LSP `workspaceSymbol` has no filters |
+| `search` | Module/package/exported **filters** | LSP `workspaceSymbol` has no filters |
 | `get_impact` | **Impact analysis** across all edge types | No LSP equivalent |
 | `find_path` | **Path finding** between symbols | No LSP equivalent |
 | `get_neighbors` | **Subgraph extraction** + Mermaid diagrams | No LSP equivalent |
-
-### Removal Plan
-
-**When removed:**
-- Remove `get_file_symbols` tool entirely
-- Remove `src/tools/get-file-symbols/` directory
-- Update MCP server registration
-- Update tool count in documentation (7 → 6 tools)
 
 ---
 
@@ -48,21 +40,21 @@ The `get-impact` query.ts already supports `edgeTypes` and `moduleFilter` option
 
 ```typescript
 // Enables targeted impact analysis
-get_impact({ nodeId: "...", edgeTypes: ["CALLS"] })        // Only call-chain impact
-get_impact({ nodeId: "...", edgeTypes: ["USES_TYPE"] })    // Only type usage impact
-get_impact({ nodeId: "...", moduleFilter: "api" })         // Impact within module
+get_impact({ symbol: "processData", edgeTypes: ["CALLS"] })        // Only call-chain impact
+get_impact({ symbol: "User", edgeTypes: ["USES_TYPE"] })           // Only type usage impact
+get_impact({ symbol: "formatDate", moduleFilter: "api" })          // Impact within module
 ```
 
-### Result Limits (search-nodes, get-neighbors)
+### Result Limits (search, get-neighbors)
 **Impact: High | Effort: Low**
 
-Broad searches can return thousands of results, wasting tokens. Add default limits with truncation warnings.
+Broad searches can return thousands of results, wasting tokens. The `search` tool now has `limit` and `offset` parameters for pagination. Future enhancement: add default limits with truncation warnings.
 
 ```typescript
-// search-nodes
-{ limit: 100 }  // Default, max 500
+// search tool already supports pagination
+search({ pattern: "*Service", limit: 100, offset: 0 })
 
-// Output when truncated
+// Future: Output when truncated
 "Search results for '*Service' (showing 100 of 342 matches)
 ⚠️ Results truncated. Add filters or use a more specific pattern."
 ```
@@ -84,9 +76,37 @@ The MCP tool definitions (in `src/tools/*/handler.ts`) have quality gaps that re
 - `src/tools/get-callers/handler.ts` - redundant description
 - `src/tools/get-callees/handler.ts` - redundant description
 - `src/tools/get-neighbors/handler.ts` - unclear direction param
-- All 6 non-deprecated tools - missing output format hints
+- All 6 tools - missing output format hints
 
-> See `src/tools/*/FUTURE_IMPROVEMENTS.md` for detailed improvement plans per tool.
+### Error Messages with Example Syntax
+**Impact: Medium | Effort: Very Low**
+
+When symbol resolution fails (not found or ambiguous), error messages tell the user *what* to do but not *how*. Adding example syntax reduces friction.
+
+**Current:**
+```
+Narrow your query with: file, module, or package parameter
+```
+
+**Improved:**
+```
+Narrow your query with file, module, or package:
+  { symbol: "formatDate", file: "src/utils/date.ts" }
+  { symbol: "formatDate", module: "core" }
+```
+
+**Affected file:** `src/tools/shared/errorFormatters.ts`
+
+### Document `pattern` vs `symbol` Distinction
+**Impact: Low | Effort: Very Low**
+
+The `search` tool uses `pattern` (glob matching) while all other tools use `symbol` (exact name). This is semantically correct but could confuse AI agents.
+
+**Options:**
+1. **Documentation only** - Clarify in tool descriptions that `search` takes globs, others take exact names
+2. **Alias in search** - Accept both `pattern` and `symbol` params (treat `symbol` as exact pattern)
+
+Recommendation: Option 1 is sufficient. The distinction is meaningful and the current naming is accurate.
 
 ---
 
@@ -110,8 +130,8 @@ Developer-friendly command-line interface.
 ```bash
 # Quick queries from terminal
 ts-graph search "extract*"
-ts-graph callers src/db/DbReader.ts:DbReader
-ts-graph impact src/db/Types.ts:Node --depth 3
+ts-graph callers formatDate --file src/utils.ts
+ts-graph impact Node --module db --depth 3
 
 # Export for visualization
 ts-graph export --format neo4j
@@ -396,12 +416,13 @@ Agent:
 
 Want to help build the future of AI-assisted development?
 
-Pick something from this roadmap that excites you. The codebase is well-tested (350+ tests) and documented. Every module has a CLAUDE.md explaining its purpose and patterns.
+Pick something from this roadmap that excites you. The codebase is well-tested (400+ tests) and documented. Every module has a CLAUDE.md explaining its purpose and patterns.
 
 **High-impact, low-effort** items are great starting points:
 - Expose hidden parameters in get-impact
-- Result limits for search-nodes
+- Result limits for search
 - Improve tool descriptions (redundancy, output format hints)
+- Error messages with example syntax
 - Simplified single-module configuration
 - Circular dependency detection
 

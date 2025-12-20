@@ -1,6 +1,7 @@
 import type { Node, NodeType } from "../../db/Types.js";
 import { TYPE_ORDER, TYPE_PLURALS } from "../shared/formatConstants.js";
-import { formatNode } from "../shared/nodeFormatters.js";
+import { formatLocation, formatNode } from "../shared/nodeFormatters.js";
+import type { SymbolLocation } from "../shared/resolveSymbol.js";
 
 /**
  * Group nodes by file, then by type within each file.
@@ -30,36 +31,64 @@ function groupByFileAndType(nodes: Node[]): Map<string, Map<NodeType, Node[]>> {
  *
  * Output format:
  * ```
- * targetId: src/types.ts:User
- * count: 42
+ * target:
+ *   name: formatDate
+ *   type: Function
+ *   file: src/utils.ts
+ *   offset: 15
+ *   limit: 6
+ *   module: core
+ *   package: main
+ *
+ * impacted[42]:
  *
  * src/db/Types.ts (15 impacted):
  *   interfaces[3]:
  *     BaseNode [24-51] exp
+ *       offset: 24, limit: 28
  *     FunctionNode [54-59] exp extends:[BaseNode]
+ *       offset: 54, limit: 6
  *   properties[12]:
  *     BaseNode.id [26]: string
+ *       offset: 26, limit: 1
  *     ...
  *
  * src/utils.ts (8 impacted):
  *   functions[5]:
  *     formatDate [10-15] exp (date:Date) → string
+ *       offset: 10, limit: 6
  *     ...
  *   variables[3]:
  *     API_URL [1] exp const: string
+ *       offset: 1, limit: 1
  *     ...
  * ```
  */
-export function formatImpactNodes(targetId: string, nodes: Node[]): string {
-	if (nodes.length === 0) {
-		return `targetId: ${targetId}\ncount: 0\n\n(no impacted code found)`;
-	}
-
+export function formatImpactNodes(
+	target: SymbolLocation,
+	nodes: Node[],
+): string {
 	const lines: string[] = [];
 
-	// Header
-	lines.push(`targetId: ${targetId}`);
-	lines.push(`count: ${nodes.length}`);
+	// Header - machine-readable location for Read tool
+	lines.push("target:");
+	lines.push(`  name: ${target.name}`);
+	lines.push(`  type: ${target.type}`);
+	lines.push(`  file: ${target.file}`);
+	lines.push(`  offset: ${target.offset}`);
+	lines.push(`  limit: ${target.limit}`);
+	lines.push(`  module: ${target.module}`);
+	lines.push(`  package: ${target.package}`);
+	lines.push("");
+
+	if (nodes.length === 0) {
+		lines.push("impacted[0]:");
+		lines.push("");
+		lines.push("(no impacted code found)");
+		return lines.join("\n");
+	}
+
+	lines.push(`impacted[${nodes.length}]:`);
 	lines.push("");
 
 	// Group by file, then by type
@@ -84,11 +113,13 @@ export function formatImpactNodes(targetId: string, nodes: Node[]): string {
 			lines.push(`  ${plural}[${typeNodes.length}]:`);
 
 			for (const node of typeNodes) {
+				const loc = formatLocation(node);
 				lines.push(`    ${formatNode(node)}`);
+				lines.push(`      offset: ${loc.offset}, limit: ${loc.limit}`);
 			}
-
-			lines.push("");
 		}
+
+		lines.push("");
 	}
 
 	return lines.join("\n").trimEnd();

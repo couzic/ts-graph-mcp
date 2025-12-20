@@ -21,7 +21,7 @@ This document describes the technical architecture of **ts-graph-mcp**, an MCP (
 - **Nodes**: Code symbols (functions, classes, methods, interfaces, types, variables, files, properties)
 - **Edges**: Relationships between symbols (calls, imports, type usage, inheritance, etc.)
 
-The graph is exposed through an MCP server that provides 7 specialized tools for AI agents to:
+The graph is exposed through an MCP server that provides 6 specialized tools for AI agents to:
 - Search for symbols by name patterns
 - Traverse call graphs (who calls this? what does this call?)
 - Analyze code impact (what breaks if I change this?)
@@ -41,7 +41,7 @@ The project uses a **vertical slice architecture** where each MCP tool owns its 
 ├─────────────────────────────────────────────────────────────────┤
 │                     Vertical Slice Tools                        │
 │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐            │
-│  │ search-nodes │ │ get-callers  │ │ get-callees  │  ... (x7)  │
+│  │    search    │ │ get-callers  │ │ get-callees  │  ... (x6)  │
 │  │  handler.ts  │ │  handler.ts  │ │  handler.ts  │            │
 │  │  query.ts    │ │  query.ts    │ │  query.ts    │            │
 │  │  format.ts   │ │  format.ts   │ │  format.ts   │            │
@@ -86,6 +86,12 @@ Each MCP tool folder (`src/tools/<tool>/`) contains:
 - `handler.ts` - MCP tool definition and execute function
 - `query.ts` - Direct SQL queries using recursive CTEs
 - `format.ts` - Output formatting for LLM consumption
+
+**Shared Utilities** (`src/tools/shared/`):
+- `SymbolQuery.ts` - Reusable Zod schema for symbol-based queries (used by all tools)
+- `resolveSymbol.ts` - Symbol resolution with disambiguation (unique/ambiguous/not_found)
+- `validateSymbolExists.ts` - Symbol existence validation with helpful error messages
+- `nodeFormatters.ts` - Output formatting utilities
 
 ## Module Organization
 
@@ -178,10 +184,10 @@ The schema intentionally omits FK constraints on edges table for three key reaso
 
 ### `/src/mcp/` - MCP Server
 
-**Purpose**: Exposes the code graph as an MCP server with 7 tools (6 active, 1 deprecated).
+**Purpose**: Exposes the code graph as an MCP server with 6 tools.
 
 **Key Files**:
-- `McpServer.ts` - Server implementation with 7 tool registrations
+- `McpServer.ts` - Server implementation with 6 tool registrations
 - `StartServer.ts` - CLI entry point with auto-indexing on first run
 
 **Design Highlights**:
@@ -421,70 +427,94 @@ await dbWriter.addEdges(edges);
 
 ## MCP Tools
 
-The MCP server exposes 7 tools for querying the code graph (6 active, 1 deprecated — see [LSP Tool Overlap](#lsp-tool-overlap)).
+The MCP server exposes 6 tools for querying the code graph.
 
-**Input Validation**: Tools that accept `nodeId` or `filePath` parameters validate existence before querying. Invalid inputs return actionable error messages with suggestions (e.g., "Use search_nodes to find valid IDs"). Shared validators live in `src/tools/shared/validateNodeExists.ts`.
+**Symbol-First Design**: All tools use a symbol-based query approach instead of internal node IDs. Tools accept a `symbol` name with optional filters (`file`, `module`, `package`) to narrow scope. Symbol resolution handles disambiguation automatically — if multiple matches exist, the tool returns candidates for clarification.
 
-### 1. `search_nodes`
+**Input Validation**: Tools validate symbol existence before querying. Invalid inputs return actionable error messages with suggestions (e.g., "Use search to find valid symbols"). Shared validators live in `src/tools/shared/validateSymbolExists.ts`.
 
-**Purpose**: Search for nodes by name pattern with filters.
+**Output Format**: All tools return machine-readable output optimized for AI agent consumption. Each symbol includes `offset` and `limit` fields that can be passed directly to the Read tool without computation.
+
+### 1. `search`
+
+**Purpose**: Search for symbols by name pattern with filters.
 
 **Parameters**:
 - `pattern` (required): Glob pattern (e.g., `"handle*"`, `"User*Service"`)
-- `nodeType` (optional): Filter by type (Function, Class, etc.)
+- `type` (optional): Filter by symbol type (Function, Class, Method, Interface, TypeAlias, Variable, Property)
 - `module` (optional): Filter by module name
 - `package` (optional): Filter by package name
 - `exported` (optional): Filter by export status
+- `offset` (optional): Skip first N results for pagination
+- `limit` (optional): Return maximum N results for pagination
 
 ### 2. `get_callers`
 
-**Purpose**: Find all functions/methods that call the target (reverse call graph).
+**Purpose**: Find all functions/methods that call the target (reverse call graph, transitive).
 
 **Parameters**:
-- `nodeId` (required): Target function/method ID
+- `symbol` (required): Target symbol name (e.g., `"formatDate"`, `"User.save"`)
+- `file` (optional): Narrow scope to a specific file
+- `module` (optional): Narrow scope to a specific module
+- `package` (optional): Narrow scope to a specific package
 - `maxDepth` (optional): Traversal depth (1-100, default: 100)
+
+**Output**: Includes `callCount` (how many times each caller calls the target) and `depth` (1 for direct callers, 2+ for transitive).
 
 ### 3. `get_callees`
 
-**Purpose**: Find all functions/methods that the source calls (forward call graph).
+**Purpose**: Find all functions/methods that the source calls (forward call graph, transitive).
 
 **Parameters**:
-- `nodeId` (required): Source function/method ID
+- `symbol` (required): Source symbol name (e.g., `"processData"`, `"Service.run"`)
+- `file` (optional): Narrow scope to a specific file
+- `module` (optional): Narrow scope to a specific module
+- `package` (optional): Narrow scope to a specific package
 - `maxDepth` (optional): Traversal depth (1-100, default: 100)
+
+**Output**: Includes `callCount` (how many times the source calls each callee) and `depth` (1 for direct callees, 2+ for transitive).
 
 ### 4. `get_impact`
 
-**Purpose**: Impact analysis - find all code affected by changes to a node.
+**Purpose**: Impact analysis - find all code affected by changes to a symbol.
 
 **Parameters**:
-- `nodeId` (required): Node to analyze
+- `symbol` (required): Symbol to analyze (e.g., `"Database.query"`, `"validateInput"`)
+- `file` (optional): Narrow scope to a specific file
+- `module` (optional): Narrow scope to a specific module
+- `package` (optional): Narrow scope to a specific package
 - `maxDepth` (optional): Traversal depth (default: 100)
 
 ### 5. `find_path`
 
-**Purpose**: Find shortest path between two nodes using BFS.
+**Purpose**: Find paths between two symbols using BFS. Returns multiple paths if they exist.
 
 **Parameters**:
-- `sourceId` (required): Starting node ID
-- `targetId` (required): Ending node ID
+- `from` (required): Source symbol query object with fields:
+  - `symbol` (required): Symbol name
+  - `file` (optional): Narrow scope to file
+  - `module` (optional): Narrow scope to module
+  - `package` (optional): Narrow scope to package
+- `to` (required): Target symbol query object (same fields as `from`)
+- `maxDepth` (optional): Maximum path length (1-100, default: 20)
+- `maxPaths` (optional): Maximum number of paths to return (1-10, default: 3)
+
+**Output**: Returns all paths found (up to `maxPaths`), each showing the complete sequence of symbols and connection types between them.
 
 ### 6. `get_neighbors`
 
-**Purpose**: Extract subgraph - all nodes within N edges of center.
+**Purpose**: Extract neighborhood subgraph - all symbols within N connections of a center symbol.
 
 **Parameters**:
-- `nodeId` (required): Center node ID
-- `distance` (optional): Maximum edge distance (1-100, default: 1)
-- `direction` (optional): `"outgoing"` | `"incoming"` | `"both"` (default: "both")
+- `symbol` (required): Center symbol name (e.g., `"handleRequest"`, `"Config"`)
+- `file` (optional): Narrow scope to a specific file
+- `module` (optional): Narrow scope to a specific module
+- `package` (optional): Narrow scope to a specific package
+- `distance` (optional): Maximum connection distance (1-100, default: 1)
+- `direction` (optional): Traversal direction - `"outgoing"` | `"incoming"` | `"both"` (default: "both")
+- `outputTypes` (optional): Output formats to include - array of `"text"` and/or `"mermaid"` (default: `["text"]`)
 
-### 7. `get_file_symbols` ⚠️ DEPRECATED
-
-> **DEPRECATED.** Use LSP `documentSymbol` instead — real-time, no pre-indexing required.
-
-**Purpose**: List all symbols defined in a file.
-
-**Parameters**:
-- `filePath` (required): Relative file path
+**Output**: Returns structured text format (machine-readable) and/or Mermaid diagram for visualization, depending on `outputTypes` selection.
 
 ## Key Technologies
 
@@ -565,8 +595,8 @@ The built-in LSP tool provides:
 
 | Feature | LSP Tool | ts-graph-mcp | Overlap |
 |---------|----------|--------------|---------|
-| Symbols in file | `documentSymbol` | ~~`get_file_symbols`~~ | **Full** - DEPRECATED |
-| Search symbols | `workspaceSymbol` | `search_nodes` | **Partial** - ts-graph has module/package/exported filters |
+| Symbols in file | `documentSymbol` | ❌ (removed) | None - use LSP |
+| Search symbols | `workspaceSymbol` | `search` | **Partial** - ts-graph has module/package/exported filters |
 | Direct callers | `incomingCalls` | `get_callers(maxDepth=1)` | **Partial** - ts-graph has transitive traversal |
 | Direct callees | `outgoingCalls` | `get_callees(maxDepth=1)` | **Partial** - ts-graph has transitive traversal |
 | Definition lookup | `goToDefinition` | ❌ | None |
@@ -576,10 +606,9 @@ The built-in LSP tool provides:
 | **Path finding** | ❌ | `find_path` | **Unique** |
 | **Neighborhood subgraph** | ❌ | `get_neighbors` + Mermaid | **Unique** |
 
-### Deprecation Status
+### Removed Tools
 
-**DEPRECATED:**
-- `get_file_symbols` - Use LSP `documentSymbol` instead. Real-time, no pre-indexing required.
+**`get_file_symbols`** - Removed entirely (previously deprecated). Use LSP `documentSymbol` instead, which provides real-time results without pre-indexing.
 
 ### When to Use Each
 

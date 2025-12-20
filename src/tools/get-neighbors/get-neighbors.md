@@ -1,10 +1,10 @@
 # get_neighbors
 
-Extract a neighborhood subgraph around a center node with Mermaid diagram.
+Extract a neighborhood subgraph around a center symbol with optional Mermaid diagram.
 
 ## Purpose
 
-Answer: "What's nearby this node?" Returns all nodes within a specified distance.
+Answer: "What's nearby this symbol?" Returns all symbols within a specified distance.
 
 **Use cases:**
 - Local context exploration
@@ -16,9 +16,13 @@ Answer: "What's nearby this node?" Returns all nodes within a specified distance
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `nodeId` | string | Yes | - | Center node ID |
+| `symbol` | string | Yes | - | Symbol name (e.g., `formatDate`, `User.save`) |
+| `file` | string | No | - | Narrow scope to a file |
+| `module` | string | No | - | Narrow scope to a module |
+| `package` | string | No | - | Narrow scope to a package |
 | `distance` | number | No | 1 | Distance in edges (1-100) |
 | `direction` | string | No | `both` | `outgoing`, `incoming`, or `both` |
+| `outputTypes` | array | No | `["text"]` | Output formats: `["text"]`, `["mermaid"]`, or `["text", "mermaid"]` |
 
 ### Direction Semantics
 
@@ -28,12 +32,13 @@ Answer: "What's nearby this node?" Returns all nodes within a specified distance
 
 ## Output Format
 
+### Text Format (default)
+
 ```
-center: src/models.ts:UserService
-centerType: Class
-centerData:
-  line: 4-10
-  exported: true
+center: UserService (Class)
+file: src/models.ts
+offset: 4
+limit: 7
 distance: 1
 direction: both
 nodeCount: 3
@@ -49,7 +54,11 @@ edges[3]:
   models.ts --CONTAINS--> UserService
   UserService --CONTAINS--> addUser
   UserService --CONTAINS--> users
+```
 
+### Mermaid Format (when outputTypes includes "mermaid")
+
+```
 ---mermaid---
 graph LR
   n0["UserService"]
@@ -65,7 +74,8 @@ graph LR
 
 ```json
 {
-  "nodeId": "src/models.ts:UserService",
+  "symbol": "UserService",
+  "file": "src/models.ts",
   "distance": 1,
   "direction": "both"
 }
@@ -75,7 +85,7 @@ graph LR
 
 ```json
 {
-  "nodeId": "src/utils.ts:formatDate",
+  "symbol": "formatDate",
   "distance": 2,
   "direction": "outgoing"
 }
@@ -85,9 +95,18 @@ graph LR
 
 ```json
 {
-  "nodeId": "src/types.ts:User",
+  "symbol": "User",
   "distance": 1,
   "direction": "incoming"
+}
+```
+
+### With Mermaid diagram
+
+```json
+{
+  "symbol": "UserService",
+  "outputTypes": ["text", "mermaid"]
 }
 ```
 
@@ -110,7 +129,7 @@ graph LR
 ## Key Features
 
 - **All edge types** (not just CALLS) - IMPORTS, USES_TYPE, CONTAINS, etc.
-- **Mermaid diagram** for visualization
+- **Optional Mermaid diagram** - Set `outputTypes: ["text", "mermaid"]` for visualization
 - **Edge filtering** - Only edges within subgraph
 - **Grouped output** - By file, then by type
 
@@ -125,6 +144,6 @@ graph LR
 
 ## Related Tools
 
-- `search_nodes` - Find node IDs by pattern
-- `get_file_symbols` - All symbols in a file
+- `search` - Find symbols by pattern
 - `get_impact` - Full impact analysis
+- `get_callers` / `get_callees` - Transitive call graphs

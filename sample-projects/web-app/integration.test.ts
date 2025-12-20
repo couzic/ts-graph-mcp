@@ -9,7 +9,7 @@ import { createSqliteWriter } from "../../src/db/sqlite/SqliteWriter.js";
 import { indexProject } from "../../src/ingestion/Ingestion.js";
 import { queryEdges } from "../../src/db/queryEdges.js";
 import { queryImpactedNodes } from "../../src/tools/get-impact/query.js";
-import { querySearchNodes } from "../../src/tools/search-nodes/query.js";
+import { querySearchNodes } from "../../src/tools/search/query.js";
 import config from "./ts-graph-mcp.config.js";
 
 /**
@@ -181,7 +181,7 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 		it("get_impact on shared User shows frontend dependents", () => {
 			const userNode = querySearchNodes(db, "User", {
 				module: "shared",
-				nodeType: "Interface",
+				type: "Interface",
 			})[0];
 
 			expect(userNode).toBeDefined();
@@ -198,7 +198,7 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 		it("get_impact on shared User shows backend dependents", () => {
 			const userNode = querySearchNodes(db, "User", {
 				module: "shared",
-				nodeType: "Interface",
+				type: "Interface",
 			})[0];
 
 			expect(userNode).toBeDefined();
@@ -216,7 +216,7 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 		it("get_impact on shared User shows BOTH frontend AND backend dependents", () => {
 			const userNode = querySearchNodes(db, "User", {
 				module: "shared",
-				nodeType: "Interface",
+				type: "Interface",
 			})[0];
 
 			expect(userNode).toBeDefined();
@@ -237,7 +237,7 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 		it("get_impact on shared createUser shows backend callers", () => {
 			const createUserNode = querySearchNodes(db, "createUser", {
 				module: "shared",
-				nodeType: "Function",
+				type: "Function",
 			})[0];
 
 			expect(createUserNode).toBeDefined();

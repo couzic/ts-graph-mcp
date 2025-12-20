@@ -9,7 +9,7 @@ import { initializeSchema } from "../../src/db/sqlite/SqliteSchema.js";
 import { createSqliteWriter } from "../../src/db/sqlite/SqliteWriter.js";
 import { indexProject } from "../../src/ingestion/Ingestion.js";
 import { queryImpactedNodes } from "../../src/tools/get-impact/query.js";
-import { querySearchNodes } from "../../src/tools/search-nodes/query.js";
+import { querySearchNodes } from "../../src/tools/search/query.js";
 import config from "./ts-graph-mcp.config.js";
 
 /**
@@ -353,7 +353,7 @@ describe("monorepo integration (L3: multi-module, multi-package)", () => {
       const userNode = querySearchNodes(db, "User", {
         module: "shared",
         package: "types",
-        nodeType: "Interface",
+        type: "Interface",
       })[0];
 
       expect(userNode).toBeDefined();
@@ -374,7 +374,7 @@ describe("monorepo integration (L3: multi-module, multi-package)", () => {
       const validateEmailNode = querySearchNodes(db, "validateEmail", {
         module: "shared",
         package: "utils",
-        nodeType: "Function",
+        type: "Function",
       })[0];
 
       expect(validateEmailNode).toBeDefined();
@@ -394,7 +394,7 @@ describe("monorepo integration (L3: multi-module, multi-package)", () => {
       const formatDateNode = querySearchNodes(db, "formatDate", {
         module: "shared",
         package: "utils",
-        nodeType: "Function",
+        type: "Function",
       })[0];
 
       expect(formatDateNode).toBeDefined();
@@ -419,7 +419,7 @@ describe("monorepo integration (L3: multi-module, multi-package)", () => {
       const createUserServiceNode = querySearchNodes(db, "createUserService", {
         module: "backend",
         package: "services",
-        nodeType: "Function",
+        type: "Function",
       })[0];
 
       expect(createUserServiceNode).toBeDefined();

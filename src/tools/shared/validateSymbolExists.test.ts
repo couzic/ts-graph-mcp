@@ -3,10 +3,10 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { initializeSchema } from "../../db/sqlite/SqliteSchema.js";
 import {
 	validateFileExists,
-	validateNodeExists,
-} from "./validateNodeExists.js";
+	validateSymbolExists,
+} from "./validateSymbolExists.js";
 
-describe(validateNodeExists.name, () => {
+describe(validateSymbolExists.name, () => {
 	let db: Database.Database;
 
 	beforeEach(() => {
@@ -18,7 +18,7 @@ describe(validateNodeExists.name, () => {
 		db.close();
 	});
 
-	it("returns valid:true when node exists", () => {
+	it("returns valid:true when symbol exists", () => {
 		db.prepare(
 			"INSERT INTO nodes (id, type, name, module, package, file_path, start_line, end_line, exported) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
 		).run(
@@ -33,31 +33,34 @@ describe(validateNodeExists.name, () => {
 			1,
 		);
 
-		const result = validateNodeExists(db, "src/utils.ts:formatDate");
+		const result = validateSymbolExists(db, "src/utils.ts:formatDate");
 
 		expect(result).toEqual({ valid: true });
 	});
 
-	it("returns error with suggestion when node does not exist", () => {
-		const result = validateNodeExists(db, "src/nonexistent.ts:missingFunction");
+	it("returns error with suggestion when symbol does not exist", () => {
+		const result = validateSymbolExists(
+			db,
+			"src/nonexistent.ts:missingFunction",
+		);
 
 		expect(result.valid).toBe(false);
 		if (!result.valid) {
 			expect(result.error).toContain(
-				"Node not found: src/nonexistent.ts:missingFunction",
+				"Symbol not found: src/nonexistent.ts:missingFunction",
 			);
 			expect(result.error).toContain("does not exist in the graph");
-			expect(result.error).toContain("Use search_nodes to find valid node IDs");
+			expect(result.error).toContain("Use search to find valid symbols");
 		}
 	});
 
 	it("uses custom paramName in error message", () => {
-		const result = validateNodeExists(db, "invalid:id", "sourceId");
+		const result = validateSymbolExists(db, "invalid:id", "sourceSymbol");
 
 		expect(result.valid).toBe(false);
 		if (!result.valid) {
 			expect(result.error).toContain(
-				'The sourceId "invalid:id" does not exist',
+				'The sourceSymbol "invalid:id" does not exist',
 			);
 		}
 	});
@@ -103,7 +106,7 @@ describe(validateFileExists.name, () => {
 			expect(result.error).toContain("File not found: src/nonexistent.ts");
 			expect(result.error).toContain("No symbols found for file");
 			expect(result.error).toContain("Check the path is relative");
-			expect(result.error).toContain("Use search_nodes");
+			expect(result.error).toContain("Use search");
 		}
 	});
 

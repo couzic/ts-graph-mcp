@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { extractSymbol, formatLines } from "./nodeFormatters.js";
+import {
+	extractSymbol,
+	formatLines,
+	formatLocation,
+} from "./nodeFormatters.js";
 
 describe(extractSymbol.name, () => {
 	it("extracts symbol from standard node ID", () => {
@@ -52,5 +56,32 @@ describe(formatLines.name, () => {
 
 	it("formats line 1 correctly", () => {
 		expect(formatLines(1, 1)).toBe("1");
+	});
+});
+
+describe(formatLocation.name, () => {
+	it("returns offset and limit for single line", () => {
+		const result = formatLocation({ startLine: 26, endLine: 26 });
+		expect(result).toEqual({ offset: 26, limit: 1 });
+	});
+
+	it("returns offset and limit for line range", () => {
+		const result = formatLocation({ startLine: 24, endLine: 51 });
+		expect(result).toEqual({ offset: 24, limit: 28 });
+	});
+
+	it("handles line 1", () => {
+		const result = formatLocation({ startLine: 1, endLine: 1 });
+		expect(result).toEqual({ offset: 1, limit: 1 });
+	});
+
+	it("handles large line numbers", () => {
+		const result = formatLocation({ startLine: 1000, endLine: 2000 });
+		expect(result).toEqual({ offset: 1000, limit: 1001 });
+	});
+
+	it("calculates limit correctly for multi-line range", () => {
+		const result = formatLocation({ startLine: 15, endLine: 20 });
+		expect(result).toEqual({ offset: 15, limit: 6 });
 	});
 });

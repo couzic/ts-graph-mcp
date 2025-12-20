@@ -156,7 +156,7 @@ export interface Path {
 // Search and Traversal Options
 export interface SearchFilters {
 	/** Filter by node type(s) */
-	nodeType?: NodeType | NodeType[];
+	type?: NodeType | NodeType[];
 
 	/** Filter by module name(s) */
 	module?: string | string[];
@@ -166,6 +166,12 @@ export interface SearchFilters {
 
 	/** Filter by export status */
 	exported?: boolean;
+
+	/** Skip first N results (pagination) */
+	offset?: number;
+
+	/** Max results to return (pagination, default: 100) */
+	limit?: number;
 }
 
 export interface TraversalOptions {
