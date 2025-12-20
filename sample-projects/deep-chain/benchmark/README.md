@@ -38,12 +38,12 @@ Run `npm run benchmark:setup` once before benchmarking (or after changing source
 
 ```bash
 # Run from project root using shared runner:
-npx tsx benchmark/lib/run.ts test-projects/deep-chain                # Default (1 iteration)
-npx tsx benchmark/lib/run.ts test-projects/deep-chain --runs 5       # 5 iterations
-npx tsx benchmark/lib/run.ts test-projects/deep-chain --prompt P1    # Only run P1
-npx tsx benchmark/lib/run.ts test-projects/deep-chain --scenario with-mcp  # Only WITH MCP
-npx tsx benchmark/lib/run.ts test-projects/deep-chain --verbose      # Show detailed output
-npx tsx benchmark/lib/run.ts test-projects/deep-chain --sequential   # Run one at a time
+npx tsx benchmark/lib/run.ts sample-projects/deep-chain                # Default (1 iteration)
+npx tsx benchmark/lib/run.ts sample-projects/deep-chain --runs 5       # 5 iterations
+npx tsx benchmark/lib/run.ts sample-projects/deep-chain --prompt P1    # Only run P1
+npx tsx benchmark/lib/run.ts sample-projects/deep-chain --scenario with-mcp  # Only WITH MCP
+npx tsx benchmark/lib/run.ts sample-projects/deep-chain --verbose      # Show detailed output
+npx tsx benchmark/lib/run.ts sample-projects/deep-chain --sequential   # Run one at a time
 ```
 
 ## Output
@@ -79,4 +79,4 @@ All runner logic is in the shared library at `<project-root>/benchmark/lib/`.
 
 ## Adding to Other Test Projects
 
-See `test-projects/CLAUDE.md` or `benchmark/lib/README.md` for instructions.
+See `sample-projects/CLAUDE.md` or `benchmark/lib/README.md` for instructions.

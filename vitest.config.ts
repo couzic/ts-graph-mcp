@@ -4,7 +4,7 @@ export default defineConfig({
 	test: {
 		include: [
 			"src/**/*.test.ts",
-			"test-projects/**/*.test.ts",
+			"sample-projects/**/*.test.ts",
 		],
 		globals: true,
 		environment: "node",

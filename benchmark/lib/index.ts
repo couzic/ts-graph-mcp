@@ -23,8 +23,8 @@
  *
  * Then run:
  * ```bash
- * npx tsx benchmark/lib/setup.ts test-projects/my-project
- * npx tsx benchmark/lib/run.ts test-projects/my-project
+ * npx tsx benchmark/lib/setup.ts sample-projects/my-project
+ * npx tsx benchmark/lib/run.ts sample-projects/my-project
  * ```
  */
 

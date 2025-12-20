@@ -24,7 +24,7 @@ npm run benchmark -- --scenario with-mcp
 **You only need ONE file: `benchmark/prompts.ts`**
 
 ```typescript
-// test-projects/my-project/benchmark/prompts.ts
+// sample-projects/my-project/benchmark/prompts.ts
 import type { BenchmarkConfig, BenchmarkPrompt } from "../../../benchmark/lib/types.js";
 
 export const config: BenchmarkConfig = {
@@ -48,10 +48,10 @@ Then run:
 
 ```bash
 # Setup (index the project)
-npx tsx benchmark/lib/setup.ts test-projects/my-project
+npx tsx benchmark/lib/setup.ts sample-projects/my-project
 
 # Run benchmarks
-npx tsx benchmark/lib/run.ts test-projects/my-project
+npx tsx benchmark/lib/run.ts sample-projects/my-project
 ```
 
 ## Configuration Options
@@ -82,7 +82,7 @@ benchmark/
 └── results/           # All benchmark results
     └── <project>/     # Results organized by project name
 
-test-projects/
+sample-projects/
 └── <project>/
     ├── .mcp.json              # MCP server configuration
     ├── tsconfig.json

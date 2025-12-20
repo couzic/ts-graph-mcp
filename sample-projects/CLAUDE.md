@@ -1,4 +1,4 @@
-# Test Projects
+# Sample Projects
 
 Sample TypeScript codebases for integration testing and benchmarking.
 
@@ -162,7 +162,7 @@ benchmark/
 
 **Each test project only needs ONE file:**
 ```
-test-project/
+sample-project/
 ├── .mcp.json              # Points to ts-graph-mcp server
 ├── .ts-graph/graph.db     # Pre-indexed database (created by setup)
 ├── tsconfig.json
@@ -223,12 +223,12 @@ test-project/
 
 3. **Run setup** to pre-index:
    ```bash
-   npx tsx benchmark/lib/setup.ts test-projects/my-project
+   npx tsx benchmark/lib/setup.ts sample-projects/my-project
    ```
 
 4. **Run benchmarks**:
    ```bash
-   npx tsx benchmark/lib/run.ts test-projects/my-project
+   npx tsx benchmark/lib/run.ts sample-projects/my-project
    ```
 
 ### Why MCP Wins
