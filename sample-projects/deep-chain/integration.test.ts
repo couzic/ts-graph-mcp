@@ -9,12 +9,12 @@ import {
 import { initializeSchema } from "../../src/db/sqlite/SqliteSchema.js";
 import { createSqliteWriter } from "../../src/db/sqlite/SqliteWriter.js";
 import { indexProject } from "../../src/ingestion/Ingestion.js";
-import { queryCallees } from "../../src/tools/get-callees/query.js";
-import { queryCallers } from "../../src/tools/get-callers/query.js";
+import { queryCallees } from "../../src/tools/outgoing-calls-deep/query.js";
+import { queryCallers } from "../../src/tools/incoming-calls-deep/query.js";
 import { queryPath } from "../../src/tools/find-path/query.js";
-import { queryImpactedNodes } from "../../src/tools/get-impact/query.js";
-import { queryNeighbors } from "../../src/tools/get-neighbors/query.js";
-import { querySearchNodes } from "../../src/tools/search/query.js";
+import { queryImpactedNodes } from "../../src/tools/analyze-impact/query.js";
+import { queryNeighbors } from "../../src/tools/get-neighborhood/query.js";
+import { querySearchNodes } from "../../src/tools/search-symbols/query.js";
 import { queryEdges } from "../../src/db/queryEdges.js";
 
 // Helper to get all nodes in a file (replacement for deprecated queryFileNodes)

@@ -41,7 +41,7 @@ const DEFAULT_LIMIT = 100;
 const MAX_LIMIT = 500;
 
 {
-  name: 'search_nodes',
+  name: 'searchSymbols',
   inputSchema: {
     pattern: { type: 'string' },
     // ... existing filters
@@ -113,7 +113,7 @@ No results found for pattern "user*"
 
 💡 GLOB patterns are case-sensitive. Try:
    - "User*" for PascalCase matches
-   - Use search_nodes with nodeType filter to narrow results
+   - Use searchSymbols with nodeType filter to narrow results
 ```
 
 ### P4: No-Match Suggestions (Medium Impact)
@@ -153,7 +153,7 @@ Search: pattern="*", nodeType="Method", exported=true
 Result: 0 matches
 
 💡 Methods are typically exported via their parent class, not directly.
-   Try: nodeType="Class" with exported=true, then use get_file_symbols
+   Try: nodeType="Class" with exported=true, then use LSP documentSymbol
 ```
 
 ### P6: Pagination Support (Low Impact)

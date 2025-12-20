@@ -1,6 +1,6 @@
-# get_callees
+# outgoingCallsDeep
 
-Find all functions/methods called by a source. Forward call graph traversal.
+Find all functions/methods called by a source. Forward call graph traversal (transitive).
 
 ## Purpose
 
@@ -121,10 +121,10 @@ WITH RECURSIVE callees(id, depth) AS (
 
 - High callee count = complex function (consider refactoring)
 - Many callees, few callers = likely entry point
-- Combine with `get_callers` for full picture
+- Combine with `incomingCallsDeep` for full picture
 
 ## Related Tools
 
-- `get_callers` - Reverse call graph (what calls this?)
-- `get_impact` - Broader impact (all edge types)
-- `get_neighbors` - Local subgraph extraction
+- `incomingCallsDeep` - Reverse call graph (what calls this?)
+- `analyzeImpact` - Broader impact (all edge types)
+- `getNeighborhood` - Local subgraph extraction

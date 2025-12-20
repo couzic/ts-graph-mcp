@@ -1,4 +1,4 @@
-# get_impact
+# analyzeImpact
 
 Impact analysis: find all code affected by changes to a target symbol.
 
@@ -40,7 +40,7 @@ src/tools/get-callers/format.ts (8 impacted):
 
 ## Edge Types Traversed
 
-Unlike `get_callers` (CALLS only), impact analysis follows ALL incoming edges:
+Unlike `incomingCallsDeep` (CALLS only), impact analysis follows ALL incoming edges:
 
 - **CALLS** - Functions that call the target
 - **USES_TYPE** - Code using the type
@@ -118,6 +118,6 @@ WITH RECURSIVE impacted(id, depth) AS (
 
 ## Related Tools
 
-- `get_callers` - CALLS edges only (narrower)
-- `get_neighbors` - Distance-limited, bidirectional
-- `find_path` - Specific path between nodes
+- `incomingCallsDeep` - CALLS edges only (narrower)
+- `getNeighborhood` - Distance-limited, bidirectional
+- `findPath` - Specific path between nodes

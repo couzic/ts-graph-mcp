@@ -41,7 +41,7 @@ The project uses a **vertical slice architecture** where each MCP tool owns its 
 ├─────────────────────────────────────────────────────────────────┤
 │                     Vertical Slice Tools                        │
 │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐            │
-│  │    search    │ │ get-callers  │ │ get-callees  │  ... (x6)  │
+│  │searchSymbols │ │incomingCalls │ │outgoingCalls │  ... (x6)  │
 │  │  handler.ts  │ │  handler.ts  │ │  handler.ts  │            │
 │  │  query.ts    │ │  query.ts    │ │  query.ts    │            │
 │  │  format.ts   │ │  format.ts   │ │  format.ts   │            │
@@ -435,7 +435,7 @@ The MCP server exposes 6 tools for querying the code graph.
 
 **Output Format**: All tools return machine-readable output optimized for AI agent consumption. Each symbol includes `offset` and `limit` fields that can be passed directly to the Read tool without computation.
 
-### 1. `search`
+### 1. `searchSymbols`
 
 **Purpose**: Search for symbols by name pattern with filters.
 
@@ -448,9 +448,9 @@ The MCP server exposes 6 tools for querying the code graph.
 - `offset` (optional): Skip first N results for pagination
 - `limit` (optional): Return maximum N results for pagination
 
-### 2. `get_callers`
+### 2. `incomingCallsDeep`
 
-**Purpose**: Find all functions/methods that call the target (reverse call graph, transitive).
+**Purpose**: Find all functions/methods that call the target (reverse call graph, transitive). Extends LSP's `incomingCalls` with transitive traversal.
 
 **Parameters**:
 - `symbol` (required): Target symbol name (e.g., `"formatDate"`, `"User.save"`)
@@ -461,9 +461,9 @@ The MCP server exposes 6 tools for querying the code graph.
 
 **Output**: Includes `callCount` (how many times each caller calls the target) and `depth` (1 for direct callers, 2+ for transitive).
 
-### 3. `get_callees`
+### 3. `outgoingCallsDeep`
 
-**Purpose**: Find all functions/methods that the source calls (forward call graph, transitive).
+**Purpose**: Find all functions/methods that the source calls (forward call graph, transitive). Extends LSP's `outgoingCalls` with transitive traversal.
 
 **Parameters**:
 - `symbol` (required): Source symbol name (e.g., `"processData"`, `"Service.run"`)
@@ -474,7 +474,7 @@ The MCP server exposes 6 tools for querying the code graph.
 
 **Output**: Includes `callCount` (how many times the source calls each callee) and `depth` (1 for direct callees, 2+ for transitive).
 
-### 4. `get_impact`
+### 4. `analyzeImpact`
 
 **Purpose**: Impact analysis - find all code affected by changes to a symbol.
 
@@ -485,7 +485,7 @@ The MCP server exposes 6 tools for querying the code graph.
 - `package` (optional): Narrow scope to a specific package
 - `maxDepth` (optional): Traversal depth (default: 100)
 
-### 5. `find_path`
+### 5. `findPath`
 
 **Purpose**: Find paths between two symbols using BFS. Returns multiple paths if they exist.
 
@@ -501,7 +501,7 @@ The MCP server exposes 6 tools for querying the code graph.
 
 **Output**: Returns all paths found (up to `maxPaths`), each showing the complete sequence of symbols and connection types between them.
 
-### 6. `get_neighbors`
+### 6. `getNeighborhood`
 
 **Purpose**: Extract neighborhood subgraph - all symbols within N connections of a center symbol.
 
@@ -596,15 +596,15 @@ The built-in LSP tool provides:
 | Feature | LSP Tool | ts-graph-mcp | Overlap |
 |---------|----------|--------------|---------|
 | Symbols in file | `documentSymbol` | ❌ (removed) | None - use LSP |
-| Search symbols | `workspaceSymbol` | `search` | **Partial** - ts-graph has module/package/exported filters |
-| Direct callers | `incomingCalls` | `get_callers(maxDepth=1)` | **Partial** - ts-graph has transitive traversal |
-| Direct callees | `outgoingCalls` | `get_callees(maxDepth=1)` | **Partial** - ts-graph has transitive traversal |
+| Search symbols | `workspaceSymbol` | `searchSymbols` | **Partial** - ts-graph has module/package/exported filters |
+| Direct callers | `incomingCalls` | `incomingCallsDeep(maxDepth=1)` | **Partial** - ts-graph has transitive traversal |
+| Direct callees | `outgoingCalls` | `outgoingCallsDeep(maxDepth=1)` | **Partial** - ts-graph has transitive traversal |
 | Definition lookup | `goToDefinition` | ❌ | None |
 | Hover docs | `hover` | ❌ | None |
-| **Transitive call graph** | ❌ | `get_callers/callees(maxDepth=N)` | **Unique** |
-| **Impact analysis** | ❌ | `get_impact` | **Unique** |
-| **Path finding** | ❌ | `find_path` | **Unique** |
-| **Neighborhood subgraph** | ❌ | `get_neighbors` + Mermaid | **Unique** |
+| **Transitive call graph** | ❌ | `incomingCallsDeep/outgoingCallsDeep` | **Unique** |
+| **Impact analysis** | ❌ | `analyzeImpact` | **Unique** |
+| **Path finding** | ❌ | `findPath` | **Unique** |
+| **Neighborhood subgraph** | ❌ | `getNeighborhood` + Mermaid | **Unique** |
 
 ### Removed Tools
 

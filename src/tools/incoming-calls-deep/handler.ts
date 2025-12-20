@@ -1,13 +1,13 @@
 import type Database from "better-sqlite3";
 import { formatAmbiguous, formatNotFound } from "../shared/errorFormatters.js";
 import { resolveSymbol } from "../shared/resolveSymbol.js";
-import { formatCallees } from "./format.js";
-import { queryCallees } from "./query.js";
+import { formatCallers } from "./format.js";
+import { type QueryCallersOptions, queryCallers } from "./query.js";
 
 /**
- * Input parameters for get_callees tool.
+ * Input parameters for incomingCallsDeep tool.
  */
-export interface GetCalleesParams {
+export interface IncomingCallsDeepParams {
 	symbol: string;
 	file?: string;
 	module?: string;
@@ -16,12 +16,12 @@ export interface GetCalleesParams {
 }
 
 /**
- * MCP tool definition for get_callees.
+ * MCP tool definition for incomingCallsDeep.
  */
-export const getCalleesDefinition = {
-	name: "get_callees",
+export const incomingCallsDeepDefinition = {
+	name: "incomingCallsDeep",
 	description:
-		"Find all functions/methods that the source calls. Returns nodes called by the specified function/method.",
+		"Find all functions/methods that call the target. Returns nodes that call the specified function/method.",
 	inputSchema: {
 		type: "object" as const,
 		properties: {
@@ -44,7 +44,7 @@ export const getCalleesDefinition = {
 			maxDepth: {
 				type: "number",
 				description:
-					"Optional: Maximum traversal depth for transitive callees (1-100)",
+					"Optional: Maximum traversal depth for transitive callers (1-100)",
 			},
 		},
 		required: ["symbol"],
@@ -52,15 +52,15 @@ export const getCalleesDefinition = {
 };
 
 /**
- * Execute the get_callees tool.
+ * Execute the incomingCallsDeep tool.
  *
  * @param db - Database connection
  * @param params - Tool parameters
  * @returns Formatted string for LLM consumption
  */
-export function executeGetCallees(
+export function executeIncomingCallsDeep(
 	db: Database.Database,
-	params: GetCalleesParams,
+	params: IncomingCallsDeepParams,
 ): string {
 	const result = resolveSymbol(db, params);
 
@@ -74,7 +74,11 @@ export function executeGetCallees(
 
 	// result.status === "unique"
 	const nodeId = result.node.id;
-	const maxDepth = params.maxDepth ?? 100;
-	const nodes = queryCallees(db, nodeId, maxDepth);
-	return formatCallees(result.node, nodes);
+	const options: QueryCallersOptions = {};
+	if (params.maxDepth !== undefined) {
+		options.maxDepth = params.maxDepth;
+	}
+
+	const nodes = queryCallers(db, nodeId, options);
+	return formatCallers(result.node, nodes);
 }

@@ -45,7 +45,7 @@ export function getImpact(
   if (!node) {
     return {
       error: `Node not found: ${nodeId}`,
-      suggestion: 'Use search_nodes tool to find valid node IDs'
+      suggestion: 'Use searchSymbols tool to find valid node IDs'
     };
   }
 
@@ -66,7 +66,7 @@ export function getImpact(
 ```typescript
 // In handler.ts
 {
-  name: 'get_impact',
+  name: 'analyzeImpact',
   inputSchema: {
     nodeId: { type: 'string' },
     maxDepth: { type: 'number' },

@@ -1,4 +1,4 @@
-# get_neighbors
+# getNeighborhood
 
 Extract a neighborhood subgraph around a center symbol with optional Mermaid diagram.
 
@@ -137,13 +137,13 @@ graph LR
 
 | Tool | Difference |
 |------|------------|
-| `get_callers` | Only CALLS, unlimited depth |
-| `get_callees` | Only CALLS, unlimited depth |
-| `get_impact` | Semantic impact rules, no direction |
-| `find_path` | Single path, not neighborhood |
+| `incomingCallsDeep` | Only CALLS, unlimited depth |
+| `outgoingCallsDeep` | Only CALLS, unlimited depth |
+| `analyzeImpact` | Semantic impact rules, no direction |
+| `findPath` | Single path, not neighborhood |
 
 ## Related Tools
 
-- `search` - Find symbols by pattern
-- `get_impact` - Full impact analysis
-- `get_callers` / `get_callees` - Transitive call graphs
+- `searchSymbols` - Find symbols by pattern
+- `analyzeImpact` - Full impact analysis
+- `incomingCallsDeep` / `outgoingCallsDeep` - Transitive call graphs

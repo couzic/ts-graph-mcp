@@ -38,7 +38,7 @@ This document tracks test projects to be created for integration testing and ben
 | `type-system` | ✅ Yes | New pattern: EXTENDS/IMPLEMENTS edges |
 | `layered-api` | ✅ Done | Implemented with 3 benchmark prompts |
 | `property-access` | ❌ No | Covered by `monorepo` (impact analysis) |
-| `event-system` | ❌ No | Covered by `monorepo` (`get_neighbors`) |
+| `event-system` | ❌ No | Covered by `monorepo` (`getNeighborhood`) |
 | `multi-package` | ❌ No | Covered by `monorepo` (cross-package) |
 
 ---
@@ -75,7 +75,7 @@ This document tracks test projects to be created for integration testing and ben
 
 **Purpose:** Test wide fan-in pattern (many callers to few utilities).
 
-**Benchmark:** ✅ Yes — New query pattern (wide fan-in, `search_nodes` discovery)
+**Benchmark:** ✅ Yes — New query pattern (wide fan-in, `searchSymbols` discovery)
 
 **Structure:** L1 - Single package, ~15 files
 ```
@@ -95,16 +95,16 @@ src/
 ```
 
 **Tests:**
-- `get_callers(logger)` - returns 10+ callers
-- `get_impact(formatDate)` - shows all affected code
-- `search_nodes(*validate*)` - pattern matching
+- `incomingCallsDeep(logger)` - returns 10+ callers
+- `analyzeImpact(formatDate)` - shows all affected code
+- `searchSymbols(*validate*)` - pattern matching
 
 **Benchmark Prompts:**
 - "What code uses the `logger` function?"
 - "If I change `formatDate`, what breaks?"
 - "Find all validation functions"
 
-**Why MCP wins:** `get_impact` instantly shows blast radius vs manually tracing imports.
+**Why MCP wins:** `analyzeImpact` instantly shows blast radius vs manually tracing imports.
 
 ---
 
@@ -133,14 +133,14 @@ src/
 - EXTENDS edges: `AdminUser → User → BaseEntity`
 - IMPLEMENTS edges: `UserService → EntityService`
 - USES_TYPE edges: function parameters/returns using types
-- `get_impact(BaseEntity)` - shows entire type hierarchy
+- `analyzeImpact(BaseEntity)` - shows entire type hierarchy
 
 **Benchmark Prompts:**
 - "What types extend `BaseEntity`?"
 - "What classes implement `EntityService`?"
 - "If I change the `User` interface, what's affected?"
 
-**Why MCP wins:** Type relationships span many files; `get_impact` reveals full dependency tree.
+**Why MCP wins:** Type relationships span many files; `analyzeImpact` reveals full dependency tree.
 
 ---
 
@@ -170,8 +170,8 @@ src/
 **Tests:**
 - READS_PROPERTY edges from readers
 - WRITES_PROPERTY edges from writers
-- `get_callers(State.count)` with edge type filtering
-- `get_impact(State.count)` - all code touching this property
+- `incomingCallsDeep(State.count)` with edge type filtering
+- `analyzeImpact(State.count)` - all code touching this property
 
 **Benchmark Prompts:**
 - "What code reads `state.count`?"
@@ -184,9 +184,9 @@ src/
 
 ### 4. `event-system` (Priority: Medium)
 
-**Purpose:** Test hub patterns and `get_neighbors` tool.
+**Purpose:** Test hub patterns and `getNeighborhood` tool.
 
-**Benchmark:** ❌ No — `get_neighbors` pattern covered by `monorepo`
+**Benchmark:** ❌ No — `getNeighborhood` pattern covered by `monorepo`
 
 **Structure:** L1 - Single package, ~12 files
 ```
@@ -206,8 +206,8 @@ src/
 ```
 
 **Tests:**
-- `get_neighbors(EventBus, distance: 1)` - all direct connections
-- `get_neighbors(EventBus, distance: 2)` - extended ecosystem
+- `getNeighborhood(EventBus, distance: 1)` - all direct connections
+- `getNeighborhood(EventBus, distance: 2)` - extended ecosystem
 - Dense local graph around hub
 
 **Benchmark Prompts:**
@@ -215,7 +215,7 @@ src/
 - "What handlers process user events?"
 - "Show me the event system architecture"
 
-**Why MCP wins:** `get_neighbors` with Mermaid diagram instantly visualizes the hub.
+**Why MCP wins:** `getNeighborhood` with Mermaid diagram instantly visualizes the hub.
 
 ---
 
@@ -260,8 +260,8 @@ defineConfig({
 **Tests:**
 - Cross-package CALLS edges (api → core, web → core)
 - Cross-package USES_TYPE edges
-- `search_nodes({ pattern: "*", package: "core" })` - package filtering
-- `get_impact(core/types)` - impact across packages
+- `searchSymbols({ pattern: "*", package: "core" })` - package filtering
+- `analyzeImpact(core/types)` - impact across packages
 
 **Benchmark Prompts:**
 - "What in the `api` package uses `core` utilities?"
@@ -278,13 +278,12 @@ defineConfig({
 
 | Tool | Existing | Planned |
 |------|----------|---------|
-| `search_nodes` | deep-chain, web-app, monorepo | shared-utils, multi-package |
-| `get_callers` | deep-chain, monorepo | shared-utils |
-| `get_callees` | deep-chain, layered-api | - |
-| `get_impact` | web-app, monorepo | shared-utils, type-system, property-access, multi-package |
-| `find_path` | deep-chain, layered-api | - |
-| `get_neighbors` | monorepo, layered-api | event-system |
-| `get_file_symbols` | All (implicit) | - |
+| `searchSymbols` | deep-chain, web-app, monorepo | shared-utils, multi-package |
+| `incomingCallsDeep` | deep-chain, monorepo | shared-utils |
+| `outgoingCallsDeep` | deep-chain, layered-api | - |
+| `analyzeImpact` | web-app, monorepo | shared-utils, type-system, property-access, multi-package |
+| `findPath` | deep-chain, layered-api | - |
+| `getNeighborhood` | monorepo, layered-api | event-system |
 
 ### By Edge Type
 
@@ -314,14 +313,14 @@ defineConfig({
 
 ### With Benchmarks (new query patterns)
 
-1. **`shared-utils`** - Wide fan-in pattern, tests `search_nodes` + `get_impact`
+1. **`shared-utils`** - Wide fan-in pattern, tests `searchSymbols` + `analyzeImpact`
 2. **`type-system`** - Type hierarchy, tests EXTENDS/IMPLEMENTS edges
 
 ### Integration Tests Only (query patterns already benchmarked)
 
 3. **`multi-package`** - L2 structure (cross-package covered by `monorepo`)
 4. **`property-access`** - READS/WRITES edges (impact analysis covered by `shared-utils`)
-5. **`event-system`** - Hub pattern (`get_neighbors` covered by `monorepo`)
+5. **`event-system`** - Hub pattern (`getNeighborhood` covered by `monorepo`)
 
 ---
 

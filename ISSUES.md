@@ -26,7 +26,7 @@ defineConfig({
 })
 ```
 
-### 13. `find_path` Multiple Paths
+### 13. `findPath` Multiple Paths
 
 **Impact:** Low
 
@@ -42,11 +42,11 @@ Currently returns only shortest path. Could add a `limit` parameter for top N pa
 
 Hardcoded depth limits scattered across query files:
 
-- `src/tools/get-callers/query.ts` — `?? 100`
-- `src/tools/get-callees/query.ts` — `= 100`
-- `src/tools/get-impact/query.ts` — `?? 100`
+- `src/tools/incoming-calls-deep/query.ts` — `?? 100`
+- `src/tools/outgoing-calls-deep/query.ts` — `= 100`
+- `src/tools/analyze-impact/query.ts` — `?? 100`
 - `src/tools/find-path/query.ts` — `20` (inconsistent with others)
-- `src/tools/get-neighbors/query.ts` — default parameter
+- `src/tools/get-neighborhood/query.ts` — default parameter
 
 **Fix approach:**
 

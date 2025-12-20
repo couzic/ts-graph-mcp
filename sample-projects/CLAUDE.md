@@ -13,7 +13,7 @@ Sample TypeScript codebases for integration testing and benchmarking.
 ### `deep-chain/`
 10-file cross-file call chain (`entry` → `step02` → ... → `step10`). Tests deep transitive traversal.
 - 10 files, each with one function calling the next
-- Primary benchmark for `get_callees`, `get_callers`, `find_path` at depth
+- Primary benchmark for `outgoingCallsDeep`, `incomingCallsDeep`, `findPath` at depth
 - 20 integration tests
 
 ### `mixed-types/`
@@ -25,8 +25,8 @@ All 8 node types: Function, Class, Method, Interface, TypeAlias, Variable, Prope
 ### `web-app/`
 Multi-module web app with 3 modules (shared, frontend, backend), 1 package each.
 - Tests cross-module edges (CALLS, USES_TYPE, IMPORTS)
-- Tests module filtering with `search_nodes`
-- Tests `get_impact` analysis across modules
+- Tests module filtering with `searchSymbols`
+- Tests `analyzeImpact` analysis across modules
 - **Regression test for Issue #5** (cross-module edge resolution). 15 integration tests.
 - Note: This is a simplified L2 structure. See `monorepo/` for the full L3 test.
 
@@ -34,14 +34,14 @@ Multi-module web app with 3 modules (shared, frontend, backend), 1 package each.
 True L3 monorepo structure with 3 modules × 2 packages each = 6 packages.
 - Tests cross-package edges within same module (backend/api → backend/services)
 - Tests cross-module edges between packages (backend/services → shared/utils)
-- Tests module + package filtering with `search_nodes`
-- Tests `get_impact` analysis at package granularity
+- Tests module + package filtering with `searchSymbols`
+- Tests `analyzeImpact` analysis at package granularity
 - 30 integration tests
 
 ## Planned Projects
 
 See **PLANNED.md** for the full roadmap of test projects to be created, including:
-- `shared-utils` - Wide fan-in pattern, `get_impact` testing
+- `shared-utils` - Wide fan-in pattern, `analyzeImpact` testing
 - `type-system` - EXTENDS, IMPLEMENTS, USES_TYPE edges
 - `multi-package` - L2 multi-package structure
 
@@ -63,10 +63,11 @@ Tests MUST be database-agnostic to support multiple backends (SQLite, Neo4j, Mem
 
 **Allowed APIs** (always import from `src/`, never `dist/`):
 - `openDatabase()`, `initializeSchema()`, `createSqliteWriter()` - Setup only
-- `querySearchNodes()` - From `../../src/tools/search-nodes/query.js`
-- `queryCallers()`, `queryCallees()` - From respective tool query.js files
-- `queryEdges()` - From `../../src/db/queryEdges.js`
-- `queryImpactedNodes()` - From `../../src/tools/get-impact/query.js`
+- `querySearchNodes()` - From `src/tools/search-symbols/query.js`
+- `queryCallers()`, `queryCallees()` - From `src/tools/incoming-calls-deep/query.js` and `src/tools/outgoing-calls-deep/query.js`
+- `queryEdges()` - From `src/db/queryEdges.js`
+- `queryImpactedNodes()` - From `src/tools/analyze-impact/query.js`
+- `queryNeighbors()` - From `src/tools/get-neighborhood/query.js`
 - `DbWriter.addNodes()`, `DbWriter.addEdges()` - For writes
 
 **Forbidden in tests:**
@@ -175,8 +176,8 @@ sample-project/
 
 | Project | Prompts | Query Types Covered |
 |---------|---------|---------------------|
-| `deep-chain` | P1, P2, P3 | Deep transitive traversal (`get_callees`, `find_path`, `get_impact`) |
-| `monorepo` | P1, P2, P3, P4 | Cross-module/package analysis (`get_callers`, `get_impact`, `get_neighbors`) |
+| `deep-chain` | P1, P2, P3 | Deep transitive traversal (`outgoingCallsDeep`, `findPath`, `analyzeImpact`) |
+| `monorepo` | P1, P2, P3, P4 | Cross-module/package analysis (`incomingCallsDeep`, `analyzeImpact`, `getNeighborhood`) |
 
 ### Sample Results (deep-chain)
 
@@ -216,7 +217,7 @@ sample-project/
        name: "Test prompt",
        prompt: "What does function X do?",
        expectedContains: ["expected", "keywords"],
-       expectedTool: "get_callees",
+       expectedTool: "outgoingCallsDeep",
      },
    ];
    ```
@@ -235,12 +236,12 @@ sample-project/
 
 **deep-chain example:**
 - WITHOUT MCP: Claude reads 10 files sequentially to trace call chain
-- WITH MCP: Single `get_callees(entry, maxDepth: 10)` → instant answer
+- WITH MCP: Single `outgoingCallsDeep(entry, maxDepth: 10)` → instant answer
 
 **web-app example:**
 - WITHOUT MCP: Claude traces imports across modules, reads multiple files
-- WITH MCP: `get_impact(sharedType)` shows cross-module dependents instantly
+- WITH MCP: `analyzeImpact(sharedType)` shows cross-module dependents instantly
 
 **monorepo example:**
 - WITHOUT MCP: Claude must navigate 6 packages across 3 modules to trace dependencies
-- WITH MCP: `get_callers(createUserService)` instantly finds backend/api callers, `get_impact(User)` shows all 6 packages affected
+- WITH MCP: `incomingCallsDeep(createUserService)` instantly finds backend/api callers, `analyzeImpact(User)` shows all 6 packages affected

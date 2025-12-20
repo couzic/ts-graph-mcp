@@ -1,13 +1,13 @@
 import type Database from "better-sqlite3";
 import { formatAmbiguous, formatNotFound } from "../shared/errorFormatters.js";
 import { resolveSymbol } from "../shared/resolveSymbol.js";
-import { formatCallers } from "./format.js";
-import { type QueryCallersOptions, queryCallers } from "./query.js";
+import { formatImpactNodes } from "./format.js";
+import { queryImpactedNodes } from "./query.js";
 
 /**
- * Input parameters for get_callers tool.
+ * Input parameters for analyzeImpact tool.
  */
-export interface GetCallersParams {
+export interface AnalyzeImpactParams {
 	symbol: string;
 	file?: string;
 	module?: string;
@@ -16,12 +16,12 @@ export interface GetCallersParams {
 }
 
 /**
- * MCP tool definition for get_callers.
+ * MCP tool definition for analyzeImpact.
  */
-export const getCallersDefinition = {
-	name: "get_callers",
+export const analyzeImpactDefinition = {
+	name: "analyzeImpact",
 	description:
-		"Find all functions/methods that call the target. Returns nodes that call the specified function/method.",
+		"Impact analysis: find all code affected by changes to target. Returns all nodes that depend on the specified node.",
 	inputSchema: {
 		type: "object" as const,
 		properties: {
@@ -44,7 +44,7 @@ export const getCallersDefinition = {
 			maxDepth: {
 				type: "number",
 				description:
-					"Optional: Maximum traversal depth for transitive callers (1-100)",
+					"Optional: Maximum traversal depth for transitive dependencies (1-100)",
 			},
 		},
 		required: ["symbol"],
@@ -52,15 +52,15 @@ export const getCallersDefinition = {
 };
 
 /**
- * Execute the get_callers tool.
+ * Execute the analyzeImpact tool.
  *
  * @param db - Database connection
  * @param params - Tool parameters
  * @returns Formatted string for LLM consumption
  */
-export function executeGetCallers(
+export function executeAnalyzeImpact(
 	db: Database.Database,
-	params: GetCallersParams,
+	params: AnalyzeImpactParams,
 ): string {
 	const result = resolveSymbol(db, params);
 
@@ -72,13 +72,9 @@ export function executeGetCallers(
 		return formatAmbiguous(params.symbol, result.candidates);
 	}
 
-	// result.status === "unique"
 	const nodeId = result.node.id;
-	const options: QueryCallersOptions = {};
-	if (params.maxDepth !== undefined) {
-		options.maxDepth = params.maxDepth;
-	}
-
-	const nodes = queryCallers(db, nodeId, options);
-	return formatCallers(result.node, nodes);
+	const nodes = queryImpactedNodes(db, nodeId, {
+		maxDepth: params.maxDepth,
+	});
+	return formatImpactNodes(result.node, nodes);
 }

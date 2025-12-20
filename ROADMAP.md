@@ -20,12 +20,12 @@ These 6 tools remain because they offer capabilities LSP lacks:
 
 | Tool | Unique Value | LSP Cannot Do This |
 |------|--------------|-------------------|
-| `get_callers` | **Transitive** (maxDepth=N) | LSP `incomingCalls` is single-hop only |
-| `get_callees` | **Transitive** (maxDepth=N) | LSP `outgoingCalls` is single-hop only |
-| `search` | Module/package/exported **filters** | LSP `workspaceSymbol` has no filters |
-| `get_impact` | **Impact analysis** across all edge types | No LSP equivalent |
-| `find_path` | **Path finding** between symbols | No LSP equivalent |
-| `get_neighbors` | **Subgraph extraction** + Mermaid diagrams | No LSP equivalent |
+| `incomingCallsDeep` | **Transitive** (maxDepth=N) | LSP `incomingCalls` is single-hop only |
+| `outgoingCallsDeep` | **Transitive** (maxDepth=N) | LSP `outgoingCalls` is single-hop only |
+| `searchSymbols` | Module/package/exported **filters** | LSP `workspaceSymbol` has no filters |
+| `analyzeImpact` | **Impact analysis** across all edge types | No LSP equivalent |
+| `findPath` | **Path finding** between symbols | No LSP equivalent |
+| `getNeighborhood` | **Subgraph extraction** + Mermaid diagrams | No LSP equivalent |
 
 ---
 
@@ -33,26 +33,26 @@ These 6 tools remain because they offer capabilities LSP lacks:
 
 These improvements have the highest value-to-effort ratio. They improve AI agent experience with minimal code changes.
 
-### Expose Hidden Parameters (get-impact)
+### Expose Hidden Parameters (analyzeImpact)
 **Impact: High | Effort: Very Low**
 
-The `get-impact` query.ts already supports `edgeTypes` and `moduleFilter` options, but they're not exposed in the MCP interface. Wire them through.
+The `analyze-impact` query.ts already supports `edgeTypes` and `moduleFilter` options, but they're not exposed in the MCP interface. Wire them through.
 
 ```typescript
 // Enables targeted impact analysis
-get_impact({ symbol: "processData", edgeTypes: ["CALLS"] })        // Only call-chain impact
-get_impact({ symbol: "User", edgeTypes: ["USES_TYPE"] })           // Only type usage impact
-get_impact({ symbol: "formatDate", moduleFilter: "api" })          // Impact within module
+analyzeImpact({ symbol: "processData", edgeTypes: ["CALLS"] })        // Only call-chain impact
+analyzeImpact({ symbol: "User", edgeTypes: ["USES_TYPE"] })           // Only type usage impact
+analyzeImpact({ symbol: "formatDate", moduleFilter: "api" })          // Impact within module
 ```
 
-### Result Limits (search, get-neighbors)
+### Result Limits (searchSymbols, getNeighborhood)
 **Impact: High | Effort: Low**
 
 Broad searches can return thousands of results, wasting tokens. The `search` tool now has `limit` and `offset` parameters for pagination. Future enhancement: add default limits with truncation warnings.
 
 ```typescript
-// search tool already supports pagination
-search({ pattern: "*Service", limit: 100, offset: 0 })
+// searchSymbols tool already supports pagination
+searchSymbols({ pattern: "*Service", limit: 100, offset: 0 })
 
 // Future: Output when truncated
 "Search results for '*Service' (showing 100 of 342 matches)
@@ -68,14 +68,14 @@ The MCP tool definitions (in `src/tools/*/handler.ts`) have quality gaps that re
 
 | Problem | Example | Fix |
 |---------|---------|-----|
-| **Redundant descriptions** | `get_callers`: "Find all functions/methods that call the target. Returns nodes that call the specified function/method." | Remove redundant second sentence |
+| **Redundant descriptions** | `incomingCallsDeep`: "Find all functions/methods that call the target. Returns nodes that call the specified function/method." | Remove redundant second sentence |
 | **Missing output format hints** | No descriptions mention the hierarchical text format | Add: "Returns hierarchical text grouped by file" |
-| **Unclear direction semantics** | `get_neighbors` `direction` param just says "outgoing/incoming/both" | Add: "outgoing = edges where node is source, incoming = edges where node is target" |
+| **Unclear direction semantics** | `getNeighborhood` `direction` param just says "outgoing/incoming/both" | Add: "outgoing = edges where node is source, incoming = edges where node is target" |
 
 **Affected files:**
-- `src/tools/get-callers/handler.ts` - redundant description
-- `src/tools/get-callees/handler.ts` - redundant description
-- `src/tools/get-neighbors/handler.ts` - unclear direction param
+- `src/tools/incoming-calls-deep/handler.ts` - redundant description
+- `src/tools/outgoing-calls-deep/handler.ts` - redundant description
+- `src/tools/get-neighborhood/handler.ts` - unclear direction param
 - All 6 tools - missing output format hints
 
 ### Error Messages with Example Syntax
@@ -373,7 +373,7 @@ Code graph in your knowledge base.
 User: "Refactor all usages of this deprecated function"
 
 Agent:
-1. Queries get_callers for all usages
+1. Queries incomingCallsDeep for all usages
 2. Understands each call site's context
 3. Updates each one appropriately
 4. Verifies no remaining usages
@@ -384,7 +384,7 @@ Agent:
 PR touches authentication module
 
 CI automatically:
-1. Runs get_impact on changed functions
+1. Runs analyzeImpact on changed functions
 2. Comments: "This affects: login, signup, password-reset, 12 API endpoints"
 3. Suggests reviewers based on module ownership
 ```
@@ -394,7 +394,7 @@ CI automatically:
 User: "Generate architecture diagram for the billing module"
 
 Agent:
-1. Queries get_neighbors with high distance
+1. Queries getNeighborhood with high distance
 2. Filters to billing-related nodes
 3. Generates Mermaid diagram
 4. Adds to documentation

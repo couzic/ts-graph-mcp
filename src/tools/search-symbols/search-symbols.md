@@ -1,4 +1,4 @@
-# search
+# searchSymbols
 
 Search for symbols by name pattern with optional filters. Returns matching nodes grouped by file and type.
 
@@ -104,5 +104,5 @@ Each symbol includes `offset` and `limit` fields that can be passed directly to 
 
 ## Related Tools
 
-- `get_neighbors` - Explore relationships around a symbol
-- `get_impact` - Find what depends on a symbol
+- `getNeighborhood` - Explore relationships around a symbol
+- `analyzeImpact` - Find what depends on a symbol

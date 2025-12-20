@@ -8,8 +8,8 @@ import {
 import { initializeSchema } from "../../src/db/sqlite/SqliteSchema.js";
 import { createSqliteWriter } from "../../src/db/sqlite/SqliteWriter.js";
 import { indexProject } from "../../src/ingestion/Ingestion.js";
-import { queryImpactedNodes } from "../../src/tools/get-impact/query.js";
-import { querySearchNodes } from "../../src/tools/search/query.js";
+import { queryImpactedNodes } from "../../src/tools/analyze-impact/query.js";
+import { querySearchNodes } from "../../src/tools/search-symbols/query.js";
 import config from "./ts-graph-mcp.config.js";
 
 /**
@@ -267,21 +267,21 @@ describe("monorepo integration (L3: multi-module, multi-package)", () => {
   });
 
   describe("module filtering", () => {
-    it("search_nodes with module=shared returns only shared nodes", () => {
+    it("searchSymbols with module=shared returns only shared nodes", () => {
       const nodes = querySearchNodes(db, "*", { module: "shared" });
 
       expect(nodes.length).toBeGreaterThan(0);
       expect(nodes.every((n) => n.module === "shared")).toBe(true);
     });
 
-    it("search_nodes with module=frontend returns only frontend nodes", () => {
+    it("searchSymbols with module=frontend returns only frontend nodes", () => {
       const nodes = querySearchNodes(db, "*", { module: "frontend" });
 
       expect(nodes.length).toBeGreaterThan(0);
       expect(nodes.every((n) => n.module === "frontend")).toBe(true);
     });
 
-    it("search_nodes with module=backend returns only backend nodes", () => {
+    it("searchSymbols with module=backend returns only backend nodes", () => {
       const nodes = querySearchNodes(db, "*", { module: "backend" });
 
       expect(nodes.length).toBeGreaterThan(0);
@@ -290,28 +290,28 @@ describe("monorepo integration (L3: multi-module, multi-package)", () => {
   });
 
   describe("package filtering", () => {
-    it("search_nodes with package=types returns only types package nodes", () => {
+    it("searchSymbols with package=types returns only types package nodes", () => {
       const nodes = querySearchNodes(db, "*", { package: "types" });
 
       expect(nodes.length).toBeGreaterThan(0);
       expect(nodes.every((n) => n.package === "types")).toBe(true);
     });
 
-    it("search_nodes with package=utils returns only utils package nodes", () => {
+    it("searchSymbols with package=utils returns only utils package nodes", () => {
       const nodes = querySearchNodes(db, "*", { package: "utils" });
 
       expect(nodes.length).toBeGreaterThan(0);
       expect(nodes.every((n) => n.package === "utils")).toBe(true);
     });
 
-    it("search_nodes with package=api returns only api package nodes", () => {
+    it("searchSymbols with package=api returns only api package nodes", () => {
       const nodes = querySearchNodes(db, "*", { package: "api" });
 
       expect(nodes.length).toBeGreaterThan(0);
       expect(nodes.every((n) => n.package === "api")).toBe(true);
     });
 
-    it("search_nodes with package=services returns only services package nodes", () => {
+    it("searchSymbols with package=services returns only services package nodes", () => {
       const nodes = querySearchNodes(db, "*", { package: "services" });
 
       expect(nodes.length).toBeGreaterThan(0);
@@ -320,7 +320,7 @@ describe("monorepo integration (L3: multi-module, multi-package)", () => {
   });
 
   describe("module + package filtering combined", () => {
-    it("search_nodes with module=shared + package=types returns correct subset", () => {
+    it("searchSymbols with module=shared + package=types returns correct subset", () => {
       const nodes = querySearchNodes(db, "*", {
         module: "shared",
         package: "types",
@@ -336,7 +336,7 @@ describe("monorepo integration (L3: multi-module, multi-package)", () => {
       expect(names).not.toContain("formatDate"); // from utils package
     });
 
-    it("search_nodes with module=backend + package=api excludes services", () => {
+    it("searchSymbols with module=backend + package=api excludes services", () => {
       const nodes = querySearchNodes(db, "*", {
         module: "backend",
         package: "api",
@@ -349,7 +349,7 @@ describe("monorepo integration (L3: multi-module, multi-package)", () => {
   });
 
   describe("cross-module impact analysis", () => {
-    it("get_impact on shared/types User shows dependents from ALL modules", () => {
+    it("analyzeImpact on shared/types User shows dependents from ALL modules", () => {
       const userNode = querySearchNodes(db, "User", {
         module: "shared",
         package: "types",
@@ -370,7 +370,7 @@ describe("monorepo integration (L3: multi-module, multi-package)", () => {
       expect(modules).toContain("backend");
     });
 
-    it("get_impact on shared/utils validateEmail shows callers from multiple modules", () => {
+    it("analyzeImpact on shared/utils validateEmail shows callers from multiple modules", () => {
       const validateEmailNode = querySearchNodes(db, "validateEmail", {
         module: "shared",
         package: "utils",
@@ -390,7 +390,7 @@ describe("monorepo integration (L3: multi-module, multi-package)", () => {
       expect(impactedNames).toContain("createUserService");
     });
 
-    it("get_impact on shared/utils formatDate shows callers from multiple modules", () => {
+    it("analyzeImpact on shared/utils formatDate shows callers from multiple modules", () => {
       const formatDateNode = querySearchNodes(db, "formatDate", {
         module: "shared",
         package: "utils",
@@ -415,7 +415,7 @@ describe("monorepo integration (L3: multi-module, multi-package)", () => {
     /**
      * KEY TEST: Impact analysis at package granularity within same module.
      */
-    it("get_impact on backend/services createUserService shows backend/api callers", () => {
+    it("analyzeImpact on backend/services createUserService shows backend/api callers", () => {
       const createUserServiceNode = querySearchNodes(db, "createUserService", {
         module: "backend",
         package: "services",

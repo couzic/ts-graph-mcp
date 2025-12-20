@@ -6,35 +6,35 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import type Database from "better-sqlite3";
 import {
+	type AnalyzeImpactParams,
+	analyzeImpactDefinition,
+	executeAnalyzeImpact,
+} from "../tools/analyze-impact/handler.js";
+import {
 	executeFindPath,
 	type FindPathParams,
 	findPathDefinition,
 } from "../tools/find-path/handler.js";
 import {
-	executeGetCallees,
-	type GetCalleesParams,
-	getCalleesDefinition,
-} from "../tools/get-callees/handler.js";
+	executeGetNeighborhood,
+	type GetNeighborhoodParams,
+	getNeighborhoodDefinition,
+} from "../tools/get-neighborhood/handler.js";
 import {
-	executeGetCallers,
-	type GetCallersParams,
-	getCallersDefinition,
-} from "../tools/get-callers/handler.js";
+	executeIncomingCallsDeep,
+	type IncomingCallsDeepParams,
+	incomingCallsDeepDefinition,
+} from "../tools/incoming-calls-deep/handler.js";
 import {
-	executeGetImpact,
-	type GetImpactParams,
-	getImpactDefinition,
-} from "../tools/get-impact/handler.js";
+	executeOutgoingCallsDeep,
+	type OutgoingCallsDeepParams,
+	outgoingCallsDeepDefinition,
+} from "../tools/outgoing-calls-deep/handler.js";
 import {
-	executeGetNeighbors,
-	type GetNeighborsParams,
-	getNeighborsDefinition,
-} from "../tools/get-neighbors/handler.js";
-import {
-	executeSearch,
-	type SearchParams,
-	searchDefinition,
-} from "../tools/search/handler.js";
+	executeSearchSymbols,
+	type SearchSymbolsParams,
+	searchSymbolsDefinition,
+} from "../tools/search-symbols/handler.js";
 
 /**
  * Start the MCP server that exposes TypeScript code graph queries as tools.
@@ -54,16 +54,16 @@ export async function startMcpServer(db: Database.Database): Promise<void> {
 		},
 	);
 
-	// Tool 1: search
+	// Register all tools
 	server.setRequestHandler(ListToolsRequestSchema, async () => {
 		return {
 			tools: [
-				searchDefinition,
-				getCallersDefinition,
-				getCalleesDefinition,
-				getImpactDefinition,
+				searchSymbolsDefinition,
+				incomingCallsDeepDefinition,
+				outgoingCallsDeepDefinition,
+				analyzeImpactDefinition,
 				findPathDefinition,
-				getNeighborsDefinition,
+				getNeighborhoodDefinition,
 			],
 		};
 	});
@@ -74,39 +74,39 @@ export async function startMcpServer(db: Database.Database): Promise<void> {
 
 		try {
 			switch (name) {
-				case "search": {
-					const params = args as unknown as SearchParams;
-					const result = executeSearch(db, params);
+				case "searchSymbols": {
+					const params = args as unknown as SearchSymbolsParams;
+					const result = executeSearchSymbols(db, params);
 					return {
 						content: [{ type: "text" as const, text: result }],
 					};
 				}
 
-				case "get_callers": {
-					const params = args as unknown as GetCallersParams;
-					const result = executeGetCallers(db, params);
+				case "incomingCallsDeep": {
+					const params = args as unknown as IncomingCallsDeepParams;
+					const result = executeIncomingCallsDeep(db, params);
 					return {
 						content: [{ type: "text" as const, text: result }],
 					};
 				}
 
-				case "get_callees": {
-					const params = args as unknown as GetCalleesParams;
-					const result = executeGetCallees(db, params);
+				case "outgoingCallsDeep": {
+					const params = args as unknown as OutgoingCallsDeepParams;
+					const result = executeOutgoingCallsDeep(db, params);
 					return {
 						content: [{ type: "text" as const, text: result }],
 					};
 				}
 
-				case "get_impact": {
-					const params = args as unknown as GetImpactParams;
-					const result = executeGetImpact(db, params);
+				case "analyzeImpact": {
+					const params = args as unknown as AnalyzeImpactParams;
+					const result = executeAnalyzeImpact(db, params);
 					return {
 						content: [{ type: "text" as const, text: result }],
 					};
 				}
 
-				case "find_path": {
+				case "findPath": {
 					const params = args as unknown as FindPathParams;
 					const result = executeFindPath(db, params);
 					return {
@@ -114,9 +114,9 @@ export async function startMcpServer(db: Database.Database): Promise<void> {
 					};
 				}
 
-				case "get_neighbors": {
-					const params = args as unknown as GetNeighborsParams;
-					const result = executeGetNeighbors(db, params);
+				case "getNeighborhood": {
+					const params = args as unknown as GetNeighborhoodParams;
+					const result = executeGetNeighborhood(db, params);
 					return {
 						content: [{ type: "text" as const, text: result }],
 					};

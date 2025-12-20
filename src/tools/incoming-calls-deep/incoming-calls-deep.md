@@ -1,6 +1,6 @@
-# get_callers
+# incomingCallsDeep
 
-Find all functions/methods that call a target. Reverse call graph traversal.
+Find all functions/methods that call a target. Reverse call graph traversal (transitive).
 
 ## Purpose
 
@@ -118,6 +118,6 @@ WITH RECURSIVE callers(id, depth) AS (
 
 ## Related Tools
 
-- `get_callees` - Forward call graph (what does this call?)
-- `get_impact` - Broader impact (all edge types)
-- `find_path` - Specific path between nodes
+- `outgoingCallsDeep` - Forward call graph (what does this call?)
+- `analyzeImpact` - Broader impact (all edge types)
+- `findPath` - Specific path between nodes

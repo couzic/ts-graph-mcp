@@ -5,7 +5,7 @@ import { formatAmbiguous, formatNotFound, formatPath } from "./format.js";
 import { queryPath } from "./query.js";
 
 /**
- * Input parameters for find_path tool.
+ * Input parameters for findPath tool.
  */
 export interface FindPathParams {
 	from: SymbolQuery;
@@ -15,10 +15,10 @@ export interface FindPathParams {
 }
 
 /**
- * MCP tool definition for find_path.
+ * MCP tool definition for findPath.
  */
 export const findPathDefinition = {
-	name: "find_path",
+	name: "findPath",
 	description:
 		"Find the shortest path between two nodes in the code graph. Returns the path with nodes and edges.",
 	inputSchema: {
@@ -84,7 +84,7 @@ export const findPathDefinition = {
 };
 
 /**
- * Execute the find_path tool.
+ * Execute the findPath tool.
  *
  * @param db - Database connection
  * @param params - Tool parameters

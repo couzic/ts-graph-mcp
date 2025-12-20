@@ -45,7 +45,7 @@ export function getCallers(
   if (!node) {
     return {
       error: `Target node not found: ${nodeId}`,
-      suggestion: 'Use search_nodes tool to find valid node IDs',
+      suggestion: 'Use searchSymbols tool to find valid node IDs',
       didYouMean: findSimilarNodes(db, nodeId) // Optional: fuzzy matching
     };
   }

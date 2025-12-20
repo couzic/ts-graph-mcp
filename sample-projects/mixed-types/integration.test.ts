@@ -9,9 +9,9 @@ import {
 import { initializeSchema } from "../../src/db/sqlite/SqliteSchema.js";
 import { createSqliteWriter } from "../../src/db/sqlite/SqliteWriter.js";
 import { indexProject } from "../../src/ingestion/Ingestion.js";
-import { queryImpactedNodes } from "../../src/tools/get-impact/query.js";
-import { queryNeighbors } from "../../src/tools/get-neighbors/query.js";
-import { querySearchNodes } from "../../src/tools/search/query.js";
+import { queryImpactedNodes } from "../../src/tools/analyze-impact/query.js";
+import { queryNeighbors } from "../../src/tools/get-neighborhood/query.js";
+import { querySearchNodes } from "../../src/tools/search-symbols/query.js";
 import { queryEdges } from "../../src/db/queryEdges.js";
 
 // Helper to get all nodes in a file (replacement for deprecated queryFileNodes)
@@ -340,7 +340,7 @@ describe("mixed-types integration", () => {
 			});
 		});
 
-		it("get_neighbors shows User interface when querying addUser method", () => {
+		it("getNeighborhood shows User interface when querying addUser method", () => {
 			const result = queryNeighbors(
 				db,
 				"src/models.ts:UserService.addUser",
@@ -358,7 +358,7 @@ describe("mixed-types integration", () => {
 			expect(usesTypeEdge).toBeDefined();
 		});
 
-		it("get_impact shows models.ts symbols when querying User interface", () => {
+		it("analyzeImpact shows models.ts symbols when querying User interface", () => {
 			const result = queryImpactedNodes(db, "src/types.ts:User");
 
 			const impactedIds = result.map((n) => n.id);

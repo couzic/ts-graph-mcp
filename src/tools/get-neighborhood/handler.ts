@@ -5,9 +5,9 @@ import { formatNeighbors, type OutputType } from "./format.js";
 import { type Direction, queryNeighbors } from "./query.js";
 
 /**
- * Input parameters for get_neighbors tool.
+ * Input parameters for getNeighborhood tool.
  */
-export interface GetNeighborsParams {
+export interface GetNeighborhoodParams {
 	symbol: string;
 	file?: string;
 	module?: string;
@@ -18,10 +18,10 @@ export interface GetNeighborsParams {
 }
 
 /**
- * MCP tool definition for get_neighbors.
+ * MCP tool definition for getNeighborhood.
  */
-export const getNeighborsDefinition = {
-	name: "get_neighbors",
+export const getNeighborhoodDefinition = {
+	name: "getNeighborhood",
 	description:
 		"Find all nodes within a given distance from a center node. Returns a subgraph containing the neighborhood.",
 	inputSchema: {
@@ -69,15 +69,15 @@ export const getNeighborsDefinition = {
 };
 
 /**
- * Execute the get_neighbors tool.
+ * Execute the getNeighborhood tool.
  *
  * @param db - Database connection
  * @param params - Tool parameters
  * @returns Formatted string for LLM consumption
  */
-export function executeGetNeighbors(
+export function executeGetNeighborhood(
 	db: Database.Database,
-	params: GetNeighborsParams,
+	params: GetNeighborhoodParams,
 ): string {
 	const result = resolveSymbol(db, params);
 

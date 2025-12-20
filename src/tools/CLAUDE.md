@@ -14,10 +14,10 @@ AI agents think in terms of **symbols** and **concepts**, not internal IDs or da
 
 ```typescript
 // BAD: Requires knowing internal ID format
-get_callers({ nodeId: "src/utils.ts:formatDate" })
+incomingCallsDeep({ nodeId: "src/utils.ts:formatDate" })
 
 // GOOD: Natural symbol reference
-get_callers({ symbol: "formatDate", module: "core" })
+incomingCallsDeep({ symbol: "formatDate", module: "core" })
 ```
 
 ### Output: Directly Usable by Other Tools
@@ -72,10 +72,10 @@ export const SymbolQuerySchema = z.object({
 **Composition patterns:**
 
 ```typescript
-// Flat: get_callers, get_impact, get_neighbors
+// Flat: incomingCallsDeep, analyzeImpact, getNeighborhood
 z.object({ ...SymbolQuerySchema.shape, maxDepth: z.number().optional() })
 
-// Nested: find_path (needs two symbols)
+// Nested: findPath (needs two symbols)
 z.object({ from: SymbolQuerySchema, to: SymbolQuerySchema, ... })
 ```
 

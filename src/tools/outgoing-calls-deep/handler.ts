@@ -1,13 +1,13 @@
 import type Database from "better-sqlite3";
 import { formatAmbiguous, formatNotFound } from "../shared/errorFormatters.js";
 import { resolveSymbol } from "../shared/resolveSymbol.js";
-import { formatImpactNodes } from "./format.js";
-import { queryImpactedNodes } from "./query.js";
+import { formatCallees } from "./format.js";
+import { queryCallees } from "./query.js";
 
 /**
- * Input parameters for get_impact tool.
+ * Input parameters for outgoingCallsDeep tool.
  */
-export interface GetImpactParams {
+export interface OutgoingCallsDeepParams {
 	symbol: string;
 	file?: string;
 	module?: string;
@@ -16,12 +16,12 @@ export interface GetImpactParams {
 }
 
 /**
- * MCP tool definition for get_impact.
+ * MCP tool definition for outgoingCallsDeep.
  */
-export const getImpactDefinition = {
-	name: "get_impact",
+export const outgoingCallsDeepDefinition = {
+	name: "outgoingCallsDeep",
 	description:
-		"Impact analysis: find all code affected by changes to target. Returns all nodes that depend on the specified node.",
+		"Find all functions/methods that the source calls. Returns nodes called by the specified function/method.",
 	inputSchema: {
 		type: "object" as const,
 		properties: {
@@ -44,7 +44,7 @@ export const getImpactDefinition = {
 			maxDepth: {
 				type: "number",
 				description:
-					"Optional: Maximum traversal depth for transitive dependencies (1-100)",
+					"Optional: Maximum traversal depth for transitive callees (1-100)",
 			},
 		},
 		required: ["symbol"],
@@ -52,15 +52,15 @@ export const getImpactDefinition = {
 };
 
 /**
- * Execute the get_impact tool.
+ * Execute the outgoingCallsDeep tool.
  *
  * @param db - Database connection
  * @param params - Tool parameters
  * @returns Formatted string for LLM consumption
  */
-export function executeGetImpact(
+export function executeOutgoingCallsDeep(
 	db: Database.Database,
-	params: GetImpactParams,
+	params: OutgoingCallsDeepParams,
 ): string {
 	const result = resolveSymbol(db, params);
 
@@ -72,9 +72,9 @@ export function executeGetImpact(
 		return formatAmbiguous(params.symbol, result.candidates);
 	}
 
+	// result.status === "unique"
 	const nodeId = result.node.id;
-	const nodes = queryImpactedNodes(db, nodeId, {
-		maxDepth: params.maxDepth,
-	});
-	return formatImpactNodes(result.node, nodes);
+	const maxDepth = params.maxDepth ?? 100;
+	const nodes = queryCallees(db, nodeId, maxDepth);
+	return formatCallees(result.node, nodes);
 }

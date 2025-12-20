@@ -8,8 +8,8 @@ import { initializeSchema } from "../../src/db/sqlite/SqliteSchema.js";
 import { createSqliteWriter } from "../../src/db/sqlite/SqliteWriter.js";
 import { indexProject } from "../../src/ingestion/Ingestion.js";
 import { queryEdges } from "../../src/db/queryEdges.js";
-import { queryImpactedNodes } from "../../src/tools/get-impact/query.js";
-import { querySearchNodes } from "../../src/tools/search/query.js";
+import { queryImpactedNodes } from "../../src/tools/analyze-impact/query.js";
+import { querySearchNodes } from "../../src/tools/search-symbols/query.js";
 import config from "./ts-graph-mcp.config.js";
 
 /**
@@ -172,13 +172,13 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 
 	describe("cross-module impact analysis (Issue #5)", () => {
 		/**
-		 * get_impact(shared/User) should return all code affected by changes to User:
+		 * analyzeImpact(shared/User) should return all code affected by changes to User:
 		 *   - frontend:UserCardProps (has user: User property)
 		 *   - frontend:formatUserName (has User parameter)
 		 *   - backend:getUser (returns User)
 		 *   - backend:listUsers (returns User[])
 		 */
-		it("get_impact on shared User shows frontend dependents", () => {
+		it("analyzeImpact on shared User shows frontend dependents", () => {
 			const userNode = querySearchNodes(db, "User", {
 				module: "shared",
 				type: "Interface",
@@ -195,7 +195,7 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 			expect(impactedNames).toContain("formatUserName");
 		});
 
-		it("get_impact on shared User shows backend dependents", () => {
+		it("analyzeImpact on shared User shows backend dependents", () => {
 			const userNode = querySearchNodes(db, "User", {
 				module: "shared",
 				type: "Interface",
@@ -213,7 +213,7 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 			expect(impactedNames).toContain("listUsers");
 		});
 
-		it("get_impact on shared User shows BOTH frontend AND backend dependents", () => {
+		it("analyzeImpact on shared User shows BOTH frontend AND backend dependents", () => {
 			const userNode = querySearchNodes(db, "User", {
 				module: "shared",
 				type: "Interface",
@@ -234,7 +234,7 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 			expect(modules).toContain("backend");
 		});
 
-		it("get_impact on shared createUser shows backend callers", () => {
+		it("analyzeImpact on shared createUser shows backend callers", () => {
 			const createUserNode = querySearchNodes(db, "createUser", {
 				module: "shared",
 				type: "Function",
@@ -254,7 +254,7 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 	});
 
 	describe("module filtering (should pass)", () => {
-		it("search_nodes with module filter returns only that module", () => {
+		it("searchSymbols with module filter returns only that module", () => {
 			const sharedNodes = querySearchNodes(db, "*", { module: "shared" });
 			const frontendNodes = querySearchNodes(db, "*", { module: "frontend" });
 			const backendNodes = querySearchNodes(db, "*", { module: "backend" });

@@ -25,9 +25,9 @@ Run `npm run benchmark:setup` once before benchmarking (or after changing source
 
 | Prompt | Description | Expected MCP Tool |
 |--------|-------------|-------------------|
-| P1 | Transitive callees of `entry` | `get_callees` |
-| P2 | Call path from `entry` to `step10` | `find_path` |
-| P3 | Impact of changing `step10` | `get_impact` |
+| P1 | Transitive callees of `entry` | `outgoingCallsDeep` |
+| P2 | Call path from `entry` to `step10` | `findPath` |
+| P3 | Impact of changing `step10` | `analyzeImpact` |
 
 ## Scenarios
 

@@ -141,7 +141,7 @@ path: UserService.addUser --USES_TYPE--> User
 
 ## Related Tools
 
-- `get_callers` - All callers (not just path)
-- `get_callees` - All callees (not just path)
-- `get_neighbors` - Local subgraph
-- `get_impact` - Full impact analysis
+- `incomingCallsDeep` - All callers (not just path)
+- `outgoingCallsDeep` - All callees (not just path)
+- `getNeighborhood` - Local subgraph
+- `analyzeImpact` - Full impact analysis

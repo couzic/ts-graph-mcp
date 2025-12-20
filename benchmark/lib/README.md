@@ -39,7 +39,7 @@ export const prompts: BenchmarkPrompt[] = [
     name: "Test prompt",
     prompt: "What does function X do?",
     expectedContains: ["expected", "answer", "keywords"],
-    expectedTool: "get_callees",  // Which MCP tool should be used
+    expectedTool: "outgoingCallsDeep",  // Which MCP tool should be used
   },
 ];
 ```

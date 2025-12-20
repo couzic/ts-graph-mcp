@@ -10,13 +10,13 @@ Each tool is implemented as a self-contained vertical slice:
 
 ```
 src/tools/
-├── search/          (query.ts, format.ts, format.test.ts, handler.ts)
-├── get-callers/     (query.ts, format.ts, format.test.ts, handler.ts)
-├── get-callees/     (query.ts, format.ts, format.test.ts, handler.ts)
-├── get-impact/      (query.ts, format.ts, format.test.ts, handler.ts)
-├── find-path/       (query.ts, format.ts, format.test.ts, handler.ts)
-├── get-neighbors/   (query.ts, format.ts, format.test.ts, handler.ts)
-└── shared/          (SymbolQuery.ts, resolveSymbol.ts, resolveSymbol.test.ts)
+├── search-symbols/        (query.ts, format.ts, format.test.ts, handler.ts)
+├── incoming-calls-deep/   (query.ts, format.ts, format.test.ts, handler.ts)
+├── outgoing-calls-deep/   (query.ts, format.ts, format.test.ts, handler.ts)
+├── analyze-impact/        (query.ts, format.ts, format.test.ts, handler.ts)
+├── find-path/             (query.ts, format.ts, format.test.ts, handler.ts)
+├── get-neighborhood/      (query.ts, format.ts, format.test.ts, handler.ts)
+└── shared/                (SymbolQuery.ts, resolveSymbol.ts, resolveSymbol.test.ts)
 ```
 
 **Each slice contains:**
@@ -37,12 +37,12 @@ src/tools/
 Initializes and starts the MCP server on stdio transport with 6 registered tools. Dispatches tool calls to vertical slice handlers.
 
 **Tools provided:**
-1. `search` - Search symbols by name pattern with filters (type, module, package, exported) and pagination (offset, limit)
-2. `get_callers` - Find all callers of a symbol (supports transitive traversal via maxDepth)
-3. `get_callees` - Find all callees of a symbol (supports transitive traversal via maxDepth)
-4. `get_impact` - Impact analysis - all code affected by changes to a symbol
-5. `find_path` - Find shortest path between two symbols (BFS with maxDepth, maxPaths)
-6. `get_neighbors` - Find all nodes within N edges of a symbol (with direction control, Mermaid output)
+1. `searchSymbols` - Search symbols by name pattern with filters (type, module, package, exported) and pagination (offset, limit)
+2. `incomingCallsDeep` - Find all callers of a symbol (extends LSP's incomingCalls with transitive traversal via maxDepth)
+3. `outgoingCallsDeep` - Find all callees of a symbol (extends LSP's outgoingCalls with transitive traversal via maxDepth)
+4. `analyzeImpact` - Impact analysis - all code affected by changes to a symbol
+5. `findPath` - Find shortest path between two symbols (BFS with maxDepth, maxPaths)
+6. `getNeighborhood` - Find all nodes within N edges of a symbol (with direction control, Mermaid output)
 
 ### `main(): Promise<void>`
 **File:** `StartServer.ts`
@@ -72,8 +72,8 @@ CLI entry point that orchestrates database initialization and server startup. Ha
 All tools return hierarchical text optimized for LLM consumption:
 
 ```
-# search example (with pagination)
-search: User*
+# searchSymbols example (with pagination)
+searchSymbols: User*
 count: 3
 showing: 3 (offset: 0, limit: 100)
 files: 2
@@ -130,4 +130,4 @@ ts-graph-mcp --db :memory:
 - **Auto-indexing:** Only happens on first run when database doesn't exist
 - **No file watching:** Server doesn't auto-refresh on code changes (use external tooling or restart server)
 - **Tool execution:** All tools are read-only - no mutations to the code graph via MCP interface
-- **Pagination:** The `search` tool supports offset/limit parameters for handling large result sets efficiently
+- **Pagination:** The `searchSymbols` tool supports offset/limit parameters for handling large result sets efficiently

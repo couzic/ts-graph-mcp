@@ -120,12 +120,12 @@ The server exposes 6 tools for querying the code graph:
 
 | Tool | Purpose | Key Parameters |
 |------|---------|----------------|
-| `search` | Search for symbols by name pattern | `pattern` (glob), `type`, `module`, `package`, `exported` |
-| `get_callers` | Find all functions/methods that call the target | `symbol`, `file?`, `module?`, `package?`, `maxDepth?` |
-| `get_callees` | Find all functions/methods that the source calls | `symbol`, `file?`, `module?`, `package?`, `maxDepth?` |
-| `get_impact` | Impact analysis - find all code affected by changes | `symbol`, `file?`, `module?`, `package?`, `maxDepth?` |
-| `find_path` | Find shortest path between two symbols | `from: {symbol, ...}`, `to: {symbol, ...}`, `maxDepth?`, `maxPaths?` |
-| `get_neighbors` | Extract subgraph within N edges of center | `symbol`, `file?`, `module?`, `package?`, `distance?`, `direction?`, `outputTypes?` |
+| `searchSymbols` | Search for symbols by name pattern | `pattern` (glob), `type`, `module`, `package`, `exported` |
+| `incomingCallsDeep` | Find all functions/methods that call the target (transitive) | `symbol`, `file?`, `module?`, `package?`, `maxDepth?` |
+| `outgoingCallsDeep` | Find all functions/methods that the source calls (transitive) | `symbol`, `file?`, `module?`, `package?`, `maxDepth?` |
+| `analyzeImpact` | Impact analysis - find all code affected by changes | `symbol`, `file?`, `module?`, `package?`, `maxDepth?` |
+| `findPath` | Find shortest path between two symbols | `from: {symbol, ...}`, `to: {symbol, ...}`, `maxDepth?`, `maxPaths?` |
+| `getNeighborhood` | Extract subgraph within N edges of center | `symbol`, `file?`, `module?`, `package?`, `distance?`, `direction?`, `outputTypes?` |
 
 ### Symbol-Based Queries
 
@@ -140,7 +140,7 @@ If multiple symbols match, the tool returns candidates with their location detai
 
 All outputs include `offset` and `limit` fields that can be passed directly to the Read tool.
 
-#### search
+#### searchSymbols
 
 Search for all symbols matching `User*`:
 
@@ -170,7 +170,7 @@ classes[1]:
     offset: 4, limit: 47
 ```
 
-#### get_callers
+#### incomingCallsDeep
 
 Find all callers of `saveUser`:
 
@@ -197,7 +197,7 @@ methods[1]:
     callCount: 2, depth: 1
 ```
 
-#### find_path
+#### findPath
 
 Find path from `handleRequest` to `saveData`:
 
@@ -219,7 +219,7 @@ path[1]:
   saveData (src/db.ts)
 ```
 
-#### get_neighbors
+#### getNeighborhood
 
 Get neighborhood around `User` interface with distance 1:
 

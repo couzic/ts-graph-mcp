@@ -47,7 +47,7 @@ export function findPath(db: Database.Database, sourceId: string, targetId: stri
   if (!sourceExists) {
     return {
       error: `Source node not found: ${sourceId}`,
-      suggestion: 'Use search_nodes tool to find valid node IDs'
+      suggestion: 'Use searchSymbols tool to find valid node IDs'
     };
   }
 
@@ -56,7 +56,7 @@ export function findPath(db: Database.Database, sourceId: string, targetId: stri
   if (!targetExists) {
     return {
       error: `Target node not found: ${targetId}`,
-      suggestion: 'Use search_nodes tool to find valid node IDs'
+      suggestion: 'Use searchSymbols tool to find valid node IDs'
     };
   }
 

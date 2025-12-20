@@ -2,9 +2,9 @@
  * Benchmark prompts for layered-api test project.
  *
  * Each prompt tests a different MCP tool capability:
- * - P1: find_path (multi-layer path finding)
- * - P2: get_neighbors (local ecosystem visualization)
- * - P3: get_callees (forward traversal through layers)
+ * - P1: findPath (multi-layer path finding)
+ * - P2: getNeighborhood (local ecosystem visualization)
+ * - P3: outgoingCallsDeep (forward traversal through layers)
  */
 
 import type { BenchmarkConfig, BenchmarkPrompt } from "../../../benchmark/lib/types.js";
@@ -31,7 +31,7 @@ export const prompts: BenchmarkPrompt[] = [
 			"findUserById",
 			"query",
 		],
-		expectedTool: "find_path",
+		expectedTool: "findPath",
 	},
 	{
 		id: "P2",
@@ -43,7 +43,7 @@ export const prompts: BenchmarkPrompt[] = [
 			"getUserById",
 			"findUserById",
 		],
-		expectedTool: "get_neighbors",
+		expectedTool: "getNeighborhood",
 	},
 	{
 		id: "P3",
@@ -55,6 +55,6 @@ export const prompts: BenchmarkPrompt[] = [
 			"findUserById",
 			"query",
 		],
-		expectedTool: "get_callees",
+		expectedTool: "outgoingCallsDeep",
 	},
 ];

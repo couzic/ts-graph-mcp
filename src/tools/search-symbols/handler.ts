@@ -4,9 +4,9 @@ import { formatSearchResults } from "./format.js";
 import { querySearchNodes } from "./query.js";
 
 /**
- * Input parameters for search tool.
+ * Input parameters for searchSymbols tool.
  */
-export interface SearchParams {
+export interface SearchSymbolsParams {
 	pattern: string;
 	type?:
 		| "Function"
@@ -25,10 +25,10 @@ export interface SearchParams {
 }
 
 /**
- * MCP tool definition for search.
+ * MCP tool definition for searchSymbols.
  */
-export const searchDefinition = {
-	name: "search",
+export const searchSymbolsDefinition = {
+	name: "searchSymbols",
 	description:
 		"Search for symbols by pattern with optional filters. Returns matching nodes with metadata and Read tool parameters.",
 	inputSchema: {
@@ -69,15 +69,15 @@ export const searchDefinition = {
 };
 
 /**
- * Execute the search tool.
+ * Execute the searchSymbols tool.
  *
  * @param db - Database connection
  * @param params - Tool parameters
  * @returns Formatted string for LLM consumption
  */
-export function executeSearch(
+export function executeSearchSymbols(
 	db: Database.Database,
-	params: SearchParams,
+	params: SearchSymbolsParams,
 ): string {
 	const filters: SearchFilters = {};
 

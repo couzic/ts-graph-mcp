@@ -47,7 +47,7 @@ export function getNeighbors(
   if (!centerNode) {
     return {
       error: `Center node not found: ${nodeId}`,
-      suggestion: 'Use search_nodes tool to find valid node IDs'
+      suggestion: 'Use searchSymbols tool to find valid node IDs'
     };
   }
 
@@ -95,7 +95,7 @@ if (options?.direction && !['incoming', 'outgoing', 'both'].includes(options.dir
 
 ```typescript
 {
-  name: 'get_neighbors',
+  name: 'getNeighborhood',
   inputSchema: {
     // ... existing params
     edgeTypes: {
