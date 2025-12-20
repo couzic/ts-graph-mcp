@@ -2,27 +2,7 @@
 
 ## Open Issues
 
-### 12. Cross-File EXTENDS/IMPLEMENTS Edges Not Extracted
-
-**Impact:** Medium
-
-EXTENDS and IMPLEMENTS edges between classes/interfaces in **different files** are not being extracted.
-
-**Example:** `class AdminUser extends User` where `User` is imported from another file — no EXTENDS edge is created.
-
-**Root Cause:** `extractInheritanceEdges` uses `generateNodeId(context.filePath, ...)` assuming base types are in the same file.
-
-**Fix approach:**
-
-Use `buildImportMap` to resolve imported base classes/interfaces. Reference implementations:
-
-- `src/ingestion/extract/edges/extractCallEdges.ts` — see `buildCombinedSymbolMap()` which merges local symbols with import map
-- `src/ingestion/extract/edges/buildImportMap.ts` — resolves imported symbol names to target node IDs via ts-morph
-
-The pattern:
-1. Build import map from source file: `buildImportMap(sourceFile, filePath)`
-2. When encountering `extends Foo` or `implements Bar`, look up `Foo`/`Bar` in import map
-3. If found → use the resolved target ID; if not found → assume same-file and use `generateNodeId`
+(None currently)
 
 ---
 
