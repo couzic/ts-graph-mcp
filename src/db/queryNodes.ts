@@ -1,6 +1,6 @@
 import type Database from "better-sqlite3";
-import type { Node, SearchFilters } from "../../db/Types.js";
-import { type NodeRow, rowToNode } from "../shared/rowConverters.js";
+import { type NodeRow, rowToNode } from "../tools/shared/rowConverters.js";
+import type { Node, SearchFilters } from "./Types.js";
 
 /**
  * Convert glob pattern to SQLite GLOB pattern.
@@ -13,7 +13,7 @@ const globToSqlite = (pattern: string): string => {
 /**
  * Query nodes by name pattern with optional filters.
  */
-export function querySearchNodes(
+export function queryNodes(
 	db: Database.Database,
 	pattern: string,
 	filters?: SearchFilters,

@@ -6,9 +6,8 @@ A Model Context Protocol (MCP) server that extracts TypeScript code structure in
 
 ts-graph-mcp parses TypeScript source code using AST analysis and builds a graph database of your codebase structure. The graph captures code symbols (functions, classes, interfaces, types, variables) and their relationships (calls, imports, type usage, inheritance).
 
-AI agents can then query this graph through 6 specialized MCP tools to:
+AI agents can then query this graph through 5 specialized MCP tools to:
 
-- Search for symbols by name patterns
 - Traverse call graphs (who calls this? what does this call?)
 - Analyze code impact (what breaks if I change this?)
 - Find paths between symbols
@@ -116,11 +115,10 @@ export default defineConfig({
 
 ## MCP Tools
 
-The server exposes 6 tools for querying the code graph:
+The server exposes 5 tools for querying the code graph:
 
 | Tool | Purpose | Key Parameters |
 |------|---------|----------------|
-| `searchSymbols` | Search for symbols by name pattern | `pattern` (glob), `type`, `module`, `package`, `exported` |
 | `incomingCallsDeep` | Find all functions/methods that call the target (transitive) | `symbol`, `file?`, `module?`, `package?`, `maxDepth?` |
 | `outgoingCallsDeep` | Find all functions/methods that the source calls (transitive) | `symbol`, `file?`, `module?`, `package?`, `maxDepth?` |
 | `analyzeImpact` | Impact analysis - find all code affected by changes | `symbol`, `file?`, `module?`, `package?`, `maxDepth?` |
@@ -139,36 +137,6 @@ If multiple symbols match, the tool returns candidates with their location detai
 ### Example Outputs
 
 All outputs include `offset` and `limit` fields that can be passed directly to the Read tool.
-
-#### searchSymbols
-
-Search for all symbols matching `User*`:
-
-```
-count: 3
-files: 2
-
-file: src/types.ts
-module: core
-package: main
-matches: 2
-
-interfaces[1]:
-  User
-    offset: 0, limit: 11
-typeAliases[1]:
-  UserId = string
-    offset: 11, limit: 2
-
-file: src/models/User.ts
-module: models
-package: main
-matches: 1
-
-classes[1]:
-  UserService extends:BaseService implements:[IUserService]
-    offset: 4, limit: 47
-```
 
 #### incomingCallsDeep
 

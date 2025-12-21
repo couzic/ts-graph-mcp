@@ -11,12 +11,12 @@ import { createSqliteWriter } from "../../src/db/sqlite/SqliteWriter.js";
 import { indexProject } from "../../src/ingestion/Ingestion.js";
 import { queryImpactedNodes } from "../../src/tools/analyze-impact/query.js";
 import { queryNeighbors } from "../../src/tools/get-neighborhood/query.js";
-import { querySearchNodes } from "../../src/tools/search-symbols/query.js";
+import { queryNodes } from "../../src/db/queryNodes.js";
 import { queryEdges } from "../../src/db/queryEdges.js";
 
 // Helper to get all nodes in a file (replacement for deprecated queryFileNodes)
 function queryFileNodes(db: Database.Database, filePath: string) {
-	return querySearchNodes(db, "*").filter((n) => n.filePath === filePath);
+	return queryNodes(db, "*").filter((n) => n.filePath === filePath);
 }
 
 /**
@@ -47,9 +47,9 @@ describe("mixed-types integration", () => {
 		closeDatabase(db);
 	});
 
-	describe(querySearchNodes.name, () => {
+	describe(queryNodes.name, () => {
 		it('finds User interface and UserService class with pattern "User*"', () => {
-			const result = querySearchNodes(db, "User*");
+			const result = queryNodes(db, "User*");
 
 			const names = result.map((n) => n.name);
 			expect(names).toContain("User");
@@ -57,7 +57,7 @@ describe("mixed-types integration", () => {
 		});
 
 		it("filters by nodeType Interface to return only User", () => {
-			const result = querySearchNodes(db, "User*", { type: "Interface" });
+			const result = queryNodes(db, "User*", { type: "Interface" });
 
 			expect(result).toHaveLength(1);
 			expect(result[0]?.name).toBe("User");
@@ -65,7 +65,7 @@ describe("mixed-types integration", () => {
 		});
 
 		it("finds TypeAlias UserId", () => {
-			const result = querySearchNodes(db, "UserId");
+			const result = queryNodes(db, "UserId");
 
 			expect(result).toHaveLength(1);
 			expect(result[0]?.name).toBe("UserId");
@@ -131,7 +131,7 @@ describe("mixed-types integration", () => {
 
 	describe("Property nodes from interfaces", () => {
 		it("extracts id and name properties from User interface and users from UserService", () => {
-			const result = querySearchNodes(db, "*", { type: "Property" });
+			const result = queryNodes(db, "*", { type: "Property" });
 
 			const names = result.map((n) => n.name);
 			expect(names).toContain("id");
@@ -178,7 +178,7 @@ describe("mixed-types integration", () => {
 		});
 
 		it("verifies async functions have async flag set", () => {
-			const result = querySearchNodes(db, "fetchData");
+			const result = queryNodes(db, "fetchData");
 
 			expect(result).toHaveLength(1);
 			const fetchDataNode = result[0];
@@ -190,7 +190,7 @@ describe("mixed-types integration", () => {
 		});
 
 		it("verifies processData async function without explicit return type", () => {
-			const result = querySearchNodes(db, "processData");
+			const result = queryNodes(db, "processData");
 
 			expect(result).toHaveLength(1);
 			const processDataNode = result[0];
@@ -201,7 +201,7 @@ describe("mixed-types integration", () => {
 		});
 
 		it("verifies function parameters are extracted", () => {
-			const result = querySearchNodes(db, "greet");
+			const result = queryNodes(db, "greet");
 
 			expect(result).toHaveLength(1);
 			const greetNode = result[0];
@@ -219,7 +219,7 @@ describe("mixed-types integration", () => {
 
 	describe("Method node details", () => {
 		it("verifies addUser method has parameters and return type", () => {
-			const result = querySearchNodes(db, "addUser");
+			const result = queryNodes(db, "addUser");
 
 			expect(result).toHaveLength(1);
 			const methodNode = result[0];
@@ -237,7 +237,7 @@ describe("mixed-types integration", () => {
 
 	describe("Property node details", () => {
 		it("verifies users property is readonly", () => {
-			const result = querySearchNodes(db, "users");
+			const result = queryNodes(db, "users");
 
 			expect(result).toHaveLength(1);
 			const propertyNode = result[0];
@@ -251,7 +251,7 @@ describe("mixed-types integration", () => {
 
 	describe("Variable node details", () => {
 		it("verifies DEFAULT_NAME is const without explicit type annotation", () => {
-			const result = querySearchNodes(db, "DEFAULT_NAME");
+			const result = queryNodes(db, "DEFAULT_NAME");
 
 			expect(result).toHaveLength(1);
 			const variableNode = result[0];
@@ -264,7 +264,7 @@ describe("mixed-types integration", () => {
 		});
 
 		it("verifies MAX_RETRIES is const with explicit number type", () => {
-			const result = querySearchNodes(db, "MAX_RETRIES");
+			const result = queryNodes(db, "MAX_RETRIES");
 
 			expect(result).toHaveLength(1);
 			const variableNode = result[0];
@@ -278,7 +278,7 @@ describe("mixed-types integration", () => {
 
 	describe("File nodes", () => {
 		it("extracts File nodes for all source files", () => {
-			const result = querySearchNodes(db, "*.ts", { type: "File" });
+			const result = queryNodes(db, "*.ts", { type: "File" });
 
 			const fileNames = result.map((n) => n.name).sort();
 			expect(fileNames).toContain("models.ts");
@@ -289,7 +289,7 @@ describe("mixed-types integration", () => {
 
 	describe("Exported flag", () => {
 		it("marks all top-level symbols as exported", () => {
-			const allNodes = querySearchNodes(db, "*");
+			const allNodes = queryNodes(db, "*");
 			const topLevelNodes = allNodes.filter(
 				(n) =>
 					n.type !== "File" &&

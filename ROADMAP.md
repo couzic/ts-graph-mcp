@@ -16,13 +16,12 @@ Claude Code 2.0.74+ includes a built-in LSP tool with `documentSymbol`, `workspa
 
 ### Retained (Unique Value)
 
-These 6 tools remain because they offer capabilities LSP lacks:
+These 5 tools remain because they offer capabilities LSP lacks:
 
 | Tool | Unique Value | LSP Cannot Do This |
 |------|--------------|-------------------|
 | `incomingCallsDeep` | **Transitive** (maxDepth=N) | LSP `incomingCalls` is single-hop only |
 | `outgoingCallsDeep` | **Transitive** (maxDepth=N) | LSP `outgoingCalls` is single-hop only |
-| `searchSymbols` | Module/package/exported **filters** | LSP `workspaceSymbol` has no filters |
 | `analyzeImpact` | **Impact analysis** across all edge types | No LSP equivalent |
 | `findPath` | **Path finding** between symbols | No LSP equivalent |
 | `getNeighborhood` | **Subgraph extraction** + Mermaid diagrams | No LSP equivalent |
@@ -45,18 +44,15 @@ analyzeImpact({ symbol: "User", edgeTypes: ["USES_TYPE"] })           // Only ty
 analyzeImpact({ symbol: "formatDate", moduleFilter: "api" })          // Impact within module
 ```
 
-### Result Limits (searchSymbols, getNeighborhood)
+### Result Limits (getNeighborhood)
 **Impact: High | Effort: Low**
 
-Broad searches can return thousands of results, wasting tokens. The `search` tool now has `limit` and `offset` parameters for pagination. Future enhancement: add default limits with truncation warnings.
+Broad queries can return thousands of results, wasting tokens. Future enhancement: add default limits with truncation warnings.
 
 ```typescript
-// searchSymbols tool already supports pagination
-searchSymbols({ pattern: "*Service", limit: 100, offset: 0 })
-
-// Future: Output when truncated
-"Search results for '*Service' (showing 100 of 342 matches)
-⚠️ Results truncated. Add filters or use a more specific pattern."
+// Future: Output when truncated for large neighborhoods
+"Neighborhood results (showing 100 of 342 nodes)
+⚠️ Results truncated. Reduce distance or use direction filtering."
 ```
 
 ### Improve Tool Descriptions
@@ -76,7 +72,7 @@ The MCP tool definitions (in `src/tools/*/handler.ts`) have quality gaps that re
 - `src/tools/incoming-calls-deep/handler.ts` - redundant description
 - `src/tools/outgoing-calls-deep/handler.ts` - redundant description
 - `src/tools/get-neighborhood/handler.ts` - unclear direction param
-- All 6 tools - missing output format hints
+- All 5 tools - missing output format hints
 
 ### Error Messages with Example Syntax
 **Impact: Medium | Effort: Very Low**
@@ -97,16 +93,6 @@ Narrow your query with file, module, or package:
 
 **Affected file:** `src/tools/shared/errorFormatters.ts`
 
-### Document `pattern` vs `symbol` Distinction
-**Impact: Low | Effort: Very Low**
-
-The `search` tool uses `pattern` (glob matching) while all other tools use `symbol` (exact name). This is semantically correct but could confuse AI agents.
-
-**Options:**
-1. **Documentation only** - Clarify in tool descriptions that `search` takes globs, others take exact names
-2. **Alias in search** - Accept both `pattern` and `symbol` params (treat `symbol` as exact pattern)
-
-Recommendation: Option 1 is sufficient. The distinction is meaningful and the current naming is accurate.
 
 ---
 

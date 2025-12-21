@@ -47,7 +47,7 @@ export function getNeighbors(
   if (!centerNode) {
     return {
       error: `Center node not found: ${nodeId}`,
-      suggestion: 'Use searchSymbols tool to find valid node IDs'
+      suggestion: 'Use LSP workspaceSymbol to find valid node IDs'
     };
   }
 

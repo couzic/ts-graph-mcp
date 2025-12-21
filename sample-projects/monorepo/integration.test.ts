@@ -9,7 +9,7 @@ import { initializeSchema } from "../../src/db/sqlite/SqliteSchema.js";
 import { createSqliteWriter } from "../../src/db/sqlite/SqliteWriter.js";
 import { indexProject } from "../../src/ingestion/Ingestion.js";
 import { queryImpactedNodes } from "../../src/tools/analyze-impact/query.js";
-import { querySearchNodes } from "../../src/tools/search-symbols/query.js";
+import { queryNodes } from "../../src/db/queryNodes.js";
 import config from "./ts-graph-mcp.config.js";
 
 /**
@@ -57,7 +57,7 @@ describe("monorepo integration (L3: multi-module, multi-package)", () => {
 
   describe("node extraction", () => {
     it("extracts nodes from shared/types package", () => {
-      const result = querySearchNodes(db, "*", {
+      const result = queryNodes(db, "*", {
         module: "shared",
         package: "types",
       });
@@ -70,7 +70,7 @@ describe("monorepo integration (L3: multi-module, multi-package)", () => {
     });
 
     it("extracts nodes from shared/utils package", () => {
-      const result = querySearchNodes(db, "*", {
+      const result = queryNodes(db, "*", {
         module: "shared",
         package: "utils",
       });
@@ -83,7 +83,7 @@ describe("monorepo integration (L3: multi-module, multi-package)", () => {
     });
 
     it("extracts nodes from frontend/ui package", () => {
-      const result = querySearchNodes(db, "*", {
+      const result = queryNodes(db, "*", {
         module: "frontend",
         package: "ui",
       });
@@ -96,7 +96,7 @@ describe("monorepo integration (L3: multi-module, multi-package)", () => {
     });
 
     it("extracts nodes from frontend/state package", () => {
-      const result = querySearchNodes(db, "*", {
+      const result = queryNodes(db, "*", {
         module: "frontend",
         package: "state",
       });
@@ -108,7 +108,7 @@ describe("monorepo integration (L3: multi-module, multi-package)", () => {
     });
 
     it("extracts nodes from backend/services package", () => {
-      const result = querySearchNodes(db, "*", {
+      const result = queryNodes(db, "*", {
         module: "backend",
         package: "services",
       });
@@ -121,7 +121,7 @@ describe("monorepo integration (L3: multi-module, multi-package)", () => {
     });
 
     it("extracts nodes from backend/api package", () => {
-      const result = querySearchNodes(db, "*", {
+      const result = queryNodes(db, "*", {
         module: "backend",
         package: "api",
       });
@@ -268,21 +268,21 @@ describe("monorepo integration (L3: multi-module, multi-package)", () => {
 
   describe("module filtering", () => {
     it("searchSymbols with module=shared returns only shared nodes", () => {
-      const nodes = querySearchNodes(db, "*", { module: "shared" });
+      const nodes = queryNodes(db, "*", { module: "shared" });
 
       expect(nodes.length).toBeGreaterThan(0);
       expect(nodes.every((n) => n.module === "shared")).toBe(true);
     });
 
     it("searchSymbols with module=frontend returns only frontend nodes", () => {
-      const nodes = querySearchNodes(db, "*", { module: "frontend" });
+      const nodes = queryNodes(db, "*", { module: "frontend" });
 
       expect(nodes.length).toBeGreaterThan(0);
       expect(nodes.every((n) => n.module === "frontend")).toBe(true);
     });
 
     it("searchSymbols with module=backend returns only backend nodes", () => {
-      const nodes = querySearchNodes(db, "*", { module: "backend" });
+      const nodes = queryNodes(db, "*", { module: "backend" });
 
       expect(nodes.length).toBeGreaterThan(0);
       expect(nodes.every((n) => n.module === "backend")).toBe(true);
@@ -291,28 +291,28 @@ describe("monorepo integration (L3: multi-module, multi-package)", () => {
 
   describe("package filtering", () => {
     it("searchSymbols with package=types returns only types package nodes", () => {
-      const nodes = querySearchNodes(db, "*", { package: "types" });
+      const nodes = queryNodes(db, "*", { package: "types" });
 
       expect(nodes.length).toBeGreaterThan(0);
       expect(nodes.every((n) => n.package === "types")).toBe(true);
     });
 
     it("searchSymbols with package=utils returns only utils package nodes", () => {
-      const nodes = querySearchNodes(db, "*", { package: "utils" });
+      const nodes = queryNodes(db, "*", { package: "utils" });
 
       expect(nodes.length).toBeGreaterThan(0);
       expect(nodes.every((n) => n.package === "utils")).toBe(true);
     });
 
     it("searchSymbols with package=api returns only api package nodes", () => {
-      const nodes = querySearchNodes(db, "*", { package: "api" });
+      const nodes = queryNodes(db, "*", { package: "api" });
 
       expect(nodes.length).toBeGreaterThan(0);
       expect(nodes.every((n) => n.package === "api")).toBe(true);
     });
 
     it("searchSymbols with package=services returns only services package nodes", () => {
-      const nodes = querySearchNodes(db, "*", { package: "services" });
+      const nodes = queryNodes(db, "*", { package: "services" });
 
       expect(nodes.length).toBeGreaterThan(0);
       expect(nodes.every((n) => n.package === "services")).toBe(true);
@@ -321,7 +321,7 @@ describe("monorepo integration (L3: multi-module, multi-package)", () => {
 
   describe("module + package filtering combined", () => {
     it("searchSymbols with module=shared + package=types returns correct subset", () => {
-      const nodes = querySearchNodes(db, "*", {
+      const nodes = queryNodes(db, "*", {
         module: "shared",
         package: "types",
       });
@@ -337,7 +337,7 @@ describe("monorepo integration (L3: multi-module, multi-package)", () => {
     });
 
     it("searchSymbols with module=backend + package=api excludes services", () => {
-      const nodes = querySearchNodes(db, "*", {
+      const nodes = queryNodes(db, "*", {
         module: "backend",
         package: "api",
       });
@@ -350,7 +350,7 @@ describe("monorepo integration (L3: multi-module, multi-package)", () => {
 
   describe("cross-module impact analysis", () => {
     it("analyzeImpact on shared/types User shows dependents from ALL modules", () => {
-      const userNode = querySearchNodes(db, "User", {
+      const userNode = queryNodes(db, "User", {
         module: "shared",
         package: "types",
         type: "Interface",
@@ -371,7 +371,7 @@ describe("monorepo integration (L3: multi-module, multi-package)", () => {
     });
 
     it("analyzeImpact on shared/utils validateEmail shows callers from multiple modules", () => {
-      const validateEmailNode = querySearchNodes(db, "validateEmail", {
+      const validateEmailNode = queryNodes(db, "validateEmail", {
         module: "shared",
         package: "utils",
         type: "Function",
@@ -391,7 +391,7 @@ describe("monorepo integration (L3: multi-module, multi-package)", () => {
     });
 
     it("analyzeImpact on shared/utils formatDate shows callers from multiple modules", () => {
-      const formatDateNode = querySearchNodes(db, "formatDate", {
+      const formatDateNode = queryNodes(db, "formatDate", {
         module: "shared",
         package: "utils",
         type: "Function",
@@ -416,7 +416,7 @@ describe("monorepo integration (L3: multi-module, multi-package)", () => {
      * KEY TEST: Impact analysis at package granularity within same module.
      */
     it("analyzeImpact on backend/services createUserService shows backend/api callers", () => {
-      const createUserServiceNode = querySearchNodes(db, "createUserService", {
+      const createUserServiceNode = queryNodes(db, "createUserService", {
         module: "backend",
         package: "services",
         type: "Function",
@@ -440,7 +440,7 @@ describe("monorepo integration (L3: multi-module, multi-package)", () => {
 
   describe("edge summary (diagnostic)", () => {
     it("logs all nodes by module and package for debugging", () => {
-      const allNodes = querySearchNodes(db, "*");
+      const allNodes = queryNodes(db, "*");
 
       console.log("\n=== Monorepo Node Summary ===");
       console.log(`Total nodes: ${allNodes.length}`);
@@ -472,7 +472,7 @@ describe("monorepo integration (L3: multi-module, multi-package)", () => {
 
     it("logs cross-package and cross-module edges for debugging", () => {
       const edges = queryEdges(db);
-      const allNodes = querySearchNodes(db, "*");
+      const allNodes = queryNodes(db, "*");
 
       // Build node lookup map
       const nodeMap = new Map(allNodes.map((n) => [n.id, n]));

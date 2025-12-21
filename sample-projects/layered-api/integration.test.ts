@@ -13,7 +13,7 @@ import { queryCallees } from "../../src/tools/outgoing-calls-deep/query.js";
 import { queryCallers } from "../../src/tools/incoming-calls-deep/query.js";
 import { queryPath } from "../../src/tools/find-path/query.js";
 import { queryNeighbors } from "../../src/tools/get-neighborhood/query.js";
-import { querySearchNodes } from "../../src/tools/search-symbols/query.js";
+import { queryNodes } from "../../src/db/queryNodes.js";
 import { queryEdges } from "../../src/db/queryEdges.js";
 
 /**
@@ -64,12 +64,12 @@ describe("layered-api integration (layered architecture)", () => {
 
 	// Helper to find a function by name
 	function findFunction(name: string) {
-		return querySearchNodes(db, name, { type: "Function" })[0];
+		return queryNodes(db, name, { type: "Function" })[0];
 	}
 
 	// Helper to find functions in a specific layer
 	function findFunctionsInLayer(layer: string) {
-		return querySearchNodes(db, "*", { type: "Function" }).filter((n) =>
+		return queryNodes(db, "*", { type: "Function" }).filter((n) =>
 			n.filePath.includes(`${layer}/`),
 		);
 	}
@@ -273,7 +273,7 @@ describe("layered-api integration (layered architecture)", () => {
 			}).filter((e) => e.source.includes("controllers/"));
 
 			const targetIds = controllerEdges.map((e) => e.target);
-			const allNodes = querySearchNodes(db, "*");
+			const allNodes = queryNodes(db, "*");
 			const targetNodes = allNodes.filter((n) => targetIds.includes(n.id));
 
 			// All targets should be in services layer
@@ -289,7 +289,7 @@ describe("layered-api integration (layered architecture)", () => {
 			}).filter((e) => e.source.includes("services/"));
 
 			const targetIds = serviceEdges.map((e) => e.target);
-			const allNodes = querySearchNodes(db, "*");
+			const allNodes = queryNodes(db, "*");
 			const targetNodes = allNodes.filter((n) => targetIds.includes(n.id));
 
 			// All targets should be in services or repositories layer
@@ -309,7 +309,7 @@ describe("layered-api integration (layered architecture)", () => {
 			}).filter((e) => e.source.includes("repositories/"));
 
 			const targetIds = repoEdges.map((e) => e.target);
-			const allNodes = querySearchNodes(db, "*");
+			const allNodes = queryNodes(db, "*");
 			const targetNodes = allNodes.filter((n) => targetIds.includes(n.id));
 
 			// All targets should be Database functions OR other repository functions (same-layer calls allowed)
@@ -366,7 +366,7 @@ describe("layered-api integration (layered architecture)", () => {
 
 		it("verifies complete call chain: controllers → services → repositories → database", () => {
 			const allEdges = queryEdges(db, { type: "CALLS" });
-			const allNodes = querySearchNodes(db, "*");
+			const allNodes = queryNodes(db, "*");
 			const nodeMap = new Map(allNodes.map((n) => [n.id, n]));
 
 			// Verify edges at each layer transition

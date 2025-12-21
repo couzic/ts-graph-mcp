@@ -21,8 +21,7 @@ This document describes the technical architecture of **ts-graph-mcp**, an MCP (
 - **Nodes**: Code symbols (functions, classes, methods, interfaces, types, variables, files, properties)
 - **Edges**: Relationships between symbols (calls, imports, type usage, inheritance, etc.)
 
-The graph is exposed through an MCP server that provides 6 specialized tools for AI agents to:
-- Search for symbols by name patterns
+The graph is exposed through an MCP server that provides 5 specialized tools for AI agents to:
 - Traverse call graphs (who calls this? what does this call?)
 - Analyze code impact (what breaks if I change this?)
 - Find paths between symbols
@@ -41,7 +40,7 @@ The project uses a **vertical slice architecture** where each MCP tool owns its 
 ├─────────────────────────────────────────────────────────────────┤
 │                     Vertical Slice Tools                        │
 │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐            │
-│  │searchSymbols │ │incomingCalls │ │outgoingCalls │  ... (x6)  │
+│  │incomingCalls │ │outgoingCalls │ │analyzeImpact │  ... (x5)  │
 │  │  handler.ts  │ │  handler.ts  │ │  handler.ts  │            │
 │  │  query.ts    │ │  query.ts    │ │  query.ts    │            │
 │  │  format.ts   │ │  format.ts   │ │  format.ts   │            │
@@ -184,10 +183,10 @@ The schema intentionally omits FK constraints on edges table for three key reaso
 
 ### `/src/mcp/` - MCP Server
 
-**Purpose**: Exposes the code graph as an MCP server with 6 tools.
+**Purpose**: Exposes the code graph as an MCP server with 5 tools.
 
 **Key Files**:
-- `McpServer.ts` - Server implementation with 6 tool registrations
+- `McpServer.ts` - Server implementation with 5 tool registrations
 - `StartServer.ts` - CLI entry point with auto-indexing on first run
 
 **Design Highlights**:
@@ -427,28 +426,15 @@ await dbWriter.addEdges(edges);
 
 ## MCP Tools
 
-The MCP server exposes 6 tools for querying the code graph.
+The MCP server exposes 5 tools for querying the code graph.
 
 **Symbol-First Design**: All tools use a symbol-based query approach instead of internal node IDs. Tools accept a `symbol` name with optional filters (`file`, `module`, `package`) to narrow scope. Symbol resolution handles disambiguation automatically — if multiple matches exist, the tool returns candidates for clarification.
 
-**Input Validation**: Tools validate symbol existence before querying. Invalid inputs return actionable error messages with suggestions (e.g., "Use search to find valid symbols"). Shared validators live in `src/tools/shared/validateSymbolExists.ts`.
+**Input Validation**: Tools validate symbol existence before querying. Invalid inputs return actionable error messages with suggestions. Shared validators live in `src/tools/shared/validateSymbolExists.ts`.
 
 **Output Format**: All tools return machine-readable output optimized for AI agent consumption. Each symbol includes `offset` and `limit` fields that can be passed directly to the Read tool without computation.
 
-### 1. `searchSymbols`
-
-**Purpose**: Search for symbols by name pattern with filters.
-
-**Parameters**:
-- `pattern` (required): Glob pattern (e.g., `"handle*"`, `"User*Service"`)
-- `type` (optional): Filter by symbol type (Function, Class, Method, Interface, TypeAlias, Variable, Property)
-- `module` (optional): Filter by module name
-- `package` (optional): Filter by package name
-- `exported` (optional): Filter by export status
-- `offset` (optional): Skip first N results for pagination
-- `limit` (optional): Return maximum N results for pagination
-
-### 2. `incomingCallsDeep`
+### 1. `incomingCallsDeep`
 
 **Purpose**: Find all functions/methods that call the target (reverse call graph, transitive). Extends LSP's `incomingCalls` with transitive traversal.
 
@@ -461,7 +447,7 @@ The MCP server exposes 6 tools for querying the code graph.
 
 **Output**: Includes `callCount` (how many times each caller calls the target) and `depth` (1 for direct callers, 2+ for transitive).
 
-### 3. `outgoingCallsDeep`
+### 2. `outgoingCallsDeep`
 
 **Purpose**: Find all functions/methods that the source calls (forward call graph, transitive). Extends LSP's `outgoingCalls` with transitive traversal.
 
@@ -474,7 +460,7 @@ The MCP server exposes 6 tools for querying the code graph.
 
 **Output**: Includes `callCount` (how many times the source calls each callee) and `depth` (1 for direct callees, 2+ for transitive).
 
-### 4. `analyzeImpact`
+### 3. `analyzeImpact`
 
 **Purpose**: Impact analysis - find all code affected by changes to a symbol.
 
@@ -485,7 +471,7 @@ The MCP server exposes 6 tools for querying the code graph.
 - `package` (optional): Narrow scope to a specific package
 - `maxDepth` (optional): Traversal depth (default: 100)
 
-### 5. `findPath`
+### 4. `findPath`
 
 **Purpose**: Find paths between two symbols using BFS. Returns multiple paths if they exist.
 
@@ -501,7 +487,7 @@ The MCP server exposes 6 tools for querying the code graph.
 
 **Output**: Returns all paths found (up to `maxPaths`), each showing the complete sequence of symbols and connection types between them.
 
-### 6. `getNeighborhood`
+### 5. `getNeighborhood`
 
 **Purpose**: Extract neighborhood subgraph - all symbols within N connections of a center symbol.
 
@@ -596,7 +582,7 @@ The built-in LSP tool provides:
 | Feature | LSP Tool | ts-graph-mcp | Overlap |
 |---------|----------|--------------|---------|
 | Symbols in file | `documentSymbol` | ❌ (removed) | None - use LSP |
-| Search symbols | `workspaceSymbol` | `searchSymbols` | **Partial** - ts-graph has module/package/exported filters |
+| Search symbols | `workspaceSymbol` | ❌ (removed) | None - use LSP |
 | Direct callers | `incomingCalls` | `incomingCallsDeep(maxDepth=1)` | **Partial** - ts-graph has transitive traversal |
 | Direct callees | `outgoingCalls` | `outgoingCallsDeep(maxDepth=1)` | **Partial** - ts-graph has transitive traversal |
 | Definition lookup | `goToDefinition` | ❌ | None |

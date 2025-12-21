@@ -63,7 +63,7 @@ Tests MUST be database-agnostic to support multiple backends (SQLite, Neo4j, Mem
 
 **Allowed APIs** (always import from `src/`, never `dist/`):
 - `openDatabase()`, `initializeSchema()`, `createSqliteWriter()` - Setup only
-- `querySearchNodes()` - From `src/tools/search-symbols/query.js`
+- `queryNodes()` - From `src/db/queryNodes.js`
 - `queryCallers()`, `queryCallees()` - From `src/tools/incoming-calls-deep/query.js` and `src/tools/outgoing-calls-deep/query.js`
 - `queryEdges()` - From `src/db/queryEdges.js`
 - `queryImpactedNodes()` - From `src/tools/analyze-impact/query.js`

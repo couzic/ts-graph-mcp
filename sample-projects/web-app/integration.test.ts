@@ -9,7 +9,7 @@ import { createSqliteWriter } from "../../src/db/sqlite/SqliteWriter.js";
 import { indexProject } from "../../src/ingestion/Ingestion.js";
 import { queryEdges } from "../../src/db/queryEdges.js";
 import { queryImpactedNodes } from "../../src/tools/analyze-impact/query.js";
-import { querySearchNodes } from "../../src/tools/search-symbols/query.js";
+import { queryNodes } from "../../src/db/queryNodes.js";
 import config from "./ts-graph-mcp.config.js";
 
 /**
@@ -47,7 +47,7 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 
 	describe("node extraction (should pass)", () => {
 		it("extracts nodes from shared module", () => {
-			const result = querySearchNodes(db, "*", { module: "shared" });
+			const result = queryNodes(db, "*", { module: "shared" });
 
 			const names = result.map((n) => n.name);
 			expect(names).toContain("User");
@@ -56,7 +56,7 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 		});
 
 		it("extracts nodes from frontend module", () => {
-			const result = querySearchNodes(db, "*", { module: "frontend" });
+			const result = queryNodes(db, "*", { module: "frontend" });
 
 			const names = result.map((n) => n.name);
 			expect(names).toContain("UserCardProps");
@@ -65,7 +65,7 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 		});
 
 		it("extracts nodes from backend module", () => {
-			const result = querySearchNodes(db, "*", { module: "backend" });
+			const result = queryNodes(db, "*", { module: "backend" });
 
 			const names = result.map((n) => n.name);
 			expect(names).toContain("getUser");
@@ -179,7 +179,7 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 		 *   - backend:listUsers (returns User[])
 		 */
 		it("analyzeImpact on shared User shows frontend dependents", () => {
-			const userNode = querySearchNodes(db, "User", {
+			const userNode = queryNodes(db, "User", {
 				module: "shared",
 				type: "Interface",
 			})[0];
@@ -196,7 +196,7 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 		});
 
 		it("analyzeImpact on shared User shows backend dependents", () => {
-			const userNode = querySearchNodes(db, "User", {
+			const userNode = queryNodes(db, "User", {
 				module: "shared",
 				type: "Interface",
 			})[0];
@@ -214,7 +214,7 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 		});
 
 		it("analyzeImpact on shared User shows BOTH frontend AND backend dependents", () => {
-			const userNode = querySearchNodes(db, "User", {
+			const userNode = queryNodes(db, "User", {
 				module: "shared",
 				type: "Interface",
 			})[0];
@@ -235,7 +235,7 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 		});
 
 		it("analyzeImpact on shared createUser shows backend callers", () => {
-			const createUserNode = querySearchNodes(db, "createUser", {
+			const createUserNode = queryNodes(db, "createUser", {
 				module: "shared",
 				type: "Function",
 			})[0];
@@ -255,9 +255,9 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 
 	describe("module filtering (should pass)", () => {
 		it("searchSymbols with module filter returns only that module", () => {
-			const sharedNodes = querySearchNodes(db, "*", { module: "shared" });
-			const frontendNodes = querySearchNodes(db, "*", { module: "frontend" });
-			const backendNodes = querySearchNodes(db, "*", { module: "backend" });
+			const sharedNodes = queryNodes(db, "*", { module: "shared" });
+			const frontendNodes = queryNodes(db, "*", { module: "frontend" });
+			const backendNodes = queryNodes(db, "*", { module: "backend" });
 
 			expect(sharedNodes.every((n) => n.module === "shared")).toBe(true);
 			expect(frontendNodes.every((n) => n.module === "frontend")).toBe(true);
@@ -271,7 +271,7 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 		 * Helps debug why module filtering might not work.
 		 */
 		it("logs all nodes and their modules for debugging", () => {
-			const allNodes = querySearchNodes(db, "*");
+			const allNodes = queryNodes(db, "*");
 
 			console.log("\n=== Node Summary ===");
 			console.log(`Total nodes: ${allNodes.length}`);

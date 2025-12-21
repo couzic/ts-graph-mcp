@@ -66,7 +66,7 @@ Integration tests MUST be database-agnostic. When we switch to Neo4j/Memgraph, a
 - ✅ Use `DbWriter` interface for writes: `writer.addNodes()`, `writer.addEdges()`
 
 **Query functions** (import from `src/`):
-- `querySearchNodes(db, pattern, filters?)` - Search nodes by name pattern
+- `queryNodes(db, pattern, filters?)` - Search nodes by name pattern (import from `src/db/queryNodes.js`)
 - `queryCallers(db, nodeId, options?)` - Find callers of a function
 - `queryCallees(db, nodeId, maxDepth?)` - Find callees of a function
 - `queryEdges(db, filters?)` - Query edges with filters (type, sourcePattern, targetPattern, etc.)

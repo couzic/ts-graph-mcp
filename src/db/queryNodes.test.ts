@@ -1,13 +1,10 @@
 import type Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import {
-	closeDatabase,
-	openDatabase,
-} from "../../db/sqlite/SqliteConnection.js";
-import { initializeSchema } from "../../db/sqlite/SqliteSchema.js";
-import { createSqliteWriter } from "../../db/sqlite/SqliteWriter.js";
-import type { ClassNode, FunctionNode } from "../../db/Types.js";
-import { querySearchNodes } from "./query.js";
+import { queryNodes } from "./queryNodes.js";
+import { closeDatabase, openDatabase } from "./sqlite/SqliteConnection.js";
+import { initializeSchema } from "./sqlite/SqliteSchema.js";
+import { createSqliteWriter } from "./sqlite/SqliteWriter.js";
+import type { ClassNode, FunctionNode } from "./Types.js";
 
 // Test data factory - creates minimal function nodes
 const fn = (
@@ -45,7 +42,7 @@ const cls = (
 	...overrides,
 });
 
-describe(querySearchNodes.name, () => {
+describe(queryNodes.name, () => {
 	let db: Database.Database;
 
 	beforeEach(() => {
@@ -64,7 +61,7 @@ describe(querySearchNodes.name, () => {
 		const bar = fn("bar");
 		await writer.addNodes([foo, fooBar, bar]);
 
-		const result = querySearchNodes(db, "foo*");
+		const result = queryNodes(db, "foo*");
 
 		expect(result).toHaveLength(2);
 		const names = result.map((n) => n.name);
@@ -79,7 +76,7 @@ describe(querySearchNodes.name, () => {
 		const fooClass = cls("Foo");
 		await writer.addNodes([fooFn, fooClass]);
 
-		const result = querySearchNodes(db, "*", { type: "Function" });
+		const result = queryNodes(db, "*", { type: "Function" });
 
 		expect(result).toHaveLength(1);
 		expect(result[0]?.id).toBe(fooFn.id);
@@ -92,7 +89,7 @@ describe(querySearchNodes.name, () => {
 		const internalBar = fn("bar", "src/test.ts", { exported: false });
 		await writer.addNodes([exportedFoo, internalBar]);
 
-		const result = querySearchNodes(db, "*", { exported: true });
+		const result = queryNodes(db, "*", { exported: true });
 
 		expect(result).toHaveLength(1);
 		expect(result[0]?.id).toBe(exportedFoo.id);
@@ -105,7 +102,7 @@ describe(querySearchNodes.name, () => {
 		const mod2B = fn("b", "src/mod2/b.ts", { module: "mod2" });
 		await writer.addNodes([mod1A, mod2B]);
 
-		const result = querySearchNodes(db, "*", { module: "mod1" });
+		const result = queryNodes(db, "*", { module: "mod1" });
 
 		expect(result).toHaveLength(1);
 		expect(result[0]?.id).toBe(mod1A.id);
@@ -118,7 +115,7 @@ describe(querySearchNodes.name, () => {
 		const pkg2B = fn("b", "src/pkg2/b.ts", { package: "pkg2" });
 		await writer.addNodes([pkg1A, pkg2B]);
 
-		const result = querySearchNodes(db, "*", { package: "pkg1" });
+		const result = queryNodes(db, "*", { package: "pkg1" });
 
 		expect(result).toHaveLength(1);
 		expect(result[0]?.id).toBe(pkg1A.id);
@@ -130,7 +127,7 @@ describe(querySearchNodes.name, () => {
 		const foo = fn("foo");
 		await writer.addNodes([foo]);
 
-		const result = querySearchNodes(db, "bar*");
+		const result = queryNodes(db, "bar*");
 
 		expect(result).toEqual([]);
 	});
@@ -142,7 +139,7 @@ describe(querySearchNodes.name, () => {
 		const mod2FooFn = fn("foo", "src/mod2/foo.ts", { module: "mod2" });
 		await writer.addNodes([mod1FooFn, mod1FooClass, mod2FooFn]);
 
-		const result = querySearchNodes(db, "foo*", {
+		const result = queryNodes(db, "foo*", {
 			type: "Function",
 			module: "mod1",
 		});
@@ -170,7 +167,7 @@ describe(querySearchNodes.name, () => {
 		};
 		await writer.addNodes([fooFn, fooClass, fooInterface]);
 
-		const result = querySearchNodes(db, "*", {
+		const result = queryNodes(db, "*", {
 			type: ["Function", "Class"],
 		});
 
@@ -188,7 +185,7 @@ describe(querySearchNodes.name, () => {
 		const mod3C = fn("c", "src/mod3/c.ts", { module: "mod3" });
 		await writer.addNodes([mod1A, mod2B, mod3C]);
 
-		const result = querySearchNodes(db, "*", {
+		const result = queryNodes(db, "*", {
 			module: ["mod1", "mod2"],
 		});
 
@@ -206,7 +203,7 @@ describe(querySearchNodes.name, () => {
 		const pkg3C = fn("c", "src/pkg3/c.ts", { package: "pkg3" });
 		await writer.addNodes([pkg1A, pkg2B, pkg3C]);
 
-		const result = querySearchNodes(db, "*", {
+		const result = queryNodes(db, "*", {
 			package: ["pkg1", "pkg2"],
 		});
 
@@ -223,7 +220,7 @@ describe(querySearchNodes.name, () => {
 		const Foo = cls("Foo");
 		await writer.addNodes([foo, Foo]);
 
-		const result = querySearchNodes(db, "foo*");
+		const result = queryNodes(db, "foo*");
 
 		expect(result).toHaveLength(1);
 		expect(result[0]?.name).toBe("foo");
@@ -236,7 +233,7 @@ describe(querySearchNodes.name, () => {
 		const submitForm = fn("submitForm");
 		await writer.addNodes([handleClick, handleSubmit, submitForm]);
 
-		const result = querySearchNodes(db, "handle*");
+		const result = queryNodes(db, "handle*");
 
 		expect(result).toHaveLength(2);
 		const names = result.map((n) => n.name);
@@ -252,7 +249,7 @@ describe(querySearchNodes.name, () => {
 		const fn10 = fn("fn10");
 		await writer.addNodes([fn1, fn2, fn10]);
 
-		const result = querySearchNodes(db, "fn?");
+		const result = queryNodes(db, "fn?");
 
 		expect(result).toHaveLength(2);
 		const names = result.map((n) => n.name);
@@ -266,7 +263,7 @@ describe(querySearchNodes.name, () => {
 		const nodes = [fn("fn1"), fn("fn2"), fn("fn3"), fn("fn4"), fn("fn5")];
 		await writer.addNodes(nodes);
 
-		const result = querySearchNodes(db, "fn*", { limit: 3 });
+		const result = queryNodes(db, "fn*", { limit: 3 });
 
 		expect(result).toHaveLength(3);
 		// Should return first 3 results (alphabetically sorted)
@@ -279,7 +276,7 @@ describe(querySearchNodes.name, () => {
 		const nodes = [fn("fn1"), fn("fn2"), fn("fn3"), fn("fn4"), fn("fn5")];
 		await writer.addNodes(nodes);
 
-		const result = querySearchNodes(db, "fn*", { offset: 2 });
+		const result = queryNodes(db, "fn*", { offset: 2 });
 
 		expect(result).toHaveLength(3);
 		// Should skip first 2 results (fn1, fn2)
@@ -300,7 +297,7 @@ describe(querySearchNodes.name, () => {
 		];
 		await writer.addNodes(nodes);
 
-		const result = querySearchNodes(db, "fn*", { offset: 2, limit: 3 });
+		const result = queryNodes(db, "fn*", { offset: 2, limit: 3 });
 
 		expect(result).toHaveLength(3);
 		// Skip first 2, return next 3
@@ -313,7 +310,7 @@ describe(querySearchNodes.name, () => {
 		const nodes = [fn("fn1"), fn("fn2"), fn("fn3")];
 		await writer.addNodes(nodes);
 
-		const result = querySearchNodes(db, "fn*", { offset: 10 });
+		const result = queryNodes(db, "fn*", { offset: 10 });
 
 		expect(result).toEqual([]);
 	});
@@ -323,7 +320,7 @@ describe(querySearchNodes.name, () => {
 		const nodes = [fn("fn1"), fn("fn2"), fn("fn3")];
 		await writer.addNodes(nodes);
 
-		const result = querySearchNodes(db, "fn*", { limit: 100 });
+		const result = queryNodes(db, "fn*", { limit: 100 });
 
 		expect(result).toHaveLength(3);
 	});

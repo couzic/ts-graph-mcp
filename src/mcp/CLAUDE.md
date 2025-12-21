@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Exposes the TypeScript code graph as an MCP (Model Context Protocol) server that provides 6 tools for AI coding agents to query and explore code structure. This is the primary interface for the ts-graph-mcp project.
+Exposes the TypeScript code graph as an MCP (Model Context Protocol) server that provides 5 tools for AI coding agents to query and explore code structure. This is the primary interface for the ts-graph-mcp project.
 
 ## Architecture: Vertical Slices
 
@@ -10,7 +10,6 @@ Each tool is implemented as a self-contained vertical slice:
 
 ```
 src/tools/
-├── search-symbols/        (query.ts, format.ts, format.test.ts, handler.ts)
 ├── incoming-calls-deep/   (query.ts, format.ts, format.test.ts, handler.ts)
 ├── outgoing-calls-deep/   (query.ts, format.ts, format.test.ts, handler.ts)
 ├── analyze-impact/        (query.ts, format.ts, format.test.ts, handler.ts)
@@ -34,15 +33,14 @@ src/tools/
 ### `startMcpServer(db: Database.Database): Promise<void>`
 **File:** `McpServer.ts`
 
-Initializes and starts the MCP server on stdio transport with 6 registered tools. Dispatches tool calls to vertical slice handlers.
+Initializes and starts the MCP server on stdio transport with 5 registered tools. Dispatches tool calls to vertical slice handlers.
 
 **Tools provided:**
-1. `searchSymbols` - Search symbols by name pattern with filters (type, module, package, exported) and pagination (offset, limit)
-2. `incomingCallsDeep` - Find all callers of a symbol (extends LSP's incomingCalls with transitive traversal via maxDepth)
-3. `outgoingCallsDeep` - Find all callees of a symbol (extends LSP's outgoingCalls with transitive traversal via maxDepth)
-4. `analyzeImpact` - Impact analysis - all code affected by changes to a symbol
-5. `findPath` - Find shortest path between two symbols (BFS with maxDepth, maxPaths)
-6. `getNeighborhood` - Find all nodes within N edges of a symbol (with direction control, Mermaid output)
+1. `incomingCallsDeep` - Find all callers of a symbol (extends LSP's incomingCalls with transitive traversal via maxDepth)
+2. `outgoingCallsDeep` - Find all callees of a symbol (extends LSP's outgoingCalls with transitive traversal via maxDepth)
+3. `analyzeImpact` - Impact analysis - all code affected by changes to a symbol
+4. `findPath` - Find shortest path between two symbols (BFS with maxDepth, maxPaths)
+5. `getNeighborhood` - Find all nodes within N edges of a symbol (with direction control, Mermaid output)
 
 ### `main(): Promise<void>`
 **File:** `StartServer.ts`
@@ -72,27 +70,17 @@ CLI entry point that orchestrates database initialization and server startup. Ha
 All tools return hierarchical text optimized for LLM consumption:
 
 ```
-# searchSymbols example (with pagination)
-searchSymbols: User*
-count: 3
-showing: 3 (offset: 0, limit: 100)
-files: 2
+# incomingCallsDeep example
+target: saveUser (Function)
+file: src/db/user.ts
+offset: 15, limit: 8
+count: 2
 
-file: src/types.ts
-  module: core
-  package: main
-  matches: 2
-  interfaces[1]:
-    User [1-10] exp
-  typeAliases[1]:
-    UserId [12] exp = string
-
-file: src/models/User.ts
-  module: models
-  package: main
-  matches: 1
-  classes[1]:
-    UserService [5-50] exp
+src/api/handler.ts (1 callers):
+functions[1]:
+  handleRequest async (req:Request) → Promise<Response>
+    offset: 9, limit: 17
+    callCount: 1, depth: 1
 ```
 
 ### Dependencies
@@ -130,4 +118,3 @@ ts-graph-mcp --db :memory:
 - **Auto-indexing:** Only happens on first run when database doesn't exist
 - **No file watching:** Server doesn't auto-refresh on code changes (use external tooling or restart server)
 - **Tool execution:** All tools are read-only - no mutations to the code graph via MCP interface
-- **Pagination:** The `searchSymbols` tool supports offset/limit parameters for handling large result sets efficiently

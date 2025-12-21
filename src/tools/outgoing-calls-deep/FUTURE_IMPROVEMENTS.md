@@ -45,7 +45,7 @@ export function getCallees(
   if (!node) {
     return {
       error: `Node not found: ${nodeId}`,
-      suggestion: 'Use searchSymbols tool to find valid node IDs'
+      suggestion: 'Use LSP workspaceSymbol to find valid node IDs'
     };
   }
 

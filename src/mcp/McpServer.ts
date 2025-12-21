@@ -30,11 +30,6 @@ import {
 	type OutgoingCallsDeepParams,
 	outgoingCallsDeepDefinition,
 } from "../tools/outgoing-calls-deep/handler.js";
-import {
-	executeSearchSymbols,
-	type SearchSymbolsParams,
-	searchSymbolsDefinition,
-} from "../tools/search-symbols/handler.js";
 
 /**
  * Start the MCP server that exposes TypeScript code graph queries as tools.
@@ -58,7 +53,6 @@ export async function startMcpServer(db: Database.Database): Promise<void> {
 	server.setRequestHandler(ListToolsRequestSchema, async () => {
 		return {
 			tools: [
-				searchSymbolsDefinition,
 				incomingCallsDeepDefinition,
 				outgoingCallsDeepDefinition,
 				analyzeImpactDefinition,
@@ -74,14 +68,6 @@ export async function startMcpServer(db: Database.Database): Promise<void> {
 
 		try {
 			switch (name) {
-				case "searchSymbols": {
-					const params = args as unknown as SearchSymbolsParams;
-					const result = executeSearchSymbols(db, params);
-					return {
-						content: [{ type: "text" as const, text: result }],
-					};
-				}
-
 				case "incomingCallsDeep": {
 					const params = args as unknown as IncomingCallsDeepParams;
 					const result = executeIncomingCallsDeep(db, params);

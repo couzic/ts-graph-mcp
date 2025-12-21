@@ -97,12 +97,11 @@ src/
 **Tests:**
 - `incomingCallsDeep(logger)` - returns 10+ callers
 - `analyzeImpact(formatDate)` - shows all affected code
-- `searchSymbols(*validate*)` - pattern matching
+- Pattern matching covered by LSP `workspaceSymbol`
 
 **Benchmark Prompts:**
 - "What code uses the `logger` function?"
 - "If I change `formatDate`, what breaks?"
-- "Find all validation functions"
 
 **Why MCP wins:** `analyzeImpact` instantly shows blast radius vs manually tracing imports.
 
@@ -260,15 +259,13 @@ defineConfig({
 **Tests:**
 - Cross-package CALLS edges (api → core, web → core)
 - Cross-package USES_TYPE edges
-- `searchSymbols({ pattern: "*", package: "core" })` - package filtering
 - `analyzeImpact(core/types)` - impact across packages
 
 **Benchmark Prompts:**
 - "What in the `api` package uses `core` utilities?"
 - "If I change a type in `core`, what packages are affected?"
-- "List all exports from the `core` package"
 
-**Why MCP wins:** Package filtering narrows scope; impact analysis crosses package boundaries.
+**Why MCP wins:** Impact analysis crosses package boundaries instantly.
 
 ---
 
@@ -278,7 +275,6 @@ defineConfig({
 
 | Tool | Existing | Planned |
 |------|----------|---------|
-| `searchSymbols` | deep-chain, web-app, monorepo | shared-utils, multi-package |
 | `incomingCallsDeep` | deep-chain, monorepo | shared-utils |
 | `outgoingCallsDeep` | deep-chain, layered-api | - |
 | `analyzeImpact` | web-app, monorepo | shared-utils, type-system, property-access, multi-package |
@@ -313,7 +309,7 @@ defineConfig({
 
 ### With Benchmarks (new query patterns)
 
-1. **`shared-utils`** - Wide fan-in pattern, tests `searchSymbols` + `analyzeImpact`
+1. **`shared-utils`** - Wide fan-in pattern, tests `analyzeImpact`
 2. **`type-system`** - Type hierarchy, tests EXTENDS/IMPLEMENTS edges
 
 ### Integration Tests Only (query patterns already benchmarked)

@@ -14,12 +14,12 @@ import { queryCallers } from "../../src/tools/incoming-calls-deep/query.js";
 import { queryPath } from "../../src/tools/find-path/query.js";
 import { queryImpactedNodes } from "../../src/tools/analyze-impact/query.js";
 import { queryNeighbors } from "../../src/tools/get-neighborhood/query.js";
-import { querySearchNodes } from "../../src/tools/search-symbols/query.js";
+import { queryNodes } from "../../src/db/queryNodes.js";
 import { queryEdges } from "../../src/db/queryEdges.js";
 
 // Helper to get all nodes in a file (replacement for deprecated queryFileNodes)
 function queryFileNodes(db: Database.Database, filePath: string) {
-	return querySearchNodes(db, "*").filter((n) => n.filePath === filePath);
+	return queryNodes(db, "*").filter((n) => n.filePath === filePath);
 }
 
 /**
@@ -250,9 +250,9 @@ describe("deep-chain integration", () => {
 		});
 	});
 
-	describe(querySearchNodes.name, () => {
+	describe(queryNodes.name, () => {
 		it("finds all step functions with step* pattern (filtered by type)", () => {
-			const result = querySearchNodes(db, "step*", { type: "Function" });
+			const result = queryNodes(db, "step*", { type: "Function" });
 
 			expect(result).toHaveLength(9);
 			const names = result.map((n) => n.name).sort();
@@ -270,14 +270,14 @@ describe("deep-chain integration", () => {
 		});
 
 		it("finds all step files and functions without type filter", () => {
-			const result = querySearchNodes(db, "step*");
+			const result = queryNodes(db, "step*");
 
 			// 10 File nodes (step01.ts - step10.ts) + 9 Function nodes (step02 - step10)
 			expect(result).toHaveLength(19);
 		});
 
 		it("finds entry function", () => {
-			const result = querySearchNodes(db, "entry");
+			const result = queryNodes(db, "entry");
 
 			expect(result).toHaveLength(1);
 			expect(result[0]?.name).toBe("entry");
@@ -285,7 +285,7 @@ describe("deep-chain integration", () => {
 		});
 
 		it("finds specific step with exact pattern", () => {
-			const result = querySearchNodes(db, "step05");
+			const result = queryNodes(db, "step05");
 
 			expect(result).toHaveLength(1);
 			expect(result[0]?.name).toBe("step05");
