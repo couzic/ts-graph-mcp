@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Exposes the TypeScript code graph as an MCP (Model Context Protocol) server that provides 12 tools for AI coding agents to query and explore code structure. This is the primary interface for the ts-graph-mcp project.
+Exposes the TypeScript code graph as an MCP (Model Context Protocol) server that provides 10 tools for AI coding agents to query and explore code structure. This is the primary interface for the ts-graph-mcp project.
 
 **For tool documentation, see [`../tools/CLAUDE.md`](../tools/CLAUDE.md).**
 
@@ -12,10 +12,10 @@ Each tool is implemented as a self-contained vertical slice in `src/tools/<tool-
 
 ```
 src/tools/
-├── incoming-calls-deep/    ├── incoming-imports/     ├── incoming-extends/
-├── outgoing-calls-deep/    ├── outgoing-imports/     ├── outgoing-extends/
-├── analyze-impact/         ├── incoming-uses-type/   ├── incoming-package-deps/
-├── find-path/              ├── outgoing-uses-type/   └── outgoing-package-deps/
+├── incoming-calls-deep/    ├── incoming-imports/     ├── incoming-package-deps/
+├── outgoing-calls-deep/    ├── outgoing-imports/     ├── outgoing-package-deps/
+├── analyze-impact/         ├── incoming-uses-type/
+├── find-path/              ├── outgoing-uses-type/
 └── shared/                 (SymbolQuery.ts, resolveSymbol.ts, nodeFormatters.ts)
 ```
 
@@ -34,7 +34,7 @@ src/tools/
 ### `startMcpServer(db: Database.Database): Promise<void>`
 **File:** `McpServer.ts`
 
-Initializes and starts the MCP server on stdio transport with 12 registered tools. Dispatches tool calls to vertical slice handlers. See [`../tools/CLAUDE.md`](../tools/CLAUDE.md) for tool details.
+Initializes and starts the MCP server on stdio transport with 10 registered tools. Dispatches tool calls to vertical slice handlers. See [`../tools/CLAUDE.md`](../tools/CLAUDE.md) for tool details.
 
 ### `main(): Promise<void>`
 **File:** `StartServer.ts`

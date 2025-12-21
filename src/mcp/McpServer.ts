@@ -21,11 +21,6 @@ import {
 	incomingCallsDeepDefinition,
 } from "../tools/incoming-calls-deep/handler.js";
 import {
-	executeIncomingExtends,
-	type IncomingExtendsParams,
-	incomingExtendsDefinition,
-} from "../tools/incoming-extends/handler.js";
-import {
 	executeIncomingImports,
 	type IncomingImportsParams,
 	incomingImportsDefinition,
@@ -45,11 +40,6 @@ import {
 	type OutgoingCallsDeepParams,
 	outgoingCallsDeepDefinition,
 } from "../tools/outgoing-calls-deep/handler.js";
-import {
-	executeOutgoingExtends,
-	type OutgoingExtendsParams,
-	outgoingExtendsDefinition,
-} from "../tools/outgoing-extends/handler.js";
 import {
 	executeOutgoingImports,
 	type OutgoingImportsParams,
@@ -96,8 +86,6 @@ export async function startMcpServer(db: Database.Database): Promise<void> {
 				outgoingPackageDepsDefinition,
 				incomingUsesTypeDefinition,
 				outgoingUsesTypeDefinition,
-				incomingExtendsDefinition,
-				outgoingExtendsDefinition,
 				analyzeImpactDefinition,
 				findPathDefinition,
 			],
@@ -158,25 +146,9 @@ export async function startMcpServer(db: Database.Database): Promise<void> {
 					};
 				}
 
-				case "outgoingExtends": {
-					const params = args as unknown as OutgoingExtendsParams;
-					const result = executeOutgoingExtends(db, params);
-					return {
-						content: [{ type: "text" as const, text: result }],
-					};
-				}
-
 				case "incomingUsesType": {
 					const params = args as unknown as IncomingUsesTypeParams;
 					const result = executeIncomingUsesType(db, params);
-					return {
-						content: [{ type: "text" as const, text: result }],
-					};
-				}
-
-				case "incomingExtends": {
-					const params = args as unknown as IncomingExtendsParams;
-					const result = executeIncomingExtends(db, params);
 					return {
 						content: [{ type: "text" as const, text: result }],
 					};

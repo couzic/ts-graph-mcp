@@ -94,7 +94,7 @@ src/tools/<tool-name>/
 
 ## MCP Tools Reference
 
-The MCP server exposes 12 focused tools organized by relationship type. All tools use symbol-based queries with optional filters (`file`, `module`, `package`) for disambiguation.
+The MCP server exposes 10 focused tools organized by relationship type. All tools use symbol-based queries with optional filters (`file`, `module`, `package`) for disambiguation.
 
 ### Call Graph Tools
 
@@ -164,30 +164,6 @@ Find what types a function or class references in its signatures.
 |-----------|----------|-------------|
 | `symbol` | ✓ | Function, Method, or Class name |
 | `context` | | Filter: `"parameter"`, `"return"`, `"property"`, `"variable"` |
-| `file` | | Narrow scope to a specific file |
-| `module` | | Narrow scope to a specific module |
-| `package` | | Narrow scope to a specific package |
-
-### Inheritance Tools
-
-#### `incomingExtends`
-Find what classes/interfaces extend a base (subclass tree).
-
-| Parameter | Required | Description |
-|-----------|----------|-------------|
-| `symbol` | ✓ | Class or Interface name |
-| `maxDepth` | | Traversal depth (1 = direct, 2+ = full hierarchy, default: 10) |
-| `file` | | Narrow scope to a specific file |
-| `module` | | Narrow scope to a specific module |
-| `package` | | Narrow scope to a specific package |
-
-#### `outgoingExtends`
-Find what a class/interface extends (superclass chain).
-
-| Parameter | Required | Description |
-|-----------|----------|-------------|
-| `symbol` | ✓ | Class or Interface name |
-| `maxDepth` | | Traversal depth (1 = direct, 2+ = full chain, default: 10) |
 | `file` | | Narrow scope to a specific file |
 | `module` | | Narrow scope to a specific module |
 | `package` | | Narrow scope to a specific package |

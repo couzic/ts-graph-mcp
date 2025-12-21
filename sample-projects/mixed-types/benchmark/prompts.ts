@@ -2,9 +2,7 @@
  * Benchmark prompts for mixed-types test project.
  *
  * Tests type system tools:
- * - P1: incomingExtends (find subclasses, transitive)
- * - P2: outgoingExtends (find parent class chain)
- * - P3: incomingUsesType (find type consumers)
+ * - P1: incomingUsesType (find type consumers)
  */
 
 import type { BenchmarkConfig, BenchmarkPrompt } from "../../../benchmark/lib/types.js";
@@ -21,22 +19,6 @@ export const config: BenchmarkConfig = {
 export const prompts: BenchmarkPrompt[] = [
 	{
 		id: "P1",
-		name: "Find subclasses",
-		prompt:
-			"What classes extend BaseService in this project, including indirect subclasses?",
-		expectedContains: ["UserService", "AdminService"],
-		expectedTool: "incomingExtends",
-	},
-	{
-		id: "P2",
-		name: "Find parent class chain",
-		prompt:
-			"What does the AdminService class extend? Trace its full inheritance chain.",
-		expectedContains: ["UserService", "BaseService"],
-		expectedTool: "outgoingExtends",
-	},
-	{
-		id: "P3",
 		name: "Find type consumers",
 		prompt: "What methods use the User type as a parameter?",
 		expectedContains: ["addUser"],

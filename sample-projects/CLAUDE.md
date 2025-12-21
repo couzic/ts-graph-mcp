@@ -19,8 +19,8 @@ Sample TypeScript codebases for integration testing and benchmarking.
 ### `mixed-types/`
 All 8 node types: Function, Class, Method, Interface, TypeAlias, Variable, Property, File.
 - Tests node extraction completeness and type-specific properties
-- **Benchmark for type system tools**: `incomingExtends`, `outgoingExtends`, `incomingUsesType`
-- 3-level class hierarchy (`AdminService → UserService → BaseService`) for transitive inheritance testing
+- **Benchmark for type usage tools**: `incomingUsesType`
+- 3-level class hierarchy (`AdminService → UserService → BaseService`) for edge extraction testing
 - 28 integration tests
 
 ### `web-app/`
@@ -118,7 +118,7 @@ beforeAll(async () => {
 **Current strategy:**
 - `deep-chain` benchmarks prove value for **deep transitive traversal**
 - `monorepo` benchmarks prove value for **cross-module/package analysis** and **package dependencies**
-- `mixed-types` benchmarks prove value for **type system tools** (inheritance, implementations, type usage)
+- `mixed-types` benchmarks prove value for **type usage tracking** (`incomingUsesType`)
 - `web-app` has full integration test coverage but no benchmarks (query patterns already covered by other projects)
 
 ## Benchmarking
@@ -181,7 +181,7 @@ sample-project/
 |---------|---------|---------------|
 | `deep-chain` | P1-P3 | `outgoingCallsDeep`, `findPath`, `analyzeImpact` |
 | `monorepo` | P1-P6 | `incomingCallsDeep`, `analyzeImpact`, `outgoingImports`, `outgoingPackageDeps`, `incomingPackageDeps` |
-| `mixed-types` | P1-P3 | `incomingExtends`, `outgoingExtends`, `incomingUsesType` |
+| `mixed-types` | P1 | `incomingUsesType` |
 
 ### Sample Results (deep-chain)
 
