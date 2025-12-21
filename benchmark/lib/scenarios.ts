@@ -6,39 +6,23 @@
 import type { BenchmarkScenario } from "./types.js";
 
 /**
- * All MCP tools available for benchmarking.
+ * Benchmark scenarios compare Claude's performance WITH vs WITHOUT MCP tools.
+ *
+ * Design principle: Both scenarios have access to ALL standard Claude Code tools
+ * (Read, Glob, Grep, LSP, Task, etc.). The only difference is whether ts-graph-mcp
+ * tools are available. This measures: "Does adding MCP improve performance?"
  */
-const MCP_TOOLS = [
-	"mcp__ts-graph-mcp__get_callees",
-	"mcp__ts-graph-mcp__get_callers",
-	"mcp__ts-graph-mcp__find_path",
-	"mcp__ts-graph-mcp__get_impact",
-	"mcp__ts-graph-mcp__search_nodes",
-	"mcp__ts-graph-mcp__get_neighbors",
-	"mcp__ts-graph-mcp__get_file_symbols",
-].join(",");
-
 export const scenarios: BenchmarkScenario[] = [
 	{
 		id: "with-mcp",
 		name: "WITH MCP",
-		cliFlags: [
-			"--allowedTools",
-			`${MCP_TOOLS},Read,Glob,Grep`,
-		],
-		description: "Claude has access to ts-graph-mcp tools for graph queries",
+		cliFlags: ["--allowedTools", "mcp__ts-graph-mcp__*"],
+		description: "All tools available, including ts-graph-mcp",
 	},
 	{
 		id: "without-mcp",
 		name: "WITHOUT MCP",
-		cliFlags: ["--disallowedTools", "mcp__ts-graph-mcp__*"],
-		description: "Claude must read files manually to trace relationships",
+		cliFlags: [],
+		description: "All tools available, EXCEPT ts-graph-mcp",
 	},
 ];
-
-/**
- * Get a scenario by ID.
- */
-export function getScenario(id: string): BenchmarkScenario | undefined {
-	return scenarios.find((s) => s.id === id);
-}
