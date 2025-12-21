@@ -20,7 +20,7 @@ export interface FindPathParams {
 export const findPathDefinition = {
 	name: "findPath",
 	description:
-		"Find the shortest path between two nodes in the code graph. Returns the path with nodes and edges.",
+		"Find how two symbols are connected. Returns the call/import chain from source to target. Use this to answer 'How does function A eventually call function B?' or 'What's the dependency path between these modules?'",
 	inputSchema: {
 		type: "object" as const,
 		properties: {

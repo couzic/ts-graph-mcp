@@ -93,7 +93,7 @@ export const main = async (): Promise<void> => {
 				});
 
 				console.error(
-					`Indexed ${result.filesProcessed} files (${result.nodesAdded} nodes, ${result.edgesAdded} edges) in ${result.durationMs}ms`,
+					`Indexed ${result.filesProcessed} files (${result.nodesAdded} symbols, ${result.edgesAdded} connections) in ${result.durationMs}ms`,
 				);
 
 				if (result.errors && result.errors.length > 0) {

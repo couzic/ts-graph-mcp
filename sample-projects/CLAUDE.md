@@ -164,7 +164,8 @@ benchmark/
 **Each test project only needs ONE file:**
 ```
 sample-project/
-├── .mcp.json              # Points to ts-graph-mcp server
+├── .mcp-enabled.json      # MCP server config (for WITH MCP scenario)
+├── .mcp-disabled.json     # Empty config (for WITHOUT MCP scenario)
 ├── .ts-graph/graph.db     # Pre-indexed database (created by setup)
 ├── tsconfig.json
 ├── src/
@@ -189,7 +190,9 @@ sample-project/
 
 ### Adding Benchmarks to a Test Project
 
-1. **Create `.mcp.json`** in the test project root:
+1. **Create MCP config files** in the test project root:
+
+   `.mcp-enabled.json` (for WITH MCP scenario):
    ```json
    {
      "mcpServers": {
@@ -198,6 +201,13 @@ sample-project/
          "args": ["../../dist/mcp/StartServer.js", "--db", ".ts-graph/graph.db"]
        }
      }
+   }
+   ```
+
+   `.mcp-disabled.json` (for WITHOUT MCP scenario):
+   ```json
+   {
+     "mcpServers": {}
    }
    ```
 

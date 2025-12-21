@@ -21,7 +21,7 @@ export interface AnalyzeImpactParams {
 export const analyzeImpactDefinition = {
 	name: "analyzeImpact",
 	description:
-		"Impact analysis: find all code affected by changes to target. Returns all nodes that depend on the specified node.",
+		"Find all code that would be affected if you change a symbol. Includes callers, importers, and type users - everything that depends on this symbol directly or transitively. Use this before refactoring to understand the blast radius.",
 	inputSchema: {
 		type: "object" as const,
 		properties: {

@@ -21,7 +21,7 @@ export interface OutgoingCallsDeepParams {
 export const outgoingCallsDeepDefinition = {
 	name: "outgoingCallsDeep",
 	description:
-		"Find all functions/methods that the source calls. Returns nodes called by the specified function/method.",
+		"Find all functions or methods called by a symbol, including transitive callees. Use this to answer 'What does this function depend on?' or 'Trace the call chain from this entry point.'",
 	inputSchema: {
 		type: "object" as const,
 		properties: {

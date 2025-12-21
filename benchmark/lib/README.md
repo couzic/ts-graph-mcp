@@ -84,7 +84,8 @@ benchmark/
 
 sample-projects/
 └── <project>/
-    ├── .mcp.json              # MCP server configuration
+    ├── .mcp-enabled.json      # MCP server configuration (for WITH MCP scenario)
+    ├── .mcp-disabled.json     # Empty config (for WITHOUT MCP scenario)
     ├── tsconfig.json
     ├── src/                   # Source files to index
     └── benchmark/

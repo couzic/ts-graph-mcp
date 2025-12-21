@@ -23,7 +23,7 @@ export interface GetNeighborhoodParams {
 export const getNeighborhoodDefinition = {
 	name: "getNeighborhood",
 	description:
-		"Find all nodes within a given distance from a center node. Returns a subgraph containing the neighborhood.",
+		"Find dependencies or dependents of a symbol. Use direction='outgoing' to see what a symbol imports, calls, or uses. Use direction='incoming' to see what imports, calls, or uses this symbol. The distance parameter controls how many levels deep to traverse (1 = direct only, 2+ = transitive).",
 	inputSchema: {
 		type: "object" as const,
 		properties: {
@@ -46,7 +46,7 @@ export const getNeighborhoodDefinition = {
 			distance: {
 				type: "number",
 				description:
-					"Distance from center node (number of edges, 1-100, default: 1)",
+					"How many levels of dependencies to traverse (1 = direct only, 2+ = transitive, default: 1)",
 			},
 			direction: {
 				type: "string",

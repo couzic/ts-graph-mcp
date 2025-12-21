@@ -21,7 +21,7 @@ export interface IncomingCallsDeepParams {
 export const incomingCallsDeepDefinition = {
 	name: "incomingCallsDeep",
 	description:
-		"Find all functions/methods that call the target. Returns nodes that call the specified function/method.",
+		"Find all callers of a function or method, including transitive callers (callers of callers). Use this to answer 'Who uses this function?' or 'What code calls this API?'",
 	inputSchema: {
 		type: "object" as const,
 		properties: {
