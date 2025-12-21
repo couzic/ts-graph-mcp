@@ -1,11 +1,10 @@
 /**
  * Benchmark prompts for mixed-types test project.
  *
- * Tests type system tools that have zero benchmark coverage:
+ * Tests type system tools:
  * - P1: incomingExtends (find subclasses, transitive)
  * - P2: outgoingExtends (find parent class chain)
- * - P3: incomingImplements (find interface implementations)
- * - P4: incomingUsesType (find type consumers)
+ * - P3: incomingUsesType (find type consumers)
  */
 
 import type { BenchmarkConfig, BenchmarkPrompt } from "../../../benchmark/lib/types.js";
@@ -38,13 +37,6 @@ export const prompts: BenchmarkPrompt[] = [
 	},
 	{
 		id: "P3",
-		name: "Find interface implementations",
-		prompt: "What classes implement the Auditable interface?",
-		expectedContains: ["AuditLog", "ActivityLog"],
-		expectedTool: "incomingImplements",
-	},
-	{
-		id: "P4",
 		name: "Find type consumers",
 		prompt: "What methods use the User type as a parameter?",
 		expectedContains: ["addUser"],

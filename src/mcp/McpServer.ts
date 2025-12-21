@@ -26,11 +26,6 @@ import {
 	incomingExtendsDefinition,
 } from "../tools/incoming-extends/handler.js";
 import {
-	executeIncomingImplements,
-	type IncomingImplementsParams,
-	incomingImplementsDefinition,
-} from "../tools/incoming-implements/handler.js";
-import {
 	executeIncomingImports,
 	type IncomingImportsParams,
 	incomingImportsDefinition,
@@ -55,11 +50,6 @@ import {
 	type OutgoingExtendsParams,
 	outgoingExtendsDefinition,
 } from "../tools/outgoing-extends/handler.js";
-import {
-	executeOutgoingImplements,
-	type OutgoingImplementsParams,
-	outgoingImplementsDefinition,
-} from "../tools/outgoing-implements/handler.js";
 import {
 	executeOutgoingImports,
 	type OutgoingImportsParams,
@@ -107,9 +97,7 @@ export async function startMcpServer(db: Database.Database): Promise<void> {
 				incomingUsesTypeDefinition,
 				outgoingUsesTypeDefinition,
 				incomingExtendsDefinition,
-				incomingImplementsDefinition,
 				outgoingExtendsDefinition,
-				outgoingImplementsDefinition,
 				analyzeImpactDefinition,
 				findPathDefinition,
 			],
@@ -189,22 +177,6 @@ export async function startMcpServer(db: Database.Database): Promise<void> {
 				case "incomingExtends": {
 					const params = args as unknown as IncomingExtendsParams;
 					const result = executeIncomingExtends(db, params);
-					return {
-						content: [{ type: "text" as const, text: result }],
-					};
-				}
-
-				case "incomingImplements": {
-					const params = args as unknown as IncomingImplementsParams;
-					const result = executeIncomingImplements(db, params);
-					return {
-						content: [{ type: "text" as const, text: result }],
-					};
-				}
-
-				case "outgoingImplements": {
-					const params = args as unknown as OutgoingImplementsParams;
-					const result = executeOutgoingImplements(db, params);
 					return {
 						content: [{ type: "text" as const, text: result }],
 					};

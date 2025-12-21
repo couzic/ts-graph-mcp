@@ -182,10 +182,10 @@ The schema intentionally omits FK constraints on edges table for three key reaso
 
 ### `/src/mcp/` - MCP Server
 
-**Purpose**: Exposes the code graph as an MCP server with 14 focused tools.
+**Purpose**: Exposes the code graph as an MCP server with 12 focused tools.
 
 **Key Files**:
-- `McpServer.ts` - Server implementation with 14 tool registrations
+- `McpServer.ts` - Server implementation with 12 tool registrations
 - `StartServer.ts` - CLI entry point with auto-indexing on first run
 
 **Design Highlights**:
@@ -407,7 +407,7 @@ if (targetId) {
 
 ## MCP Tools
 
-The MCP server exposes 14 focused tools for querying the code graph. All tools use symbol-based queries with optional filters (`file`, `module`, `package`) for disambiguation.
+The MCP server exposes 12 focused tools for querying the code graph. All tools use symbol-based queries with optional filters (`file`, `module`, `package`) for disambiguation.
 
 **For detailed parameter documentation, see [`src/tools/CLAUDE.md`](src/tools/CLAUDE.md).**
 
@@ -421,8 +421,6 @@ The MCP server exposes 14 focused tools for querying the code graph. All tools u
 | | `outgoingUsesType` | Find types used by a symbol |
 | **Inheritance** | `incomingExtends` | Find subclasses |
 | | `outgoingExtends` | Find superclasses |
-| | `incomingImplements` | Find implementing classes |
-| | `outgoingImplements` | Find implemented interfaces |
 | **Package Deps** | `outgoingPackageDeps` | Find package dependencies |
 | | `incomingPackageDeps` | Find reverse package deps |
 | **Analysis** | `analyzeImpact` | Impact analysis |
@@ -511,7 +509,7 @@ The built-in LSP tool provides:
 | Search symbols | `workspaceSymbol` | ❌ (removed) | None - use LSP |
 | Direct callers | `incomingCalls` | `incomingCallsDeep(maxDepth=1)` | **Partial** - ts-graph has transitive traversal |
 | Direct callees | `outgoingCalls` | `outgoingCallsDeep(maxDepth=1)` | **Partial** - ts-graph has transitive traversal |
-| Implementations | `goToImplementation` | `incomingImplements` | **Partial** - ts-graph has package filtering |
+| Implementations | `goToImplementation` | ❌ (removed) | None - use LSP |
 | Definition lookup | `goToDefinition` | ❌ | None |
 | Hover docs | `hover` | ❌ | None |
 | **Transitive call graph** | ❌ | `incomingCallsDeep/outgoingCallsDeep` | **Unique** |

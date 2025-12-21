@@ -94,7 +94,7 @@ src/tools/<tool-name>/
 
 ## MCP Tools Reference
 
-The MCP server exposes 14 focused tools organized by relationship type. All tools use symbol-based queries with optional filters (`file`, `module`, `package`) for disambiguation.
+The MCP server exposes 12 focused tools organized by relationship type. All tools use symbol-based queries with optional filters (`file`, `module`, `package`) for disambiguation.
 
 ### Call Graph Tools
 
@@ -188,26 +188,6 @@ Find what a class/interface extends (superclass chain).
 |-----------|----------|-------------|
 | `symbol` | ✓ | Class or Interface name |
 | `maxDepth` | | Traversal depth (1 = direct, 2+ = full chain, default: 10) |
-| `file` | | Narrow scope to a specific file |
-| `module` | | Narrow scope to a specific module |
-| `package` | | Narrow scope to a specific package |
-
-#### `incomingImplements`
-Find what classes implement an interface.
-
-| Parameter | Required | Description |
-|-----------|----------|-------------|
-| `symbol` | ✓ | Interface name |
-| `file` | | Narrow scope to a specific file |
-| `module` | | Narrow scope to a specific module |
-| `package` | | Narrow scope to a specific package |
-
-#### `outgoingImplements`
-Find what interfaces a class implements.
-
-| Parameter | Required | Description |
-|-----------|----------|-------------|
-| `symbol` | ✓ | Class name |
 | `file` | | Narrow scope to a specific file |
 | `module` | | Narrow scope to a specific module |
 | `package` | | Narrow scope to a specific package |

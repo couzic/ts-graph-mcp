@@ -19,7 +19,7 @@ Sample TypeScript codebases for integration testing and benchmarking.
 ### `mixed-types/`
 All 8 node types: Function, Class, Method, Interface, TypeAlias, Variable, Property, File.
 - Tests node extraction completeness and type-specific properties
-- **Benchmark for type system tools**: `incomingExtends`, `outgoingExtends`, `incomingImplements`, `incomingUsesType`
+- **Benchmark for type system tools**: `incomingExtends`, `outgoingExtends`, `incomingUsesType`
 - 3-level class hierarchy (`AdminService → UserService → BaseService`) for transitive inheritance testing
 - 28 integration tests
 
@@ -180,7 +180,7 @@ sample-project/
 |---------|---------|---------------|
 | `deep-chain` | P1-P3 | `outgoingCallsDeep`, `findPath`, `analyzeImpact` |
 | `monorepo` | P1-P6 | `incomingCallsDeep`, `analyzeImpact`, `outgoingImports`, `outgoingPackageDeps`, `incomingPackageDeps` |
-| `mixed-types` | P1-P4 | `incomingExtends`, `outgoingExtends`, `incomingImplements`, `incomingUsesType` |
+| `mixed-types` | P1-P3 | `incomingExtends`, `outgoingExtends`, `incomingUsesType` |
 
 ### Sample Results (deep-chain)
 
