@@ -7,8 +7,6 @@ Parses TypeScript source code using ts-morph AST and extracts nodes (symbols) an
 ### Public API (`Ingestion.ts`)
 
 - `indexProject` - Index entire project based on config (processes all modules/packages)
-- `indexFile` - Index a single file incrementally (auto-removes old data first)
-- `removeFile` - Remove file from index (for deletions)
 
 ### Extraction (`extract/`)
 
@@ -72,11 +70,9 @@ This order maintains a clean two-pass architecture. Edge extraction uses `buildI
 - `IMPLEMENTS` - Class implements interface
 - `USES_TYPE` - Type references in parameters, returns, properties
 
-### Incremental Updates
+### Full Re-index
 
-- `indexFile` automatically removes old file data before re-indexing
-- `removeFile` for deletions (idempotent - no error if file not indexed)
-- `indexProject` with `clearFirst: true` for full re-index
+- `indexProject` with `clearFirst: true` clears DB before indexing
 
 ### ts-morph Integration
 
@@ -86,16 +82,6 @@ Uses ts-morph for type-aware TypeScript parsing:
 - Skips `node_modules` and `.d.ts` files automatically
 
 ## Common Patterns
-
-### Index Single File
-```typescript
-await indexFile(absolutePath, dbWriter, {
-  module: "core",
-  package: "utils",
-  relativePath: "src/utils/format.ts",
-  project: existingProject  // Optional: reuse for performance
-});
-```
 
 ### Index Entire Project
 ```typescript

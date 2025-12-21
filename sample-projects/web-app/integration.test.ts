@@ -265,6 +265,31 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 		});
 	});
 
+	describe("node integrity (regression tests)", () => {
+		it("has no duplicate node IDs", () => {
+			const allNodes = queryNodes(db, "*");
+			const ids = allNodes.map((n) => n.id);
+			const uniqueIds = new Set(ids);
+
+			expect(ids.length).toBe(uniqueIds.size);
+		});
+
+		it("assigns correct module based on file path", () => {
+			const allNodes = queryNodes(db, "*");
+
+			// Every node's module should match its file path prefix
+			for (const node of allNodes) {
+				if (node.filePath.startsWith("shared/")) {
+					expect(node.module).toBe("shared");
+				} else if (node.filePath.startsWith("frontend/")) {
+					expect(node.module).toBe("frontend");
+				} else if (node.filePath.startsWith("backend/")) {
+					expect(node.module).toBe("backend");
+				}
+			}
+		});
+	});
+
 	describe("edge summary (diagnostic)", () => {
 		/**
 		 * This test shows what nodes exist and their module assignments.
@@ -314,7 +339,6 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 
 		/**
 		 * This test provides diagnostic output to understand what edges were created.
-		 * Useful for debugging Issue #5.
 		 */
 		it("logs all edges for debugging", () => {
 			const allEdges = queryEdges(db, {});
@@ -355,12 +379,8 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 				console.log(`  ${e.type}: ${e.source} → ${e.target}`);
 			}
 
-			// This assertion documents the expected state when Issue #5 is fixed
-			// Currently fails because cross-module edges are dropped
-			expect(
-				crossModuleEdges.length,
-				"Cross-module edges should exist when Issue #5 is fixed",
-			).toBeGreaterThan(0);
+			// Cross-module edges should be created (requires proper tsconfig references)
+			expect(crossModuleEdges.length).toBeGreaterThan(0);
 		});
 	});
 });

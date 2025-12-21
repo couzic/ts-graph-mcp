@@ -51,7 +51,7 @@ The project uses a **vertical slice architecture** where each MCP tool owns its 
 ┌─────────────────────────────────────────────────────────────────┐
 │                    SQLite Database (graph.db)                   │
 │                    - nodes table (8 types)                      │
-│                    - edges table (8 types)                      │
+│                    - edges table (6 types)                      │
 └────────────────────────────────┬────────────────────────────────┘
                                  ↑ writes
                                  │
@@ -110,7 +110,7 @@ Each MCP tool folder (`src/tools/<tool>/`) contains:
 **Note**: Query logic lives in each tool's `query.ts` file (`src/tools/*/query.ts`), using direct SQL queries via better-sqlite3. This vertical slice approach eliminates the need for a shared reader abstraction.
 
 **Design Highlights**:
-- Interface-first design allows pluggable backends (SQLite today, Neo4j/Memgraph future)
+- Interface-first design allows pluggable backends
 - Recursive CTEs for efficient graph traversals with cycle detection
 - No FK constraints - enables parallel indexing, backend-agnostic design (queries use JOINs to filter dangling edges)
 - Upsert semantics (insert or update) for idempotent operations
@@ -135,10 +135,10 @@ The schema intentionally omits FK constraints on edges table for three key reaso
 **Purpose**: Parse TypeScript source code and extract graph structure.
 
 **Key Files**:
-- `Ingestion.ts` - Public API (`indexProject`, `indexFile`, `removeFile`)
+- `Ingestion.ts` - Public API (`indexProject`)
 - `Extractor.ts` - Orchestrates extraction: nodes first, then edges
 - `NodeExtractors.ts` - Extracts 8 node types from AST (Function, Class, Method, etc.)
-- `EdgeExtractors.ts` - Extracts 8 edge types from AST (CALLS, IMPORTS, etc.)
+- `EdgeExtractors.ts` - Extracts 6 edge types from AST (CALLS, IMPORTS, etc.)
 - `IdGenerator.ts` - Generates deterministic node IDs (`{filePath}:{symbolPath}`)
 - `normalizeTypeText.ts` - Collapses multiline TypeScript types to single line
 
@@ -146,7 +146,6 @@ The schema intentionally omits FK constraints on edges table for three key reaso
 - Streaming architecture: processes one file at a time (nodes → write → edges → write)
 - Cross-file resolution via `buildImportMap` (no global nodes array needed)
 - Memory efficient: O(1) per file, scales to any codebase size
-- Incremental indexing via `indexFile()` with automatic cleanup
 - Uses ts-morph for type-aware AST parsing with tsconfig integration
 - No dangling edge filtering needed: queries use JOINs to filter automatically
 
@@ -227,7 +226,7 @@ BaseNode {
 7. **File** - `extension`
 8. **Property** - `propertyType`, `optional`, `readonly`
 
-### Edge Types (8 Total)
+### Edge Types (6 Total)
 
 All edges have source/target/type plus edge-specific metadata:
 
@@ -253,8 +252,6 @@ Edge {
 4. **IMPLEMENTS** - Class implements interface
 5. **EXTENDS** - Class/interface inheritance
 6. **USES_TYPE** - Type references in parameters/returns/properties (tracks `context`)
-7. **READS_PROPERTY** - Property access (reads)
-8. **WRITES_PROPERTY** - Property assignment (writes)
 
 ### Node ID Format
 
@@ -407,22 +404,6 @@ if (targetId) {
    Missing nodes simply end that traversal branch.
 
 3. **Enables parallel processing** - No FK constraints means packages can be indexed in any order
-
-### Incremental Updates
-
-The `indexFile()` API supports incremental re-indexing:
-
-```typescript
-// 1. Remove old data for file (edges first, then nodes)
-await dbWriter.removeFileNodes(filePath);
-
-// 2. Extract fresh nodes and edges
-const { nodes, edges } = extractFromSourceFile(sourceFile, context);
-
-// 3. Write to database (upsert)
-await dbWriter.addNodes(nodes);
-await dbWriter.addEdges(edges);
-```
 
 ## MCP Tools
 
@@ -640,11 +621,21 @@ The trade-off of more frequent DB writes is offset by:
 
 ### 2. Cross-Module Edge Resolution
 
-**Status**: Known issue with planned fix (see ISSUES.md #5, ROADMAP.md)
+**Status**: Working
 
-Edges that cross module boundaries are currently dropped during ingestion. This is a **high-priority bug** blocking monorepo support, not an accepted limitation.
+Cross-module edges (CALLS, USES_TYPE, IMPORTS, etc.) are correctly extracted when packages use tsconfig project references and path aliases.
 
-**Fix strategy**: Deferred Edge Table - collect edges during indexing, resolve after all modules are indexed. See ISSUES.md for implementation details.
+**How it works**:
+- ts-morph loads all referenced projects when given a tsconfig with `references`
+- `getModuleSpecifierSourceFile()` resolves imports across package boundaries
+- Edge extractors use `buildImportMap` to resolve cross-module symbols
+- The source file filter in `processPackage()` limits *extraction* to the current package, but ts-morph retains knowledge of all referenced files for resolution
+
+**Requirements for cross-module resolution**:
+- Packages must have proper tsconfig `references` fields
+- Path aliases (e.g., `@shared/*`) must be configured in tsconfig `paths`
+
+See `sample-projects/web-app/` and `sample-projects/monorepo/` for working examples with 9 and 22 cross-module edges respectively.
 
 ### 3. Output Format Optimization
 
@@ -658,17 +649,13 @@ Each MCP tool has its own `format.ts` file producing hierarchical text output op
 
 See `docs/toon-optimization/` for historical analysis that informed the current format.
 
-### 4. No Incremental File Watching (Yet)
+### 4. SQLite Only
 
-**Status**: Planned feature (chokidar dependency already added)
+The `DbWriter` interface exists for writes, but query logic is embedded in each tool's `query.ts` file using direct SQLite queries.
+
+### 5. No File Watching
 
 Server doesn't auto-refresh on code changes. Requires restart to pick up changes.
-
-### 5. SQLite Only
-
-**Status**: By design (Neo4j/Memgraph support planned)
-
-The `DbWriter` interface exists for writes, but query logic is embedded in each tool's `query.ts` file using direct SQLite queries. Supporting other backends would require abstracting the recursive CTE queries.
 
 ---
 
