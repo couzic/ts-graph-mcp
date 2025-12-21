@@ -12,6 +12,7 @@
  * The test project must have a benchmark/prompts.ts that exports a `config` object.
  */
 
+import { access } from "node:fs/promises";
 import { mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { closeDatabase, openDatabase } from "../../src/db/sqlite/SqliteConnection.js";
@@ -22,6 +23,25 @@ import type { ProjectConfig } from "../../src/config/ConfigSchema.js";
 import type { BenchmarkConfig } from "./types.js";
 
 const DEFAULT_DB_PATH = ".ts-graph/graph.db";
+const PROJECT_CONFIG_EXTENSIONS = [".ts", ".js"] as const;
+
+/**
+ * Try to load the project's ts-graph-mcp.config.(ts|js) if it exists.
+ * Returns undefined if not found.
+ */
+async function tryLoadProjectConfig(projectRoot: string): Promise<ProjectConfig | undefined> {
+	for (const ext of PROJECT_CONFIG_EXTENSIONS) {
+		const configPath = join(projectRoot, `ts-graph-mcp.config${ext}`);
+		try {
+			await access(configPath);
+			const module = await import(configPath);
+			return module.default as ProjectConfig;
+		} catch {
+			// Try next extension
+		}
+	}
+	return undefined;
+}
 
 /**
  * Run the benchmark setup for a test project.
@@ -46,8 +66,10 @@ export async function setupBenchmark(config: BenchmarkConfig): Promise<void> {
 	const db = openDatabase({ path: fullDbPath });
 	initializeSchema(db);
 
-	// Build project config from benchmark config
-	const projectConfig: ProjectConfig = {
+	// Try to load the project's actual config file first (for multi-module/package projects)
+	// Fall back to creating a flat config from benchmark config
+	const loadedConfig = await tryLoadProjectConfig(config.projectRoot);
+	const projectConfig: ProjectConfig = loadedConfig ?? {
 		modules: [
 			{
 				name: config.moduleName ?? config.projectName,
@@ -60,6 +82,14 @@ export async function setupBenchmark(config: BenchmarkConfig): Promise<void> {
 			},
 		],
 	};
+
+	if (loadedConfig) {
+		const moduleCount = loadedConfig.modules.length;
+		const packageCount = loadedConfig.modules.reduce((sum, m) => sum + m.packages.length, 0);
+		console.log(`Loaded project config: ${moduleCount} modules, ${packageCount} packages`);
+	} else {
+		console.log("Using flat config (single module/package)");
+	}
 
 	// Index the project
 	console.log("Indexing project...");
