@@ -2,8 +2,9 @@
  * Benchmark prompts for layered-api test project.
  *
  * Each prompt tests a different MCP tool capability:
- * - P1: findPath (multi-layer path finding)
- * - P2: outgoingCallsDeep (forward traversal through layers)
+ * - P1: Vague architectural question (negative test - should NOT use findPath)
+ * - P2: outgoingCallsDeep with specific symbol
+ * - P3: findPath with precise source and target symbols (positive test)
  */
 
 import type { BenchmarkConfig, BenchmarkPrompt } from "../../../benchmark/lib/types.js";
@@ -21,7 +22,7 @@ export const config: BenchmarkConfig = {
 export const prompts: BenchmarkPrompt[] = [
 	{
 		id: "P1",
-		name: "Request to database path",
+		name: "Vague architecture question (negative)",
 		prompt:
 			"How does a user request reach the database? Trace the path from the user routes to the database layer.",
 		expectedContains: [
@@ -30,11 +31,12 @@ export const prompts: BenchmarkPrompt[] = [
 			"findUserById",
 			"query",
 		],
-		expectedTool: "findPath",
+		// Note: This is a NEGATIVE test - agent should NOT use findPath for vague questions
+		expectedTool: "none",
 	},
 	{
 		id: "P2",
-		name: "Layers between routes and database",
+		name: "outgoingCallsDeep with specific symbol",
 		prompt:
 			"What code is between the routes and the database? Start from handleGetUser and show what it calls transitively.",
 		expectedContains: [
@@ -43,5 +45,18 @@ export const prompts: BenchmarkPrompt[] = [
 			"query",
 		],
 		expectedTool: "outgoingCallsDeep",
+	},
+	{
+		id: "P3",
+		name: "findPath with precise symbols",
+		prompt:
+			"Find the call path from handleGetUser to the query function.",
+		expectedContains: [
+			"handleGetUser",
+			"getUserById",
+			"findUserById",
+			"query",
+		],
+		expectedTool: "findPath",
 	},
 ];
