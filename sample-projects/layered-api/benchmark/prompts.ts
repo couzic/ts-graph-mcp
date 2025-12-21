@@ -3,8 +3,7 @@
  *
  * Each prompt tests a different MCP tool capability:
  * - P1: findPath (multi-layer path finding)
- * - P2: getNeighborhood (local ecosystem visualization)
- * - P3: outgoingCallsDeep (forward traversal through layers)
+ * - P2: outgoingCallsDeep (forward traversal through layers)
  */
 
 import type { BenchmarkConfig, BenchmarkPrompt } from "../../../benchmark/lib/types.js";
@@ -35,18 +34,6 @@ export const prompts: BenchmarkPrompt[] = [
 	},
 	{
 		id: "P2",
-		name: "Service dependency graph",
-		prompt:
-			"What's the dependency graph around UserService? Show what calls it and what it calls.",
-		expectedContains: [
-			"handleGetUser",
-			"getUserById",
-			"findUserById",
-		],
-		expectedTool: "getNeighborhood",
-	},
-	{
-		id: "P3",
 		name: "Layers between routes and database",
 		prompt:
 			"What code is between the routes and the database? Start from handleGetUser and show what it calls transitively.",

@@ -21,7 +21,7 @@ This document describes the technical architecture of **ts-graph-mcp**, an MCP (
 - **Nodes**: Code symbols (functions, classes, methods, interfaces, types, variables, files, properties)
 - **Edges**: Relationships between symbols (calls, imports, type usage, inheritance, etc.)
 
-The graph is exposed through an MCP server that provides 5 specialized tools for AI agents to:
+The graph is exposed through an MCP server that provides 6 specialized tools for AI agents to:
 - Traverse call graphs (who calls this? what does this call?)
 - Analyze code impact (what breaks if I change this?)
 - Find paths between symbols
@@ -182,10 +182,10 @@ The schema intentionally omits FK constraints on edges table for three key reaso
 
 ### `/src/mcp/` - MCP Server
 
-**Purpose**: Exposes the code graph as an MCP server with 5 tools.
+**Purpose**: Exposes the code graph as an MCP server with 14 focused tools.
 
 **Key Files**:
-- `McpServer.ts` - Server implementation with 5 tool registrations
+- `McpServer.ts` - Server implementation with 14 tool registrations
 - `StartServer.ts` - CLI entry point with auto-indexing on first run
 
 **Design Highlights**:
@@ -407,7 +407,7 @@ if (targetId) {
 
 ## MCP Tools
 
-The MCP server exposes 5 tools for querying the code graph.
+The MCP server exposes 14 focused tools for querying the code graph, organized by relationship type.
 
 **Symbol-First Design**: All tools use a symbol-based query approach instead of internal node IDs. Tools accept a `symbol` name with optional filters (`file`, `module`, `package`) to narrow scope. Symbol resolution handles disambiguation automatically — if multiple matches exist, the tool returns candidates for clarification.
 
@@ -468,20 +468,129 @@ The MCP server exposes 5 tools for querying the code graph.
 
 **Output**: Returns all paths found (up to `maxPaths`), each showing the complete sequence of symbols and connection types between them.
 
-### 5. `getNeighborhood`
+### 5. `incomingImports`
 
-**Purpose**: Extract neighborhood subgraph - all symbols within N connections of a center symbol.
+**Purpose**: Find what files import a module.
 
 **Parameters**:
-- `symbol` (required): Center symbol name (e.g., `"handleRequest"`, `"Config"`)
+- `symbol` (required): File or module name to search for
 - `file` (optional): Narrow scope to a specific file
 - `module` (optional): Narrow scope to a specific module
 - `package` (optional): Narrow scope to a specific package
-- `distance` (optional): Maximum connection distance (1-100, default: 1)
-- `direction` (optional): Traversal direction - `"outgoing"` | `"incoming"` | `"both"` (default: "both")
-- `outputTypes` (optional): Output formats to include - array of `"text"` and/or `"mermaid"` (default: `["text"]`)
 
-**Output**: Returns structured text format (machine-readable) and/or Mermaid diagram for visualization, depending on `outputTypes` selection.
+**Output**: Returns files that import the target, grouped by package.
+
+### 6. `outgoingImports`
+
+**Purpose**: Find what a file imports.
+
+**Parameters**:
+- `symbol` (required): File name to search from
+- `file` (optional): Narrow scope to a specific file
+- `module` (optional): Narrow scope to a specific module
+- `package` (optional): Narrow scope to a specific package
+
+**Output**: Returns imports from the source file, grouped by package with type-only indicators.
+
+### 7. `incomingUsesType`
+
+**Purpose**: Find what code uses a type in signatures or declarations.
+
+**Parameters**:
+- `symbol` (required): Type, Interface, or TypeAlias name
+- `context` (optional): Filter by usage context ("parameter", "return", "property", "variable")
+- `file` (optional): Narrow scope to a specific file
+- `module` (optional): Narrow scope to a specific module
+- `package` (optional): Narrow scope to a specific package
+
+**Output**: Returns functions/methods/variables that reference the type, grouped by package.
+
+### 8. `outgoingUsesType`
+
+**Purpose**: Find what types a function or class references in its signatures.
+
+**Parameters**:
+- `symbol` (required): Function, Method, or Class name
+- `context` (optional): Filter by usage context ("parameter", "return", "property", "variable")
+- `file` (optional): Narrow scope to a specific file
+- `module` (optional): Narrow scope to a specific module
+- `package` (optional): Narrow scope to a specific package
+
+**Output**: Returns types referenced by the symbol, grouped by package.
+
+### 9. `incomingExtends`
+
+**Purpose**: Find what classes or interfaces extend a base class/interface (subclass tree).
+
+**Parameters**:
+- `symbol` (required): Class or Interface name
+- `maxDepth` (optional): Traversal depth (1 = direct children, 2+ = full hierarchy)
+- `file` (optional): Narrow scope to a specific file
+- `module` (optional): Narrow scope to a specific module
+- `package` (optional): Narrow scope to a specific package
+
+**Output**: Returns subclasses/sub-interfaces with inheritance depth.
+
+### 10. `outgoingExtends`
+
+**Purpose**: Find what a class or interface extends (superclass chain).
+
+**Parameters**:
+- `symbol` (required): Class or Interface name
+- `maxDepth` (optional): Traversal depth (1 = direct parent, 2+ = full chain)
+- `file` (optional): Narrow scope to a specific file
+- `module` (optional): Narrow scope to a specific module
+- `package` (optional): Narrow scope to a specific package
+
+**Output**: Returns parent classes/interfaces with inheritance depth.
+
+### 11. `incomingImplements`
+
+**Purpose**: Find what classes implement an interface.
+
+**Parameters**:
+- `symbol` (required): Interface name
+- `file` (optional): Narrow scope to a specific file
+- `module` (optional): Narrow scope to a specific module
+- `package` (optional): Narrow scope to a specific package
+
+**Output**: Returns implementing classes, grouped by package.
+
+### 12. `outgoingImplements`
+
+**Purpose**: Find what interfaces a class implements.
+
+**Parameters**:
+- `symbol` (required): Class name
+- `file` (optional): Narrow scope to a specific file
+- `module` (optional): Narrow scope to a specific module
+- `package` (optional): Narrow scope to a specific package
+
+**Output**: Returns implemented interfaces, grouped by package.
+
+### 13. `outgoingPackageDeps`
+
+**Purpose**: Find package-level dependencies (what packages does this package depend on).
+
+**Parameters**:
+- `package` (required): Package name (e.g., "backend/api")
+- `module` (optional): Narrow scope to a specific module
+- `maxDepth` (optional): Traversal depth (1 = direct only, default = all reachable)
+- `outputTypes` (optional): Output formats ("text", "mermaid", or both)
+
+**Output**: Returns package dependency graph with depth information. Optionally includes Mermaid diagram.
+
+### 14. `incomingPackageDeps`
+
+**Purpose**: Find reverse package dependencies (what packages depend on this package).
+
+**Parameters**:
+- `package` (required): Package name (e.g., "shared/types")
+- `module` (optional): Narrow scope to a specific module
+- `maxDepth` (optional): Traversal depth (1 = direct only, default = all reachable)
+- `outputTypes` (optional): Output formats ("text", "mermaid", or both)
+
+**Output**: Returns reverse package dependency graph. Useful for impact analysis at package granularity.
 
 ## Key Technologies
 
@@ -566,16 +675,22 @@ The built-in LSP tool provides:
 | Search symbols | `workspaceSymbol` | ❌ (removed) | None - use LSP |
 | Direct callers | `incomingCalls` | `incomingCallsDeep(maxDepth=1)` | **Partial** - ts-graph has transitive traversal |
 | Direct callees | `outgoingCalls` | `outgoingCallsDeep(maxDepth=1)` | **Partial** - ts-graph has transitive traversal |
+| Implementations | `goToImplementation` | `incomingImplements` | **Partial** - ts-graph has package filtering |
 | Definition lookup | `goToDefinition` | ❌ | None |
 | Hover docs | `hover` | ❌ | None |
 | **Transitive call graph** | ❌ | `incomingCallsDeep/outgoingCallsDeep` | **Unique** |
+| **Import tracking** | ❌ | `incomingImports/outgoingImports` | **Unique** |
+| **Type usage tracking** | ❌ | `incomingUsesType/outgoingUsesType` | **Unique** |
+| **Inheritance hierarchy** | ❌ | `incomingExtends/outgoingExtends` | **Unique** |
+| **Package dependencies** | ❌ | `outgoingPackageDeps/incomingPackageDeps` | **Unique** |
 | **Impact analysis** | ❌ | `analyzeImpact` | **Unique** |
 | **Path finding** | ❌ | `findPath` | **Unique** |
-| **Neighborhood subgraph** | ❌ | `getNeighborhood` + Mermaid | **Unique** |
 
 ### Removed Tools
 
 **`get_file_symbols`** - Removed entirely (previously deprecated). Use LSP `documentSymbol` instead, which provides real-time results without pre-indexing.
+
+**`getNeighborhood`** - Removed in favor of focused tools. The generic neighborhood query returned ALL edge types (CALLS, IMPORTS, USES_TYPE, etc.), causing exponential output growth. Replaced by focused tools that each traverse one relationship type.
 
 ### When to Use Each
 

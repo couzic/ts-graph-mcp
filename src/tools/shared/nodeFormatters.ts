@@ -186,3 +186,18 @@ export function groupByFile(nodes: Node[]): Map<string, Node[]> {
 	}
 	return groups;
 }
+
+/**
+ * Group nodes by depth (for nodes with depth property).
+ */
+export function groupByDepth<T extends Node & { depth: number }>(
+	nodes: T[],
+): Map<number, T[]> {
+	const groups = new Map<number, T[]>();
+	for (const node of nodes) {
+		const existing = groups.get(node.depth) ?? [];
+		existing.push(node);
+		groups.set(node.depth, existing);
+	}
+	return groups;
+}

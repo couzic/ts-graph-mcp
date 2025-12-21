@@ -67,7 +67,6 @@ Tests MUST be database-agnostic to support multiple backends (SQLite, Neo4j, Mem
 - `queryCallers()`, `queryCallees()` - From `src/tools/incoming-calls-deep/query.js` and `src/tools/outgoing-calls-deep/query.js`
 - `queryEdges()` - From `src/db/queryEdges.js`
 - `queryImpactedNodes()` - From `src/tools/analyze-impact/query.js`
-- `queryNeighbors()` - From `src/tools/get-neighborhood/query.js`
 - `DbWriter.addNodes()`, `DbWriter.addEdges()` - For writes
 
 **Forbidden in tests:**
@@ -178,7 +177,7 @@ sample-project/
 | Project | Prompts | Query Types Covered |
 |---------|---------|---------------------|
 | `deep-chain` | P1, P2, P3 | Deep transitive traversal (`outgoingCallsDeep`, `findPath`, `analyzeImpact`) |
-| `monorepo` | P1, P2, P3, P4 | Cross-module/package analysis (`incomingCallsDeep`, `analyzeImpact`, `getNeighborhood`) |
+| `monorepo` | P1, P2, P3, P4 | Cross-module/package analysis (`incomingCallsDeep`, `analyzeImpact`, `outgoingImports`) |
 
 ### Sample Results (deep-chain)
 

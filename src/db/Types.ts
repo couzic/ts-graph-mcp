@@ -16,9 +16,7 @@ export type EdgeType =
 	| "CONTAINS"
 	| "IMPLEMENTS"
 	| "EXTENDS"
-	| "USES_TYPE"
-	| "READS_PROPERTY"
-	| "WRITES_PROPERTY";
+	| "USES_TYPE";
 
 // Base Node (shared properties)
 export interface BaseNode {

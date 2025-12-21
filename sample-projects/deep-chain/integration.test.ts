@@ -13,7 +13,6 @@ import { queryCallees } from "../../src/tools/outgoing-calls-deep/query.js";
 import { queryCallers } from "../../src/tools/incoming-calls-deep/query.js";
 import { queryPath } from "../../src/tools/find-path/query.js";
 import { queryImpactedNodes } from "../../src/tools/analyze-impact/query.js";
-import { queryNeighbors } from "../../src/tools/get-neighborhood/query.js";
 import { queryNodes } from "../../src/db/queryNodes.js";
 import { queryEdges } from "../../src/db/queryEdges.js";
 
@@ -223,30 +222,6 @@ describe("deep-chain integration", () => {
 			expect(result).toHaveLength(2);
 			const ids = result.map((n) => n.id).sort();
 			expect(ids).toEqual(["src/step08.ts:step08", "src/step09.ts:step09"]);
-		});
-	});
-
-	describe(queryNeighbors.name, () => {
-		it("finds step05's bidirectional neighbors at distance 1", () => {
-			const result = queryNeighbors(db, "src/step05.ts:step05", 1, "both");
-
-			expect(result.center.id).toBe("src/step05.ts:step05");
-
-			const nodeIds = result.nodes.map((n) => n.id);
-			expect(nodeIds).toContain("src/step05.ts:step05");
-			expect(nodeIds).toContain("src/step04.ts:step04");
-			expect(nodeIds).toContain("src/step06.ts:step06");
-		});
-
-		it("finds extended neighborhood at distance 2", () => {
-			const result = queryNeighbors(db, "src/step05.ts:step05", 2, "both");
-
-			const functionNodes = result.nodes.filter((n) => n.type === "Function");
-			expect(functionNodes.length).toBeGreaterThanOrEqual(5);
-
-			const nodeIds = result.nodes.map((n) => n.id);
-			expect(nodeIds).toContain("src/step03.ts:step03");
-			expect(nodeIds).toContain("src/step07.ts:step07");
 		});
 	});
 

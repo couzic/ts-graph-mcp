@@ -72,7 +72,7 @@ export const SymbolQuerySchema = z.object({
 **Composition patterns:**
 
 ```typescript
-// Flat: incomingCallsDeep, analyzeImpact, getNeighborhood
+// Flat: incomingCallsDeep, analyzeImpact, incomingImports, outgoingImports
 z.object({ ...SymbolQuerySchema.shape, maxDepth: z.number().optional() })
 
 // Nested: findPath (needs two symbols)

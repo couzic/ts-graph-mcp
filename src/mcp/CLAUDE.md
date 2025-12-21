@@ -14,7 +14,8 @@ src/tools/
 ├── outgoing-calls-deep/   (query.ts, format.ts, format.test.ts, handler.ts)
 ├── analyze-impact/        (query.ts, format.ts, format.test.ts, handler.ts)
 ├── find-path/             (query.ts, format.ts, format.test.ts, handler.ts)
-├── get-neighborhood/      (query.ts, format.ts, format.test.ts, handler.ts)
+├── incoming-imports/      (query.ts, format.ts, handler.ts)
+├── outgoing-imports/      (query.ts, format.ts, handler.ts)
 └── shared/                (SymbolQuery.ts, resolveSymbol.ts, resolveSymbol.test.ts)
 ```
 
@@ -33,14 +34,15 @@ src/tools/
 ### `startMcpServer(db: Database.Database): Promise<void>`
 **File:** `McpServer.ts`
 
-Initializes and starts the MCP server on stdio transport with 5 registered tools. Dispatches tool calls to vertical slice handlers.
+Initializes and starts the MCP server on stdio transport with 6 registered tools. Dispatches tool calls to vertical slice handlers.
 
 **Tools provided:**
 1. `incomingCallsDeep` - Find all callers of a symbol (extends LSP's incomingCalls with transitive traversal via maxDepth)
 2. `outgoingCallsDeep` - Find all callees of a symbol (extends LSP's outgoingCalls with transitive traversal via maxDepth)
-3. `analyzeImpact` - Impact analysis - all code affected by changes to a symbol
-4. `findPath` - Find shortest path between two symbols (BFS with maxDepth, maxPaths)
-5. `getNeighborhood` - Find all nodes within N edges of a symbol (with direction control, Mermaid output)
+3. `incomingImports` - Find what files import a module
+4. `outgoingImports` - Find what a file imports
+5. `analyzeImpact` - Impact analysis - all code affected by changes to a symbol
+6. `findPath` - Find shortest path between two symbols (BFS with maxDepth, maxPaths)
 
 ### `main(): Promise<void>`
 **File:** `StartServer.ts`

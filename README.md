@@ -115,15 +115,16 @@ export default defineConfig({
 
 ## MCP Tools
 
-The server exposes 5 tools for querying the code graph:
+The server exposes 6 tools for querying the code graph:
 
 | Tool | Purpose | Key Parameters |
 |------|---------|----------------|
 | `incomingCallsDeep` | Find all functions/methods that call the target (transitive) | `symbol`, `file?`, `module?`, `package?`, `maxDepth?` |
 | `outgoingCallsDeep` | Find all functions/methods that the source calls (transitive) | `symbol`, `file?`, `module?`, `package?`, `maxDepth?` |
+| `incomingImports` | Find what files import a module | `symbol`, `file?`, `module?`, `package?` |
+| `outgoingImports` | Find what a file imports | `symbol`, `file?`, `module?`, `package?` |
 | `analyzeImpact` | Impact analysis - find all code affected by changes | `symbol`, `file?`, `module?`, `package?`, `maxDepth?` |
 | `findPath` | Find shortest path between two symbols | `from: {symbol, ...}`, `to: {symbol, ...}`, `maxDepth?`, `maxPaths?` |
-| `getNeighborhood` | Extract subgraph within N edges of center | `symbol`, `file?`, `module?`, `package?`, `distance?`, `direction?`, `outputTypes?` |
 
 ### Symbol-Based Queries
 
@@ -185,46 +186,6 @@ path[1]:
   process (src/service.ts)
     --CALLS-->
   saveData (src/db.ts)
-```
-
-#### getNeighborhood
-
-Get neighborhood around `User` interface with distance 1:
-
-```bash
-# Input
-{ symbol: "User", distance: 1, outputTypes: ["text", "mermaid"] }
-
-# Output
-center: User (Interface)
-file: src/types.ts
-offset: 0, limit: 11
-distance: 1
-direction: both
-nodeCount: 2
-edgeCount: 2
-
-src/types.ts (1 nodes):
-interfaces[1]:
-  Admin extends:[User]
-    offset: 24, limit: 7
-
-src/services/UserService.ts (1 nodes):
-classes[1]:
-  UserService
-    offset: 4, limit: 47
-
-edges[2]:
-  Admin --EXTENDS--> User
-  UserService --USES_TYPE--> User
-
----mermaid---
-graph LR
-  n0["User"]
-  n1["Admin"]
-  n2["UserService"]
-  n1 -->|extends| n0
-  n2 -->|uses type| n0
 ```
 
 ### Supported Node Types

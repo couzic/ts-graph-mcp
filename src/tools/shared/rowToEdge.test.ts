@@ -5,9 +5,9 @@ import { rowToEdge } from "./rowConverters.js";
 describe(rowToEdge.name, () => {
 	it("converts basic edge with source, target, and type only", () => {
 		const row: EdgeRow = {
-			source: "src/utils.ts:formatDate",
-			target: "src/models/User.ts:User.name",
-			type: "READS_PROPERTY",
+			source: "src/utils.ts",
+			target: "src/utils.ts:formatDate",
+			type: "CONTAINS",
 			call_count: null,
 			is_type_only: null,
 			imported_symbols: null,
@@ -17,9 +17,9 @@ describe(rowToEdge.name, () => {
 		const edge = rowToEdge(row);
 
 		expect(edge).toEqual({
-			source: "src/utils.ts:formatDate",
-			target: "src/models/User.ts:User.name",
-			type: "READS_PROPERTY",
+			source: "src/utils.ts",
+			target: "src/utils.ts:formatDate",
+			type: "CONTAINS",
 		});
 		expect(edge).not.toHaveProperty("callCount");
 		expect(edge).not.toHaveProperty("isTypeOnly");

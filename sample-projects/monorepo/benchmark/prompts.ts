@@ -4,7 +4,8 @@
  * Each prompt tests L3 monorepo capabilities:
  * - P1: Cross-package queries within module (incomingCallsDeep)
  * - P2: Cross-module impact analysis (analyzeImpact)
- * - P3: Package dependencies visualization (getNeighborhood)
+ * - P3: Utility usage tracking (incomingCallsDeep)
+ * - P4: Package dependencies (outgoingImports)
  *
  * Key differentiator from deep-chain and web-app:
  * This tests BOTH cross-package (within module) AND cross-module edges.
@@ -61,6 +62,6 @@ export const prompts: BenchmarkPrompt[] = [
     prompt:
       "What are the dependencies of the backend/api package? Show me what packages it imports from.",
     expectedContains: ["services", "types", "shared"],
-    expectedTool: "getNeighborhood",
+    expectedTool: "outgoingImports",
   },
 ];

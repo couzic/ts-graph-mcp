@@ -98,7 +98,10 @@ const buildCombinedSymbolMap = (
 	addLocalSymbols(map, sourceFile, filePath);
 
 	// 2. Add imported symbols (from import declarations)
-	const importMap = buildImportMap(sourceFile, filePath);
+	// MUST include type-only imports since EXTENDS/IMPLEMENTS reference types
+	const importMap = buildImportMap(sourceFile, filePath, {
+		includeTypeImports: true,
+	});
 	for (const [name, targetId] of importMap) {
 		map.set(name, targetId);
 	}

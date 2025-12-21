@@ -12,7 +12,6 @@ import { indexProject } from "../../src/ingestion/Ingestion.js";
 import { queryCallees } from "../../src/tools/outgoing-calls-deep/query.js";
 import { queryCallers } from "../../src/tools/incoming-calls-deep/query.js";
 import { queryPath } from "../../src/tools/find-path/query.js";
-import { queryNeighbors } from "../../src/tools/get-neighborhood/query.js";
 import { queryNodes } from "../../src/db/queryNodes.js";
 import { queryEdges } from "../../src/db/queryEdges.js";
 
@@ -207,62 +206,6 @@ describe("layered-api integration (layered architecture)", () => {
 
 			const callerPaths = result.map((n) => n.filePath);
 			expect(callerPaths.some((p) => p.includes("controllers/"))).toBe(true);
-		});
-	});
-
-	describe(queryNeighbors.name, () => {
-		it("finds getUserById local ecosystem at distance 2", () => {
-			const getUserById = findFunction("getUserById");
-			expect(getUserById).toBeDefined();
-
-			const result = queryNeighbors(db, getUserById!.id, 2, "both");
-
-			expect(result.center.id).toBe(getUserById!.id);
-
-			const nodeNames = result.nodes.map((n) => n.name);
-
-			// At distance 2, should see:
-			// - handleGetUser (caller, distance 1)
-			// - findUserById (callee, distance 1)
-			// - query (callee, distance 2 through findUserById)
-			expect(nodeNames).toContain("handleGetUser");
-			expect(nodeNames).toContain("findUserById");
-		});
-
-		it("finds placeOrder neighborhood including getUserById", () => {
-			const placeOrder = findFunction("placeOrder");
-			expect(placeOrder).toBeDefined();
-
-			const result = queryNeighbors(db, placeOrder!.id, 1, "both");
-
-			const nodeNames = result.nodes.map((n) => n.name);
-
-			// placeOrder connects to createOrder and getUserById
-			expect(nodeNames).toContain("createOrder");
-			expect(nodeNames).toContain("getUserById");
-		});
-
-		it("finds outgoing neighbors only (downstream) from controller", () => {
-			const handleGetUser = findFunction("handleGetUser");
-			expect(handleGetUser).toBeDefined();
-
-			const result = queryNeighbors(db, handleGetUser!.id, 1, "outgoing");
-
-			// Should only find downstream (services), not upstream
-			const filePaths = result.nodes.map((n) => n.filePath);
-			expect(filePaths.some((f) => f.includes("services/"))).toBe(true);
-		});
-
-		it("finds incoming neighbors only (upstream) from repository", () => {
-			const findUserById = findFunction("findUserById");
-			expect(findUserById).toBeDefined();
-
-			const result = queryNeighbors(db, findUserById!.id, 1, "incoming");
-
-			// Should only find upstream (services), not downstream (database)
-			const filePaths = result.nodes.map((n) => n.filePath);
-			expect(filePaths.some((f) => f.includes("services/"))).toBe(true);
-			expect(filePaths.some((f) => f.includes("db/"))).toBe(false);
 		});
 	});
 

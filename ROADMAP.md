@@ -16,15 +16,16 @@ Claude Code 2.0.74+ includes a built-in LSP tool with `documentSymbol`, `workspa
 
 ### Retained (Unique Value)
 
-These 5 tools remain because they offer capabilities LSP lacks:
+These 6 tools remain because they offer capabilities LSP lacks:
 
 | Tool | Unique Value | LSP Cannot Do This |
 |------|--------------|-------------------|
 | `incomingCallsDeep` | **Transitive** (maxDepth=N) | LSP `incomingCalls` is single-hop only |
 | `outgoingCallsDeep` | **Transitive** (maxDepth=N) | LSP `outgoingCalls` is single-hop only |
+| `incomingImports` | **Module import tracking** | No LSP equivalent |
+| `outgoingImports` | **Module dependency analysis** | No LSP equivalent |
 | `analyzeImpact` | **Impact analysis** across all edge types | No LSP equivalent |
 | `findPath` | **Path finding** between symbols | No LSP equivalent |
-| `getNeighborhood` | **Subgraph extraction** + Mermaid diagrams | No LSP equivalent |
 
 ---
 
@@ -44,17 +45,6 @@ analyzeImpact({ symbol: "User", edgeTypes: ["USES_TYPE"] })           // Only ty
 analyzeImpact({ symbol: "formatDate", moduleFilter: "api" })          // Impact within module
 ```
 
-### Result Limits (getNeighborhood)
-**Impact: High | Effort: Low**
-
-Broad queries can return thousands of results, wasting tokens. Future enhancement: add default limits with truncation warnings.
-
-```typescript
-// Future: Output when truncated for large neighborhoods
-"Neighborhood results (showing 100 of 342 nodes)
-⚠️ Results truncated. Reduce distance or use direction filtering."
-```
-
 ### Improve Tool Descriptions
 **Impact: Medium | Effort: Very Low**
 
@@ -66,13 +56,11 @@ The MCP tool definitions (in `src/tools/*/handler.ts`) have quality gaps that re
 |---------|---------|-----|
 | **Redundant descriptions** | `incomingCallsDeep`: "Find all functions/methods that call the target. Returns nodes that call the specified function/method." | Remove redundant second sentence |
 | **Missing output format hints** | No descriptions mention the hierarchical text format | Add: "Returns hierarchical text grouped by file" |
-| **Unclear direction semantics** | `getNeighborhood` `direction` param just says "outgoing/incoming/both" | Add: "outgoing = edges where node is source, incoming = edges where node is target" |
 
 **Affected files:**
 - `src/tools/incoming-calls-deep/handler.ts` - redundant description
 - `src/tools/outgoing-calls-deep/handler.ts` - redundant description
-- `src/tools/get-neighborhood/handler.ts` - unclear direction param
-- All 5 tools - missing output format hints
+- All 6 tools - missing output format hints
 
 ### Error Messages with Example Syntax
 **Impact: Medium | Effort: Very Low**
@@ -373,17 +361,6 @@ CI automatically:
 1. Runs analyzeImpact on changed functions
 2. Comments: "This affects: login, signup, password-reset, 12 API endpoints"
 3. Suggests reviewers based on module ownership
-```
-
-### Architecture Visualization
-```
-User: "Generate architecture diagram for the billing module"
-
-Agent:
-1. Queries getNeighborhood with high distance
-2. Filters to billing-related nodes
-3. Generates Mermaid diagram
-4. Adds to documentation
 ```
 
 ### Semantic Code Search

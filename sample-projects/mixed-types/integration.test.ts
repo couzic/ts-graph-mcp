@@ -10,7 +10,6 @@ import { initializeSchema } from "../../src/db/sqlite/SqliteSchema.js";
 import { createSqliteWriter } from "../../src/db/sqlite/SqliteWriter.js";
 import { indexProject } from "../../src/ingestion/Ingestion.js";
 import { queryImpactedNodes } from "../../src/tools/analyze-impact/query.js";
-import { queryNeighbors } from "../../src/tools/get-neighborhood/query.js";
 import { queryNodes } from "../../src/db/queryNodes.js";
 import { queryEdges } from "../../src/db/queryEdges.js";
 
@@ -115,29 +114,23 @@ describe("mixed-types integration", () => {
 		});
 	});
 
-	describe(queryNeighbors.name, () => {
-		it("finds File node as neighbor of UserService via CONTAINS edge", () => {
-			const result = queryNeighbors(db, "src/models.ts:UserService", 1, "both");
-
-			expect(result.center.id).toBe("src/models.ts:UserService");
-
-			const neighborNames = result.nodes.map((n) => n.name);
-			expect(neighborNames).toContain("models.ts");
-
-			const containsEdge = result.edges.find((e) => e.type === "CONTAINS");
-			expect(containsEdge).toBeDefined();
-		});
-	});
-
 	describe("Property nodes from interfaces", () => {
-		it("extracts id and name properties from User interface and users from UserService", () => {
+		it("extracts properties from interfaces and classes", () => {
 			const result = queryNodes(db, "*", { type: "Property" });
 
 			const names = result.map((n) => n.name);
+			// User interface properties
 			expect(names).toContain("id");
 			expect(names).toContain("name");
+			// UserService class property
 			expect(names).toContain("users");
-			expect(names).toHaveLength(3);
+			// Entity interface property
+			expect(names).toContain("id");
+			// Auditable interface properties
+			expect(names).toContain("createdAt");
+			expect(names).toContain("updatedAt");
+			// BaseService, AdminService, AuditLog properties
+			expect(names.length).toBeGreaterThanOrEqual(3);
 		});
 
 		it("verifies User interface properties have correct types", () => {
@@ -305,6 +298,70 @@ describe("mixed-types integration", () => {
 		});
 	});
 
+	describe("EXTENDS edges", () => {
+		it("creates EXTENDS edge from UserService to BaseService", () => {
+			const edges = queryEdges(db, {
+				sourceId: "src/models.ts:UserService",
+				targetId: "src/models.ts:BaseService",
+				type: "EXTENDS",
+			});
+
+			expect(edges).toHaveLength(1);
+			expect(edges[0]).toMatchObject({
+				source: "src/models.ts:UserService",
+				target: "src/models.ts:BaseService",
+				type: "EXTENDS",
+			});
+		});
+
+		it("creates EXTENDS edge from AdminService to BaseService", () => {
+			const edges = queryEdges(db, {
+				sourceId: "src/models.ts:AdminService",
+				targetId: "src/models.ts:BaseService",
+				type: "EXTENDS",
+			});
+
+			expect(edges).toHaveLength(1);
+			expect(edges[0]).toMatchObject({
+				source: "src/models.ts:AdminService",
+				target: "src/models.ts:BaseService",
+				type: "EXTENDS",
+			});
+		});
+
+		it("creates EXTENDS edge from Auditable to Entity interface", () => {
+			const edges = queryEdges(db, {
+				sourceId: "src/types.ts:Auditable",
+				targetId: "src/types.ts:Entity",
+				type: "EXTENDS",
+			});
+
+			expect(edges).toHaveLength(1);
+			expect(edges[0]).toMatchObject({
+				source: "src/types.ts:Auditable",
+				target: "src/types.ts:Entity",
+				type: "EXTENDS",
+			});
+		});
+	});
+
+	describe("IMPLEMENTS edges", () => {
+		it("creates IMPLEMENTS edge from AuditLog to Auditable interface", () => {
+			const edges = queryEdges(db, {
+				sourceId: "src/models.ts:AuditLog",
+				targetId: "src/types.ts:Auditable",
+				type: "IMPLEMENTS",
+			});
+
+			expect(edges).toHaveLength(1);
+			expect(edges[0]).toMatchObject({
+				source: "src/models.ts:AuditLog",
+				target: "src/types.ts:Auditable",
+				type: "IMPLEMENTS",
+			});
+		});
+	});
+
 	describe("Cross-file USES_TYPE edges (Issue #11)", () => {
 		it("creates USES_TYPE edge from addUser method to User interface across files", () => {
 			const edges = queryEdges(db, {
@@ -340,30 +397,60 @@ describe("mixed-types integration", () => {
 			});
 		});
 
-		it("getNeighborhood shows User interface when querying addUser method", () => {
-			const result = queryNeighbors(
-				db,
-				"src/models.ts:UserService.addUser",
-				1,
-				"outgoing",
-			);
-
-			const neighborIds = result.nodes.map((n) => n.id);
-			expect(neighborIds).toContain("src/types.ts:User");
-
-			const usesTypeEdge = result.edges.find(
-				(e) =>
-					e.type === "USES_TYPE" && e.target === "src/types.ts:User",
-			);
-			expect(usesTypeEdge).toBeDefined();
-		});
-
 		it("analyzeImpact shows models.ts symbols when querying User interface", () => {
 			const result = queryImpactedNodes(db, "src/types.ts:User");
 
 			const impactedIds = result.map((n) => n.id);
 			expect(impactedIds).toContain("src/models.ts:UserService.addUser");
 			expect(impactedIds).toContain("src/models.ts:UserService.users");
+		});
+	});
+
+	describe("incomingUsesType tool integration", () => {
+		it("finds all usages of User interface", () => {
+			const edges = queryEdges(db, {
+				targetId: "src/types.ts:User",
+				type: "USES_TYPE",
+			});
+
+			expect(edges.length).toBeGreaterThan(0);
+			const sourceIds = edges.map((e) => e.source);
+			expect(sourceIds).toContain("src/models.ts:UserService.addUser");
+			expect(sourceIds).toContain("src/models.ts:UserService.users");
+		});
+
+		it("filters by context parameter", () => {
+			const edges = queryEdges(db, {
+				targetId: "src/types.ts:User",
+				type: "USES_TYPE",
+				context: "parameter",
+			});
+
+			expect(edges.length).toBeGreaterThan(0);
+			// All edges should have parameter context
+			for (const edge of edges) {
+				expect(edge.context).toBe("parameter");
+			}
+			// Should include the method parameter usage
+			const sourceIds = edges.map((e) => e.source);
+			expect(sourceIds).toContain("src/models.ts:UserService.addUser");
+		});
+
+		it("filters by context property", () => {
+			const edges = queryEdges(db, {
+				targetId: "src/types.ts:User",
+				type: "USES_TYPE",
+				context: "property",
+			});
+
+			expect(edges.length).toBeGreaterThan(0);
+			// All edges should have property context
+			for (const edge of edges) {
+				expect(edge.context).toBe("property");
+			}
+			// Should include the property usage
+			const sourceIds = edges.map((e) => e.source);
+			expect(sourceIds).toContain("src/models.ts:UserService.users");
 		});
 	});
 });

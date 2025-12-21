@@ -38,7 +38,7 @@ This document tracks test projects to be created for integration testing and ben
 | `type-system` | ✅ Yes | New pattern: EXTENDS/IMPLEMENTS edges |
 | `layered-api` | ✅ Done | Implemented with 3 benchmark prompts |
 | `property-access` | ❌ No | Covered by `monorepo` (impact analysis) |
-| `event-system` | ❌ No | Covered by `monorepo` (`getNeighborhood`) |
+| `event-system` | ❌ No | Covered by `monorepo` (impact analysis) |
 | `multi-package` | ❌ No | Covered by `monorepo` (cross-package) |
 
 ---
@@ -183,9 +183,9 @@ src/
 
 ### 4. `event-system` (Priority: Medium)
 
-**Purpose:** Test hub patterns and `getNeighborhood` tool.
+**Purpose:** Test hub patterns and impact analysis tool.
 
-**Benchmark:** ❌ No — `getNeighborhood` pattern covered by `monorepo`
+**Benchmark:** ❌ No — Impact analysis pattern covered by `monorepo`
 
 **Structure:** L1 - Single package, ~12 files
 ```
@@ -205,16 +205,16 @@ src/
 ```
 
 **Tests:**
-- `getNeighborhood(EventBus, distance: 1)` - all direct connections
-- `getNeighborhood(EventBus, distance: 2)` - extended ecosystem
+- `analyzeImpact(EventBus)` - all code affected by changes to EventBus
+- `incomingCallsDeep(EventBus.emit)` - all emitters
 - Dense local graph around hub
 
 **Benchmark Prompts:**
 - "What's connected to the EventBus?"
 - "What handlers process user events?"
-- "Show me the event system architecture"
+- "What happens if I change the EventBus API?"
 
-**Why MCP wins:** `getNeighborhood` with Mermaid diagram instantly visualizes the hub.
+**Why MCP wins:** `analyzeImpact` instantly reveals all connected code.
 
 ---
 
@@ -277,9 +277,10 @@ defineConfig({
 |------|----------|---------|
 | `incomingCallsDeep` | deep-chain, monorepo | shared-utils |
 | `outgoingCallsDeep` | deep-chain, layered-api | - |
-| `analyzeImpact` | web-app, monorepo | shared-utils, type-system, property-access, multi-package |
+| `incomingImports` | monorepo | multi-package |
+| `outgoingImports` | monorepo | multi-package |
+| `analyzeImpact` | web-app, monorepo | shared-utils, type-system, property-access, multi-package, event-system |
 | `findPath` | deep-chain, layered-api | - |
-| `getNeighborhood` | monorepo, layered-api | event-system |
 
 ### By Edge Type
 
@@ -316,7 +317,7 @@ defineConfig({
 
 3. **`multi-package`** - L2 structure (cross-package covered by `monorepo`)
 4. **`property-access`** - READS/WRITES edges (impact analysis covered by `shared-utils`)
-5. **`event-system`** - Hub pattern (`getNeighborhood` covered by `monorepo`)
+5. **`event-system`** - Hub pattern (impact analysis covered by `monorepo`)
 
 ---
 

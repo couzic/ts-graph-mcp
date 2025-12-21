@@ -46,7 +46,6 @@ Hardcoded depth limits scattered across query files:
 - `src/tools/outgoing-calls-deep/query.ts` — `= 100`
 - `src/tools/analyze-impact/query.ts` — `?? 100`
 - `src/tools/find-path/query.ts` — `20` (inconsistent with others)
-- `src/tools/get-neighborhood/query.ts` — default parameter
 
 **Fix approach:**
 
