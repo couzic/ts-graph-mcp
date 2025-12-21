@@ -24,19 +24,20 @@ All 8 node types: Function, Class, Method, Interface, TypeAlias, Variable, Prope
 - 28 integration tests
 
 ### `web-app/`
-Multi-module web app with 3 modules (shared, frontend, backend), 1 package each.
-- Tests cross-module edges (CALLS, USES_TYPE, IMPORTS)
-- Tests module filtering with `searchSymbols`
-- Tests `analyzeImpact` analysis across modules
-- **Regression test for Issue #5** (cross-module edge resolution). 15 integration tests.
-- Note: This is a simplified L2 structure. See `monorepo/` for the full L3 test.
+Web app using **flat packages format** (3 packages in single "main" module).
+- Uses simplified config: `packages: [...]` instead of nested `modules: [{ packages: [...] }]`
+- Tests cross-PACKAGE edges (CALLS, USES_TYPE, IMPORTS) within single module
+- Tests package filtering with `queryNodes`
+- Tests `analyzeImpact` analysis across packages
+- **Example of flat config format** (Issue #15). 15 integration tests.
+- For cross-MODULE edge testing, see `monorepo/`.
 
 ### `monorepo/`
 True L3 monorepo structure with 3 modules × 2 packages each = 6 packages.
+- **Primary test for cross-MODULE edges** (backend/services → shared/utils)
 - Tests cross-package edges within same module (backend/api → backend/services)
-- Tests cross-module edges between packages (backend/services → shared/utils)
-- Tests module + package filtering with `searchSymbols`
-- Tests `analyzeImpact` analysis at package granularity
+- Tests module + package filtering with `queryNodes`
+- Tests `analyzeImpact` analysis at module and package granularity
 - 30 integration tests
 
 ## Planned Projects

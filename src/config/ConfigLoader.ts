@@ -1,6 +1,10 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { type ProjectConfig, ProjectConfigSchema } from "./ConfigSchema.js";
+import {
+	normalizeConfig,
+	type ProjectConfig,
+	ProjectConfigInputSchema,
+} from "./ConfigSchema.js";
 
 /**
  * Read package name from package.json in the given directory.
@@ -119,8 +123,10 @@ export const loadConfig = async (
 		throw new Error(`Unsupported config file extension: ${ext}`);
 	}
 
-	// Validate with Zod schema
-	return ProjectConfigSchema.parse(rawConfig);
+	// Validate with Zod schema (accepts both full and flat formats)
+	const parsed = ProjectConfigInputSchema.parse(rawConfig);
+	// Normalize flat format to full format
+	return normalizeConfig(parsed);
 };
 
 /**

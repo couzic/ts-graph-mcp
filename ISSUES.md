@@ -8,24 +8,6 @@
 
 ## Enhancements
 
-### 15. Simplified Configuration: Support Flat Package List
-
-**Impact:** Low (DX improvement)
-
-For projects that don't need module grouping, allow a simpler flat format:
-
-```typescript
-// Current - verbose
-defineConfig({
-  modules: [{ name: "main", packages: [{ name: "core", tsconfig: "./tsconfig.json" }] }]
-})
-
-// Proposed - simpler
-defineConfig({
-  packages: [{ name: "core", tsconfig: "./tsconfig.json" }]
-})
-```
-
 ### 13. `findPath` Multiple Paths
 
 **Impact:** Low

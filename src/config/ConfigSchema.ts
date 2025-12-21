@@ -48,7 +48,8 @@ export const WatchConfigSchema = z.object({
 	debounce: z.number().int().nonnegative().optional(),
 });
 
-export const ProjectConfigSchema = z.object({
+/** Full format with explicit modules */
+const FullProjectConfigSchema = z.object({
 	/** Modules in the project */
 	modules: z.array(ModuleConfigSchema).min(1),
 	/** Storage configuration (default: sqlite) */
@@ -57,9 +58,47 @@ export const ProjectConfigSchema = z.object({
 	watch: WatchConfigSchema.optional(),
 });
 
+/** Flat format: packages without module nesting (creates implicit "main" module) */
+const FlatProjectConfigSchema = z.object({
+	/** Packages in the project (will be placed in implicit "main" module) */
+	packages: z.array(PackageConfigSchema).min(1),
+	/** Storage configuration (default: sqlite) */
+	storage: StorageConfigSchema.optional(),
+	/** Watch mode configuration */
+	watch: WatchConfigSchema.optional(),
+});
+
+/** Input schema accepts either full or flat format */
+export const ProjectConfigInputSchema = z.union([
+	FullProjectConfigSchema,
+	FlatProjectConfigSchema,
+]);
+
+/** Output schema is always the full format */
+export const ProjectConfigSchema = FullProjectConfigSchema;
+
 // --- Inferred Types ---
 
 export type ProjectConfig = z.infer<typeof ProjectConfigSchema>;
+export type ProjectConfigInput = z.infer<typeof ProjectConfigInputSchema>;
+
+// --- Normalization ---
+
+/**
+ * Normalizes flat package format to full module format.
+ * Flat format creates an implicit "main" module containing all packages.
+ */
+export const normalizeConfig = (input: ProjectConfigInput): ProjectConfig => {
+	if ("modules" in input) {
+		return input;
+	}
+	// Flat format: create implicit "main" module
+	return {
+		modules: [{ name: "main", packages: input.packages }],
+		storage: input.storage,
+		watch: input.watch,
+	};
+};
 
 // --- Helper Function ---
 
@@ -67,10 +106,15 @@ export type ProjectConfig = z.infer<typeof ProjectConfigSchema>;
  * Type-safe config helper for ts-graph-mcp.config.ts files.
  * Validates config at runtime using Zod.
  *
- * @param config - Project configuration
- * @returns Validated configuration
+ * Accepts two formats:
+ * 1. Full format: `{ modules: [{ name: "...", packages: [...] }] }`
+ * 2. Flat format: `{ packages: [...] }` (creates implicit "main" module)
+ *
+ * @param config - Project configuration (full or flat format)
+ * @returns Validated configuration (always in full format)
  * @throws ZodError if validation fails
  */
-export const defineConfig = (config: ProjectConfig): ProjectConfig => {
-	return ProjectConfigSchema.parse(config);
+export const defineConfig = (config: ProjectConfigInput): ProjectConfig => {
+	const parsed = ProjectConfigInputSchema.parse(config);
+	return normalizeConfig(parsed);
 };

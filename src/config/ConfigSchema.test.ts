@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
 	defineConfig,
 	ModuleConfigSchema,
+	normalizeConfig,
 	PackageConfigSchema,
+	ProjectConfigInputSchema,
 	ProjectConfigSchema,
 	StorageConfigSchema,
 	WatchConfigSchema,
@@ -215,6 +217,100 @@ describe("ConfigSchema", () => {
 					typeof defineConfig
 				>[0]),
 			).toThrow();
+		});
+
+		it("accepts flat packages format and normalizes to full format", () => {
+			const flatConfig = {
+				packages: [
+					{ name: "core", tsconfig: "./tsconfig.json" },
+					{ name: "utils", tsconfig: "./packages/utils/tsconfig.json" },
+				],
+			};
+			const result = defineConfig(flatConfig);
+			expect(result.modules).toHaveLength(1);
+			expect(result.modules[0]?.name).toBe("main");
+			expect(result.modules[0]?.packages).toEqual(flatConfig.packages);
+		});
+
+		it("preserves storage and watch options in flat format", () => {
+			const flatConfig = {
+				packages: [{ name: "core", tsconfig: "./tsconfig.json" }],
+				storage: { type: "sqlite" as const, path: "./data/graph.db" },
+				watch: { debounce: 200 },
+			};
+			const result = defineConfig(flatConfig);
+			expect(result.storage).toEqual(flatConfig.storage);
+			expect(result.watch).toEqual(flatConfig.watch);
+		});
+	});
+
+	describe("ProjectConfigInputSchema", () => {
+		it("accepts full format with modules", () => {
+			const config = {
+				modules: [
+					{
+						name: "app",
+						packages: [{ name: "main", tsconfig: "./tsconfig.json" }],
+					},
+				],
+			};
+			const result = ProjectConfigInputSchema.parse(config);
+			expect("modules" in result).toBe(true);
+		});
+
+		it("accepts flat format with packages", () => {
+			const config = {
+				packages: [{ name: "core", tsconfig: "./tsconfig.json" }],
+			};
+			const result = ProjectConfigInputSchema.parse(config);
+			expect("packages" in result).toBe(true);
+		});
+
+		it("rejects config with neither modules nor packages", () => {
+			expect(() => ProjectConfigInputSchema.parse({})).toThrow();
+		});
+
+		it("rejects config with empty packages array", () => {
+			expect(() => ProjectConfigInputSchema.parse({ packages: [] })).toThrow();
+		});
+	});
+
+	describe(normalizeConfig.name, () => {
+		it("passes through full format unchanged", () => {
+			const fullConfig = {
+				modules: [
+					{
+						name: "app",
+						packages: [{ name: "main", tsconfig: "./tsconfig.json" }],
+					},
+				],
+			};
+			const result = normalizeConfig(fullConfig);
+			expect(result).toEqual(fullConfig);
+		});
+
+		it("converts flat format to full format with implicit main module", () => {
+			const flatConfig = {
+				packages: [
+					{ name: "core", tsconfig: "./tsconfig.json" },
+					{ name: "utils", tsconfig: "./packages/utils/tsconfig.json" },
+				],
+			};
+			const result = normalizeConfig(flatConfig);
+			expect(result.modules).toHaveLength(1);
+			expect(result.modules[0]?.name).toBe("main");
+			expect(result.modules[0]?.packages).toEqual(flatConfig.packages);
+		});
+
+		it("preserves optional fields when normalizing", () => {
+			const flatConfig = {
+				packages: [{ name: "core", tsconfig: "./tsconfig.json" }],
+				storage: { type: "sqlite" as const },
+				watch: { debounce: 100 },
+			};
+			const result = normalizeConfig(flatConfig);
+			expect(result.storage).toEqual({ type: "sqlite" });
+			expect(result.watch).toEqual({ debounce: 100 });
 		});
 	});
 });

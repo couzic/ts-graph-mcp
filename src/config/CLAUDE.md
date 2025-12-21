@@ -7,17 +7,20 @@ Configuration loading and validation for ts-graph-mcp projects. Uses Zod schemas
 ### ConfigSchema.ts
 
 **Zod Schemas:**
-- `ProjectConfigSchema` - Top-level Zod schema for the entire project configuration
+- `ProjectConfigInputSchema` - Input schema accepting both full and flat formats
+- `ProjectConfigSchema` - Output schema (always full format with modules)
 - `ModuleConfigSchema` - Schema for a module (contains one or more packages)
 - `PackageConfigSchema` - Schema for a package (name + tsconfig path)
 - `StorageConfigSchema` - Discriminated union for storage backends (sqlite | memgraph)
 - `WatchConfigSchema` - Schema for file watch configuration
 
 **Type Exports:**
-- `ProjectConfig` - TypeScript type inferred from ProjectConfigSchema (only exported type)
+- `ProjectConfig` - TypeScript type for full format (output)
+- `ProjectConfigInput` - TypeScript type for input (full or flat format)
 
 **Utilities:**
-- `defineConfig(config)` - Type-safe helper for ts-graph-mcp.config.ts files (validates at runtime)
+- `defineConfig(config)` - Type-safe helper accepting both formats, always returns full format
+- `normalizeConfig(input)` - Converts flat format to full format (creates implicit "main" module)
 
 ### ConfigLoader.ts
 
@@ -27,6 +30,25 @@ Configuration loading and validation for ts-graph-mcp projects. Uses Zod schemas
 - `CONFIG_FILE_NAMES` - Array of supported config filenames in precedence order
 
 ## Config File Structure
+
+**Two formats are supported:**
+
+### Flat Format (simpler, for non-monorepo projects)
+
+```typescript
+{
+  packages: [
+    { name: "core", tsconfig: "./tsconfig.json" },
+    { name: "utils", tsconfig: "./packages/utils/tsconfig.json" }
+  ],
+  storage?: { ... },
+  watch?: { ... }
+}
+```
+
+Creates an implicit "main" module containing all packages.
+
+### Full Format (for monorepos with multiple modules)
 
 ```typescript
 {
@@ -75,16 +97,27 @@ TS/JS configs must export config as default export or named export. The loader u
 ### Usage Pattern
 
 ```typescript
-// In user's ts-graph-mcp.config.ts
+// Flat format - for simple projects
 import { defineConfig } from 'ts-graph-mcp';
 
 export default defineConfig({
-  modules: [/* ... */]
+  packages: [
+    { name: "core", tsconfig: "./tsconfig.json" }
+  ]
+});
+
+// Full format - for monorepos
+export default defineConfig({
+  modules: [
+    { name: "api", packages: [{ name: "rest", tsconfig: "./packages/api/tsconfig.json" }] },
+    { name: "core", packages: [{ name: "domain", tsconfig: "./packages/core/tsconfig.json" }] }
+  ]
 });
 
 // In application code
 import { loadConfigFromDirectory } from '../config/ConfigLoader.js';
 const config = await loadConfigFromDirectory(process.cwd());
+// config is always in full format (with modules)
 ```
 
 ## Module Dependencies

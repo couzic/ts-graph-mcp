@@ -15,22 +15,20 @@ import config from "./ts-graph-mcp.config.js";
 /**
  * Integration tests for web-app test project.
  *
- * Structure (multi-module):
- * - shared: User, Config interfaces + createUser function
- * - frontend: UserCard.ts imports User from shared
- * - backend: userApi.ts imports User, Config and calls createUser from shared
+ * Structure (flat packages format - single "main" module):
+ * - shared package: User, Config interfaces + createUser function
+ * - frontend package: UserCard.ts imports User from shared
+ * - backend package: userApi.ts imports User, Config and calls createUser from shared
  *
- * PURPOSE: Test cross-module edge resolution (Issue #5).
+ * PURPOSE: Test cross-PACKAGE edge resolution within a single module.
+ * For cross-MODULE testing, see the monorepo sample project.
  *
- * These tests verify that edges crossing module boundaries are correctly extracted:
+ * These tests verify that edges crossing package boundaries are correctly extracted:
  * - USES_TYPE: frontend → shared (User type in function signatures)
  * - USES_TYPE: backend → shared (User, Config types)
  * - CALLS: backend → shared (createUser function calls)
- *
- * Note: This is a simplified multi-module structure (1 package per module).
- * See PLANNED.md for a full monorepo test with multiple packages per module.
  */
-describe("web-app integration (Issue #5: cross-module edges)", () => {
+describe("web-app integration (cross-package edges)", () => {
 	let db: Database.Database;
 
 	beforeAll(async () => {
@@ -45,9 +43,26 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 		closeDatabase(db);
 	});
 
-	describe("node extraction (should pass)", () => {
-		it("extracts nodes from shared module", () => {
-			const result = queryNodes(db, "*", { module: "shared" });
+	describe("flat config normalization", () => {
+		it("all nodes are in the implicit main module", () => {
+			const allNodes = queryNodes(db, "*");
+			expect(allNodes.every((n) => n.module === "main")).toBe(true);
+		});
+
+		it("nodes are correctly assigned to their packages", () => {
+			const sharedNodes = queryNodes(db, "*", { package: "shared" });
+			const frontendNodes = queryNodes(db, "*", { package: "frontend" });
+			const backendNodes = queryNodes(db, "*", { package: "backend" });
+
+			expect(sharedNodes.length).toBeGreaterThan(0);
+			expect(frontendNodes.length).toBeGreaterThan(0);
+			expect(backendNodes.length).toBeGreaterThan(0);
+		});
+	});
+
+	describe("node extraction", () => {
+		it("extracts nodes from shared package", () => {
+			const result = queryNodes(db, "*", { package: "shared" });
 
 			const names = result.map((n) => n.name);
 			expect(names).toContain("User");
@@ -55,8 +70,8 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 			expect(names).toContain("createUser");
 		});
 
-		it("extracts nodes from frontend module", () => {
-			const result = queryNodes(db, "*", { module: "frontend" });
+		it("extracts nodes from frontend package", () => {
+			const result = queryNodes(db, "*", { package: "frontend" });
 
 			const names = result.map((n) => n.name);
 			expect(names).toContain("UserCardProps");
@@ -64,8 +79,8 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 			expect(names).toContain("formatUserName");
 		});
 
-		it("extracts nodes from backend module", () => {
-			const result = queryNodes(db, "*", { module: "backend" });
+		it("extracts nodes from backend package", () => {
+			const result = queryNodes(db, "*", { package: "backend" });
 
 			const names = result.map((n) => n.name);
 			expect(names).toContain("getUser");
@@ -74,21 +89,7 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 		});
 	});
 
-	describe("cross-module USES_TYPE edges (Issue #5)", () => {
-		/**
-		 * frontend/src/UserCard.ts has:
-		 *   - UserCardProps interface with `user: User` property
-		 *   - renderUserCard(props: UserCardProps) - indirect User usage
-		 *   - formatUserName(user: User) - direct User usage in parameter
-		 *
-		 * Expected USES_TYPE edges:
-		 *   frontend:formatUserName → shared:User (parameter type)
-		 *
-		 * Note: Interface property types (UserCardProps.user: User) don't
-		 * currently create USES_TYPE edges. This is a potential enhancement,
-		 * not part of Issue #5 (cross-module edge resolution).
-		 */
-
+	describe("cross-package USES_TYPE edges", () => {
 		it("creates USES_TYPE edge from frontend formatUserName to shared User", () => {
 			const edges = queryEdges(db, {
 				type: "USES_TYPE",
@@ -101,17 +102,6 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 			expect(edges[0]?.context).toBe("parameter");
 		});
 
-		/**
-		 * backend/src/userApi.ts has:
-		 *   - getUser(id: string): User | null
-		 *   - listUsers(): User[]
-		 *   - getConfig(): Config
-		 *
-		 * Expected USES_TYPE edges:
-		 *   backend:getUser → shared:User (return type)
-		 *   backend:listUsers → shared:User (return type)
-		 *   backend:getConfig → shared:Config (return type)
-		 */
 		it("creates USES_TYPE edge from backend getUser to shared User", () => {
 			const edges = queryEdges(db, {
 				type: "USES_TYPE",
@@ -136,16 +126,7 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 		});
 	});
 
-	describe("cross-module CALLS edges (Issue #5)", () => {
-		/**
-		 * backend/src/userApi.ts calls createUser from shared:
-		 *   - getUser calls createUser("John Doe", ...)
-		 *   - listUsers calls createUser twice
-		 *
-		 * Expected CALLS edges:
-		 *   backend:getUser → shared:createUser
-		 *   backend:listUsers → shared:createUser
-		 */
+	describe("cross-package CALLS edges", () => {
 		it("creates CALLS edge from backend getUser to shared createUser", () => {
 			const edges = queryEdges(db, {
 				type: "CALLS",
@@ -170,17 +151,10 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 		});
 	});
 
-	describe("cross-module impact analysis (Issue #5)", () => {
-		/**
-		 * analyzeImpact(shared/User) should return all code affected by changes to User:
-		 *   - frontend:UserCardProps (has user: User property)
-		 *   - frontend:formatUserName (has User parameter)
-		 *   - backend:getUser (returns User)
-		 *   - backend:listUsers (returns User[])
-		 */
+	describe("cross-package impact analysis", () => {
 		it("analyzeImpact on shared User shows frontend dependents", () => {
 			const userNode = queryNodes(db, "User", {
-				module: "shared",
+				package: "shared",
 				type: "Interface",
 			})[0];
 
@@ -197,7 +171,7 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 
 		it("analyzeImpact on shared User shows backend dependents", () => {
 			const userNode = queryNodes(db, "User", {
-				module: "shared",
+				package: "shared",
 				type: "Interface",
 			})[0];
 
@@ -213,9 +187,9 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 			expect(impactedNames).toContain("listUsers");
 		});
 
-		it("analyzeImpact on shared User shows BOTH frontend AND backend dependents", () => {
+		it("analyzeImpact on shared User shows dependents from BOTH frontend AND backend packages", () => {
 			const userNode = queryNodes(db, "User", {
-				module: "shared",
+				package: "shared",
 				type: "Interface",
 			})[0];
 
@@ -226,17 +200,16 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 				edgeTypes: ["USES_TYPE"],
 			});
 
-			const modules = [...new Set(impacted.map((n) => n.module))];
+			const packages = [...new Set(impacted.map((n) => n.package))];
 
-			// This is the key assertion for Issue #5:
-			// Impact analysis on shared types should show dependents from BOTH modules
-			expect(modules).toContain("frontend");
-			expect(modules).toContain("backend");
+			// Key assertion: Impact analysis on shared types shows dependents from multiple packages
+			expect(packages).toContain("frontend");
+			expect(packages).toContain("backend");
 		});
 
 		it("analyzeImpact on shared createUser shows backend callers", () => {
 			const createUserNode = queryNodes(db, "createUser", {
-				module: "shared",
+				package: "shared",
 				type: "Function",
 			})[0];
 
@@ -253,15 +226,15 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 		});
 	});
 
-	describe("module filtering (should pass)", () => {
-		it("searchSymbols with module filter returns only that module", () => {
-			const sharedNodes = queryNodes(db, "*", { module: "shared" });
-			const frontendNodes = queryNodes(db, "*", { module: "frontend" });
-			const backendNodes = queryNodes(db, "*", { module: "backend" });
+	describe("package filtering", () => {
+		it("queryNodes with package filter returns only that package", () => {
+			const sharedNodes = queryNodes(db, "*", { package: "shared" });
+			const frontendNodes = queryNodes(db, "*", { package: "frontend" });
+			const backendNodes = queryNodes(db, "*", { package: "backend" });
 
-			expect(sharedNodes.every((n) => n.module === "shared")).toBe(true);
-			expect(frontendNodes.every((n) => n.module === "frontend")).toBe(true);
-			expect(backendNodes.every((n) => n.module === "backend")).toBe(true);
+			expect(sharedNodes.every((n) => n.package === "shared")).toBe(true);
+			expect(frontendNodes.every((n) => n.package === "frontend")).toBe(true);
+			expect(backendNodes.every((n) => n.package === "backend")).toBe(true);
 		});
 	});
 
@@ -274,46 +247,41 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 			expect(ids.length).toBe(uniqueIds.size);
 		});
 
-		it("assigns correct module based on file path", () => {
+		it("assigns correct package based on file path", () => {
 			const allNodes = queryNodes(db, "*");
 
-			// Every node's module should match its file path prefix
 			for (const node of allNodes) {
 				if (node.filePath.startsWith("shared/")) {
-					expect(node.module).toBe("shared");
+					expect(node.package).toBe("shared");
 				} else if (node.filePath.startsWith("frontend/")) {
-					expect(node.module).toBe("frontend");
+					expect(node.package).toBe("frontend");
 				} else if (node.filePath.startsWith("backend/")) {
-					expect(node.module).toBe("backend");
+					expect(node.package).toBe("backend");
 				}
 			}
 		});
 	});
 
 	describe("edge summary (diagnostic)", () => {
-		/**
-		 * This test shows what nodes exist and their module assignments.
-		 * Helps debug why module filtering might not work.
-		 */
-		it("logs all nodes and their modules for debugging", () => {
+		it("logs all nodes and their packages for debugging", () => {
 			const allNodes = queryNodes(db, "*");
 
 			console.log("\n=== Node Summary ===");
 			console.log(`Total nodes: ${allNodes.length}`);
 
-			// Group by module
-			const byModule = allNodes.reduce(
+			// Group by package
+			const byPackage = allNodes.reduce(
 				(acc, n) => {
-					acc[n.module] = acc[n.module] || [];
-					acc[n.module].push(n);
+					acc[n.package] = acc[n.package] || [];
+					acc[n.package].push(n);
 					return acc;
 				},
 				{} as Record<string, typeof allNodes>,
 			);
 
-			console.log("\nNodes by module:");
-			for (const [module, nodes] of Object.entries(byModule)) {
-				console.log(`  ${module}: ${nodes.length} nodes`);
+			console.log("\nNodes by package:");
+			for (const [pkg, nodes] of Object.entries(byPackage)) {
+				console.log(`  ${pkg}: ${nodes.length} nodes`);
 				for (const n of nodes.slice(0, 5)) {
 					console.log(`    - ${n.type} ${n.name} (${n.filePath})`);
 				}
@@ -322,25 +290,10 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 				}
 			}
 
-			// Check if any nodes should be in "shared" but aren't
-			const shouldBeShared = allNodes.filter(
-				(n) =>
-					n.filePath.startsWith("shared/") || n.id.startsWith("shared/"),
-			);
-			console.log(
-				`\nNodes with 'shared' in path (expected module=shared): ${shouldBeShared.length}`,
-			);
-			for (const n of shouldBeShared) {
-				console.log(`  ${n.module}/${n.package}: ${n.name} (${n.filePath})`);
-			}
-
 			expect(allNodes.length).toBeGreaterThan(0);
 		});
 
-		/**
-		 * This test provides diagnostic output to understand what edges were created.
-		 */
-		it("logs all edges for debugging", () => {
+		it("logs cross-package edges for debugging", () => {
 			const allEdges = queryEdges(db, {});
 
 			// Count edges by type
@@ -355,32 +308,32 @@ describe("web-app integration (Issue #5: cross-module edges)", () => {
 			console.log("\n=== Edge Summary ===");
 			console.log("Edge counts by type:", edgeCounts);
 
-			// Count cross-module edges
-			const crossModuleEdges = allEdges.filter((e) => {
-				const sourceModule = e.source.startsWith("shared/")
+			// Count cross-package edges
+			const crossPackageEdges = allEdges.filter((e) => {
+				const sourcePackage = e.source.startsWith("shared/")
 					? "shared"
 					: e.source.startsWith("frontend/")
 						? "frontend"
 						: e.source.startsWith("backend/")
 							? "backend"
 							: "unknown";
-				const targetModule = e.target.startsWith("shared/")
+				const targetPackage = e.target.startsWith("shared/")
 					? "shared"
 					: e.target.startsWith("frontend/")
 						? "frontend"
 						: e.target.startsWith("backend/")
 							? "backend"
 							: "unknown";
-				return sourceModule !== targetModule;
+				return sourcePackage !== targetPackage;
 			});
 
-			console.log(`Cross-module edges: ${crossModuleEdges.length}`);
-			for (const e of crossModuleEdges) {
+			console.log(`Cross-package edges: ${crossPackageEdges.length}`);
+			for (const e of crossPackageEdges) {
 				console.log(`  ${e.type}: ${e.source} → ${e.target}`);
 			}
 
-			// Cross-module edges should be created (requires proper tsconfig references)
-			expect(crossModuleEdges.length).toBeGreaterThan(0);
+			// Cross-package edges should be created
+			expect(crossPackageEdges.length).toBeGreaterThan(0);
 		});
 	});
 });

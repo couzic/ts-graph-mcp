@@ -1,29 +1,20 @@
 import { defineConfig } from "../../src/config/ConfigSchema.js";
 
 /**
- * Multi-module web app configuration for testing cross-module edge resolution.
+ * Web app configuration using flat packages format (no module nesting).
  *
  * Structure:
- * - shared: Common types (User, Config) used by other modules
+ * - shared: Common types (User, Config) used by other packages
  * - frontend: UI components that import from shared
  * - backend: API handlers that import from shared
  *
- * This tests Issue #5 (cross-module edges). For a full monorepo test with
- * multiple packages per module, see PLANNED.md.
+ * This tests cross-PACKAGE edges within a single implicit "main" module.
+ * For cross-MODULE edge testing, see the monorepo sample project.
  */
 export default defineConfig({
-	modules: [
-		{
-			name: "shared",
-			packages: [{ name: "shared", tsconfig: "./shared/tsconfig.json" }],
-		},
-		{
-			name: "frontend",
-			packages: [{ name: "frontend", tsconfig: "./frontend/tsconfig.json" }],
-		},
-		{
-			name: "backend",
-			packages: [{ name: "backend", tsconfig: "./backend/tsconfig.json" }],
-		},
+	packages: [
+		{ name: "shared", tsconfig: "./shared/tsconfig.json" },
+		{ name: "frontend", tsconfig: "./frontend/tsconfig.json" },
+		{ name: "backend", tsconfig: "./backend/tsconfig.json" },
 	],
 });
