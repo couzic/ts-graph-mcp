@@ -18,8 +18,8 @@ export class UserService extends BaseService {
   }
 }
 
-// Another class extending BaseService
-export class AdminService extends BaseService {
+// Class extending UserService (creates 3-level hierarchy: AdminService → UserService → BaseService)
+export class AdminService extends UserService {
   private adminLevel: number = 1;
 
   getAdminLevel(): number {
@@ -34,6 +34,19 @@ export class AuditLog implements Auditable {
   updatedAt: Date = new Date();
 
   update(): void {
+    this.updatedAt = new Date();
+  }
+}
+
+// Second class implementing Auditable (validates multiple implementers)
+export class ActivityLog implements Auditable {
+  id: number = 0;
+  createdAt: Date = new Date();
+  updatedAt: Date = new Date();
+  action: string = "";
+
+  recordAction(action: string): void {
+    this.action = action;
     this.updatedAt = new Date();
   }
 }

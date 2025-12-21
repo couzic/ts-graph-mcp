@@ -6,6 +6,8 @@
  * - P2: Cross-module impact analysis (analyzeImpact)
  * - P3: Utility usage tracking (incomingCallsDeep)
  * - P4: Package dependencies (outgoingImports)
+ * - P5: Transitive package dependencies (outgoingPackageDeps)
+ * - P6: Reverse package dependencies (incomingPackageDeps)
  *
  * Key differentiator from deep-chain and web-app:
  * This tests BOTH cross-package (within module) AND cross-module edges.
@@ -63,5 +65,21 @@ export const prompts: BenchmarkPrompt[] = [
       "What are the dependencies of the backend/api package? Show me what packages it imports from.",
     expectedContains: ["services", "types", "shared"],
     expectedTool: "outgoingImports",
+  },
+  {
+    id: "P5",
+    name: "Transitive package dependencies",
+    prompt:
+      "What packages does backend/api depend on? Show me the transitive package dependencies.",
+    expectedContains: ["backend/services", "shared/types", "shared/utils"],
+    expectedTool: "outgoingPackageDeps",
+  },
+  {
+    id: "P6",
+    name: "Reverse package dependencies",
+    prompt:
+      "What packages depend on shared/types? I want to know what would be affected if I changed this package.",
+    expectedContains: ["frontend/ui", "frontend/state", "backend/api", "backend/services"],
+    expectedTool: "incomingPackageDeps",
   },
 ];

@@ -19,8 +19,9 @@ Sample TypeScript codebases for integration testing and benchmarking.
 ### `mixed-types/`
 All 8 node types: Function, Class, Method, Interface, TypeAlias, Variable, Property, File.
 - Tests node extraction completeness and type-specific properties
-- Will be merged into `type-system` when that project is implemented (see PLANNED.md)
-- 23 integration tests
+- **Benchmark for type system tools**: `incomingExtends`, `outgoingExtends`, `incomingImplements`, `incomingUsesType`
+- 3-level class hierarchy (`AdminService → UserService → BaseService`) for transitive inheritance testing
+- 28 integration tests
 
 ### `web-app/`
 Multi-module web app with 3 modules (shared, frontend, backend), 1 package each.
@@ -115,8 +116,9 @@ beforeAll(async () => {
 
 **Current strategy:**
 - `deep-chain` benchmarks prove value for **deep transitive traversal**
-- `monorepo` benchmarks prove value for **cross-module/package analysis**
-- `mixed-types` and `web-app` have full integration test coverage but no benchmarks (their query patterns are already covered)
+- `monorepo` benchmarks prove value for **cross-module/package analysis** and **package dependencies**
+- `mixed-types` benchmarks prove value for **type system tools** (inheritance, implementations, type usage)
+- `web-app` has full integration test coverage but no benchmarks (query patterns already covered by other projects)
 
 ## Benchmarking
 
@@ -174,10 +176,11 @@ sample-project/
 
 ### Current Benchmarks
 
-| Project | Prompts | Query Types Covered |
-|---------|---------|---------------------|
-| `deep-chain` | P1, P2, P3 | Deep transitive traversal (`outgoingCallsDeep`, `findPath`, `analyzeImpact`) |
-| `monorepo` | P1, P2, P3, P4 | Cross-module/package analysis (`incomingCallsDeep`, `analyzeImpact`, `outgoingImports`) |
+| Project | Prompts | Tools Covered |
+|---------|---------|---------------|
+| `deep-chain` | P1-P3 | `outgoingCallsDeep`, `findPath`, `analyzeImpact` |
+| `monorepo` | P1-P6 | `incomingCallsDeep`, `analyzeImpact`, `outgoingImports`, `outgoingPackageDeps`, `incomingPackageDeps` |
+| `mixed-types` | P1-P4 | `incomingExtends`, `outgoingExtends`, `incomingImplements`, `incomingUsesType` |
 
 ### Sample Results (deep-chain)
 

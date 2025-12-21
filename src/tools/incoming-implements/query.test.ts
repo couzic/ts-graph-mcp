@@ -38,12 +38,14 @@ describe(queryImplementers.name, () => {
 		closeDatabase(db);
 	});
 
-	it("finds AuditLog implementing Auditable interface", () => {
+	it("finds classes implementing Auditable interface", () => {
 		const result = queryImplementers(db, "src/types.ts:Auditable");
 
-		expect(result).toHaveLength(1);
-		expect(result[0]?.name).toBe("AuditLog");
-		expect(result[0]?.type).toBe("Class");
+		expect(result).toHaveLength(2);
+		const names = result.map((r) => r.name);
+		expect(names).toContain("AuditLog");
+		expect(names).toContain("ActivityLog");
+		expect(result.every((r) => r.type === "Class")).toBe(true);
 	});
 
 	it("returns empty array for interface with no implementations", () => {
@@ -59,11 +61,11 @@ describe(queryImplementers.name, () => {
 	});
 
 	it("orders results by package, module, name", () => {
-		// This test will pass with single result, but demonstrates sorting
 		const result = queryImplementers(db, "src/types.ts:Auditable");
 
-		expect(result).toHaveLength(1);
-		// Results are ordered, even with one result
-		expect(result[0]?.name).toBe("AuditLog");
+		expect(result).toHaveLength(2);
+		// Results are alphabetically ordered by name
+		expect(result[0]?.name).toBe("ActivityLog");
+		expect(result[1]?.name).toBe("AuditLog");
 	});
 });

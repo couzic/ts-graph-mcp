@@ -314,17 +314,17 @@ describe("mixed-types integration", () => {
 			});
 		});
 
-		it("creates EXTENDS edge from AdminService to BaseService", () => {
+		it("creates EXTENDS edge from AdminService to UserService (3-level hierarchy)", () => {
 			const edges = queryEdges(db, {
 				sourceId: "src/models.ts:AdminService",
-				targetId: "src/models.ts:BaseService",
+				targetId: "src/models.ts:UserService",
 				type: "EXTENDS",
 			});
 
 			expect(edges).toHaveLength(1);
 			expect(edges[0]).toMatchObject({
 				source: "src/models.ts:AdminService",
-				target: "src/models.ts:BaseService",
+				target: "src/models.ts:UserService",
 				type: "EXTENDS",
 			});
 		});
