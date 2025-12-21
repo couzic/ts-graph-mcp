@@ -21,7 +21,7 @@ export interface IncomingUsesTypeParams {
 export const incomingUsesTypeDefinition = {
 	name: "incomingUsesType",
 	description:
-		"Find what code uses a type in signatures or declarations. Use this to answer 'What functions take this type as a parameter?' or 'Where is this interface referenced?'",
+		"Find what code uses a type in signatures or declarations. Use this to answer 'What functions take this type as a parameter?' or 'Where is this interface referenced?' Returns usages grouped by file with context (parameter, return, property, variable).",
 	inputSchema: {
 		type: "object" as const,
 		properties: {

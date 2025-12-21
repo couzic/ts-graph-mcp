@@ -21,7 +21,7 @@ export interface OutgoingUsesTypeParams {
 export const outgoingUsesTypeDefinition = {
 	name: "outgoingUsesType",
 	description:
-		"Find what types a function or class references. Use this to answer 'What types does this function depend on?'",
+		"Find what types a function or class references. Use this to answer 'What types does this function depend on?' Returns type dependencies grouped by file with context (parameter, return, property, variable).",
 	inputSchema: {
 		type: "object" as const,
 		properties: {

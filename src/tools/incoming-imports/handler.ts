@@ -20,7 +20,7 @@ export interface IncomingImportsParams {
 export const incomingImportsDefinition = {
 	name: "incomingImports",
 	description:
-		"Find what files import a module. Use this to answer 'What code imports this module?' or 'Where is this file imported?'",
+		"Find what files import a module. Use this to answer 'What code imports this module?' or 'Where is this file imported?' Returns importing files with their imported symbols.",
 	inputSchema: {
 		type: "object" as const,
 		properties: {

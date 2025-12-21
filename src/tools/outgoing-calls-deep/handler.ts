@@ -21,7 +21,7 @@ export interface OutgoingCallsDeepParams {
 export const outgoingCallsDeepDefinition = {
 	name: "outgoingCallsDeep",
 	description:
-		"Find all functions or methods called by a symbol, including transitive callees. Use this to answer 'What does this function depend on?' or 'Trace the call chain from this entry point.'",
+		"Find all functions or methods called by a symbol, including transitive callees. Use this to answer 'What does this function depend on?' or 'Trace the call chain from this entry point.' Returns results grouped by file with depth (1=direct, 2+=transitive).",
 	inputSchema: {
 		type: "object" as const,
 		properties: {

@@ -45,23 +45,6 @@ analyzeImpact({ symbol: "User", edgeTypes: ["USES_TYPE"] })           // Only ty
 analyzeImpact({ symbol: "formatDate", moduleFilter: "api" })          // Impact within module
 ```
 
-### Improve Tool Descriptions
-**Impact: Medium | Effort: Very Low**
-
-The MCP tool definitions (in `src/tools/*/handler.ts`) have quality gaps that reduce discoverability for AI agents:
-
-**Issues identified:**
-
-| Problem | Example | Fix |
-|---------|---------|-----|
-| **Redundant descriptions** | `incomingCallsDeep`: "Find all functions/methods that call the target. Returns nodes that call the specified function/method." | Remove redundant second sentence |
-| **Missing output format hints** | No descriptions mention the hierarchical text format | Add: "Returns hierarchical text grouped by file" |
-
-**Affected files:**
-- `src/tools/incoming-calls-deep/handler.ts` - redundant description
-- `src/tools/outgoing-calls-deep/handler.ts` - redundant description
-- All 6 tools - missing output format hints
-
 ### Error Messages with Example Syntax
 **Impact: Medium | Effort: Very Low**
 
@@ -379,12 +362,10 @@ Agent:
 
 Want to help build the future of AI-assisted development?
 
-Pick something from this roadmap that excites you. The codebase is well-tested (400+ tests) and documented. Every module has a CLAUDE.md explaining its purpose and patterns.
+Pick something from this roadmap that excites you. The codebase is well-tested (478 tests) and documented. Every module has a CLAUDE.md explaining its purpose and patterns.
 
 **High-impact, low-effort** items are great starting points:
 - Expose hidden parameters in get-impact
-- Result limits for search
-- Improve tool descriptions (redundancy, output format hints)
 - Error messages with example syntax
 - Simplified single-module configuration
 - Circular dependency detection

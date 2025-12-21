@@ -21,7 +21,7 @@ export interface IncomingCallsDeepParams {
 export const incomingCallsDeepDefinition = {
 	name: "incomingCallsDeep",
 	description:
-		"Find all callers of a function or method, including transitive callers (callers of callers). Use this to answer 'Who uses this function?' or 'What code calls this API?'",
+		"Find all callers of a function or method, including transitive callers (callers of callers). Use this to answer 'Who uses this function?' or 'What code calls this API?' Returns results grouped by file with depth (1=direct, 2+=transitive) and call count.",
 	inputSchema: {
 		type: "object" as const,
 		properties: {

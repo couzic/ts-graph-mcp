@@ -20,7 +20,7 @@ export interface OutgoingImportsParams {
 export const outgoingImportsDefinition = {
 	name: "outgoingImports",
 	description:
-		"Find what a file imports. Use this to answer 'What are the dependencies of this file?' or 'What does this module import?'",
+		"Find what a file imports. Use this to answer 'What are the dependencies of this file?' or 'What does this module import?' Returns imported files with the symbols imported from each.",
 	inputSchema: {
 		type: "object" as const,
 		properties: {
