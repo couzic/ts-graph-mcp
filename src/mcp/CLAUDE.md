@@ -2,21 +2,22 @@
 
 ## Purpose
 
-Exposes the TypeScript code graph as an MCP (Model Context Protocol) server that provides 5 tools for AI coding agents to query and explore code structure. This is the primary interface for the ts-graph-mcp project.
+Exposes the TypeScript code graph as an MCP (Model Context Protocol) server that provides 14 tools for AI coding agents to query and explore code structure. This is the primary interface for the ts-graph-mcp project.
+
+**For tool documentation, see [`../tools/CLAUDE.md`](../tools/CLAUDE.md).**
 
 ## Architecture: Vertical Slices
 
-Each tool is implemented as a self-contained vertical slice:
+Each tool is implemented as a self-contained vertical slice in `src/tools/<tool-name>/`:
 
 ```
 src/tools/
-├── incoming-calls-deep/   (query.ts, format.ts, format.test.ts, handler.ts)
-├── outgoing-calls-deep/   (query.ts, format.ts, format.test.ts, handler.ts)
-├── analyze-impact/        (query.ts, format.ts, format.test.ts, handler.ts)
-├── find-path/             (query.ts, format.ts, format.test.ts, handler.ts)
-├── incoming-imports/      (query.ts, format.ts, handler.ts)
-├── outgoing-imports/      (query.ts, format.ts, handler.ts)
-└── shared/                (SymbolQuery.ts, resolveSymbol.ts, resolveSymbol.test.ts)
+├── incoming-calls-deep/    ├── incoming-imports/     ├── incoming-extends/
+├── outgoing-calls-deep/    ├── outgoing-imports/     ├── outgoing-extends/
+├── analyze-impact/         ├── incoming-uses-type/   ├── incoming-implements/
+├── find-path/              ├── outgoing-uses-type/   ├── outgoing-implements/
+├── incoming-package-deps/  └── outgoing-package-deps/
+└── shared/                 (SymbolQuery.ts, resolveSymbol.ts, nodeFormatters.ts)
 ```
 
 **Each slice contains:**
@@ -34,15 +35,7 @@ src/tools/
 ### `startMcpServer(db: Database.Database): Promise<void>`
 **File:** `McpServer.ts`
 
-Initializes and starts the MCP server on stdio transport with 6 registered tools. Dispatches tool calls to vertical slice handlers.
-
-**Tools provided:**
-1. `incomingCallsDeep` - Find all callers of a symbol (extends LSP's incomingCalls with transitive traversal via maxDepth)
-2. `outgoingCallsDeep` - Find all callees of a symbol (extends LSP's outgoingCalls with transitive traversal via maxDepth)
-3. `incomingImports` - Find what files import a module
-4. `outgoingImports` - Find what a file imports
-5. `analyzeImpact` - Impact analysis - all code affected by changes to a symbol
-6. `findPath` - Find shortest path between two symbols (BFS with maxDepth, maxPaths)
+Initializes and starts the MCP server on stdio transport with 14 registered tools. Dispatches tool calls to vertical slice handlers. See [`../tools/CLAUDE.md`](../tools/CLAUDE.md) for tool details.
 
 ### `main(): Promise<void>`
 **File:** `StartServer.ts`

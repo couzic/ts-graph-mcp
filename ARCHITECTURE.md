@@ -407,190 +407,26 @@ if (targetId) {
 
 ## MCP Tools
 
-The MCP server exposes 14 focused tools for querying the code graph, organized by relationship type.
+The MCP server exposes 14 focused tools for querying the code graph. All tools use symbol-based queries with optional filters (`file`, `module`, `package`) for disambiguation.
 
-**Symbol-First Design**: All tools use a symbol-based query approach instead of internal node IDs. Tools accept a `symbol` name with optional filters (`file`, `module`, `package`) to narrow scope. Symbol resolution handles disambiguation automatically — if multiple matches exist, the tool returns candidates for clarification.
+**For detailed parameter documentation, see [`src/tools/CLAUDE.md`](src/tools/CLAUDE.md).**
 
-**Input Validation**: Tools validate symbol existence before querying. Invalid inputs return actionable error messages with suggestions. Shared validators live in `src/tools/shared/validateSymbolExists.ts`.
-
-**Output Format**: All tools return machine-readable output optimized for AI agent consumption. Each symbol includes `offset` and `limit` fields that can be passed directly to the Read tool without computation.
-
-### 1. `incomingCallsDeep`
-
-**Purpose**: Find all functions/methods that call the target (reverse call graph, transitive). Extends LSP's `incomingCalls` with transitive traversal.
-
-**Parameters**:
-- `symbol` (required): Target symbol name (e.g., `"formatDate"`, `"User.save"`)
-- `file` (optional): Narrow scope to a specific file
-- `module` (optional): Narrow scope to a specific module
-- `package` (optional): Narrow scope to a specific package
-- `maxDepth` (optional): Traversal depth (1-100, default: 100)
-
-**Output**: Includes `callCount` (how many times each caller calls the target) and `depth` (1 for direct callers, 2+ for transitive).
-
-### 2. `outgoingCallsDeep`
-
-**Purpose**: Find all functions/methods that the source calls (forward call graph, transitive). Extends LSP's `outgoingCalls` with transitive traversal.
-
-**Parameters**:
-- `symbol` (required): Source symbol name (e.g., `"processData"`, `"Service.run"`)
-- `file` (optional): Narrow scope to a specific file
-- `module` (optional): Narrow scope to a specific module
-- `package` (optional): Narrow scope to a specific package
-- `maxDepth` (optional): Traversal depth (1-100, default: 100)
-
-**Output**: Includes `callCount` (how many times the source calls each callee) and `depth` (1 for direct callees, 2+ for transitive).
-
-### 3. `analyzeImpact`
-
-**Purpose**: Impact analysis - find all code affected by changes to a symbol.
-
-**Parameters**:
-- `symbol` (required): Symbol to analyze (e.g., `"Database.query"`, `"validateInput"`)
-- `file` (optional): Narrow scope to a specific file
-- `module` (optional): Narrow scope to a specific module
-- `package` (optional): Narrow scope to a specific package
-- `maxDepth` (optional): Traversal depth (default: 100)
-
-### 4. `findPath`
-
-**Purpose**: Find paths between two symbols using BFS. Returns multiple paths if they exist.
-
-**Parameters**:
-- `from` (required): Source symbol query object with fields:
-  - `symbol` (required): Symbol name
-  - `file` (optional): Narrow scope to file
-  - `module` (optional): Narrow scope to module
-  - `package` (optional): Narrow scope to package
-- `to` (required): Target symbol query object (same fields as `from`)
-- `maxDepth` (optional): Maximum path length (1-100, default: 20)
-- `maxPaths` (optional): Maximum number of paths to return (1-10, default: 3)
-
-**Output**: Returns all paths found (up to `maxPaths`), each showing the complete sequence of symbols and connection types between them.
-
-### 5. `incomingImports`
-
-**Purpose**: Find what files import a module.
-
-**Parameters**:
-- `symbol` (required): File or module name to search for
-- `file` (optional): Narrow scope to a specific file
-- `module` (optional): Narrow scope to a specific module
-- `package` (optional): Narrow scope to a specific package
-
-**Output**: Returns files that import the target, grouped by package.
-
-### 6. `outgoingImports`
-
-**Purpose**: Find what a file imports.
-
-**Parameters**:
-- `symbol` (required): File name to search from
-- `file` (optional): Narrow scope to a specific file
-- `module` (optional): Narrow scope to a specific module
-- `package` (optional): Narrow scope to a specific package
-
-**Output**: Returns imports from the source file, grouped by package with type-only indicators.
-
-### 7. `incomingUsesType`
-
-**Purpose**: Find what code uses a type in signatures or declarations.
-
-**Parameters**:
-- `symbol` (required): Type, Interface, or TypeAlias name
-- `context` (optional): Filter by usage context ("parameter", "return", "property", "variable")
-- `file` (optional): Narrow scope to a specific file
-- `module` (optional): Narrow scope to a specific module
-- `package` (optional): Narrow scope to a specific package
-
-**Output**: Returns functions/methods/variables that reference the type, grouped by package.
-
-### 8. `outgoingUsesType`
-
-**Purpose**: Find what types a function or class references in its signatures.
-
-**Parameters**:
-- `symbol` (required): Function, Method, or Class name
-- `context` (optional): Filter by usage context ("parameter", "return", "property", "variable")
-- `file` (optional): Narrow scope to a specific file
-- `module` (optional): Narrow scope to a specific module
-- `package` (optional): Narrow scope to a specific package
-
-**Output**: Returns types referenced by the symbol, grouped by package.
-
-### 9. `incomingExtends`
-
-**Purpose**: Find what classes or interfaces extend a base class/interface (subclass tree).
-
-**Parameters**:
-- `symbol` (required): Class or Interface name
-- `maxDepth` (optional): Traversal depth (1 = direct children, 2+ = full hierarchy)
-- `file` (optional): Narrow scope to a specific file
-- `module` (optional): Narrow scope to a specific module
-- `package` (optional): Narrow scope to a specific package
-
-**Output**: Returns subclasses/sub-interfaces with inheritance depth.
-
-### 10. `outgoingExtends`
-
-**Purpose**: Find what a class or interface extends (superclass chain).
-
-**Parameters**:
-- `symbol` (required): Class or Interface name
-- `maxDepth` (optional): Traversal depth (1 = direct parent, 2+ = full chain)
-- `file` (optional): Narrow scope to a specific file
-- `module` (optional): Narrow scope to a specific module
-- `package` (optional): Narrow scope to a specific package
-
-**Output**: Returns parent classes/interfaces with inheritance depth.
-
-### 11. `incomingImplements`
-
-**Purpose**: Find what classes implement an interface.
-
-**Parameters**:
-- `symbol` (required): Interface name
-- `file` (optional): Narrow scope to a specific file
-- `module` (optional): Narrow scope to a specific module
-- `package` (optional): Narrow scope to a specific package
-
-**Output**: Returns implementing classes, grouped by package.
-
-### 12. `outgoingImplements`
-
-**Purpose**: Find what interfaces a class implements.
-
-**Parameters**:
-- `symbol` (required): Class name
-- `file` (optional): Narrow scope to a specific file
-- `module` (optional): Narrow scope to a specific module
-- `package` (optional): Narrow scope to a specific package
-
-**Output**: Returns implemented interfaces, grouped by package.
-
-### 13. `outgoingPackageDeps`
-
-**Purpose**: Find package-level dependencies (what packages does this package depend on).
-
-**Parameters**:
-- `package` (required): Package name (e.g., "backend/api")
-- `module` (optional): Narrow scope to a specific module
-- `maxDepth` (optional): Traversal depth (1 = direct only, default = all reachable)
-- `outputTypes` (optional): Output formats ("text", "mermaid", or both)
-
-**Output**: Returns package dependency graph with depth information. Optionally includes Mermaid diagram.
-
-### 14. `incomingPackageDeps`
-
-**Purpose**: Find reverse package dependencies (what packages depend on this package).
-
-**Parameters**:
-- `package` (required): Package name (e.g., "shared/types")
-- `module` (optional): Narrow scope to a specific module
-- `maxDepth` (optional): Traversal depth (1 = direct only, default = all reachable)
-- `outputTypes` (optional): Output formats ("text", "mermaid", or both)
-
-**Output**: Returns reverse package dependency graph. Useful for impact analysis at package granularity.
+| Category | Tool | Purpose |
+|----------|------|---------|
+| **Call Graph** | `incomingCallsDeep` | Find callers (transitive) |
+| | `outgoingCallsDeep` | Find callees (transitive) |
+| **Imports** | `incomingImports` | Find what imports a module |
+| | `outgoingImports` | Find what a file imports |
+| **Type Usage** | `incomingUsesType` | Find code using a type |
+| | `outgoingUsesType` | Find types used by a symbol |
+| **Inheritance** | `incomingExtends` | Find subclasses |
+| | `outgoingExtends` | Find superclasses |
+| | `incomingImplements` | Find implementing classes |
+| | `outgoingImplements` | Find implemented interfaces |
+| **Package Deps** | `outgoingPackageDeps` | Find package dependencies |
+| | `incomingPackageDeps` | Find reverse package deps |
+| **Analysis** | `analyzeImpact` | Impact analysis |
+| | `findPath` | Find paths between symbols |
 
 ## Key Technologies
 
