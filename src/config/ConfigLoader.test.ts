@@ -36,7 +36,7 @@ describe("ConfigLoader", () => {
 		});
 	});
 
-	describe("findConfigFile", () => {
+	describe(findConfigFile.name, () => {
 		it("finds ts-graph-mcp.config.json", () => {
 			const configPath = join(TEST_DIR, "ts-graph-mcp.config.json");
 			writeFileSync(configPath, "{}");
@@ -67,7 +67,7 @@ describe("ConfigLoader", () => {
 		});
 	});
 
-	describe("loadConfig", () => {
+	describe(loadConfig.name, () => {
 		it("loads valid JSON config", async () => {
 			const config = {
 				modules: [

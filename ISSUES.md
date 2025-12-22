@@ -61,30 +61,6 @@ export const MAX_PATH_LENGTH = 20;
 
 ---
 
-### 20. Test Describe Blocks Use String Literals
-
-**Impact:** Low (refactoring safety)
-
-19 describe blocks use string literals instead of `functionName.name` pattern:
-
-| File | Violations |
-|------|------------|
-| `src/config/ConfigLoader.test.ts` | 4 (lines 16, 30, 38, 69) |
-| `src/config/ConfigSchema.test.ts` | 7 (lines 11, 12, 35, 67, 116, 138, 198) |
-| `src/ingestion/IdGenerator.test.ts` | 2 (lines 4, 5) |
-| `src/ingestion/Ingestion.test.ts` | 2 (lines 78, 92) |
-
-**Example fix:**
-```typescript
-// Before
-describe("indexProject", () => { ... });
-
-// After
-describe(indexProject.name, () => { ... });
-```
-
----
-
 ### Watcher Tests Missing
 
 Watcher module lacks unit and system tests. Medium priority.

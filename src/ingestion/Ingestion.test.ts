@@ -89,7 +89,7 @@ describe("Ingestion", () => {
 		}
 	});
 
-	describe("indexProject", () => {
+	describe(indexProject.name, () => {
 		it("indexes all packages in config", async () => {
 			// Create project structure
 			const pkg1Dir = join(TEST_DIR, "packages", "core");

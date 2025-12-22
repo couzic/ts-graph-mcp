@@ -197,7 +197,7 @@ describe("ConfigSchema", () => {
 		});
 	});
 
-	describe("defineConfig", () => {
+	describe(defineConfig.name, () => {
 		it("returns validated config", () => {
 			const config = {
 				modules: [

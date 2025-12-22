@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { generateNodeId } from "./IdGenerator.js";
 
 describe("IdGenerator", () => {
-	describe("generateNodeId", () => {
+	describe(generateNodeId.name, () => {
 		it("generates ID for top-level function", () => {
 			const id = generateNodeId("src/utils.ts", "formatDate");
 			expect(id).toBe("src/utils.ts:formatDate");
