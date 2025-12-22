@@ -39,6 +39,7 @@ export const prompts: BenchmarkPrompt[] = [
       "handleCreateUser",
     ],
     expectedTool: "analyzeImpact",
+    maxTurns: 2,
   },
   {
     id: "P2",
@@ -47,6 +48,7 @@ export const prompts: BenchmarkPrompt[] = [
       "What packages and modules use the validateEmail function from modules/shared/packages/utils/src/validate.ts?",
     expectedContains: ["frontend", "backend", "state", "services"],
     expectedTool: "incomingCallsDeep",
+    maxTurns: 2,
   },
   {
     id: "P3",
@@ -55,6 +57,7 @@ export const prompts: BenchmarkPrompt[] = [
       "What are the dependencies of the backend/api package? Show me what packages it imports from.",
     expectedContains: ["services", "types", "shared"],
     expectedTool: "outgoingImports",
+    maxTurns: 2,
   },
   {
     id: "P4",
@@ -63,6 +66,7 @@ export const prompts: BenchmarkPrompt[] = [
       "What packages does backend/api depend on? Show me the transitive package dependencies.",
     expectedContains: ["backend/services", "shared/types", "shared/utils"],
     expectedTool: "outgoingPackageDeps",
+    maxTurns: 2,
   },
   {
     id: "P5",
@@ -71,5 +75,6 @@ export const prompts: BenchmarkPrompt[] = [
       "What packages depend on shared/types? I want to know what would be affected if I changed this package.",
     expectedContains: ["frontend/ui", "frontend/state", "backend/api", "backend/services"],
     expectedTool: "incomingPackageDeps",
+    maxTurns: 2,
   },
 ];

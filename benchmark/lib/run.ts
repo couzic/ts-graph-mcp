@@ -229,6 +229,21 @@ export async function runBenchmarks(
 		config.projectName,
 	);
 
+	// Check for turn limit violations
+	const violations = runs.filter((r) => r.turnLimitExceeded);
+	if (violations.length > 0) {
+		console.error("\n" + "=".repeat(60));
+		console.error("❌ TURN LIMIT EXCEEDED");
+		console.error("=".repeat(60));
+		for (const v of violations) {
+			const prompt = selectedPrompts.find((p) => p.id === v.promptId);
+			console.error(
+				`  ${v.promptId}: ${v.numTurns} turns (max: ${prompt?.maxTurns})`,
+			);
+		}
+		process.exit(1);
+	}
+
 	// Save results to benchmark/results/<project>/
 	const resultsDir = join(import.meta.dirname, "../results", config.projectName);
 	const markdown = formatReportMarkdown(report);

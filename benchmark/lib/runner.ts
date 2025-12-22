@@ -138,6 +138,10 @@ export async function runBenchmarkIteration(
 			verbose,
 		);
 
+		// Only check turn limit for WITH MCP scenario (id: "with-mcp")
+		const turnLimitExceeded =
+			scenario.id === "with-mcp" && output.num_turns > prompt.maxTurns;
+
 		return {
 			promptId: prompt.id,
 			scenarioId: scenario.id,
@@ -153,6 +157,7 @@ export async function runBenchmarkIteration(
 			cacheReadTokens: output.usage.cache_read_input_tokens,
 			success: !output.is_error,
 			answerValid: validateAnswer(output.result, prompt),
+			turnLimitExceeded,
 			result: output.result,
 		};
 	} catch (error) {
@@ -171,6 +176,7 @@ export async function runBenchmarkIteration(
 			cacheReadTokens: 0,
 			success: false,
 			answerValid: false,
+			turnLimitExceeded: false,
 			result: error instanceof Error ? error.message : String(error),
 		};
 	}

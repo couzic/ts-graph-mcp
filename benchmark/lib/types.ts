@@ -48,6 +48,8 @@ export interface BenchmarkPrompt {
 	expectedContains: string[];
 	/** MCP tool that should be used (for WITH MCP scenario) */
 	expectedTool: string;
+	/** Maximum turns allowed for WITH MCP scenario. Benchmark fails if exceeded. */
+	maxTurns: number;
 }
 
 export interface BenchmarkScenario {
@@ -74,6 +76,8 @@ export interface BenchmarkRun {
 	cacheReadTokens: number;
 	success: boolean;
 	answerValid: boolean;
+	/** True if numTurns exceeded maxTurns limit (WITH MCP scenario only) */
+	turnLimitExceeded: boolean;
 	result: string;
 }
 
