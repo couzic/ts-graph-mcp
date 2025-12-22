@@ -1,15 +1,15 @@
-# get-impact Tool Improvements
+# analyzeImpact Tool Improvements
 
 **Evaluation Grade: 8.5/10**
 
 ## Overview
 
-The `get-impact` tool performs impact analysis - finding all code that would be affected by changes to a target node. It traverses multiple edge types (CALLS, IMPORTS, USES_TYPE, EXTENDS, IMPLEMENTS) in the incoming direction.
+The `analyzeImpact` tool performs impact analysis - finding all code that would be affected by changes to a target node. It traverses all edge types (CALLS, IMPORTS, USES_TYPE, EXTENDS, IMPLEMENTS) in the incoming direction to show the complete blast radius.
 
 ## Architecture
 
 ```
-src/tools/get-impact/
+src/tools/analyze-impact/
 ├── handler.ts   # MCP tool definition and execute function
 ├── query.ts     # Multi-edge recursive CTE traversal
 └── format.ts    # Impact report formatting
@@ -22,85 +22,13 @@ src/tools/get-impact/
 | Function with callers | ✅ Pass | Shows all transitive callers |
 | Interface with implementers | ✅ Pass | Shows implementing classes |
 | Type with usages | ✅ Pass | Shows parameter/return type usages |
-| Non-existent node | ⚠️ Issue | Empty result, no error message |
+| Non-existent node | ✅ Pass | Handled by symbol resolution |
 | Node with no dependents | ✅ Pass | Clear "no impact" message |
 | Utility function (high impact) | ✅ Pass | Correctly shows widespread usage |
 
 ## Priority Improvements
 
-### P1: Input Validation (High Impact)
-
-**Problem**: No validation of `nodeId` parameter. Invalid nodes return empty results without explanation.
-
-**Recommended implementation**:
-
-```typescript
-export function getImpact(
-  db: Database.Database,
-  nodeId: string,
-  options?: ImpactOptions
-): ImpactResult {
-  // Validate node exists
-  const node = db.prepare('SELECT id, type, name, file_path FROM nodes WHERE id = ?').get(nodeId);
-  if (!node) {
-    return {
-      error: `Node not found: ${nodeId}`,
-      suggestion: 'Use LSP workspaceSymbol to find valid node IDs'
-    };
-  }
-
-  // Continue with impact analysis...
-}
-```
-
-### P2: Expose Edge Type Filtering (Medium Impact)
-
-**Problem**: The `query.ts` has internal support for `edgeTypes` filtering, but this parameter is NOT exposed in the MCP tool interface. Users cannot limit impact analysis to specific relationship types.
-
-**Current state**:
-- `query.ts` accepts `edgeTypes?: EdgeType[]` option
-- `handler.ts` doesn't expose this parameter
-
-**Recommended addition to MCP interface**:
-
-```typescript
-// In handler.ts
-{
-  name: 'analyzeImpact',
-  inputSchema: {
-    nodeId: { type: 'string' },
-    maxDepth: { type: 'number' },
-    edgeTypes: {
-      type: 'array',
-      items: {
-        type: 'string',
-        enum: ['CALLS', 'IMPORTS', 'USES_TYPE', 'EXTENDS', 'IMPLEMENTS']
-      },
-      description: 'Limit impact analysis to specific relationship types'
-    }
-  }
-}
-```
-
-**Use cases**:
-- `edgeTypes: ['CALLS']` - "What functions would break if I change this function's signature?"
-- `edgeTypes: ['USES_TYPE']` - "What code uses this type?"
-- `edgeTypes: ['EXTENDS', 'IMPLEMENTS']` - "What classes inherit from this?"
-
-### P3: Expose Module Filtering (Medium Impact)
-
-**Problem**: Similar to edge types, `query.ts` supports `moduleFilter` internally but it's not exposed in the MCP interface.
-
-**Recommended**: Allow users to limit impact analysis to specific modules:
-
-```typescript
-moduleFilter: {
-  type: 'string',
-  description: 'Limit impact analysis to a specific module'
-}
-```
-
-### P4: Impact Severity Indicators (Medium Impact)
+### P1: Impact Severity Indicators (Medium Impact)
 
 **Problem**: All impacted nodes are shown equally, but some impacts are more severe than others.
 
@@ -126,7 +54,7 @@ Impact Analysis: src/utils.ts:formatDate
 └── ...
 ```
 
-### P5: Impact Summary Statistics (Low Impact)
+### P2: Impact Summary Statistics (Low Impact)
 
 **Problem**: No high-level summary of impact scope.
 
@@ -140,18 +68,33 @@ By module: core (15), api (5), models (3)
 Max depth reached: 4
 ```
 
+## Design Decisions
+
+### Why No Edge Type Filtering?
+
+Impact analysis intentionally traverses **all edge types** because:
+
+1. **Complete blast radius**: When changing a symbol, you want to know everything that depends on it, regardless of how (calls, type usage, inheritance, imports)
+
+2. **No implementation leakage**: Exposing `edgeTypes: ["CALLS", "USES_TYPE"]` in the MCP API would leak internal graph concepts. AI agents shouldn't need to understand edge type semantics.
+
+3. **Separate tools exist**: For focused analysis, use `incomingCallsDeep` (CALLS only), `incomingUsesType` (USES_TYPE only), or `incomingImports` (IMPORTS only).
+
+### Why No Module Filtering?
+
+1. **Cross-module impact is the most important signal**: If changing `User` breaks code in `api`, `auth`, AND `billing`, that's critical information.
+
+2. **Filtering hides risk**: Module filtering would hide the most impactful changes (those affecting multiple modules).
+
+3. **Post-process if needed**: Consumers can filter results themselves if they need module-specific views.
+
 ## Testing Gaps
 
-1. **No input validation tests**
-2. **Edge type filtering** (`edgeTypes` option) is untested
-3. **Module filtering** (`moduleFilter` option) is untested
-4. **Missing tests for**:
-   - Circular dependencies in impact chain
+1. **Missing tests for**:
    - Very high-impact nodes (stress test)
    - Impact analysis on different node types
 
 ## Implementation Roadmap
 
-1. **Phase 1** (P1): Add comprehensive input validation
-2. **Phase 2** (P2-P3): Expose existing edgeTypes and moduleFilter options in MCP interface
-3. **Phase 3** (P4-P5): Add severity indicators and summary statistics
+1. **Phase 1** (P1): Add severity indicators based on depth
+2. **Phase 2** (P2): Add summary statistics header

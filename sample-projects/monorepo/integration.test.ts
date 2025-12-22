@@ -361,7 +361,6 @@ describe("monorepo integration (L3: multi-module, multi-package)", () => {
 
       const impacted = queryImpactedNodes(db, userNode!.id, {
         maxDepth: 5,
-        edgeTypes: ["USES_TYPE"],
       });
 
       const modules = [...new Set(impacted.map((n) => n.module))];
@@ -382,7 +381,6 @@ describe("monorepo integration (L3: multi-module, multi-package)", () => {
 
       const impacted = queryImpactedNodes(db, validateEmailNode!.id, {
         maxDepth: 5,
-        edgeTypes: ["CALLS"],
       });
 
       const impactedNames = impacted.map((n) => n.name);
@@ -402,7 +400,6 @@ describe("monorepo integration (L3: multi-module, multi-package)", () => {
 
       const impacted = queryImpactedNodes(db, formatDateNode!.id, {
         maxDepth: 5,
-        edgeTypes: ["CALLS"],
       });
 
       const modules = [...new Set(impacted.map((n) => n.module))];
@@ -427,7 +424,6 @@ describe("monorepo integration (L3: multi-module, multi-package)", () => {
 
       const impacted = queryImpactedNodes(db, createUserServiceNode!.id, {
         maxDepth: 5,
-        edgeTypes: ["CALLS"],
       });
 
       const impactedNames = impacted.map((n) => n.name);

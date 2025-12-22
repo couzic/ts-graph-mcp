@@ -162,7 +162,6 @@ describe("web-app integration (cross-package edges)", () => {
 
 			const impacted = queryImpactedNodes(db, userNode!.id, {
 				maxDepth: 5,
-				edgeTypes: ["USES_TYPE"],
 			});
 
 			const impactedNames = impacted.map((n) => n.name);
@@ -179,7 +178,6 @@ describe("web-app integration (cross-package edges)", () => {
 
 			const impacted = queryImpactedNodes(db, userNode!.id, {
 				maxDepth: 5,
-				edgeTypes: ["USES_TYPE"],
 			});
 
 			const impactedNames = impacted.map((n) => n.name);
@@ -197,7 +195,6 @@ describe("web-app integration (cross-package edges)", () => {
 
 			const impacted = queryImpactedNodes(db, userNode!.id, {
 				maxDepth: 5,
-				edgeTypes: ["USES_TYPE"],
 			});
 
 			const packages = [...new Set(impacted.map((n) => n.package))];
@@ -217,7 +214,6 @@ describe("web-app integration (cross-package edges)", () => {
 
 			const impacted = queryImpactedNodes(db, createUserNode!.id, {
 				maxDepth: 5,
-				edgeTypes: ["CALLS"],
 			});
 
 			const impactedNames = impacted.map((n) => n.name);

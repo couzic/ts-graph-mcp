@@ -85,24 +85,6 @@ describe(indexProject.name, () => { ... });
 
 ---
 
-### 21. Missing Module CLAUDE.md Documentation
-
-**Impact:** Low (AI agent context)
-
-Two modules lack required CLAUDE.md files:
-
-1. **`src/tools/`** — Major module with 7 tool subdirectories, no documentation
-2. **`src/ingestion/extract/nodes/`** — 8 node extractors, no documentation
-
-Existing CLAUDE.md files (for reference):
-- `src/config/CLAUDE.md` ✓
-- `src/db/CLAUDE.md` ✓
-- `src/mcp/CLAUDE.md` ✓
-- `src/ingestion/CLAUDE.md` ✓
-- `src/ingestion/extract/edges/CLAUDE.md` ✓
-
----
-
 ### Watcher Tests Missing
 
 Watcher module lacks unit and system tests. Medium priority.

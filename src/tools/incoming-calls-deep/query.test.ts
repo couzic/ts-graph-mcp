@@ -123,23 +123,6 @@ describe(queryCallers.name, () => {
 		expect(ids).toContain(nodeB.id); // B is a transitive caller of itself
 	});
 
-	it("filters callers by module", async () => {
-		const writer = createSqliteWriter(db);
-		const nodeA = fn("a", "src/mod1/a.ts", "mod1");
-		const nodeB = fn("b", "src/mod2/b.ts", "mod2");
-		const nodeC = fn("c", "src/target.ts", "target");
-		await writer.addNodes([nodeA, nodeB, nodeC]);
-		await writer.addEdges([
-			calls(nodeA.id, nodeC.id), // A (mod1) → C
-			calls(nodeB.id, nodeC.id), // B (mod2) → C
-		]);
-
-		const result = queryCallers(db, nodeC.id, { moduleFilter: ["mod1"] });
-
-		expect(result).toHaveLength(1);
-		expect(result[0]?.id).toBe(nodeA.id);
-	});
-
 	it("returns callers from multiple files", async () => {
 		const writer = createSqliteWriter(db);
 		const nodeA = fn("a", "src/fileA.ts");

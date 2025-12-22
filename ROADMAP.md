@@ -33,18 +33,6 @@ These 6 tools remain because they offer capabilities LSP lacks:
 
 These improvements have the highest value-to-effort ratio. They improve AI agent experience with minimal code changes.
 
-### Expose Hidden Parameters (analyzeImpact)
-**Impact: High | Effort: Very Low**
-
-The `analyze-impact` query.ts already supports `edgeTypes` and `moduleFilter` options, but they're not exposed in the MCP interface. Wire them through.
-
-```typescript
-// Enables targeted impact analysis
-analyzeImpact({ symbol: "processData", edgeTypes: ["CALLS"] })        // Only call-chain impact
-analyzeImpact({ symbol: "User", edgeTypes: ["USES_TYPE"] })           // Only type usage impact
-analyzeImpact({ symbol: "formatDate", moduleFilter: "api" })          // Impact within module
-```
-
 ### Error Messages with Example Syntax
 **Impact: Medium | Effort: Very Low**
 

@@ -158,44 +158,6 @@ describe(queryImpactedNodes.name, () => {
 		expect(ids).toContain(nodeB.id);
 	});
 
-	it("filters impact by edge type", async () => {
-		const writer = createSqliteWriter(db);
-		const nodeA = fn("a");
-		const nodeB = fn("b");
-		const typeC = iface("C");
-		await writer.addNodes([nodeA, nodeB, typeC]);
-		await writer.addEdges([
-			calls(nodeA.id, typeC.id), // A calls C
-			usesType(nodeB.id, typeC.id), // B uses type C
-		]);
-
-		const result = queryImpactedNodes(db, typeC.id, {
-			edgeTypes: ["CALLS"],
-		});
-
-		expect(result).toHaveLength(1);
-		expect(result[0]?.id).toBe(nodeA.id);
-	});
-
-	it("filters impact by module", async () => {
-		const writer = createSqliteWriter(db);
-		const nodeA = fn("a", "src/mod1/a.ts", "mod1");
-		const nodeB = fn("b", "src/mod2/b.ts", "mod2");
-		const nodeC = fn("c", "src/target.ts", "target");
-		await writer.addNodes([nodeA, nodeB, nodeC]);
-		await writer.addEdges([
-			calls(nodeA.id, nodeC.id), // A (mod1) → C
-			calls(nodeB.id, nodeC.id), // B (mod2) → C
-		]);
-
-		const result = queryImpactedNodes(db, nodeC.id, {
-			moduleFilter: ["mod1"],
-		});
-
-		expect(result).toHaveLength(1);
-		expect(result[0]?.id).toBe(nodeA.id);
-	});
-
 	it("handles cycles without infinite loop", async () => {
 		const writer = createSqliteWriter(db);
 		const nodeA = fn("a");
