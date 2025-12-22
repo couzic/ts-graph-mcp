@@ -7,6 +7,7 @@
  * - P3: Package dependencies (outgoingImports)
  * - P4: Transitive package dependencies (outgoingPackageDeps)
  * - P5: Reverse package dependencies (incomingPackageDeps)
+ * - P6: Ambiguous symbol resolution (incomingCallsDeep with disambiguation)
  *
  * findPath is tested via integration tests, not benchmarks (covered by layered-api).
  */
@@ -76,5 +77,14 @@ export const prompts: BenchmarkPrompt[] = [
     expectedContains: ["frontend/ui", "frontend/state", "backend/api", "backend/services"],
     expectedTool: "incomingPackageDeps",
     maxTurns: 2,
+  },
+  {
+    id: "P6",
+    name: "Ambiguous symbol resolution",
+    prompt:
+      "Find the call path from renderUserCard to the formatDate function in shared utilities.",
+    expectedContains: ["renderUserCard", "formatDate", "CALLS"],
+    expectedTool: "findPath",
+    maxTurns: 3,
   },
 ];
