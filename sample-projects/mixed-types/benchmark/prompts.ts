@@ -23,6 +23,6 @@ export const prompts: BenchmarkPrompt[] = [
 		prompt: "What methods use the User type as a parameter?",
 		expectedContains: ["addUser"],
 		expectedTool: "incomingUsesType",
-		maxTurns: 2,
+		expectedTurns: 2,
 	},
 ];

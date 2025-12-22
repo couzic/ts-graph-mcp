@@ -1,5 +1,8 @@
 import type { Edge } from "../../db/Types.js";
-import { formatLocation } from "../shared/nodeFormatters.js";
+import {
+	formatLocation,
+	formatModulePackageLines,
+} from "../shared/nodeFormatters.js";
 import type { SymbolLocation } from "../shared/resolveSymbol.js";
 import type { ImporterWithEdge } from "./query.js";
 
@@ -74,8 +77,7 @@ export function formatImporters(
 	lines.push(`type: ${target.type}`);
 	lines.push(`offset: ${target.offset}`);
 	lines.push(`limit: ${target.limit}`);
-	lines.push(`module: ${target.module}`);
-	lines.push(`package: ${target.package}`);
+	lines.push(...formatModulePackageLines(target.module, target.package));
 	lines.push("");
 
 	if (importers.length === 0) {

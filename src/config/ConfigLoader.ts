@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
+import { IMPLICIT_MODULE_NAME } from "../tools/shared/nodeFormatters.js";
 import {
 	normalizeConfig,
 	type ProjectConfig,
@@ -9,23 +10,41 @@ import {
 /**
  * Read package name from package.json in the given directory.
  *
+ * Falls back to directory name if package.json is missing or has no name.
+ * Throws if package.json exists but is malformed JSON.
+ *
  * @param directory - Directory containing package.json
- * @returns Package name or "default" if not found/invalid
+ * @returns Package name from package.json, or directory name as fallback
+ * @throws Error if package.json exists but contains invalid JSON
  */
 export const readPackageName = (directory: string): string => {
 	const packageJsonPath = join(directory, "package.json");
+	const directoryName = basename(directory);
+
 	if (!existsSync(packageJsonPath)) {
-		return "default";
+		return directoryName;
 	}
+
+	const content = readFileSync(packageJsonPath, "utf-8");
+	let pkg: unknown;
 	try {
-		const content = readFileSync(packageJsonPath, "utf-8");
-		const pkg = JSON.parse(content);
-		return typeof pkg.name === "string" && pkg.name.length > 0
-			? pkg.name
-			: "default";
+		pkg = JSON.parse(content);
 	} catch {
-		return "default";
+		throw new Error(
+			`Failed to parse package.json in ${directory}: invalid JSON`,
+		);
 	}
+
+	const name =
+		pkg !== null &&
+		typeof pkg === "object" &&
+		"name" in pkg &&
+		typeof pkg.name === "string" &&
+		pkg.name.length > 0
+			? pkg.name
+			: directoryName;
+
+	return name;
 };
 
 /**
@@ -43,7 +62,7 @@ export const detectTsconfig = (directory: string): string | null => {
  * Create a default ProjectConfig with sensible defaults.
  *
  * @param tsconfigPath - Relative path to tsconfig.json
- * @param packageName - Package name (from package.json or "default")
+ * @param packageName - Package name (from package.json or IMPLICIT_PACKAGE_NAME)
  * @returns Default ProjectConfig
  */
 export const createDefaultConfig = (
@@ -52,7 +71,7 @@ export const createDefaultConfig = (
 ): ProjectConfig => ({
 	modules: [
 		{
-			name: "default",
+			name: IMPLICIT_MODULE_NAME,
 			packages: [{ name: packageName, tsconfig: tsconfigPath }],
 		},
 	],

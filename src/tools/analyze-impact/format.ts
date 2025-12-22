@@ -1,6 +1,10 @@
 import type { Node, NodeType } from "../../db/Types.js";
 import { TYPE_ORDER, TYPE_PLURALS } from "../shared/formatConstants.js";
-import { formatLocation, formatNode } from "../shared/nodeFormatters.js";
+import {
+	formatLocation,
+	formatModulePackageLines,
+	formatNode,
+} from "../shared/nodeFormatters.js";
 import type { SymbolLocation } from "../shared/resolveSymbol.js";
 
 /**
@@ -77,8 +81,7 @@ export function formatImpactNodes(
 	lines.push(`  file: ${target.file}`);
 	lines.push(`  offset: ${target.offset}`);
 	lines.push(`  limit: ${target.limit}`);
-	lines.push(`  module: ${target.module}`);
-	lines.push(`  package: ${target.package}`);
+	lines.push(...formatModulePackageLines(target.module, target.package, "  "));
 	lines.push("");
 
 	if (nodes.length === 0) {

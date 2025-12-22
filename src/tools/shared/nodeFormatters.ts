@@ -1,6 +1,12 @@
 import type { Node, NodeType } from "../../db/Types.js";
 
 /**
+ * The implicit module/package name used when config doesn't specify one.
+ */
+export const IMPLICIT_MODULE_NAME = "___DEFAULT___" as const;
+export const IMPLICIT_PACKAGE_NAME = "___DEFAULT___" as const;
+
+/**
  * Extract symbol name from full node ID.
  * Example: "src/db/Types.ts:BaseNode" → "BaseNode"
  * Example: "src/db/Types.ts:BaseNode.id" → "BaseNode.id"
@@ -200,4 +206,26 @@ export function groupByDepth<T extends Node & { depth: number }>(
 		groups.set(node.depth, existing);
 	}
 	return groups;
+}
+
+/**
+ * Format module/package lines, omitting implicit "default" values.
+ * @param module - Module name
+ * @param pkg - Package name
+ * @param indent - Indentation prefix (e.g., "  " for 2 spaces)
+ * @returns Array of formatted lines (may be empty if both are implicit)
+ */
+export function formatModulePackageLines(
+	module: string,
+	pkg: string,
+	indent = "",
+): string[] {
+	const lines: string[] = [];
+	if (module !== IMPLICIT_MODULE_NAME) {
+		lines.push(`${indent}module: ${module}`);
+	}
+	if (pkg !== IMPLICIT_PACKAGE_NAME) {
+		lines.push(`${indent}package: ${pkg}`);
+	}
+	return lines;
 }

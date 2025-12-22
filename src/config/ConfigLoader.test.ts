@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { IMPLICIT_MODULE_NAME } from "../tools/shared/nodeFormatters.js";
 import {
 	CONFIG_FILE_NAMES,
 	createDefaultConfig,
@@ -144,36 +145,37 @@ describe("ConfigLoader", () => {
 			expect(result).toBe("my-awesome-project");
 		});
 
-		it('returns "default" if package.json missing', () => {
+		it("returns directory name if package.json missing", () => {
 			const result = readPackageName(TEST_DIR);
-			expect(result).toBe("default");
+			expect(result).toBe(basename(TEST_DIR));
 		});
 
-		it('returns "default" if package.json has no name field', () => {
+		it("returns directory name if package.json has no name field", () => {
 			writeFileSync(
 				join(TEST_DIR, "package.json"),
 				JSON.stringify({ version: "1.0.0" }),
 			);
 
 			const result = readPackageName(TEST_DIR);
-			expect(result).toBe("default");
+			expect(result).toBe(basename(TEST_DIR));
 		});
 
-		it('returns "default" if package.json has empty name', () => {
+		it("returns directory name if package.json has empty name", () => {
 			writeFileSync(
 				join(TEST_DIR, "package.json"),
 				JSON.stringify({ name: "", version: "1.0.0" }),
 			);
 
 			const result = readPackageName(TEST_DIR);
-			expect(result).toBe("default");
+			expect(result).toBe(basename(TEST_DIR));
 		});
 
-		it('returns "default" if package.json is malformed JSON', () => {
+		it("throws if package.json is malformed JSON", () => {
 			writeFileSync(join(TEST_DIR, "package.json"), "{ invalid json }");
 
-			const result = readPackageName(TEST_DIR);
-			expect(result).toBe("default");
+			expect(() => readPackageName(TEST_DIR)).toThrow(
+				/Failed to parse package.json/,
+			);
 		});
 	});
 
@@ -196,16 +198,16 @@ describe("ConfigLoader", () => {
 			const result = createDefaultConfig("./tsconfig.json", "my-project");
 
 			expect(result.modules).toHaveLength(1);
-			expect(result.modules[0]?.name).toBe("default");
+			expect(result.modules[0]?.name).toBe(IMPLICIT_MODULE_NAME);
 			expect(result.modules[0]?.packages).toHaveLength(1);
 			expect(result.modules[0]?.packages[0]?.name).toBe("my-project");
 			expect(result.modules[0]?.packages[0]?.tsconfig).toBe("./tsconfig.json");
 		});
 
-		it('uses "default" module name regardless of package name', () => {
+		it("uses IMPLICIT_MODULE_NAME regardless of package name", () => {
 			const result = createDefaultConfig("./tsconfig.json", "custom-name");
 
-			expect(result.modules[0]?.name).toBe("default");
+			expect(result.modules[0]?.name).toBe(IMPLICIT_MODULE_NAME);
 			expect(result.modules[0]?.packages[0]?.name).toBe("custom-name");
 		});
 	});
@@ -243,7 +245,7 @@ describe("ConfigLoader", () => {
 			expect(result).not.toBeNull();
 			expect(result?.source).toBe("auto-detected");
 			expect(result?.configPath).toBeUndefined();
-			expect(result?.config.modules[0]?.name).toBe("default");
+			expect(result?.config.modules[0]?.name).toBe(IMPLICIT_MODULE_NAME);
 			expect(result?.config.modules[0]?.packages[0]?.name).toBe("auto-project");
 		});
 
@@ -274,13 +276,15 @@ describe("ConfigLoader", () => {
 			expect(result).toBeNull();
 		});
 
-		it('uses "default" as package name when package.json has no name', async () => {
+		it("uses directory name when package.json is missing", async () => {
 			writeFileSync(join(TEST_DIR, "tsconfig.json"), "{}");
 			// No package.json
 
 			const result = await loadConfigOrDetect(TEST_DIR);
 
-			expect(result?.config.modules[0]?.packages[0]?.name).toBe("default");
+			expect(result?.config.modules[0]?.packages[0]?.name).toBe(
+				basename(TEST_DIR),
+			);
 		});
 	});
 });

@@ -2,6 +2,7 @@ import type { Node } from "../../db/Types.js";
 import { TYPE_ORDER, TYPE_PLURALS } from "../shared/formatConstants.js";
 import {
 	formatLocation,
+	formatModulePackageLines,
 	formatNode,
 	groupByFile,
 	groupByType,
@@ -48,8 +49,7 @@ export function formatCallees(source: SymbolLocation, nodes: Node[]): string {
 	lines.push(`  file: ${source.file}`);
 	lines.push(`  offset: ${source.offset}`);
 	lines.push(`  limit: ${source.limit}`);
-	lines.push(`  module: ${source.module}`);
-	lines.push(`  package: ${source.package}`);
+	lines.push(...formatModulePackageLines(source.module, source.package, "  "));
 	lines.push("");
 
 	if (nodes.length === 0) {

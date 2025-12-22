@@ -48,8 +48,10 @@ export interface BenchmarkPrompt {
 	expectedContains: string[];
 	/** MCP tool that should be used (for WITH MCP scenario) */
 	expectedTool: string;
-	/** Maximum turns allowed for WITH MCP scenario. Benchmark fails if exceeded. */
-	maxTurns: number;
+	/** Quality gate: expected turns for efficient MCP usage. Benchmark fails if exceeded. */
+	expectedTurns: number;
+	/** Hard limit: passed to Claude CLI --max-turns to stop runaway execution. Defaults to 20. */
+	maxTurns?: number;
 }
 
 export interface BenchmarkScenario {
@@ -76,7 +78,7 @@ export interface BenchmarkRun {
 	cacheReadTokens: number;
 	success: boolean;
 	answerValid: boolean;
-	/** True if numTurns exceeded maxTurns limit (WITH MCP scenario only) */
+	/** True if numTurns exceeded expectedTurns limit (WITH MCP scenario only) */
 	turnLimitExceeded: boolean;
 	result: string;
 }

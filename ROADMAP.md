@@ -83,38 +83,6 @@ Enable swapping SQLite for graph databases like Neo4j or Memgraph.
 3. Add Neo4j/Memgraph implementation
 4. Configuration switch for storage backend type
 
-### Simplified Single-Module Configuration
-**Impact: High | Effort: Low**
-
-Zero-boilerplate config for non-monorepo projects.
-
-The current config requires explicit module/package nesting even for simple single-package projects. Most TypeScript projects aren't monorepos and shouldn't need this overhead.
-
-**Config changes:**
-- Support minimal config with just `tsconfig` path
-- Infer implicit "main" module when none specified
-- Keep full module/package syntax for monorepos
-
-```typescript
-// Before: verbose for simple projects
-defineConfig({
-  modules: [{
-    name: "main",
-    packages: [{ name: "core", tsconfig: "./tsconfig.json" }]
-  }]
-})
-
-// After: zero boilerplate
-defineConfig({
-  tsconfig: "./tsconfig.json"
-})
-```
-
-**MCP output changes:**
-- Omit module/package from output when there's only one implicit module
-- Cleaner, less noisy results for AI agents
-- Backwards compatible - explicit modules still show full metadata
-
 ## Advanced Analysis
 
 ### Dead Code Detection
@@ -324,13 +292,11 @@ Agent:
 
 Want to help build the future of AI-assisted development?
 
-Pick something from this roadmap that excites you. The codebase is well-tested (478 tests) and documented. Every module has a CLAUDE.md explaining its purpose and patterns.
+Pick something from this roadmap that excites you. The codebase is well-tested (562 tests) and documented. Every module has a CLAUDE.md explaining its purpose and patterns.
 
 **High-impact, low-effort** items are great starting points:
-- Expose hidden parameters in get-impact
-- Error messages with example syntax
-- Simplified single-module configuration
 - Circular dependency detection
+- CLI tool for terminal queries
 
 **Ambitious but transformative:**
 - Semantic search with embeddings

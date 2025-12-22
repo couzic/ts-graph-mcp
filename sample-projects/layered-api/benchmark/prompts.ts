@@ -33,7 +33,7 @@ export const prompts: BenchmarkPrompt[] = [
 		],
 		// Note: This is a NEGATIVE test - agent should NOT use findPath for vague questions
 		expectedTool: "none",
-		maxTurns: 9,
+		expectedTurns: 9,
 	},
 	{
 		id: "P2",
@@ -46,7 +46,7 @@ export const prompts: BenchmarkPrompt[] = [
 			"query",
 		],
 		expectedTool: "outgoingCallsDeep",
-		maxTurns: 2,
+		expectedTurns: 2,
 	},
 	{
 		id: "P3",
@@ -60,6 +60,6 @@ export const prompts: BenchmarkPrompt[] = [
 			"query",
 		],
 		expectedTool: "findPath",
-		maxTurns: 3,
+		expectedTurns: 3,
 	},
 ];

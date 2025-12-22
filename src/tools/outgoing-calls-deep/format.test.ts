@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { Node } from "../../db/Types.js";
+import {
+	IMPLICIT_MODULE_NAME,
+	IMPLICIT_PACKAGE_NAME,
+} from "../shared/nodeFormatters.js";
 import type { SymbolLocation } from "../shared/resolveSymbol.js";
 import { formatCallees } from "./format.js";
 
@@ -437,5 +441,157 @@ describe(formatCallees.name, () => {
 		expect(result).toContain("classes[1]:");
 		expect(result).toContain("functions[1]:");
 		expect(result).toContain("methods[1]:");
+	});
+
+	describe("module/package omission", () => {
+		it("omits module when IMPLICIT_MODULE_NAME", () => {
+			const source: SymbolLocation = {
+				name: "main",
+				type: "Function",
+				file: "src/main.ts",
+				offset: 1,
+				limit: 10,
+				module: IMPLICIT_MODULE_NAME,
+				package: "main",
+				id: "src/main.ts:main",
+			};
+			const nodes: Node[] = [
+				{
+					id: "src/utils.ts:helper",
+					type: "Function",
+					name: "helper",
+					module: "core",
+					package: "main",
+					filePath: "src/utils.ts",
+					startLine: 10,
+					endLine: 15,
+					exported: true,
+				},
+			];
+
+			const result = formatCallees(source, nodes);
+			expect(result).not.toContain("module:");
+			expect(result).toContain("package: main");
+		});
+
+		it("includes module when value is not 'default'", () => {
+			const source: SymbolLocation = {
+				name: "main",
+				type: "Function",
+				file: "src/main.ts",
+				offset: 1,
+				limit: 10,
+				module: "myModule",
+				package: "main",
+				id: "src/main.ts:main",
+			};
+			const nodes: Node[] = [
+				{
+					id: "src/utils.ts:helper",
+					type: "Function",
+					name: "helper",
+					module: "core",
+					package: "main",
+					filePath: "src/utils.ts",
+					startLine: 10,
+					endLine: 15,
+					exported: true,
+				},
+			];
+
+			const result = formatCallees(source, nodes);
+			expect(result).toContain("module: myModule");
+		});
+
+		it("omits package when IMPLICIT_PACKAGE_NAME", () => {
+			const source: SymbolLocation = {
+				name: "main",
+				type: "Function",
+				file: "src/main.ts",
+				offset: 1,
+				limit: 10,
+				module: "core",
+				package: IMPLICIT_PACKAGE_NAME,
+				id: "src/main.ts:main",
+			};
+			const nodes: Node[] = [
+				{
+					id: "src/utils.ts:helper",
+					type: "Function",
+					name: "helper",
+					module: "core",
+					package: "main",
+					filePath: "src/utils.ts",
+					startLine: 10,
+					endLine: 15,
+					exported: true,
+				},
+			];
+
+			const result = formatCallees(source, nodes);
+			expect(result).toContain("module: core");
+			expect(result).not.toContain("package:");
+		});
+
+		it("includes package when value is not 'default'", () => {
+			const source: SymbolLocation = {
+				name: "main",
+				type: "Function",
+				file: "src/main.ts",
+				offset: 1,
+				limit: 10,
+				module: "core",
+				package: "myPackage",
+				id: "src/main.ts:main",
+			};
+			const nodes: Node[] = [
+				{
+					id: "src/utils.ts:helper",
+					type: "Function",
+					name: "helper",
+					module: "core",
+					package: "main",
+					filePath: "src/utils.ts",
+					startLine: 10,
+					endLine: 15,
+					exported: true,
+				},
+			];
+
+			const result = formatCallees(source, nodes);
+			expect(result).toContain("package: myPackage");
+		});
+
+		it("omits both module and package when both are IMPLICIT values", () => {
+			const source: SymbolLocation = {
+				name: "main",
+				type: "Function",
+				file: "src/main.ts",
+				offset: 1,
+				limit: 10,
+				module: IMPLICIT_MODULE_NAME,
+				package: IMPLICIT_PACKAGE_NAME,
+				id: "src/main.ts:main",
+			};
+			const nodes: Node[] = [
+				{
+					id: "src/utils.ts:helper",
+					type: "Function",
+					name: "helper",
+					module: "core",
+					package: "main",
+					filePath: "src/utils.ts",
+					startLine: 10,
+					endLine: 15,
+					exported: true,
+				},
+			];
+
+			const result = formatCallees(source, nodes);
+			expect(result).not.toContain("module:");
+			expect(result).not.toContain("package:");
+			expect(result).toContain("source:");
+			expect(result).toContain("name: main");
+		});
 	});
 });

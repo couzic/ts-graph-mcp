@@ -1,5 +1,8 @@
 import type { Edge } from "../../db/Types.js";
-import { extractSymbol } from "../shared/nodeFormatters.js";
+import {
+	extractSymbol,
+	formatModulePackageLines,
+} from "../shared/nodeFormatters.js";
 import type { SymbolLocation } from "../shared/resolveSymbol.js";
 import type { PathResult } from "./query.js";
 
@@ -59,9 +62,14 @@ export function formatAmbiguous(
 		const symbol = extractSymbol(candidate.id);
 		lines.push(`  - ${symbol} (${candidate.type})`);
 		lines.push(`    file: ${candidate.file}`);
-		lines.push(
-			`    module: ${candidate.module}, package: ${candidate.package}`,
+		const metaLines = formatModulePackageLines(
+			candidate.module,
+			candidate.package,
+			"    ",
 		);
+		if (metaLines.length > 0) {
+			lines.push(metaLines.join(", "));
+		}
 		lines.push(`    offset: ${candidate.offset}, limit: ${candidate.limit}`);
 	}
 

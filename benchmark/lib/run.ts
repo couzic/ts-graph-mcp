@@ -229,16 +229,16 @@ export async function runBenchmarks(
 		config.projectName,
 	);
 
-	// Check for turn limit violations
+	// Check for turn limit violations (expectedTurns quality gate)
 	const violations = runs.filter((r) => r.turnLimitExceeded);
 	if (violations.length > 0) {
 		console.error("\n" + "=".repeat(60));
-		console.error("❌ TURN LIMIT EXCEEDED");
+		console.error("❌ EXPECTED TURNS EXCEEDED");
 		console.error("=".repeat(60));
 		for (const v of violations) {
 			const prompt = selectedPrompts.find((p) => p.id === v.promptId);
 			console.error(
-				`  ${v.promptId}: ${v.numTurns} turns (max: ${prompt?.maxTurns})`,
+				`  ${v.promptId}: ${v.numTurns} turns (expected: ${prompt?.expectedTurns})`,
 			);
 		}
 		process.exit(1);

@@ -41,6 +41,7 @@ export async function runClaude(
 	scenario: BenchmarkScenario,
 	projectRoot: string,
 	verbose: boolean,
+	maxTurns: number,
 ): Promise<ClaudeJsonOutput> {
 	return new Promise((resolve, reject) => {
 		const { cmd, baseArgs } = getClaudeCommand();
@@ -48,8 +49,8 @@ export async function runClaude(
 			...baseArgs,
 			"-p",
 			prompt,
-			"--output-format",
-			"json",
+			"--output-format", "json",
+			"--max-turns", String(maxTurns),
 			...scenario.cliFlags,
 		];
 
@@ -130,17 +131,21 @@ export async function runBenchmarkIteration(
 ): Promise<BenchmarkRun> {
 	const timestamp = new Date().toISOString();
 
+	// Calculate effective maxTurns for CLI (default: 20)
+	const effectiveMaxTurns = prompt.maxTurns ?? 20;
+
 	try {
 		const output = await runClaude(
 			prompt.prompt,
 			scenario,
 			projectRoot,
 			verbose,
+			effectiveMaxTurns,
 		);
 
-		// Only check turn limit for WITH MCP scenario (id: "with-mcp")
+		// Only check expectedTurns limit for WITH MCP scenario (id: "with-mcp")
 		const turnLimitExceeded =
-			scenario.id === "with-mcp" && output.num_turns > prompt.maxTurns;
+			scenario.id === "with-mcp" && output.num_turns > prompt.expectedTurns;
 
 		return {
 			promptId: prompt.id,
