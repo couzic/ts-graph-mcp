@@ -5,6 +5,9 @@ import type { PathResult } from "./query.js";
 
 /**
  * Format a not_found result.
+ *
+ * @param symbolLabel - Label like "from.symbol: formatDate" or "to.symbol: save"
+ * @param suggestions - Optional fuzzy match suggestions
  */
 export function formatNotFound(
 	symbolLabel: string,
@@ -21,11 +24,25 @@ export function formatNotFound(
 		}
 	}
 
+	// Extract the parameter name (from or to) and symbol for examples
+	const paramMatch = symbolLabel.match(/^(from|to)\.symbol:\s*(.+)$/);
+	const param = paramMatch?.[1];
+	const symbol = paramMatch?.[2];
+	if (param && symbol) {
+		lines.push("");
+		lines.push("Narrow your query with file, module, or package:");
+		lines.push(`  ${param}: { symbol: "${symbol}", file: "src/..." }`);
+		lines.push(`  ${param}: { symbol: "${symbol}", module: "..." }`);
+	}
+
 	return lines.join("\n");
 }
 
 /**
  * Format an ambiguous result.
+ *
+ * @param symbolLabel - Label like "from.symbol: formatDate" or "to.symbol: save"
+ * @param candidates - All matching symbols
  */
 export function formatAmbiguous(
 	symbolLabel: string,
@@ -36,7 +53,7 @@ export function formatAmbiguous(
 		`error: ${symbolLabel} is ambiguous (${candidates.length} matches)`,
 	);
 	lines.push("");
-	lines.push("Specify file, module, or package to disambiguate:");
+	lines.push("candidates:");
 
 	for (const candidate of candidates) {
 		const symbol = extractSymbol(candidate.id);
@@ -48,7 +65,58 @@ export function formatAmbiguous(
 		lines.push(`    offset: ${candidate.offset}, limit: ${candidate.limit}`);
 	}
 
+	// Generate example disambiguation syntax
+	const paramMatch = symbolLabel.match(/^(from|to)\.symbol:\s*(.+)$/);
+	const param = paramMatch?.[1];
+	const symbol = paramMatch?.[2];
+	if (param && symbol && candidates.length > 0) {
+		const examples = generateFindPathExamples(param, symbol, candidates);
+		lines.push("");
+		lines.push("Narrow your query with file, module, or package:");
+		for (const example of examples) {
+			lines.push(`  ${example}`);
+		}
+	}
+
 	return lines.join("\n");
+}
+
+/**
+ * Generate disambiguation examples for findPath parameters.
+ */
+function generateFindPathExamples(
+	param: string,
+	symbol: string,
+	candidates: SymbolLocation[],
+): string[] {
+	const examples: string[] = [];
+	const first = candidates[0];
+	if (!first) return examples;
+
+	const uniqueFiles = new Set(candidates.map((c) => c.file));
+	const uniqueModules = new Set(candidates.map((c) => c.module));
+	const uniquePackages = new Set(candidates.map((c) => c.package));
+
+	if (uniqueFiles.size > 1) {
+		examples.push(`${param}: { symbol: "${symbol}", file: "${first.file}" }`);
+	}
+	if (uniqueModules.size > 1) {
+		examples.push(
+			`${param}: { symbol: "${symbol}", module: "${first.module}" }`,
+		);
+	}
+	if (uniquePackages.size > 1) {
+		examples.push(
+			`${param}: { symbol: "${symbol}", package: "${first.package}" }`,
+		);
+	}
+
+	// Fallback
+	if (examples.length === 0) {
+		examples.push(`${param}: { symbol: "${symbol}", file: "${first.file}" }`);
+	}
+
+	return examples.slice(0, 3);
 }
 
 /**

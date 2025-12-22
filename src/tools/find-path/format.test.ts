@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Edge } from "../../db/Types.js";
 import type { SymbolLocation } from "../shared/resolveSymbol.js";
-import { formatPath } from "./format.js";
+import { formatAmbiguous, formatNotFound, formatPath } from "./format.js";
 import type { PathResult } from "./query.js";
 
 /**
@@ -188,5 +188,93 @@ describe(formatPath.name, () => {
 		expect(result).toContain("from: User.save (Method)");
 		expect(result).toContain("to: Repo.insert (Method)");
 		expect(result).toContain("path: User.save --CALLS--> Repo.insert");
+	});
+});
+
+describe(formatNotFound.name, () => {
+	it("formats error with example syntax for from parameter", () => {
+		const result = formatNotFound("from.symbol: formatDate");
+
+		expect(result).toContain("error: from.symbol: formatDate not found");
+		expect(result).toContain(
+			"Narrow your query with file, module, or package:",
+		);
+		expect(result).toContain('from: { symbol: "formatDate", file: "src/..." }');
+		expect(result).toContain('from: { symbol: "formatDate", module: "..." }');
+	});
+
+	it("formats error with example syntax for to parameter", () => {
+		const result = formatNotFound("to.symbol: save");
+
+		expect(result).toContain("error: to.symbol: save not found");
+		expect(result).toContain('to: { symbol: "save", file: "src/..." }');
+	});
+
+	it("includes suggestions when provided", () => {
+		const result = formatNotFound("from.symbol: formatDat", [
+			"formatDate",
+			"formatTime",
+		]);
+
+		expect(result).toContain("Did you mean:");
+		expect(result).toContain("  - formatDate");
+		expect(result).toContain("  - formatTime");
+	});
+});
+
+describe(formatAmbiguous.name, () => {
+	const candidates: SymbolLocation[] = [
+		{
+			name: "save",
+			type: "Function",
+			file: "src/utils.ts",
+			offset: 10,
+			limit: 5,
+			module: "utils",
+			package: "core",
+			id: "src/utils.ts:save",
+		},
+		{
+			name: "save",
+			type: "Method",
+			file: "src/models/User.ts",
+			offset: 20,
+			limit: 8,
+			module: "models",
+			package: "core",
+			id: "src/models/User.ts:User.save",
+		},
+	];
+
+	it("formats error with candidate list", () => {
+		const result = formatAmbiguous("from.symbol: save", candidates);
+
+		expect(result).toContain(
+			"error: from.symbol: save is ambiguous (2 matches)",
+		);
+		expect(result).toContain("candidates:");
+		expect(result).toContain("save (Function)");
+		expect(result).toContain("User.save (Method)");
+	});
+
+	it("includes example syntax for from parameter", () => {
+		const result = formatAmbiguous("from.symbol: save", candidates);
+
+		expect(result).toContain(
+			"Narrow your query with file, module, or package:",
+		);
+		expect(result).toContain('from: { symbol: "save", file: "src/utils.ts" }');
+	});
+
+	it("includes example syntax for to parameter", () => {
+		const result = formatAmbiguous("to.symbol: save", candidates);
+
+		expect(result).toContain('to: { symbol: "save", file: "src/utils.ts" }');
+	});
+
+	it("shows module example when candidates differ by module", () => {
+		const result = formatAmbiguous("from.symbol: save", candidates);
+
+		expect(result).toContain('from: { symbol: "save", module: "utils" }');
 	});
 });

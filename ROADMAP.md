@@ -29,32 +29,6 @@ These 6 tools remain because they offer capabilities LSP lacks:
 
 ---
 
-## Quick Wins: MCP Tool Quality
-
-These improvements have the highest value-to-effort ratio. They improve AI agent experience with minimal code changes.
-
-### Error Messages with Example Syntax
-**Impact: Medium | Effort: Very Low**
-
-When symbol resolution fails (not found or ambiguous), error messages tell the user *what* to do but not *how*. Adding example syntax reduces friction.
-
-**Current:**
-```
-Narrow your query with: file, module, or package parameter
-```
-
-**Improved:**
-```
-Narrow your query with file, module, or package:
-  { symbol: "formatDate", file: "src/utils/date.ts" }
-  { symbol: "formatDate", module: "core" }
-```
-
-**Affected file:** `src/tools/shared/errorFormatters.ts`
-
-
----
-
 ## Near-term Enhancements
 
 ### File Watcher (Phase 7)
