@@ -36,7 +36,7 @@ The project uses a **vertical slice architecture** where each MCP tool owns its 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                        MCP Server Layer                         │
-│              (McpServer.ts dispatches to tool handlers)         │
+│              (startMcpServer.ts dispatches to tool handlers)         │
 ├─────────────────────────────────────────────────────────────────┤
 │                     Vertical Slice Tools                        │
 │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐            │
@@ -103,9 +103,9 @@ Each MCP tool folder (`src/tools/<tool>/`) contains:
 - `DbWriter.ts` - Write interface for graph mutations (4 methods)
 
 **SQLite Implementation** (`sqlite/`):
-- `SqliteConnection.ts` - Database lifecycle (open/close with WAL mode)
-- `SqliteSchema.ts` - Schema initialization (tables, indexes)
-- `SqliteWriter.ts` - Implements DbWriter with prepared statements and transactions
+- `sqliteConnection.utils.ts` - Database lifecycle (open/close with WAL mode)
+- `sqliteSchema.utils.ts` - Schema initialization (tables, indexes)
+- `createSqliteWriter.ts` - Implements DbWriter with prepared statements and transactions
 
 **Note**: Query logic lives in each tool's `query.ts` file (`src/tools/*/query.ts`), using direct SQL queries via better-sqlite3. This vertical slice approach eliminates the need for a shared reader abstraction.
 
@@ -135,11 +135,11 @@ The schema intentionally omits FK constraints on edges table for three key reaso
 **Purpose**: Parse TypeScript source code and extract graph structure.
 
 **Key Files**:
-- `Ingestion.ts` - Public API (`indexProject`)
+- `indexProject.ts` - Public API (`indexProject`)
 - `Extractor.ts` - Orchestrates extraction: nodes first, then edges
 - `NodeExtractors.ts` - Extracts 8 node types from AST (Function, Class, Method, etc.)
 - `EdgeExtractors.ts` - Extracts 6 edge types from AST (CALLS, IMPORTS, etc.)
-- `IdGenerator.ts` - Generates deterministic node IDs (`{filePath}:{symbolPath}`)
+- `generateNodeId.ts` - Generates deterministic node IDs (`{filePath}:{symbolPath}`)
 - `normalizeTypeText.ts` - Collapses multiline TypeScript types to single line
 
 **Design Highlights**:
@@ -154,8 +154,9 @@ The schema intentionally omits FK constraints on edges table for three key reaso
 **Purpose**: Load and validate project configuration using Zod schemas.
 
 **Key Files**:
-- `ConfigSchema.ts` - Zod schemas for validation + `defineConfig()` helper
-- `ConfigLoader.ts` - Auto-detects and loads config files (.ts, .js, .json)
+- `Config.schemas.ts` - Zod schemas and type definitions
+- `defineConfig.ts` - Type-safe config helper function
+- `configLoader.utils.ts` - Auto-detects and loads config files (.ts, .js, .json)
 
 **Configuration Structure**:
 ```typescript
@@ -185,8 +186,8 @@ The schema intentionally omits FK constraints on edges table for three key reaso
 **Purpose**: Exposes the code graph as an MCP server with 10 focused tools.
 
 **Key Files**:
-- `McpServer.ts` - Server implementation with 10 tool registrations
-- `StartServer.ts` - CLI entry point with auto-indexing on first run
+- `startMcpServer.ts` - Server implementation with 10 tool registrations
+- `main.ts` - CLI entry point with auto-indexing on first run
 
 **Design Highlights**:
 - Stdio transport only (designed for MCP protocol)

@@ -51,7 +51,7 @@ Narrow your query with: file, module, or package parameter
 
 ```
 source: indexProject (Function)
-file: src/ingestion/Ingestion.ts
+file: src/ingestion/indexProject.ts
 offset: 50 limit: 150
 count: 2
 
@@ -60,7 +60,7 @@ src/db/DbWriter.ts (1 callees):
     clearAll [15-20] exp async () → Promise<void>
       offset: 15 limit: 6
 
-src/ingestion/Ingestion.ts (1 callees):
+src/ingestion/indexProject.ts (1 callees):
   functions[1]:
     indexPackage [109-207] async (...) → Promise<IndexResult>
       offset: 109 limit: 99

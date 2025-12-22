@@ -1,6 +1,6 @@
 import { dirname, join, relative } from "node:path";
 import { Project } from "ts-morph";
-import type { ProjectConfig } from "../config/ConfigSchema.js";
+import type { ProjectConfig } from "../config/Config.schemas.js";
 import type { DbWriter } from "../db/DbWriter.js";
 import type { IndexResult } from "../db/Types.js";
 import { extractEdges } from "./extract/edges/extractEdges.js";

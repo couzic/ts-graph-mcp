@@ -1,6 +1,6 @@
 import type { SourceFile } from "ts-morph";
 import type { Edge } from "../../../db/Types.js";
-import { generateNodeId } from "../../IdGenerator.js";
+import { generateNodeId } from "../../generateNodeId.js";
 import type { EdgeExtractionContext } from "./EdgeExtractionContext.js";
 
 /**

@@ -3,10 +3,10 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
 	closeDatabase,
 	openDatabase,
-} from "../../src/db/sqlite/SqliteConnection.js";
-import { initializeSchema } from "../../src/db/sqlite/SqliteSchema.js";
-import { createSqliteWriter } from "../../src/db/sqlite/SqliteWriter.js";
-import { indexProject } from "../../src/ingestion/Ingestion.js";
+} from "../../src/db/sqlite/sqliteConnection.utils.js";
+import { initializeSchema } from "../../src/db/sqlite/sqliteSchema.utils.js";
+import { createSqliteWriter } from "../../src/db/sqlite/createSqliteWriter.js";
+import { indexProject } from "../../src/ingestion/indexProject.js";
 import { queryEdges } from "../../src/db/queryEdges.js";
 import { queryImpactedNodes } from "../../src/tools/analyze-impact/query.js";
 import { queryNodes } from "../../src/db/queryNodes.js";

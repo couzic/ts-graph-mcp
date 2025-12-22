@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import Database from "better-sqlite3";
-import { initializeSchema } from "./SqliteSchema.js";
+import { initializeSchema } from "./sqliteSchema.utils.js";
 
 export interface SqliteConnectionOptions {
 	/** Path to the database file. Use ':memory:' for in-memory database. */

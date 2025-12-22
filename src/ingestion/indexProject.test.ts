@@ -2,12 +2,15 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { ProjectConfig } from "../config/ConfigSchema.js";
+import type { ProjectConfig } from "../config/Config.schemas.js";
 import type { DbWriter } from "../db/DbWriter.js";
-import { closeDatabase, openDatabase } from "../db/sqlite/SqliteConnection.js";
-import { createSqliteWriter } from "../db/sqlite/SqliteWriter.js";
+import { createSqliteWriter } from "../db/sqlite/createSqliteWriter.js";
+import {
+	closeDatabase,
+	openDatabase,
+} from "../db/sqlite/sqliteConnection.utils.js";
 import type { Edge, Node } from "../db/Types.js";
-import { indexProject } from "./Ingestion.js";
+import { indexProject } from "./indexProject.js";
 
 /**
  * Simple helper to check if a node exists in the database.

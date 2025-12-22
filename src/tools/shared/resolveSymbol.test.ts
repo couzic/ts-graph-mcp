@@ -1,6 +1,6 @@
 import Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { initializeSchema } from "../../db/sqlite/SqliteSchema.js";
+import { initializeSchema } from "../../db/sqlite/sqliteSchema.utils.js";
 import { resolveSymbol } from "./resolveSymbol.js";
 import type { SymbolQuery } from "./SymbolQuery.js";
 

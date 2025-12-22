@@ -1,4 +1,4 @@
-import { defineConfig } from "../../src/config/ConfigSchema.js";
+import { defineConfig } from "../../src/config/defineConfig.js";
 
 /**
  * Web app configuration using flat packages format (no module nesting).

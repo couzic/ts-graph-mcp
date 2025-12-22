@@ -50,7 +50,7 @@ interface NodeExtractionContext {
 
 ### ID Generation
 
-All extractors use `generateNodeId()` from `IdGenerator.ts`:
+All extractors use `generateNodeId()` from `generateNodeId.ts`:
 
 - Top-level symbols: `generateNodeId(filePath, name)` → `src/utils.ts:formatDate`
 - Class members: `generateNodeId(filePath, className, name)` → `src/models/User.ts:User.save`

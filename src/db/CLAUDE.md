@@ -31,15 +31,15 @@ Write operations used by Ingestion Module:
 
 ### SQLite Implementation (`sqlite/`)
 
-#### `SqliteConnection.ts`
+#### `sqliteConnection.utils.ts`
 - `openDatabase()` - Create/open DB with WAL mode and performance settings
 - `closeDatabase()` - Clean shutdown
 
-#### `SqliteSchema.ts`
+#### `sqliteSchema.utils.ts`
 - `initializeSchema()` - Create tables and indexes
 - Schema design: `nodes` table (JSON properties column), `edges` table (composite PK)
 
-#### `SqliteWriter.ts`
+#### `createSqliteWriter.ts`
 - `createSqliteWriter()` - Factory returning DbWriter implementation
 - Prepared statements with transactions for batch operations
 

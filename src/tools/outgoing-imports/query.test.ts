@@ -1,14 +1,14 @@
 import { join } from "node:path";
 import type Database from "better-sqlite3";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import type { ProjectConfig } from "../../config/ConfigSchema.js";
+import type { ProjectConfig } from "../../config/Config.schemas.js";
+import { createSqliteWriter } from "../../db/sqlite/createSqliteWriter.js";
 import {
 	closeDatabase,
 	openDatabase,
-} from "../../db/sqlite/SqliteConnection.js";
-import { initializeSchema } from "../../db/sqlite/SqliteSchema.js";
-import { createSqliteWriter } from "../../db/sqlite/SqliteWriter.js";
-import { indexProject } from "../../ingestion/Ingestion.js";
+} from "../../db/sqlite/sqliteConnection.utils.js";
+import { initializeSchema } from "../../db/sqlite/sqliteSchema.utils.js";
+import { indexProject } from "../../ingestion/indexProject.js";
 import { queryImports } from "./query.js";
 
 const monorepoRoot = join(

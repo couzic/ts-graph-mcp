@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { generateNodeId } from "./IdGenerator.js";
+import { generateNodeId } from "./generateNodeId.js";
 
 describe("IdGenerator", () => {
 	describe(generateNodeId.name, () => {

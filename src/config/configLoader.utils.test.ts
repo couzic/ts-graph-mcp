@@ -10,7 +10,7 @@ import {
 	loadConfig,
 	loadConfigOrDetect,
 	readPackageName,
-} from "./ConfigLoader.js";
+} from "./configLoader.utils.js";
 
 const TEST_DIR = "/tmp/ts-graph-rag-config-test";
 

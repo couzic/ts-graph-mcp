@@ -1,7 +1,7 @@
 import type Database from "better-sqlite3";
 import type { DbWriter } from "../DbWriter.js";
 import type { Edge, Node } from "../Types.js";
-import { dropAllTables, initializeSchema } from "./SqliteSchema.js";
+import { dropAllTables, initializeSchema } from "./sqliteSchema.utils.js";
 
 /**
  * Extract type-specific properties from a node (everything not in BaseNode).

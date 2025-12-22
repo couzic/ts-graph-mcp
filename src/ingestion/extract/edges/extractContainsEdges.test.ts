@@ -1,6 +1,6 @@
 import { Project } from "ts-morph";
 import { describe, expect, it } from "vitest";
-import { generateNodeId } from "../../IdGenerator.js";
+import { generateNodeId } from "../../generateNodeId.js";
 import type { EdgeExtractionContext } from "./EdgeExtractionContext.js";
 import { extractContainsEdges } from "./extractContainsEdges.js";
 

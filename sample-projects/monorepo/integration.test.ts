@@ -4,10 +4,10 @@ import { queryEdges } from "../../src/db/queryEdges.js";
 import {
   closeDatabase,
   openDatabase,
-} from "../../src/db/sqlite/SqliteConnection.js";
-import { initializeSchema } from "../../src/db/sqlite/SqliteSchema.js";
-import { createSqliteWriter } from "../../src/db/sqlite/SqliteWriter.js";
-import { indexProject } from "../../src/ingestion/Ingestion.js";
+} from "../../src/db/sqlite/sqliteConnection.utils.js";
+import { initializeSchema } from "../../src/db/sqlite/sqliteSchema.utils.js";
+import { createSqliteWriter } from "../../src/db/sqlite/createSqliteWriter.js";
+import { indexProject } from "../../src/ingestion/indexProject.js";
 import { queryImpactedNodes } from "../../src/tools/analyze-impact/query.js";
 import { queryPath } from "../../src/tools/find-path/query.js";
 import { queryNodes } from "../../src/db/queryNodes.js";

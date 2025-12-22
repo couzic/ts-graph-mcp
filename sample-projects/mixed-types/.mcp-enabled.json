@@ -2,7 +2,7 @@
   "mcpServers": {
     "ts-graph-mcp": {
       "command": "node",
-      "args": ["../../dist/mcp/StartServer.js", "--db", ".ts-graph/graph.db"]
+      "args": ["../../dist/mcp/main.js", "--db", ".ts-graph/graph.db"]
     }
   }
 }

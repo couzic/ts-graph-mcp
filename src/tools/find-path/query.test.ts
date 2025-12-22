@@ -1,11 +1,11 @@
 import type Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { createSqliteWriter } from "../../db/sqlite/createSqliteWriter.js";
 import {
 	closeDatabase,
 	openDatabase,
-} from "../../db/sqlite/SqliteConnection.js";
-import { initializeSchema } from "../../db/sqlite/SqliteSchema.js";
-import { createSqliteWriter } from "../../db/sqlite/SqliteWriter.js";
+} from "../../db/sqlite/sqliteConnection.utils.js";
+import { initializeSchema } from "../../db/sqlite/sqliteSchema.utils.js";
 import type { Edge, FunctionNode } from "../../db/Types.js";
 import { queryPath } from "./query.js";
 

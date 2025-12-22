@@ -3,9 +3,9 @@
 	"version": "0.1.0",
 	"description": "MCP server that extracts TypeScript code structure into a graph database, enabling advanced exploration for AI coding agents",
 	"type": "module",
-	"main": "dist/mcp/StartServer.js",
+	"main": "dist/mcp/main.js",
 	"bin": {
-		"ts-graph-mcp": "dist/mcp/StartServer.js"
+		"ts-graph-mcp": "dist/mcp/main.js"
 	},
 	"scripts": {
 		"check": "npm run test && npm run build && npm run lint:fix",

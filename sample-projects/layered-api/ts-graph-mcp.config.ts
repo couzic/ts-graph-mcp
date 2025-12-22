@@ -1,4 +1,4 @@
-import { defineConfig } from "../../src/config/ConfigSchema.js";
+import { defineConfig } from "../../src/config/defineConfig.js";
 
 /**
  * ts-graph-mcp configuration for layered-api test project.

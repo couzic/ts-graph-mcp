@@ -3,7 +3,7 @@
     "ts-graph-mcp": {
       "command": "node",
       "args": [
-        "../../dist/mcp/StartServer.js",
+        "../../dist/mcp/main.js",
         "--db",
         ".ts-graph/graph.db"
       ]

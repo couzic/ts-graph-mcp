@@ -4,7 +4,7 @@ Configuration loading and validation for ts-graph-mcp projects. Uses Zod schemas
 
 ## Key Exports
 
-### ConfigSchema.ts
+### Config.schemas.ts
 
 **Zod Schemas:**
 - `ProjectConfigInputSchema` - Input schema accepting both full and flat formats
@@ -22,7 +22,7 @@ Configuration loading and validation for ts-graph-mcp projects. Uses Zod schemas
 - `defineConfig(config)` - Type-safe helper accepting both formats, always returns full format
 - `normalizeConfig(input)` - Converts flat format to full format (creates implicit "main" module)
 
-### ConfigLoader.ts
+### configLoader.utils.ts
 
 - `findConfigFile(directory)` - Searches for config file in order: .ts, .js, .json
 - `loadConfig(configPath)` - Loads and validates config from specific file path
@@ -115,12 +115,12 @@ export default defineConfig({
 });
 
 // In application code
-import { loadConfigFromDirectory } from '../config/ConfigLoader.js';
+import { loadConfigFromDirectory } from '../config/configLoader.utils.js';
 const config = await loadConfigFromDirectory(process.cwd());
 // config is always in full format (with modules)
 ```
 
 ## Module Dependencies
 
-- Used by: `src/ingestion/Ingestion.ts` (for indexProject), `src/mcp/StartServer.ts` (for server initialization)
+- Used by: `src/ingestion/indexProject.ts` (for indexProject), `src/mcp/main.ts` (for server initialization)
 - Depends on: zod (runtime validation), node:fs, node:path

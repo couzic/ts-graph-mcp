@@ -32,16 +32,22 @@ Each document has a specific purpose — keep them focused:
 
 - Functional style (no classes)
 - Named exports only (no default exports)
-- File naming: Match the casing of the primary export (no index.ts barrel files)
-  - Type/interface exports → PascalCase file: `Types.ts` exports `Node`, `Edge`
-  - Function exports → camelCase file: `normalizeTypeText.ts` exports `normalizeTypeText`
+- File naming: One primary export per file, named after that export
+  - **Function** → camelCase: `generateNodeId.ts` exports `generateNodeId`
+  - **Type/Interface/Class** → PascalCase: `Node.ts` exports `Node`
+  - **Collection files** use suffixes when multiple related exports are needed:
+    - `*.types.ts` - Type/interface collections: `Config.types.ts`
+    - `*.schemas.ts` - Zod schema collections: `Config.schemas.ts`
+    - `*.utils.ts` - Utility function collections: `sqliteConnection.utils.ts`
+    - `*.constants.ts` - Constant collections: `query.constants.ts`
+  - No `index.ts` barrel files
 - Tests: Use `describe(functionName.name, ...)` instead of string literals for refactoring safety
 
 ## Project Structure
 
 - Each module must be documented with its own CLAUDE.md file. The CLAUDE.md condenses the most critical information about the module, all the "must know".
-- Direct imports: `import { SqliteReader } from './db/sqlite/SqliteReader'`
-- Each file exports one primary type/function matching its filename
+- Direct imports: `import { createSqliteWriter } from './db/sqlite/createSqliteWriter.js'`
+- Each file exports one primary item matching its filename (see File naming convention above)
 
 ## Scripts
 

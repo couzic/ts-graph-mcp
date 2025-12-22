@@ -39,28 +39,6 @@ export const MAX_PATH_LENGTH = 20;
 
 ---
 
-### 19. File Naming Convention Violations
-
-**Impact:** Low (consistency)
-
-9 files export functions but use PascalCase (convention requires camelCase for function exports):
-
-| Current | Primary Export | Should Be |
-|---------|----------------|-----------|
-| `src/ingestion/IdGenerator.ts` | `generateNodeId()` | `generateNodeId.ts` |
-| `src/ingestion/Ingestion.ts` | `indexProject()`, `indexFile()` | `ingestion.ts` |
-| `src/db/sqlite/SqliteConnection.ts` | `openDatabase()`, `closeDatabase()` | `sqliteConnection.ts` |
-| `src/db/sqlite/SqliteSchema.ts` | `initializeSchema()` | `sqliteSchema.ts` |
-| `src/db/sqlite/SqliteWriter.ts` | `createSqliteWriter()` | `sqliteWriter.ts` |
-| `src/config/ConfigLoader.ts` | `loadConfig()`, `findConfigFile()` | `configLoader.ts` |
-| `src/config/ConfigSchema.ts` | `defineConfig()` + types | `configSchema.ts` |
-| `src/mcp/McpServer.ts` | `startMcpServer()` | `mcpServer.ts` |
-| `src/mcp/StartServer.ts` | `main()` | `startServer.ts` |
-
-**Alternative:** Update convention to allow module-oriented PascalCase naming (more discoverable).
-
----
-
 ### Watcher Tests Missing
 
 Watcher module lacks unit and system tests. Medium priority.

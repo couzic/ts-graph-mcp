@@ -2,11 +2,11 @@
 
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { loadConfigOrDetect } from "../config/ConfigLoader.js";
-import { openDatabase } from "../db/sqlite/SqliteConnection.js";
-import { createSqliteWriter } from "../db/sqlite/SqliteWriter.js";
-import { indexProject } from "../ingestion/Ingestion.js";
-import { startMcpServer } from "./McpServer.js";
+import { loadConfigOrDetect } from "../config/configLoader.utils.js";
+import { createSqliteWriter } from "../db/sqlite/createSqliteWriter.js";
+import { openDatabase } from "../db/sqlite/sqliteConnection.utils.js";
+import { indexProject } from "../ingestion/indexProject.js";
+import { startMcpServer } from "./startMcpServer.js";
 
 /**
  * Default database path relative to project root.

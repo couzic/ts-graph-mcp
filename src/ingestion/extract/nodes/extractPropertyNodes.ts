@@ -1,6 +1,6 @@
 import type { ClassDeclaration, InterfaceDeclaration } from "ts-morph";
 import type { PropertyNode } from "../../../db/Types.js";
-import { generateNodeId } from "../../IdGenerator.js";
+import { generateNodeId } from "../../generateNodeId.js";
 import type { NodeExtractionContext } from "./NodeExtractionContext.js";
 import { normalizeTypeText } from "./normalizeTypeText.js";
 

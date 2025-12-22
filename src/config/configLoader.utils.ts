@@ -2,10 +2,10 @@ import { existsSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { IMPLICIT_MODULE_NAME } from "../tools/shared/nodeFormatters.js";
 import {
-	normalizeConfig,
 	type ProjectConfig,
 	ProjectConfigInputSchema,
-} from "./ConfigSchema.js";
+} from "./Config.schemas.js";
+import { normalizeConfig } from "./defineConfig.js";
 
 /**
  * Read package name from package.json in the given directory.

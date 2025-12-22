@@ -1,14 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
-	defineConfig,
 	ModuleConfigSchema,
-	normalizeConfig,
 	PackageConfigSchema,
 	ProjectConfigInputSchema,
 	ProjectConfigSchema,
 	StorageConfigSchema,
 	WatchConfigSchema,
-} from "./ConfigSchema.js";
+} from "./Config.schemas.js";
+import { defineConfig, normalizeConfig } from "./defineConfig.js";
 
 describe("ConfigSchema", () => {
 	describe("PackageConfigSchema", () => {

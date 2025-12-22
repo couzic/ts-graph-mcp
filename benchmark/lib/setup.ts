@@ -15,11 +15,11 @@
 import { access } from "node:fs/promises";
 import { mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { closeDatabase, openDatabase } from "../../src/db/sqlite/SqliteConnection.js";
-import { initializeSchema } from "../../src/db/sqlite/SqliteSchema.js";
-import { createSqliteWriter } from "../../src/db/sqlite/SqliteWriter.js";
-import { indexProject } from "../../src/ingestion/Ingestion.js";
-import type { ProjectConfig } from "../../src/config/ConfigSchema.js";
+import { closeDatabase, openDatabase } from "../../src/db/sqlite/sqliteConnection.utils.js";
+import { initializeSchema } from "../../src/db/sqlite/sqliteSchema.utils.js";
+import { createSqliteWriter } from "../../src/db/sqlite/createSqliteWriter.js";
+import { indexProject } from "../../src/ingestion/indexProject.js";
+import type { ProjectConfig } from "../../src/config/Config.schemas.js";
 import type { BenchmarkConfig } from "./types.js";
 
 const DEFAULT_DB_PATH = ".ts-graph/graph.db";

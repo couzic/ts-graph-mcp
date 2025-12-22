@@ -4,7 +4,7 @@ Parses TypeScript source code using ts-morph AST and extracts nodes (symbols) an
 
 ## Key Exports
 
-### Public API (`Ingestion.ts`)
+### Public API (`indexProject.ts`)
 
 - `indexProject` - Index entire project based on config (processes all modules/packages)
 
@@ -21,7 +21,7 @@ Parses TypeScript source code using ts-morph AST and extracts nodes (symbols) an
 - `extractEdges` - Extract all edge types (CONTAINS, IMPORTS, CALLS, EXTENDS, IMPLEMENTS, USES_TYPE)
 - See `extract/edges/CLAUDE.md` for detailed edge extractor documentation
 
-### ID Generation (`IdGenerator.ts`)
+### ID Generation (`generateNodeId.ts`)
 
 - `generateNodeId` - Create deterministic node IDs: `{relativePath}:{symbolPath}` (handles Windows paths, overloads)
 

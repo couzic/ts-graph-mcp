@@ -1,14 +1,14 @@
 import { join } from "node:path";
 import type Database from "better-sqlite3";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import type { ProjectConfig } from "../../src/config/ConfigSchema.js";
+import type { ProjectConfig } from "../../src/config/Config.schemas.js";
 import {
 	closeDatabase,
 	openDatabase,
-} from "../../src/db/sqlite/SqliteConnection.js";
-import { initializeSchema } from "../../src/db/sqlite/SqliteSchema.js";
-import { createSqliteWriter } from "../../src/db/sqlite/SqliteWriter.js";
-import { indexProject } from "../../src/ingestion/Ingestion.js";
+} from "../../src/db/sqlite/sqliteConnection.utils.js";
+import { initializeSchema } from "../../src/db/sqlite/sqliteSchema.utils.js";
+import { createSqliteWriter } from "../../src/db/sqlite/createSqliteWriter.js";
+import { indexProject } from "../../src/ingestion/indexProject.js";
 import { queryImpactedNodes } from "../../src/tools/analyze-impact/query.js";
 import { queryNodes } from "../../src/db/queryNodes.js";
 import { queryEdges } from "../../src/db/queryEdges.js";

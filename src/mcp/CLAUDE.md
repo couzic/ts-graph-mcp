@@ -32,12 +32,12 @@ src/tools/
 ## Key Exports
 
 ### `startMcpServer(db: Database.Database): Promise<void>`
-**File:** `McpServer.ts`
+**File:** `startMcpServer.ts`
 
 Initializes and starts the MCP server on stdio transport with 10 registered tools. Dispatches tool calls to vertical slice handlers. See [`../tools/CLAUDE.md`](../tools/CLAUDE.md) for tool details.
 
 ### `main(): Promise<void>`
-**File:** `StartServer.ts`
+**File:** `main.ts`
 
 CLI entry point that orchestrates database initialization and server startup. Handles:
 - Command-line argument parsing (`--db` flag for database path)

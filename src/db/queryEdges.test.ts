@@ -1,9 +1,12 @@
 import type Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { queryEdges } from "./queryEdges.js";
-import { closeDatabase, openDatabase } from "./sqlite/SqliteConnection.js";
-import { initializeSchema } from "./sqlite/SqliteSchema.js";
-import { createSqliteWriter } from "./sqlite/SqliteWriter.js";
+import { createSqliteWriter } from "./sqlite/createSqliteWriter.js";
+import {
+	closeDatabase,
+	openDatabase,
+} from "./sqlite/sqliteConnection.utils.js";
+import { initializeSchema } from "./sqlite/sqliteSchema.utils.js";
 import type { Edge } from "./Types.js";
 
 describe(queryEdges.name, () => {

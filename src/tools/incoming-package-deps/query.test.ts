@@ -1,14 +1,14 @@
 import { join } from "node:path";
 import type Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { createSqliteWriter } from "../../db/sqlite/createSqliteWriter.js";
 import {
 	closeDatabase,
 	openDatabase,
-} from "../../db/sqlite/SqliteConnection.js";
-import { initializeSchema } from "../../db/sqlite/SqliteSchema.js";
-import { createSqliteWriter } from "../../db/sqlite/SqliteWriter.js";
+} from "../../db/sqlite/sqliteConnection.utils.js";
+import { initializeSchema } from "../../db/sqlite/sqliteSchema.utils.js";
 import type { Edge, FileNode } from "../../db/Types.js";
-import { indexProject } from "../../ingestion/Ingestion.js";
+import { indexProject } from "../../ingestion/indexProject.js";
 import { queryIncomingPackageDeps } from "./query.js";
 
 // Test data factory - creates minimal file nodes
