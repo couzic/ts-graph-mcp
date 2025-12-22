@@ -2,15 +2,13 @@
  * Benchmark prompts for monorepo test project.
  *
  * Each prompt tests L3 monorepo capabilities:
- * - P1: Cross-package queries within module (incomingCallsDeep)
- * - P2: Cross-module impact analysis (analyzeImpact)
- * - P3: Utility usage tracking (incomingCallsDeep)
- * - P4: Package dependencies (outgoingImports)
- * - P5: Transitive package dependencies (outgoingPackageDeps)
- * - P6: Reverse package dependencies (incomingPackageDeps)
+ * - P1: Cross-module impact analysis (analyzeImpact)
+ * - P2: Utility usage tracking (incomingCallsDeep)
+ * - P3: Package dependencies (outgoingImports)
+ * - P4: Transitive package dependencies (outgoingPackageDeps)
+ * - P5: Reverse package dependencies (incomingPackageDeps)
  *
- * Key differentiator from deep-chain and web-app:
- * This tests BOTH cross-package (within module) AND cross-module edges.
+ * findPath is tested via integration tests, not benchmarks (covered by layered-api).
  */
 
 import type {
@@ -30,14 +28,6 @@ export const config: BenchmarkConfig = {
 export const prompts: BenchmarkPrompt[] = [
   {
     id: "P1",
-    name: "Cross-package callers",
-    prompt:
-      "What code in the backend module calls the createUserService function? The function is in modules/backend/packages/services/src/userService.ts.",
-    expectedContains: ["handleCreateUser", "api", "userRoutes"],
-    expectedTool: "incomingCallsDeep",
-  },
-  {
-    id: "P2",
     name: "Cross-module impact",
     prompt:
       "If I change the User interface in modules/shared/packages/types/src/User.ts, what code across all modules would be affected?",
@@ -51,7 +41,7 @@ export const prompts: BenchmarkPrompt[] = [
     expectedTool: "analyzeImpact",
   },
   {
-    id: "P3",
+    id: "P2",
     name: "Utility usage",
     prompt:
       "What packages and modules use the validateEmail function from modules/shared/packages/utils/src/validate.ts?",
@@ -59,7 +49,7 @@ export const prompts: BenchmarkPrompt[] = [
     expectedTool: "incomingCallsDeep",
   },
   {
-    id: "P4",
+    id: "P3",
     name: "Package dependencies",
     prompt:
       "What are the dependencies of the backend/api package? Show me what packages it imports from.",
@@ -67,7 +57,7 @@ export const prompts: BenchmarkPrompt[] = [
     expectedTool: "outgoingImports",
   },
   {
-    id: "P5",
+    id: "P4",
     name: "Transitive package dependencies",
     prompt:
       "What packages does backend/api depend on? Show me the transitive package dependencies.",
@@ -75,7 +65,7 @@ export const prompts: BenchmarkPrompt[] = [
     expectedTool: "outgoingPackageDeps",
   },
   {
-    id: "P6",
+    id: "P5",
     name: "Reverse package dependencies",
     prompt:
       "What packages depend on shared/types? I want to know what would be affected if I changed this package.",

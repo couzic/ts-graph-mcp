@@ -9,6 +9,7 @@ import { initializeSchema } from "../../src/db/sqlite/SqliteSchema.js";
 import { createSqliteWriter } from "../../src/db/sqlite/SqliteWriter.js";
 import { indexProject } from "../../src/ingestion/Ingestion.js";
 import { queryImpactedNodes } from "../../src/tools/analyze-impact/query.js";
+import { queryPath } from "../../src/tools/find-path/query.js";
 import { queryNodes } from "../../src/db/queryNodes.js";
 import config from "./ts-graph-mcp.config.js";
 
@@ -435,6 +436,82 @@ describe("monorepo integration (L3: multi-module, multi-package)", () => {
       // Verify it's from the api package
       const apiCallers = impacted.filter((n) => n.package === "api");
       expect(apiCallers.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe(queryPath.name, () => {
+    /**
+     * Tests cross-module path finding: backend/api → backend/services → shared/utils
+     */
+    it("finds path from handleCreateUser to validateEmail across modules", () => {
+      const handleCreateUser = queryNodes(db, "handleCreateUser", {
+        module: "backend",
+        package: "api",
+        type: "Function",
+      })[0];
+      const validateEmail = queryNodes(db, "validateEmail", {
+        module: "shared",
+        package: "utils",
+        type: "Function",
+      })[0];
+
+      expect(handleCreateUser).toBeDefined();
+      expect(validateEmail).toBeDefined();
+
+      const result = queryPath(db, handleCreateUser!.id, validateEmail!.id);
+
+      expect(result).not.toBeNull();
+      // Path: handleCreateUser → createUserService → validateEmail (3 nodes, 2 edges)
+      expect(result!.nodes).toHaveLength(3);
+      expect(result!.edges).toHaveLength(2);
+
+      // nodes are IDs (strings), check they contain expected function names
+      expect(result!.nodes.some((id) => id.includes("handleCreateUser"))).toBe(true);
+      expect(result!.nodes.some((id) => id.includes("createUserService"))).toBe(true);
+      expect(result!.nodes.some((id) => id.includes("validateEmail"))).toBe(true);
+    });
+
+    it("finds path from renderUserCard to formatDate (frontend → shared)", () => {
+      const renderUserCard = queryNodes(db, "renderUserCard", {
+        module: "frontend",
+        package: "ui",
+        type: "Function",
+      })[0];
+      const formatDate = queryNodes(db, "formatDate", {
+        module: "shared",
+        package: "utils",
+        type: "Function",
+      })[0];
+
+      expect(renderUserCard).toBeDefined();
+      expect(formatDate).toBeDefined();
+
+      const result = queryPath(db, renderUserCard!.id, formatDate!.id);
+
+      expect(result).not.toBeNull();
+      // Direct call: renderUserCard → formatDate (2 nodes, 1 edge)
+      expect(result!.nodes).toHaveLength(2);
+      expect(result!.edges).toHaveLength(1);
+    });
+
+    it("returns null for path in wrong direction", () => {
+      const validateEmail = queryNodes(db, "validateEmail", {
+        module: "shared",
+        package: "utils",
+        type: "Function",
+      })[0];
+      const handleCreateUser = queryNodes(db, "handleCreateUser", {
+        module: "backend",
+        package: "api",
+        type: "Function",
+      })[0];
+
+      expect(validateEmail).toBeDefined();
+      expect(handleCreateUser).toBeDefined();
+
+      // No path from leaf function back to API handler
+      const result = queryPath(db, validateEmail!.id, handleCreateUser!.id);
+      expect(result).toBeNull();
     });
   });
 

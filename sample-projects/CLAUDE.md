@@ -13,8 +13,8 @@ Sample TypeScript codebases for integration testing and benchmarking.
 ### `deep-chain/`
 10-file cross-file call chain (`entry` → `step02` → ... → `step10`). Tests deep transitive traversal.
 - 10 files, each with one function calling the next
-- Primary benchmark for `outgoingCallsDeep`, `incomingCallsDeep`, `findPath` at depth
-- 20 integration tests
+- Tests extreme depth (10-hop) for `queryCallees`, `queryCallers`, `queryPath`
+- 20 integration tests (no benchmarks - patterns covered by `layered-api`)
 
 ### `mixed-types/`
 All 8 node types: Function, Class, Method, Interface, TypeAlias, Variable, Property, File.
@@ -37,8 +37,9 @@ True L3 monorepo structure with 3 modules × 2 packages each = 6 packages.
 - **Primary test for cross-MODULE edges** (backend/services → shared/utils)
 - Tests cross-package edges within same module (backend/api → backend/services)
 - Tests module + package filtering with `queryNodes`
-- Tests `analyzeImpact` analysis at module and package granularity
-- 30 integration tests
+- Tests `queryPath` for cross-module call chains
+- **Benchmark for**: `analyzeImpact`, `incomingCallsDeep`, package dependency tools
+- 33 integration tests
 
 ## Planned Projects
 
@@ -116,10 +117,10 @@ beforeAll(async () => {
 - Once value is proven for a query type (e.g., deep traversal), re-proving with structural variants adds no signal
 
 **Current strategy:**
-- `deep-chain` benchmarks prove value for **deep transitive traversal**
+- `layered-api` benchmarks prove value for **path finding** and **deep call traversal** (`findPath`, `outgoingCallsDeep`)
 - `monorepo` benchmarks prove value for **cross-module/package analysis** and **package dependencies**
 - `mixed-types` benchmarks prove value for **type usage tracking** (`incomingUsesType`)
-- `web-app` has full integration test coverage but no benchmarks (query patterns already covered by other projects)
+- `deep-chain` and `web-app` have integration tests only (query patterns covered by other projects)
 
 ## Benchmarking
 
@@ -179,17 +180,17 @@ sample-project/
 
 | Project | Prompts | Tools Covered |
 |---------|---------|---------------|
-| `deep-chain` | P1-P3 | `outgoingCallsDeep`, `findPath`, `analyzeImpact` |
-| `monorepo` | P1-P6 | `incomingCallsDeep`, `analyzeImpact`, `outgoingImports`, `outgoingPackageDeps`, `incomingPackageDeps` |
+| `layered-api` | P1-P3 | `outgoingCallsDeep`, `findPath` (+ negative test) |
+| `monorepo` | P1-P5 | `analyzeImpact`, `incomingCallsDeep`, `outgoingImports`, `outgoingPackageDeps`, `incomingPackageDeps` |
 | `mixed-types` | P1 | `incomingUsesType` |
 
-### Sample Results (deep-chain)
+### Sample Results (monorepo)
 
 | Metric | WITH MCP | WITHOUT MCP | Improvement |
 |--------|----------|-------------|-------------|
-| Duration | 7s | 20-22s | **3x faster** |
-| Turns | 2 | 13 | **6.5x fewer** |
-| Cost | $0.06 | $0.11-$0.15 | **~2x cheaper** |
+| Duration | 9-13s | 18-42s | **2-4x faster** |
+| Turns | 2 | 3-10 | **2-5x fewer** |
+| Cost | $0.22 | $0.30-$0.84 | **30-75% cheaper** |
 
 ### Adding Benchmarks to a Test Project
 
