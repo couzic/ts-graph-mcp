@@ -17,7 +17,7 @@ src/tools/
 ├── incoming-package-deps/
 ├── outgoing-package-deps/
 ├── analyze-impact/
-├── find-path/
+├── find-paths/
 └── shared/                 (SymbolQuery.ts, resolveSymbol.ts, nodeFormatters.ts)
 ```
 

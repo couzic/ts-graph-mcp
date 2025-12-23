@@ -5,9 +5,9 @@ import { formatAmbiguous, formatNotFound, formatPath } from "./format.js";
 import { queryPath } from "./query.js";
 
 /**
- * Input parameters for findPath tool.
+ * Input parameters for findPaths tool.
  */
-export interface FindPathParams {
+export interface FindPathsParams {
 	from: SymbolQuery;
 	to: SymbolQuery;
 	maxDepth?: number;
@@ -15,10 +15,10 @@ export interface FindPathParams {
 }
 
 /**
- * MCP tool definition for findPath.
+ * MCP tool definition for findPaths.
  */
-export const findPathDefinition = {
-	name: "findPath",
+export const findPathsDefinition = {
+	name: "findPaths",
 	description:
 		"Find how two symbols are connected via call/import chains. Use this to answer 'How does function A eventually call function B?' or 'What's the dependency path between these modules?' Returns path(s) as symbol sequences with edge types. IMPORTANT: Requires SPECIFIC symbol names for both source and target. Do NOT use for vague architectural questions like 'how does a request reach the database' - instead read 2-3 key files to understand the layer structure. Only use when you already know the exact symbols to trace between.",
 	inputSchema: {
@@ -84,15 +84,15 @@ export const findPathDefinition = {
 };
 
 /**
- * Execute the findPath tool.
+ * Execute the findPaths tool.
  *
  * @param db - Database connection
  * @param params - Tool parameters
  * @returns Formatted string for LLM consumption
  */
-export function executeFindPath(
+export function executeFindPaths(
 	db: Database.Database,
-	params: FindPathParams,
+	params: FindPathsParams,
 ): string {
 	// Resolve 'from' symbol
 	const fromResult = resolveSymbol(db, params.from);

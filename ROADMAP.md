@@ -29,22 +29,11 @@ These 6 tools remain because they offer capabilities LSP lacks:
 | `incomingPackageDeps` | **Transitive** internal package dependencies | No LSP equivalent; npm ls only shows npm packages |
 | `outgoingPackageDeps` | **Transitive** package dependency graph | No LSP equivalent |
 | `analyzeImpact` | **Impact analysis** across all edge types | No LSP equivalent |
-| `findPath` | **Path finding** between symbols | No LSP equivalent |
+| `findPaths` | **Path finding** between symbols | No LSP equivalent |
 
 ---
 
 ## Planned Tool Improvements
-
-### Rename: `findPath` → `findPaths`
-**Impact: Low | Effort: Low**
-
-Rename to better reflect the tool's capability of returning multiple paths between two symbols.
-
-**Changes required:**
-- Rename tool in `startMcpServer.ts`
-- Update tool definition in handler
-- Update documentation (ARCHITECTURE.md, CLAUDE.md files)
-- Update benchmark prompts
 
 ### Improve: `analyzeImpact` Output Format
 **Impact: High | Effort: Medium**

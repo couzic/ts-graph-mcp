@@ -419,7 +419,7 @@ The MCP server exposes 6 focused tools for querying the code graph. All tools us
 | **Package Deps** | `incomingPackageDeps` | Find reverse package deps |
 | | `outgoingPackageDeps` | Find package dependencies |
 | **Analysis** | `analyzeImpact` | Impact analysis |
-| | `findPath` | Find paths between symbols |
+| | `findPaths` | Find paths between symbols |
 
 ## Key Technologies
 
@@ -510,7 +510,7 @@ The built-in LSP tool provides:
 | **Transitive call graph** | ❌ | `incomingCallsDeep/outgoingCallsDeep` | **Unique** |
 | **Package dependencies** | ❌ | `outgoingPackageDeps/incomingPackageDeps` | **Unique** |
 | **Impact analysis** | ❌ | `analyzeImpact` | **Unique** |
-| **Path finding** | ❌ | `findPath` | **Unique** |
+| **Path finding** | ❌ | `findPaths` | **Unique** |
 
 ### Removed Tools
 

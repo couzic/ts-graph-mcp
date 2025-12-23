@@ -1,6 +1,6 @@
-# find_path
+# findPaths
 
-Find the shortest path between two symbols in the code graph.
+Find the shortest paths between two symbols in the code graph.
 
 ## Purpose
 

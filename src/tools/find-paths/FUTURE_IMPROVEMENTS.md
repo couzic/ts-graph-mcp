@@ -1,15 +1,15 @@
-# findPath Tool Improvements
+# findPaths Tool Improvements
 
 **Evaluation Grade: 8/10**
 
 ## Overview
 
-The `findPath` tool finds the shortest path between two nodes in the code graph using BFS (Breadth-First Search) implemented via SQLite recursive CTEs.
+The `findPaths` tool finds the shortest path between two nodes in the code graph using BFS (Breadth-First Search) implemented via SQLite recursive CTEs.
 
 ## Architecture
 
 ```
-src/tools/find-path/
+src/tools/find-paths/
 ├── handler.ts   # MCP tool definition and execute function
 ├── query.ts     # BFS traversal using recursive CTE
 └── format.ts    # Path formatting for LLM output

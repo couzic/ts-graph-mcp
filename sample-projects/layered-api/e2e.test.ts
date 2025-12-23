@@ -11,7 +11,7 @@ import { createSqliteWriter } from "../../src/db/sqlite/createSqliteWriter.js";
 import { indexProject } from "../../src/ingestion/indexProject.js";
 import { queryCallees } from "../../src/tools/outgoing-calls-deep/query.js";
 import { queryCallers } from "../../src/tools/incoming-calls-deep/query.js";
-import { queryPath } from "../../src/tools/find-path/query.js";
+import { queryPath } from "../../src/tools/find-paths/query.js";
 import { queryNodes } from "../../src/db/queryNodes.js";
 import { queryEdges } from "../../src/db/queryEdges.js";
 

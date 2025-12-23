@@ -2,7 +2,7 @@
 
 ## Enhancements
 
-### 13. `findPath` Multiple Paths
+### 13. `findPaths` Multiple Paths
 
 **Impact:** Low
 
@@ -21,7 +21,7 @@ Hardcoded depth limits scattered across query files:
 - `src/tools/incoming-calls-deep/query.ts` — `?? 100`
 - `src/tools/outgoing-calls-deep/query.ts` — `= 100`
 - `src/tools/analyze-impact/query.ts` — `?? 100`
-- `src/tools/find-path/query.ts` — `20` (inconsistent with others)
+- `src/tools/find-paths/query.ts` — `20` (inconsistent with others)
 
 **Fix approach:**
 

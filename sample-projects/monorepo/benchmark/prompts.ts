@@ -72,7 +72,7 @@ export const prompts: BenchmarkPrompt[] = [
     prompt:
       "Find the call path from renderUserCard to the formatDate function in shared utilities.",
     expectedContains: ["renderUserCard", "formatDate", "CALLS"],
-    expectedTool: "findPath",
+    expectedTool: "findPaths",
     expectedTurns: 3,
   },
 ];

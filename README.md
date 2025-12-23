@@ -124,7 +124,7 @@ The server exposes 6 tools for querying the code graph:
 | `incomingPackageDeps` | Find reverse package dependencies | `package`, `module?`, `maxDepth?`, `outputTypes?` |
 | `outgoingPackageDeps` | Find package dependencies | `package`, `module?`, `maxDepth?`, `outputTypes?` |
 | `analyzeImpact` | Impact analysis - find all code affected by changes | `symbol`, `file?`, `module?`, `package?`, `maxDepth?` |
-| `findPath` | Find shortest path between two symbols | `from: {symbol, ...}`, `to: {symbol, ...}`, `maxDepth?`, `maxPaths?` |
+| `findPaths` | Find shortest path between two symbols | `from: {symbol, ...}`, `to: {symbol, ...}`, `maxDepth?`, `maxPaths?` |
 
 ### Symbol-Based Queries
 
@@ -166,7 +166,7 @@ methods[1]:
     callCount: 2, depth: 1
 ```
 
-#### findPath
+#### findPaths
 
 Find path from `handleRequest` to `saveData`:
 

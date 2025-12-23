@@ -2,9 +2,9 @@
  * Benchmark prompts for layered-api test project.
  *
  * Each prompt tests a different MCP tool capability:
- * - P1: Vague architectural question (negative test - should NOT use findPath)
+ * - P1: Vague architectural question (negative test - should NOT use findPaths)
  * - P2: outgoingCallsDeep with specific symbol
- * - P3: findPath with precise source and target symbols (positive test)
+ * - P3: findPaths with precise source and target symbols (positive test)
  */
 
 import type { BenchmarkConfig, BenchmarkPrompt } from "../../../benchmark/lib/types.js";
@@ -31,9 +31,9 @@ export const prompts: BenchmarkPrompt[] = [
 			"findUserById",
 			"query",
 		],
-		// Note: This is a NEGATIVE test - agent should NOT use findPath for vague questions
+		// Note: This is a NEGATIVE test - agent should NOT use findPaths for vague questions
 		expectedTool: "none",
-		expectedTurns: 9,
+		expectedTurns: 12,
 	},
 	{
 		id: "P2",
@@ -50,7 +50,7 @@ export const prompts: BenchmarkPrompt[] = [
 	},
 	{
 		id: "P3",
-		name: "findPath with precise symbols",
+		name: "findPaths with precise symbols",
 		prompt:
 			"Find the call path from handleGetUser to the query function.",
 		expectedContains: [
@@ -59,7 +59,7 @@ export const prompts: BenchmarkPrompt[] = [
 			"findUserById",
 			"query",
 		],
-		expectedTool: "findPath",
+		expectedTool: "findPaths",
 		expectedTurns: 3,
 	},
 ];

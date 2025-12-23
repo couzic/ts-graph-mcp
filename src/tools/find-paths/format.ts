@@ -78,7 +78,7 @@ export function formatAmbiguous(
 	const param = paramMatch?.[1];
 	const symbol = paramMatch?.[2];
 	if (param && symbol && candidates.length > 0) {
-		const examples = generateFindPathExamples(param, symbol, candidates);
+		const examples = generateFindPathsExamples(param, symbol, candidates);
 		lines.push("");
 		lines.push("Narrow your query with file, module, or package:");
 		for (const example of examples) {
@@ -90,9 +90,9 @@ export function formatAmbiguous(
 }
 
 /**
- * Generate disambiguation examples for findPath parameters.
+ * Generate disambiguation examples for findPaths parameters.
  */
-function generateFindPathExamples(
+function generateFindPathsExamples(
 	param: string,
 	symbol: string,
 	candidates: SymbolLocation[],

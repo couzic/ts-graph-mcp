@@ -12,7 +12,7 @@ import { indexProject } from "../../src/ingestion/indexProject.js";
 // Tool query functions (actual E2E tests)
 import { queryCallees } from "../../src/tools/outgoing-calls-deep/query.js";
 import { queryCallers } from "../../src/tools/incoming-calls-deep/query.js";
-import { queryPath } from "../../src/tools/find-path/query.js";
+import { queryPath } from "../../src/tools/find-paths/query.js";
 import { queryImpactedNodes } from "../../src/tools/analyze-impact/query.js";
 import { queryPackageDeps } from "../../src/tools/outgoing-package-deps/query.js";
 import { queryIncomingPackageDeps } from "../../src/tools/incoming-package-deps/query.js";

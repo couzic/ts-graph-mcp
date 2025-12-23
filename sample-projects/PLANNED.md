@@ -280,7 +280,7 @@ defineConfig({
 | `incomingPackageDeps` | web-app, monorepo | multi-package |
 | `outgoingPackageDeps` | web-app, monorepo | multi-package |
 | `analyzeImpact` | web-app, monorepo | shared-utils, type-system, property-access, multi-package, event-system |
-| `findPath` | deep-chain, layered-api | - |
+| `findPaths` | deep-chain, layered-api | - |
 
 ### By Edge Type
 

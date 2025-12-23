@@ -34,7 +34,7 @@ Sample projects exist for **two purposes only**:
 - Multi-hop path finding
 - Depth limiting at layer boundaries
 
-**Benchmarks:** `findPath`, `outgoingCallsDeep`
+**Benchmarks:** `findPaths`, `outgoingCallsDeep`
 
 **Status:** ✅ Correctly tests tool query functions
 
@@ -101,7 +101,7 @@ E2E tests call **actual tool query functions** from `src/tools/*/query.ts`:
 // ✅ CORRECT — Testing actual MCP tool query logic
 import { queryCallers } from "../../src/tools/incoming-calls-deep/query.js";
 import { queryCallees } from "../../src/tools/outgoing-calls-deep/query.js";
-import { queryPath } from "../../src/tools/find-path/query.js";
+import { queryPath } from "../../src/tools/find-paths/query.js";
 import { queryImpactedNodes } from "../../src/tools/analyze-impact/query.js";
 import { queryIncomingPackageDeps } from "../../src/tools/incoming-package-deps/query.js";
 import { queryPackageDeps } from "../../src/tools/outgoing-package-deps/query.js";
@@ -121,7 +121,7 @@ import { queryEdges } from "../../src/db/queryEdges.js";  // NO!
 **Test assertions** (the actual E2E tests):
 - `queryCallers(db, nodeId, options)` — From `src/tools/incoming-calls-deep/query.js`
 - `queryCallees(db, nodeId, maxDepth)` — From `src/tools/outgoing-calls-deep/query.js`
-- `queryPath(db, sourceId, targetId)` — From `src/tools/find-path/query.js`
+- `queryPath(db, sourceId, targetId)` — From `src/tools/find-paths/query.js`
 - `queryImpactedNodes(db, nodeId, options)` — From `src/tools/analyze-impact/query.js`
 - `queryIncomingPackageDeps(db, params)` — From `src/tools/incoming-package-deps/query.js`
 - `queryPackageDeps(db, module, pkg, maxDepth)` — From `src/tools/outgoing-package-deps/query.js`
@@ -198,7 +198,7 @@ describe("incomingCallsDeep E2E", () => {
 |------|-----------|--------|
 | `incomingCallsDeep` | deep-chain, layered-api, mixed-types, monorepo | ✅ |
 | `outgoingCallsDeep` | deep-chain, layered-api, mixed-types, web-app, monorepo | ✅ |
-| `findPath` | deep-chain, layered-api, mixed-types, web-app, monorepo | ✅ |
+| `findPaths` | deep-chain, layered-api, mixed-types, web-app, monorepo | ✅ |
 | `analyzeImpact` | mixed-types, web-app, monorepo | ✅ |
 | `incomingPackageDeps` | web-app, monorepo | ✅ |
 | `outgoingPackageDeps` | web-app, monorepo | ✅ |
@@ -265,8 +265,8 @@ sample-project/
 
 | Project | Prompts | Tools Covered |
 |---------|---------|---------------|
-| `layered-api` | P1-P3 | `outgoingCallsDeep`, `findPath` (+ negative test) |
-| `monorepo` | P1-P5 | `analyzeImpact`, `incomingCallsDeep`, `outgoingPackageDeps`, `incomingPackageDeps`, `findPath` |
+| `layered-api` | P1-P3 | `outgoingCallsDeep`, `findPaths` (+ negative test) |
+| `monorepo` | P1-P5 | `analyzeImpact`, `incomingCallsDeep`, `outgoingPackageDeps`, `incomingPackageDeps`, `findPaths` |
 
 ### Sample Results (monorepo)
 

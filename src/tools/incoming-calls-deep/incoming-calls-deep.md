@@ -120,4 +120,4 @@ WITH RECURSIVE callers(id, depth) AS (
 
 - `outgoingCallsDeep` - Forward call graph (what does this call?)
 - `analyzeImpact` - Broader impact (all edge types)
-- `findPath` - Specific path between nodes
+- `findPaths` - Specific path between nodes

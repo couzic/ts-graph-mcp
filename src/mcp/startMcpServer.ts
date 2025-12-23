@@ -11,10 +11,10 @@ import {
 	executeAnalyzeImpact,
 } from "../tools/analyze-impact/handler.js";
 import {
-	executeFindPath,
-	type FindPathParams,
-	findPathDefinition,
-} from "../tools/find-path/handler.js";
+	executeFindPaths,
+	type FindPathsParams,
+	findPathsDefinition,
+} from "../tools/find-paths/handler.js";
 import {
 	executeIncomingCallsDeep,
 	type IncomingCallsDeepParams,
@@ -63,7 +63,7 @@ export async function startMcpServer(db: Database.Database): Promise<void> {
 				incomingPackageDepsDefinition,
 				outgoingPackageDepsDefinition,
 				analyzeImpactDefinition,
-				findPathDefinition,
+				findPathsDefinition,
 			],
 		};
 	});
@@ -98,9 +98,9 @@ export async function startMcpServer(db: Database.Database): Promise<void> {
 					};
 				}
 
-				case "findPath": {
-					const params = args as unknown as FindPathParams;
-					const result = executeFindPath(db, params);
+				case "findPaths": {
+					const params = args as unknown as FindPathsParams;
+					const result = executeFindPaths(db, params);
 					return {
 						content: [{ type: "text" as const, text: result }],
 					};

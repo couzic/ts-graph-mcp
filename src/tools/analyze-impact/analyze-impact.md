@@ -120,4 +120,4 @@ WITH RECURSIVE impacted(id, depth) AS (
 
 - `incomingCallsDeep` - CALLS edges only (narrower)
 - `getNeighborhood` - Distance-limited, bidirectional
-- `findPath` - Specific path between nodes
+- `findPaths` - Specific path between nodes

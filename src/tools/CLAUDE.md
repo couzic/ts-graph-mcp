@@ -75,7 +75,7 @@ export const SymbolQuerySchema = z.object({
 // Flat: incomingCallsDeep, outgoingCallsDeep, analyzeImpact
 z.object({ ...SymbolQuerySchema.shape, maxDepth: z.number().optional() })
 
-// Nested: findPath (needs two symbols)
+// Nested: findPaths (needs two symbols)
 z.object({ from: SymbolQuerySchema, to: SymbolQuerySchema, ... })
 ```
 
@@ -157,7 +157,7 @@ Impact analysis - find all code affected by changes to a symbol.
 | `package` | | Narrow scope to a specific package |
 | `maxDepth` | | Traversal depth (default: 100) |
 
-#### `findPath`
+#### `findPaths`
 Find paths between two symbols using BFS.
 
 | Parameter | Required | Description |
