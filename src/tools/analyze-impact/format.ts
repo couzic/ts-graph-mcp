@@ -1,4 +1,4 @@
-import type { Node, NodeType } from "../../db/Types.js";
+import type { EdgeType, NodeType } from "../../db/Types.js";
 import { TYPE_ORDER, TYPE_PLURALS } from "../shared/formatConstants.js";
 import {
 	formatLocation,
@@ -6,17 +6,59 @@ import {
 	formatNode,
 } from "../shared/nodeFormatters.js";
 import type { SymbolLocation } from "../shared/resolveSymbol.js";
+import type { ImpactedNode } from "./query.js";
+
+/**
+ * Edge type labels for output.
+ * These are user-friendly names that describe the relationship.
+ */
+const EDGE_TYPE_LABELS: Record<EdgeType, string> = {
+	CALLS: "callers",
+	IMPORTS: "importers",
+	USES_TYPE: "type_users",
+	EXTENDS: "extenders",
+	IMPLEMENTS: "implementers",
+	CONTAINS: "containers",
+};
+
+/**
+ * Order for edge types in output (most relevant first).
+ */
+const EDGE_TYPE_ORDER: EdgeType[] = [
+	"CALLS",
+	"USES_TYPE",
+	"IMPORTS",
+	"EXTENDS",
+	"IMPLEMENTS",
+	"CONTAINS",
+];
+
+/**
+ * Depth tier classification.
+ */
+type DepthTier = "direct" | "transitive";
+
+/**
+ * Classify depth into tiers.
+ * - direct: depth 1 (immediate dependents)
+ * - transitive: depth 2+ (indirect dependents)
+ */
+function getDepthTier(depth: number): DepthTier {
+	return depth === 1 ? "direct" : "transitive";
+}
 
 /**
  * Group nodes by file, then by type within each file.
  */
-function groupByFileAndType(nodes: Node[]): Map<string, Map<NodeType, Node[]>> {
-	const fileGroups = new Map<string, Map<NodeType, Node[]>>();
+function groupByFileAndType(
+	nodes: ImpactedNode[],
+): Map<string, Map<NodeType, ImpactedNode[]>> {
+	const fileGroups = new Map<string, Map<NodeType, ImpactedNode[]>>();
 
 	for (const node of nodes) {
 		let typeGroups = fileGroups.get(node.filePath);
 		if (!typeGroups) {
-			typeGroups = new Map<NodeType, Node[]>();
+			typeGroups = new Map<NodeType, ImpactedNode[]>();
 			fileGroups.set(node.filePath, typeGroups);
 		}
 
@@ -29,11 +71,172 @@ function groupByFileAndType(nodes: Node[]): Map<string, Map<NodeType, Node[]>> {
 }
 
 /**
+ * Generate summary statistics for the impact analysis.
+ */
+function generateSummary(nodes: ImpactedNode[]): {
+	total: number;
+	fileCount: number;
+	directCount: number;
+	transitiveCount: number;
+	maxDepth: number;
+	byRelationship: Map<EdgeType, { total: number; direct: number }>;
+	byModule: Map<string, number>;
+} {
+	const files = new Set<string>();
+	const byRelationship = new Map<EdgeType, { total: number; direct: number }>();
+	const byModule = new Map<string, number>();
+
+	let directCount = 0;
+	let transitiveCount = 0;
+	let maxDepth = 0;
+
+	for (const node of nodes) {
+		files.add(node.filePath);
+
+		// Count by depth tier
+		if (node.depth === 1) {
+			directCount++;
+		} else {
+			transitiveCount++;
+		}
+
+		// Track max depth
+		if (node.depth > maxDepth) {
+			maxDepth = node.depth;
+		}
+
+		// Count by relationship type
+		const rel = byRelationship.get(node.entryEdgeType) ?? {
+			total: 0,
+			direct: 0,
+		};
+		rel.total++;
+		if (node.depth === 1) {
+			rel.direct++;
+		}
+		byRelationship.set(node.entryEdgeType, rel);
+
+		// Count by module
+		const moduleCount = byModule.get(node.module) ?? 0;
+		byModule.set(node.module, moduleCount + 1);
+	}
+
+	return {
+		total: nodes.length,
+		fileCount: files.size,
+		directCount,
+		transitiveCount,
+		maxDepth,
+		byRelationship,
+		byModule,
+	};
+}
+
+/**
+ * Format the summary section.
+ */
+function formatSummarySection(
+	summary: ReturnType<typeof generateSummary>,
+): string[] {
+	const lines: string[] = [];
+
+	lines.push("summary:");
+	lines.push(
+		`  total: ${summary.total} impacted across ${summary.fileCount} files`,
+	);
+	lines.push(`  direct: ${summary.directCount}`);
+	lines.push(`  transitive: ${summary.transitiveCount}`);
+	lines.push(`  max_depth: ${summary.maxDepth}`);
+	lines.push("");
+	lines.push("  by_relationship:");
+
+	// Sort by total count descending
+	const sortedRels = Array.from(summary.byRelationship.entries()).sort(
+		(a, b) => b[1].total - a[1].total,
+	);
+
+	for (const [edgeType, counts] of sortedRels) {
+		const label = EDGE_TYPE_LABELS[edgeType];
+		lines.push(`    ${label}: ${counts.total} (${counts.direct} direct)`);
+	}
+
+	// Only show by_module if there are multiple modules
+	if (summary.byModule.size > 1) {
+		lines.push("");
+		lines.push("  by_module:");
+
+		// Sort by count descending
+		const sortedModules = Array.from(summary.byModule.entries()).sort(
+			(a, b) => b[1] - a[1],
+		);
+
+		for (const [moduleName, count] of sortedModules) {
+			lines.push(`    ${moduleName}: ${count}`);
+		}
+	}
+
+	return lines;
+}
+
+/**
+ * Format nodes within a depth tier, grouped by file → type.
+ */
+function formatDepthTier(
+	tier: DepthTier,
+	nodes: ImpactedNode[],
+	indent: string,
+): string[] {
+	const lines: string[] = [];
+
+	lines.push(`${indent}${tier}[${nodes.length}]:`);
+
+	const fileGroups = groupByFileAndType(nodes);
+
+	// Sort files alphabetically
+	const sortedFiles = Array.from(fileGroups.keys()).sort();
+
+	for (const filePath of sortedFiles) {
+		const typeGroups = fileGroups.get(filePath);
+		if (!typeGroups) continue;
+
+		// Count total nodes in this file
+		let fileNodeCount = 0;
+		for (const typeNodes of typeGroups.values()) {
+			fileNodeCount += typeNodes.length;
+		}
+
+		lines.push(`${indent}  ${filePath} (${fileNodeCount}):`);
+
+		// Output types in consistent order
+		for (const type of TYPE_ORDER) {
+			const typeNodes = typeGroups.get(type);
+			if (!typeNodes || typeNodes.length === 0) continue;
+
+			const plural = TYPE_PLURALS[type];
+			lines.push(`${indent}    ${plural}[${typeNodes.length}]:`);
+
+			for (const node of typeNodes) {
+				const loc = formatLocation(node);
+				lines.push(`${indent}      ${formatNode(node)}`);
+				lines.push(
+					`${indent}        offset: ${loc.offset}, limit: ${loc.limit}`,
+				);
+			}
+		}
+	}
+
+	return lines;
+}
+
+/**
  * Format impacted nodes for LLM consumption.
  *
- * Groups nodes hierarchically by file, then by type within file.
+ * Output is organized hierarchically:
+ * 1. Target information (for Read tool compatibility)
+ * 2. Summary statistics (quick risk assessment)
+ * 3. Nodes grouped by relationship type → depth tier → file → node type
  *
- * Output format:
+ * Example output:
  * ```
  * target:
  *   name: formatDate
@@ -44,33 +247,42 @@ function groupByFileAndType(nodes: Node[]): Map<string, Map<NodeType, Node[]>> {
  *   module: core
  *   package: main
  *
- * impacted[42]:
+ * summary:
+ *   total: 42 impacted across 12 files
+ *   direct: 5
+ *   transitive: 37
+ *   max_depth: 5
  *
- * src/db/Types.ts (15 impacted):
- *   interfaces[3]:
- *     BaseNode [24-51] exp
- *       offset: 24, limit: 28
- *     FunctionNode [54-59] exp extends:[BaseNode]
- *       offset: 54, limit: 6
- *   properties[12]:
- *     BaseNode.id [26]: string
- *       offset: 26, limit: 1
- *     ...
+ *   by_relationship:
+ *     callers: 28 (3 direct)
+ *     type_users: 8 (1 direct)
+ *     importers: 6 (1 direct)
  *
- * src/utils.ts (8 impacted):
- *   functions[5]:
- *     formatDate [10-15] exp (date:Date) → string
- *       offset: 10, limit: 6
- *     ...
- *   variables[3]:
- *     API_URL [1] exp const: string
- *       offset: 1, limit: 1
+ *   by_module:
+ *     core: 18
+ *     api: 15
+ *     shared: 9
+ *
+ * callers[28]:
+ *   direct[3]:
+ *     src/reports.ts (1):
+ *       functions[1]:
+ *         renderReport [10-25] exp (data:Report) → string
+ *           offset: 10, limit: 16
+ *   transitive[25]:
+ *     src/api/handler.ts (2):
+ *       functions[2]:
+ *         handleRequest [10-25] exp async
+ *           offset: 10, limit: 16
+ *
+ * type_users[8]:
+ *   direct[1]:
  *     ...
  * ```
  */
 export function formatImpactNodes(
 	target: SymbolLocation,
-	nodes: Node[],
+	nodes: ImpactedNode[],
 ): string {
 	const lines: string[] = [];
 
@@ -85,41 +297,57 @@ export function formatImpactNodes(
 	lines.push("");
 
 	if (nodes.length === 0) {
-		lines.push("impacted[0]:");
+		lines.push("summary:");
+		lines.push("  total: 0 impacted across 0 files");
 		lines.push("");
 		lines.push("(no impacted code found)");
 		return lines.join("\n");
 	}
 
-	lines.push(`impacted[${nodes.length}]:`);
+	// Summary statistics
+	const summary = generateSummary(nodes);
+	lines.push(...formatSummarySection(summary));
 	lines.push("");
 
-	// Group by file, then by type
-	const fileGroups = groupByFileAndType(nodes);
+	// Group nodes by edge type, then by depth tier
+	const byEdgeType = new Map<EdgeType, Map<DepthTier, ImpactedNode[]>>();
 
-	// Output each file group
-	for (const [filePath, typeGroups] of fileGroups) {
-		// Count total nodes in this file
-		let fileNodeCount = 0;
-		for (const typeNodes of typeGroups.values()) {
-			fileNodeCount += typeNodes.length;
+	for (const node of nodes) {
+		let tierMap = byEdgeType.get(node.entryEdgeType);
+		if (!tierMap) {
+			tierMap = new Map<DepthTier, ImpactedNode[]>();
+			byEdgeType.set(node.entryEdgeType, tierMap);
 		}
 
-		lines.push(`${filePath} (${fileNodeCount} impacted):`);
+		const tier = getDepthTier(node.depth);
+		const tierNodes = tierMap.get(tier) ?? [];
+		tierNodes.push(node);
+		tierMap.set(tier, tierNodes);
+	}
 
-		// Output types in consistent order
-		for (const type of TYPE_ORDER) {
-			const typeNodes = typeGroups.get(type);
-			if (!typeNodes || typeNodes.length === 0) continue;
+	// Output each edge type section in consistent order
+	for (const edgeType of EDGE_TYPE_ORDER) {
+		const tierMap = byEdgeType.get(edgeType);
+		if (!tierMap) continue;
 
-			const plural = TYPE_PLURALS[type];
-			lines.push(`  ${plural}[${typeNodes.length}]:`);
+		// Count total for this edge type
+		let totalForType = 0;
+		for (const tierNodes of tierMap.values()) {
+			totalForType += tierNodes.length;
+		}
 
-			for (const node of typeNodes) {
-				const loc = formatLocation(node);
-				lines.push(`    ${formatNode(node)}`);
-				lines.push(`      offset: ${loc.offset}, limit: ${loc.limit}`);
-			}
+		const label = EDGE_TYPE_LABELS[edgeType];
+		lines.push(`${label}[${totalForType}]:`);
+
+		// Output depth tiers: direct first, then transitive
+		const directNodes = tierMap.get("direct");
+		if (directNodes && directNodes.length > 0) {
+			lines.push(...formatDepthTier("direct", directNodes, "  "));
+		}
+
+		const transitiveNodes = tierMap.get("transitive");
+		if (transitiveNodes && transitiveNodes.length > 0) {
+			lines.push(...formatDepthTier("transitive", transitiveNodes, "  "));
 		}
 
 		lines.push("");

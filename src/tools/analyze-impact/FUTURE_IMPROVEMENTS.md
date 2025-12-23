@@ -1,6 +1,6 @@
-# analyzeImpact Tool Improvements
+# analyzeImpact Tool - Implementation Notes
 
-**Evaluation Grade: 8.5/10**
+**Status: Implemented ✅**
 
 ## Overview
 
@@ -11,61 +11,81 @@ The `analyzeImpact` tool performs impact analysis - finding all code that would 
 ```
 src/tools/analyze-impact/
 ├── handler.ts   # MCP tool definition and execute function
-├── query.ts     # Multi-edge recursive CTE traversal
-└── format.ts    # Impact report formatting
+├── query.ts     # Multi-edge recursive CTE with depth and edge type tracking
+└── format.ts    # Hierarchical impact report formatting
 ```
 
-## Test Scenarios
+## Implemented Features
 
-| Scenario | Status | Notes |
-|----------|--------|-------|
-| Function with callers | ✅ Pass | Shows all transitive callers |
-| Interface with implementers | ✅ Pass | Shows implementing classes |
-| Type with usages | ✅ Pass | Shows parameter/return type usages |
-| Non-existent node | ✅ Pass | Handled by symbol resolution |
-| Node with no dependents | ✅ Pass | Clear "no impact" message |
-| Utility function (high impact) | ✅ Pass | Correctly shows widespread usage |
+### 1. Depth Tracking ✅
 
-## Priority Improvements
+Each impacted node includes its minimum depth from the target:
+- **depth 1**: Direct dependents (highest confidence impact)
+- **depth 2+**: Transitive dependents (propagated impact)
 
-### P1: Impact Severity Indicators (Medium Impact)
+The SQL query uses a recursive CTE that tracks depth and selects minimum depth per node.
 
-**Problem**: All impacted nodes are shown equally, but some impacts are more severe than others.
+### 2. Edge Type Tracking ✅
 
-**Impact severity levels**:
-- **Direct** (depth 1): Immediate callers/users - high confidence impact
-- **Indirect** (depth 2-3): Transitive dependents - medium confidence
-- **Distant** (depth 4+): Far transitive - may need review
+Each node includes the edge type that first connected it to the impact chain:
+- `CALLS` → shown as "callers"
+- `USES_TYPE` → shown as "type_users"
+- `IMPORTS` → shown as "importers"
+- `EXTENDS` → shown as "extenders"
+- `IMPLEMENTS` → shown as "implementers"
 
-**Enhanced output**:
+### 3. Summary Statistics ✅
+
+The output includes a comprehensive summary header:
+- Total nodes and files impacted
+- Direct vs transitive counts
+- Maximum depth reached
+- Breakdown by relationship type (with direct counts)
+- Breakdown by module (when multiple modules affected)
+
+## Output Format
+
 ```
-Impact Analysis: src/utils.ts:formatDate
+target:
+  name: formatDate
+  type: Function
+  file: src/utils.ts
+  offset: 15
+  limit: 6
+  module: core
+  package: main
 
-🔴 Direct Impact (3 nodes):
-├── Function: renderReport (src/reports.ts)
-├── Function: displayTimestamp (src/ui.ts)
-└── Method: User.getCreatedAt (src/models/User.ts)
+summary:
+  total: 42 impacted across 12 files
+  direct: 5
+  transitive: 37
+  max_depth: 5
 
-🟡 Indirect Impact (5 nodes):
-├── Function: generatePDF (src/export.ts) via renderReport
-└── ...
+  by_relationship:
+    callers: 28 (3 direct)
+    type_users: 8 (1 direct)
+    importers: 6 (1 direct)
 
-🟢 Distant Impact (12 nodes):
-└── ...
-```
+  by_module:
+    core: 18
+    api: 15
+    shared: 9
 
-### P2: Impact Summary Statistics (Low Impact)
+callers[28]:
+  direct[3]:
+    src/reports.ts (1):
+      functions[1]:
+        renderReport [10-25] exp (data:Report) → string
+          offset: 10, limit: 16
+  transitive[25]:
+    src/api/handler.ts (2):
+      functions[2]:
+        handleRequest [10-25] exp async
+          offset: 10, limit: 16
 
-**Problem**: No high-level summary of impact scope.
-
-**Recommended summary header**:
-```
-Impact Analysis: src/types.ts:User
-─────────────────────────────────
-Total affected: 23 nodes across 8 files
-By type: 12 Functions, 8 Methods, 3 Classes
-By module: core (15), api (5), models (3)
-Max depth reached: 4
+type_users[8]:
+  direct[1]:
+    ...
 ```
 
 ## Design Decisions
@@ -88,13 +108,8 @@ Impact analysis intentionally traverses **all edge types** because:
 
 3. **Post-process if needed**: Consumers can filter results themselves if they need module-specific views.
 
-## Testing Gaps
+## Potential Future Enhancements
 
-1. **Missing tests for**:
-   - Very high-impact nodes (stress test)
-   - Impact analysis on different node types
-
-## Implementation Roadmap
-
-1. **Phase 1** (P1): Add severity indicators based on depth
-2. **Phase 2** (P2): Add summary statistics header
+1. **High-risk file detection**: Identify files with the most impacted nodes (currently just counted in by_module)
+2. **Call chain visualization**: Show the path from target to distant nodes
+3. **Breaking change detection**: Distinguish between signature changes vs implementation changes

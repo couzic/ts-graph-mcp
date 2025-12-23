@@ -55,6 +55,12 @@ const usesType = (from: string, to: string): Edge => ({
 	type: "USES_TYPE",
 });
 
+const imports = (from: string, to: string): Edge => ({
+	source: from,
+	target: to,
+	type: "IMPORTS",
+});
+
 describe(queryImpactedNodes.name, () => {
 	let db: Database.Database;
 
@@ -77,7 +83,7 @@ describe(queryImpactedNodes.name, () => {
 		expect(result).toEqual([]);
 	});
 
-	it("returns direct dependents via CALLS", async () => {
+	it("returns direct dependents via CALLS with depth=1", async () => {
 		const writer = createSqliteWriter(db);
 		const nodeA = fn("a");
 		const nodeB = fn("b");
@@ -88,9 +94,11 @@ describe(queryImpactedNodes.name, () => {
 
 		expect(result).toHaveLength(1);
 		expect(result[0]?.id).toBe(nodeA.id);
+		expect(result[0]?.depth).toBe(1);
+		expect(result[0]?.entryEdgeType).toBe("CALLS");
 	});
 
-	it("returns dependents via USES_TYPE", async () => {
+	it("returns dependents via USES_TYPE with correct edge type", async () => {
 		const writer = createSqliteWriter(db);
 		const nodeA = fn("a");
 		const typeB = iface("B");
@@ -101,9 +109,11 @@ describe(queryImpactedNodes.name, () => {
 
 		expect(result).toHaveLength(1);
 		expect(result[0]?.id).toBe(nodeA.id);
+		expect(result[0]?.depth).toBe(1);
+		expect(result[0]?.entryEdgeType).toBe("USES_TYPE");
 	});
 
-	it("returns transitive impact", async () => {
+	it("returns transitive impact with correct depths", async () => {
 		const writer = createSqliteWriter(db);
 		const nodeA = fn("a");
 		const nodeB = fn("b");
@@ -117,9 +127,12 @@ describe(queryImpactedNodes.name, () => {
 		const result = queryImpactedNodes(db, nodeC.id); // Impact on C
 
 		expect(result).toHaveLength(2);
-		const ids = result.map((n) => n.id);
-		expect(ids).toContain(nodeA.id);
-		expect(ids).toContain(nodeB.id);
+
+		const nodeAResult = result.find((n) => n.id === nodeA.id);
+		const nodeBResult = result.find((n) => n.id === nodeB.id);
+
+		expect(nodeBResult?.depth).toBe(1); // B directly calls C
+		expect(nodeAResult?.depth).toBe(2); // A transitively depends on C
 	});
 
 	it("respects maxDepth=1 to return only direct dependents", async () => {
@@ -137,9 +150,10 @@ describe(queryImpactedNodes.name, () => {
 
 		expect(result).toHaveLength(1);
 		expect(result[0]?.id).toBe(nodeB.id);
+		expect(result[0]?.depth).toBe(1);
 	});
 
-	it("handles multiple edge types", async () => {
+	it("handles multiple edge types and tracks entry edge type", async () => {
 		const writer = createSqliteWriter(db);
 		const nodeA = fn("a");
 		const nodeB = fn("b");
@@ -153,9 +167,12 @@ describe(queryImpactedNodes.name, () => {
 		const result = queryImpactedNodes(db, typeC.id); // Impact on C
 
 		expect(result).toHaveLength(2);
-		const ids = result.map((n) => n.id);
-		expect(ids).toContain(nodeA.id);
-		expect(ids).toContain(nodeB.id);
+
+		const nodeAResult = result.find((n) => n.id === nodeA.id);
+		const nodeBResult = result.find((n) => n.id === nodeB.id);
+
+		expect(nodeAResult?.entryEdgeType).toBe("CALLS");
+		expect(nodeBResult?.entryEdgeType).toBe("USES_TYPE");
 	});
 
 	it("handles cycles without infinite loop", async () => {
@@ -191,9 +208,8 @@ describe(queryImpactedNodes.name, () => {
 		const result = queryImpactedNodes(db, nodeC.id);
 
 		expect(result).toHaveLength(2);
-		const ids = result.map((n) => n.id);
-		expect(ids).toContain(nodeA.id);
-		expect(ids).toContain(nodeB.id);
+		// Both should be depth 1 (direct callers)
+		expect(result.every((n) => n.depth === 1)).toBe(true);
 	});
 
 	it("handles deep transitive dependencies", async () => {
@@ -212,13 +228,17 @@ describe(queryImpactedNodes.name, () => {
 		const result = queryImpactedNodes(db, nodeD.id);
 
 		expect(result).toHaveLength(3);
-		const ids = result.map((n) => n.id);
-		expect(ids).toContain(nodeA.id);
-		expect(ids).toContain(nodeB.id);
-		expect(ids).toContain(nodeC.id);
+
+		const nodeAResult = result.find((n) => n.id === nodeA.id);
+		const nodeBResult = result.find((n) => n.id === nodeB.id);
+		const nodeCResult = result.find((n) => n.id === nodeC.id);
+
+		expect(nodeCResult?.depth).toBe(1); // C directly calls D
+		expect(nodeBResult?.depth).toBe(2); // B → C → D
+		expect(nodeAResult?.depth).toBe(3); // A → B → C → D
 	});
 
-	it("handles diamond dependency pattern", async () => {
+	it("handles diamond dependency pattern with minimum depth", async () => {
 		const writer = createSqliteWriter(db);
 		const nodeA = fn("a");
 		const nodeB = fn("b");
@@ -236,9 +256,74 @@ describe(queryImpactedNodes.name, () => {
 
 		// A, B, C all depend on D
 		expect(result).toHaveLength(3);
-		const ids = result.map((n) => n.id);
-		expect(ids).toContain(nodeA.id);
-		expect(ids).toContain(nodeB.id);
-		expect(ids).toContain(nodeC.id);
+
+		const nodeAResult = result.find((n) => n.id === nodeA.id);
+		const nodeBResult = result.find((n) => n.id === nodeB.id);
+		const nodeCResult = result.find((n) => n.id === nodeC.id);
+
+		// B and C are direct callers (depth 1)
+		expect(nodeBResult?.depth).toBe(1);
+		expect(nodeCResult?.depth).toBe(1);
+
+		// A is transitive (depth 2, via either B or C)
+		expect(nodeAResult?.depth).toBe(2);
+	});
+
+	it("returns results ordered by depth then file path", async () => {
+		const writer = createSqliteWriter(db);
+		const nodeA = fn("a", "src/z.ts"); // alphabetically last
+		const nodeB = fn("b", "src/a.ts"); // alphabetically first
+		const nodeC = fn("c", "src/m.ts");
+		await writer.addNodes([nodeA, nodeB, nodeC]);
+		await writer.addEdges([
+			calls(nodeA.id, nodeC.id), // depth 1
+			calls(nodeB.id, nodeA.id), // depth 2 (via A)
+		]);
+
+		const result = queryImpactedNodes(db, nodeC.id);
+
+		expect(result).toHaveLength(2);
+		// Should be ordered: depth 1 first (A), then depth 2 (B)
+		expect(result[0]?.id).toBe(nodeA.id);
+		expect(result[1]?.id).toBe(nodeB.id);
+	});
+
+	it("tracks entry edge type for mixed relationship chains", async () => {
+		const writer = createSqliteWriter(db);
+		const nodeA = fn("a");
+		const nodeB = fn("b");
+		const typeC = iface("C");
+		await writer.addNodes([nodeA, nodeB, typeC]);
+		await writer.addEdges([
+			calls(nodeA.id, nodeB.id), // A calls B
+			usesType(nodeB.id, typeC.id), // B uses type C
+		]);
+
+		const result = queryImpactedNodes(db, typeC.id);
+
+		expect(result).toHaveLength(2);
+
+		// B directly uses type C
+		const nodeBResult = result.find((n) => n.id === nodeB.id);
+		expect(nodeBResult?.depth).toBe(1);
+		expect(nodeBResult?.entryEdgeType).toBe("USES_TYPE");
+
+		// A transitively depends via CALLS edge to B
+		const nodeAResult = result.find((n) => n.id === nodeA.id);
+		expect(nodeAResult?.depth).toBe(2);
+		expect(nodeAResult?.entryEdgeType).toBe("CALLS"); // The edge that connected A
+	});
+
+	it("tracks IMPORTS edge type", async () => {
+		const writer = createSqliteWriter(db);
+		const fileA = fn("a", "src/a.ts");
+		const fileB = fn("b", "src/b.ts");
+		await writer.addNodes([fileA, fileB]);
+		await writer.addEdges([imports(fileA.id, fileB.id)]); // A imports B
+
+		const result = queryImpactedNodes(db, fileB.id);
+
+		expect(result).toHaveLength(1);
+		expect(result[0]?.entryEdgeType).toBe("IMPORTS");
 	});
 });
