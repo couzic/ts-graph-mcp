@@ -21,40 +21,20 @@ import {
 	incomingCallsDeepDefinition,
 } from "../tools/incoming-calls-deep/handler.js";
 import {
-	executeIncomingImports,
-	type IncomingImportsParams,
-	incomingImportsDefinition,
-} from "../tools/incoming-imports/handler.js";
-import {
 	executeIncomingPackageDeps,
 	type IncomingPackageDepsParams,
 	incomingPackageDepsDefinition,
 } from "../tools/incoming-package-deps/handler.js";
-import {
-	executeIncomingUsesType,
-	type IncomingUsesTypeParams,
-	incomingUsesTypeDefinition,
-} from "../tools/incoming-uses-type/handler.js";
 import {
 	executeOutgoingCallsDeep,
 	type OutgoingCallsDeepParams,
 	outgoingCallsDeepDefinition,
 } from "../tools/outgoing-calls-deep/handler.js";
 import {
-	executeOutgoingImports,
-	type OutgoingImportsParams,
-	outgoingImportsDefinition,
-} from "../tools/outgoing-imports/handler.js";
-import {
 	executeOutgoingPackageDeps,
 	type OutgoingPackageDepsParams,
 	outgoingPackageDepsDefinition,
 } from "../tools/outgoing-package-deps/handler.js";
-import {
-	executeOutgoingUsesType,
-	type OutgoingUsesTypeParams,
-	outgoingUsesTypeDefinition,
-} from "../tools/outgoing-uses-type/handler.js";
 
 /**
  * Start the MCP server that exposes TypeScript code graph queries as tools.
@@ -80,12 +60,8 @@ export async function startMcpServer(db: Database.Database): Promise<void> {
 			tools: [
 				incomingCallsDeepDefinition,
 				outgoingCallsDeepDefinition,
-				incomingImportsDefinition,
-				outgoingImportsDefinition,
 				incomingPackageDepsDefinition,
 				outgoingPackageDepsDefinition,
-				incomingUsesTypeDefinition,
-				outgoingUsesTypeDefinition,
 				analyzeImpactDefinition,
 				findPathDefinition,
 			],
@@ -114,22 +90,6 @@ export async function startMcpServer(db: Database.Database): Promise<void> {
 					};
 				}
 
-				case "incomingImports": {
-					const params = args as unknown as IncomingImportsParams;
-					const result = executeIncomingImports(db, params);
-					return {
-						content: [{ type: "text" as const, text: result }],
-					};
-				}
-
-				case "outgoingImports": {
-					const params = args as unknown as OutgoingImportsParams;
-					const result = executeOutgoingImports(db, params);
-					return {
-						content: [{ type: "text" as const, text: result }],
-					};
-				}
-
 				case "analyzeImpact": {
 					const params = args as unknown as AnalyzeImpactParams;
 					const result = executeAnalyzeImpact(db, params);
@@ -141,22 +101,6 @@ export async function startMcpServer(db: Database.Database): Promise<void> {
 				case "findPath": {
 					const params = args as unknown as FindPathParams;
 					const result = executeFindPath(db, params);
-					return {
-						content: [{ type: "text" as const, text: result }],
-					};
-				}
-
-				case "incomingUsesType": {
-					const params = args as unknown as IncomingUsesTypeParams;
-					const result = executeIncomingUsesType(db, params);
-					return {
-						content: [{ type: "text" as const, text: result }],
-					};
-				}
-
-				case "outgoingUsesType": {
-					const params = args as unknown as OutgoingUsesTypeParams;
-					const result = executeOutgoingUsesType(db, params);
 					return {
 						content: [{ type: "text" as const, text: result }],
 					};

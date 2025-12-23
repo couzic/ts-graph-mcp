@@ -277,8 +277,8 @@ defineConfig({
 |------|----------|---------|
 | `incomingCallsDeep` | deep-chain, monorepo | shared-utils |
 | `outgoingCallsDeep` | deep-chain, layered-api | - |
-| `incomingImports` | monorepo | multi-package |
-| `outgoingImports` | monorepo | multi-package |
+| `incomingPackageDeps` | web-app, monorepo | multi-package |
+| `outgoingPackageDeps` | web-app, monorepo | multi-package |
 | `analyzeImpact` | web-app, monorepo | shared-utils, type-system, property-access, multi-package, event-system |
 | `findPath` | deep-chain, layered-api | - |
 

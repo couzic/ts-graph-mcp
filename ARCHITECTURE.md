@@ -183,10 +183,10 @@ The schema intentionally omits FK constraints on edges table for three key reaso
 
 ### `/src/mcp/` - MCP Server
 
-**Purpose**: Exposes the code graph as an MCP server with 10 focused tools.
+**Purpose**: Exposes the code graph as an MCP server with 8 focused tools.
 
 **Key Files**:
-- `startMcpServer.ts` - Server implementation with 10 tool registrations
+- `startMcpServer.ts` - Server implementation with 8 tool registrations
 - `main.ts` - CLI entry point with auto-indexing on first run
 
 **Design Highlights**:
@@ -408,7 +408,7 @@ if (targetId) {
 
 ## MCP Tools
 
-The MCP server exposes 10 focused tools for querying the code graph. All tools use symbol-based queries with optional filters (`file`, `module`, `package`) for disambiguation.
+The MCP server exposes 6 focused tools for querying the code graph. All tools use symbol-based queries with optional filters (`file`, `module`, `package`) for disambiguation.
 
 **For detailed parameter documentation, see [`src/tools/CLAUDE.md`](src/tools/CLAUDE.md).**
 
@@ -416,12 +416,8 @@ The MCP server exposes 10 focused tools for querying the code graph. All tools u
 |----------|------|---------|
 | **Call Graph** | `incomingCallsDeep` | Find callers (transitive) |
 | | `outgoingCallsDeep` | Find callees (transitive) |
-| **Imports** | `incomingImports` | Find what imports a module |
-| | `outgoingImports` | Find what a file imports |
-| **Type Usage** | `incomingUsesType` | Find code using a type |
-| | `outgoingUsesType` | Find types used by a symbol |
-| **Package Deps** | `outgoingPackageDeps` | Find package dependencies |
-| | `incomingPackageDeps` | Find reverse package deps |
+| **Package Deps** | `incomingPackageDeps` | Find reverse package deps |
+| | `outgoingPackageDeps` | Find package dependencies |
 | **Analysis** | `analyzeImpact` | Impact analysis |
 | | `findPath` | Find paths between symbols |
 
@@ -512,8 +508,6 @@ The built-in LSP tool provides:
 | Definition lookup | `goToDefinition` | ❌ | None |
 | Hover docs | `hover` | ❌ | None |
 | **Transitive call graph** | ❌ | `incomingCallsDeep/outgoingCallsDeep` | **Unique** |
-| **Import tracking** | ❌ | `incomingImports/outgoingImports` | **Unique** |
-| **Type usage tracking** | ❌ | `incomingUsesType/outgoingUsesType` | **Unique** |
 | **Package dependencies** | ❌ | `outgoingPackageDeps/incomingPackageDeps` | **Unique** |
 | **Impact analysis** | ❌ | `analyzeImpact` | **Unique** |
 | **Path finding** | ❌ | `findPath` | **Unique** |
@@ -525,6 +519,10 @@ The built-in LSP tool provides:
 **`getNeighborhood`** - Removed in favor of focused tools. The generic neighborhood query returned ALL edge types (CALLS, IMPORTS, USES_TYPE, etc.), causing exponential output growth. Replaced by focused tools that each traverse one relationship type.
 
 **`incomingExtends/outgoingExtends`** - Removed because modern TypeScript favors composition over deep inheritance. Class hierarchies are typically shallow (2-3 levels) and localized, making simple grep patterns (`extends ClassName`) sufficient. Benchmarks showed MCP overhead exceeded benefit for realistic inheritance queries.
+
+**`incomingUsesType/outgoingUsesType`** - Removed because LSP `findReferences` + `analyzeImpact` cover the use cases better. The unique feature (context filtering: parameter/return/property) is rarely needed in practice. For "what uses this type?" use LSP; for "what breaks if I change this type?" use `analyzeImpact`.
+
+**`incomingImports/outgoingImports`** - Removed because import relationships are direct (no transitivity needed) and visible (at top of every file). LSP `findReferences` handles "what imports this export" and reading the file shows "what does this file import".
 
 ### When to Use Each
 

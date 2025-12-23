@@ -78,7 +78,7 @@ Impact analysis intentionally traverses **all edge types** because:
 
 2. **No implementation leakage**: Exposing `edgeTypes: ["CALLS", "USES_TYPE"]` in the MCP API would leak internal graph concepts. AI agents shouldn't need to understand edge type semantics.
 
-3. **Separate tools exist**: For focused analysis, use `incomingCallsDeep` (CALLS only), `incomingUsesType` (USES_TYPE only), or `incomingImports` (IMPORTS only).
+3. **Separate tools exist**: For focused analysis, use `incomingCallsDeep` (CALLS only) or `incomingPackageDeps` (IMPORTS only).
 
 ### Why No Module Filtering?
 

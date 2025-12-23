@@ -18,7 +18,6 @@
 		"format": "biome format --write .",
 		"benchmark:deep-chain": "npm run build && npx tsx benchmark/lib/setup.ts sample-projects/deep-chain && npx tsx benchmark/lib/run.ts sample-projects/deep-chain",
 		"benchmark:layered-api": "npm run build && npx tsx benchmark/lib/setup.ts sample-projects/layered-api && npx tsx benchmark/lib/run.ts sample-projects/layered-api",
-		"benchmark:mixed-types": "npm run build && npx tsx benchmark/lib/setup.ts sample-projects/mixed-types && npx tsx benchmark/lib/run.ts sample-projects/mixed-types",
 		"benchmark:monorepo": "npm run build && npx tsx benchmark/lib/setup.ts sample-projects/monorepo && npx tsx benchmark/lib/run.ts sample-projects/monorepo",
 		"benchmark:all": "npm run benchmark:deep-chain && npm run benchmark:layered-api && npm run benchmark:mixed-types && npm run benchmark:monorepo"
 	},

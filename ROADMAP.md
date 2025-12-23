@@ -8,11 +8,15 @@
 
 Claude Code 2.0.74+ includes a built-in LSP tool with `documentSymbol`, `workspaceSymbol`, `incomingCalls`, and `outgoingCalls`. This creates overlap with some ts-graph-mcp features.
 
-### Deprecated Tools
+### Removed Tools
 
-| Tool | LSP Equivalent | Status |
-|------|----------------|--------|
-| `get_file_symbols` | `documentSymbol` | **REMOVED** (deleted in API redesign) |
+| Tool | Reason | Status |
+|------|--------|--------|
+| `get_file_symbols` | LSP `documentSymbol` | **REMOVED** |
+| `incomingUsesType` | LSP `findReferences` + `analyzeImpact` | **REMOVED** |
+| `outgoingUsesType` | LSP `findReferences` + `analyzeImpact` | **REMOVED** |
+| `incomingImports` | Reading files shows imports; LSP handles references | **REMOVED** |
+| `outgoingImports` | Import statements are at top of every file | **REMOVED** |
 
 ### Retained (Unique Value)
 
@@ -20,12 +24,123 @@ These 6 tools remain because they offer capabilities LSP lacks:
 
 | Tool | Unique Value | LSP Cannot Do This |
 |------|--------------|-------------------|
-| `incomingCallsDeep` | **Transitive** (maxDepth=N) | LSP `incomingCalls` is single-hop only |
-| `outgoingCallsDeep` | **Transitive** (maxDepth=N) | LSP `outgoingCalls` is single-hop only |
-| `incomingImports` | **Module import tracking** | No LSP equivalent |
-| `outgoingImports` | **Module dependency analysis** | No LSP equivalent |
+| `incomingCallsDeep` | **Transitive** call graph (maxDepth=N) | LSP `incomingCalls` is single-hop only |
+| `outgoingCallsDeep` | **Transitive** call graph (maxDepth=N) | LSP `outgoingCalls` is single-hop only |
+| `incomingPackageDeps` | **Transitive** internal package dependencies | No LSP equivalent; npm ls only shows npm packages |
+| `outgoingPackageDeps` | **Transitive** package dependency graph | No LSP equivalent |
 | `analyzeImpact` | **Impact analysis** across all edge types | No LSP equivalent |
 | `findPath` | **Path finding** between symbols | No LSP equivalent |
+
+---
+
+## Planned Tool Improvements
+
+### Rename: `findPath` → `findPaths`
+**Impact: Low | Effort: Low**
+
+Rename to better reflect the tool's capability of returning multiple paths between two symbols.
+
+**Changes required:**
+- Rename tool in `startMcpServer.ts`
+- Update tool definition in handler
+- Update documentation (ARCHITECTURE.md, CLAUDE.md files)
+- Update benchmark prompts
+
+### Improve: `analyzeImpact` Output Format
+**Impact: High | Effort: Medium**
+
+The current output lacks critical context for AI agents making refactoring decisions.
+
+**Current problems:**
+- No indication of WHY each node is impacted (which edge type?)
+- No depth information (direct vs transitive)
+- All impacted nodes appear flat with no relationship context
+
+**Improvement Strategy (3 phases):**
+
+#### Phase 1: Depth Tracking (Low effort)
+
+Track and display minimum depth for each impacted node.
+
+**Query change:**
+```sql
+SELECT n.*, MIN(i.depth) as min_depth
+FROM impacted i JOIN nodes n ON n.id = i.id
+GROUP BY n.id ORDER BY min_depth
+```
+
+**Output format:**
+```
+summary:
+  total: 42 nodes across 12 files
+  direct: 5
+  indirect: 15
+  distant: 22
+
+Direct (depth 1) [5]:
+  src/reports.ts:
+    renderReport [10-25] Function exp
+      offset: 10, limit: 16
+
+Indirect (depth 2-3) [15]:
+  ...
+```
+
+#### Phase 2: Edge Type Tracking (Medium effort)
+
+Track which edge type (CALLS, IMPORTS, USES_TYPE, etc.) connects each node to the target.
+
+**Query change:** Add subquery to capture the entry edge type from the minimum-depth path.
+
+**Output format:**
+```
+summary:
+  callers: 12 (5 direct)
+  importers: 8 (3 direct)
+  type_users: 6 (4 direct)
+
+callers[12]:
+  direct[5]:
+    src/api/handler.ts:
+      handleRequest [10-25] Function exp
+        offset: 10, limit: 16
+  transitive[7]:
+    ...
+
+type_users[6]:
+  direct[4]:
+    src/services/auth.ts:
+      createUser [15-30] (user:User) → Promise<User>
+        offset: 15, limit: 16
+```
+
+#### Phase 3: Summary Statistics (Medium effort)
+
+Add high-level summary for quick "is this safe to refactor?" assessment.
+
+**Output additions:**
+```
+impact:
+  total: 42 nodes, 12 files
+  max_depth: 5
+
+  by_module:
+    core: 18
+    api: 15
+    shared: 9
+
+  high_risk_files:
+    src/api/handler.ts: 8 impacted
+    src/services/user.ts: 5 impacted
+```
+
+**Trade-offs by phase:**
+
+| Phase | Token Cost | Complexity | Value |
+|-------|------------|------------|-------|
+| 1 | +10-15% | Low | Prioritize direct vs transitive |
+| 2 | +25-35% | Medium | Understand WHY nodes are impacted |
+| 3 | +10-15% | Medium | Quick risk assessment |
 
 ---
 

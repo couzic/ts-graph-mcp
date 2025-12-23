@@ -1,11 +1,5 @@
 # Known Issues
 
-## Open Issues
-
-(None currently)
-
----
-
 ## Enhancements
 
 ### 13. `findPath` Multiple Paths

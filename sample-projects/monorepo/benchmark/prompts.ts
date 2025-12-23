@@ -4,12 +4,9 @@
  * Each prompt tests L3 monorepo capabilities:
  * - P1: Cross-module impact analysis (analyzeImpact)
  * - P2: Utility usage tracking (incomingCallsDeep)
- * - P3: Package dependencies (outgoingImports)
- * - P4: Transitive package dependencies (outgoingPackageDeps)
- * - P5: Reverse package dependencies (incomingPackageDeps)
- * - P6: Ambiguous symbol resolution (incomingCallsDeep with disambiguation)
- *
- * findPath is tested via integration tests, not benchmarks (covered by layered-api).
+ * - P3: Transitive package dependencies (outgoingPackageDeps)
+ * - P4: Reverse package dependencies (incomingPackageDeps)
+ * - P5: Ambiguous symbol resolution (findPath with disambiguation)
  */
 
 import type {
@@ -53,15 +50,6 @@ export const prompts: BenchmarkPrompt[] = [
   },
   {
     id: "P3",
-    name: "Package dependencies",
-    prompt:
-      "What are the dependencies of the backend/api package? Show me what packages it imports from.",
-    expectedContains: ["services", "types", "shared"],
-    expectedTool: "outgoingImports",
-    expectedTurns: 2,
-  },
-  {
-    id: "P4",
     name: "Transitive package dependencies",
     prompt:
       "What packages does backend/api depend on? Show me the transitive package dependencies.",
@@ -70,7 +58,7 @@ export const prompts: BenchmarkPrompt[] = [
     expectedTurns: 2,
   },
   {
-    id: "P5",
+    id: "P4",
     name: "Reverse package dependencies",
     prompt:
       "What packages depend on shared/types? I want to know what would be affected if I changed this package.",
@@ -79,7 +67,7 @@ export const prompts: BenchmarkPrompt[] = [
     expectedTurns: 2,
   },
   {
-    id: "P6",
+    id: "P5",
     name: "Ambiguous symbol resolution",
     prompt:
       "Find the call path from renderUserCard to the formatDate function in shared utilities.",

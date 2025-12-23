@@ -1,45 +1,76 @@
 # Sample Projects
 
-Sample TypeScript codebases for integration testing and benchmarking.
+Sample TypeScript codebases for E2E testing and benchmarking.
 
 ## Purpose
 
-1. **Integration Testing** - Exercise the full stack (AST parsing → node/edge extraction → DB writes → MCP queries) with predictable, known expectations
-2. **Benchmarking** - Compare Claude Code performance with vs without MCP tools on realistic codebase questions
-3. **Regression Testing** - Catch regressions for specific fixed bugs (e.g., Issue #9)
+Sample projects exist for **two purposes only**:
+
+1. **E2E Tests** — Test actual MCP tool query functions against real, indexed codebases
+2. **Benchmarks** — Measure Claude Code agent performance with vs without MCP tools
+
+**Sample projects are NOT for:**
+- Testing AST extraction (covered by unit tests in `src/ingestion/`)
+- Testing node/edge extraction (covered by unit tests in `src/ingestion/`)
+- Testing generic DB queries (covered by unit tests in `src/db/`)
 
 ## Current Projects
 
 ### `deep-chain/`
-10-file cross-file call chain (`entry` → `step02` → ... → `step10`). Tests deep transitive traversal.
-- 10 files, each with one function calling the next
-- Tests extreme depth (10-hop) for `queryCallees`, `queryCallers`, `queryPath`
-- 20 integration tests (no benchmarks - patterns covered by `layered-api`)
+10-file cross-file call chain (`entry` → `step02` → ... → `step10`).
+
+**E2E tests for:** `queryCallees`, `queryCallers`, `queryPath`
+- Extreme depth traversal (10 hops)
+- Depth limiting behavior
+- Cycle detection (linear chain has no cycles)
+
+**Status:** ✅ Correctly tests tool query functions
+
+### `layered-api/`
+5-layer architecture (routes → controllers → services → repositories → db).
+
+**E2E tests for:** `queryCallees`, `queryCallers`, `queryPath`
+- Layer boundary verification
+- Multi-hop path finding
+- Depth limiting at layer boundaries
+
+**Benchmarks:** `findPath`, `outgoingCallsDeep`
+
+**Status:** ✅ Correctly tests tool query functions
 
 ### `mixed-types/`
 All 8 node types: Function, Class, Method, Interface, TypeAlias, Variable, Property, File.
-- Tests node extraction completeness and type-specific properties
-- **Benchmark for type usage tools**: `incomingUsesType`
-- 3-level class hierarchy (`AdminService → UserService → BaseService`) for edge extraction testing
-- 28 integration tests
+
+**E2E tests for:** `queryImpactedNodes`, `queryCallers`, `queryCallees`, `queryPath`
+- Impact analysis across type references
+- 3-level class hierarchy traversal (AdminService → UserService → BaseService)
+- Cross-file type usage impact
+- Depth limiting behavior
+
+**Status:** ✅ Correctly tests tool query functions
 
 ### `web-app/`
-Web app using **flat packages format** (3 packages in single "main" module).
-- Uses simplified config: `packages: [...]` instead of nested `modules: [{ packages: [...] }]`
-- Tests cross-PACKAGE edges (CALLS, USES_TYPE, IMPORTS) within single module
-- Tests package filtering with `queryNodes`
-- Tests `analyzeImpact` analysis across packages
-- **Example of flat config format** (Issue #15). 15 integration tests.
-- For cross-MODULE edge testing, see `monorepo/`.
+3 packages in single module (flat packages format).
+
+**E2E tests for:** `queryImpactedNodes`, `queryCallers`, `queryCallees`, `queryPath`, `queryPackageDeps`, `queryIncomingPackageDeps`
+- Cross-package impact analysis
+- Package dependency traversal
+- Path finding between packages
+
+**Status:** ✅ Correctly tests tool query functions
 
 ### `monorepo/`
-True L3 monorepo structure with 3 modules × 2 packages each = 6 packages.
-- **Primary test for cross-MODULE edges** (backend/services → shared/utils)
-- Tests cross-package edges within same module (backend/api → backend/services)
-- Tests module + package filtering with `queryNodes`
-- Tests `queryPath` for cross-module call chains
-- **Benchmark for**: `analyzeImpact`, `incomingCallsDeep`, package dependency tools
-- 33 integration tests
+3 modules × 2 packages = 6 packages (true L3 structure).
+
+**E2E tests for:** `queryPackageDeps`, `queryIncomingPackageDeps`, `queryImpactedNodes`, `queryPath`, `queryCallers`, `queryCallees`
+- Cross-module path finding
+- Cross-module impact analysis
+- Package dependency traversal (both directions)
+- Depth limiting behavior
+
+**Benchmarks:** `analyzeImpact`, `incomingCallsDeep`, package dependency tools
+
+**Status:** ✅ Correctly tests tool query functions
 
 ## Planned Projects
 
@@ -60,35 +91,72 @@ See **PLANNED.md** for the full roadmap of test projects to be created, includin
 2. Remove it from `PLANNED.md` (delete the section entirely)
 3. Update coverage matrix in `PLANNED.md` to show existing vs planned
 
-## Integration Test Rules
+## E2E Test Rules
 
-Tests MUST be database-agnostic to support multiple backends (SQLite, Neo4j, Memgraph).
+### What E2E Tests Must Do
 
-**Allowed APIs** (always import from `src/`, never `dist/`):
-- `openDatabase()`, `initializeSchema()`, `createSqliteWriter()` - Setup only
-- `queryNodes()` - From `src/db/queryNodes.js`
-- `queryCallers()`, `queryCallees()` - From `src/tools/incoming-calls-deep/query.js` and `src/tools/outgoing-calls-deep/query.js`
-- `queryEdges()` - From `src/db/queryEdges.js`
-- `queryImpactedNodes()` - From `src/tools/analyze-impact/query.js`
-- `DbWriter.addNodes()`, `DbWriter.addEdges()` - For writes
+E2E tests call **actual tool query functions** from `src/tools/*/query.ts`:
 
-**Forbidden in tests:**
-- `db.prepare()` - Raw SQL
-- `db.exec()` - Raw SQL
-- `.all()`, `.get()`, `.run()` on prepared statements
-- Any SQLite-specific syntax (GLOB, LIKE, recursive CTEs)
+```typescript
+// ✅ CORRECT — Testing actual MCP tool query logic
+import { queryCallers } from "../../src/tools/incoming-calls-deep/query.js";
+import { queryCallees } from "../../src/tools/outgoing-calls-deep/query.js";
+import { queryPath } from "../../src/tools/find-path/query.js";
+import { queryImpactedNodes } from "../../src/tools/analyze-impact/query.js";
+import { queryIncomingPackageDeps } from "../../src/tools/incoming-package-deps/query.js";
+import { queryPackageDeps } from "../../src/tools/outgoing-package-deps/query.js";
 
-**Pattern conversion** (SQL → query functions):
-- `LIKE '%foo%'` → `sourcePattern: "*foo*"` (glob)
-- `LIKE '%foo'` → `targetPattern: "*foo"` (glob)
-- Exact match → `sourceId: "exact/path:symbol"`
+// ❌ WRONG — Testing generic DB layer (already covered in src/)
+import { queryNodes } from "../../src/db/queryNodes.js";  // NO!
+import { queryEdges } from "../../src/db/queryEdges.js";  // NO!
+```
+
+### Allowed APIs
+
+**Setup only** (import from `src/`, never `dist/`):
+- `openDatabase()`, `initializeSchema()`, `createSqliteWriter()` — DB setup
+- `indexProject()` — Index the sample project
+- `queryNodes()` — **Only** for test setup (finding node IDs to pass to tool queries)
+
+**Test assertions** (the actual E2E tests):
+- `queryCallers(db, nodeId, options)` — From `src/tools/incoming-calls-deep/query.js`
+- `queryCallees(db, nodeId, maxDepth)` — From `src/tools/outgoing-calls-deep/query.js`
+- `queryPath(db, sourceId, targetId)` — From `src/tools/find-path/query.js`
+- `queryImpactedNodes(db, nodeId, options)` — From `src/tools/analyze-impact/query.js`
+- `queryIncomingPackageDeps(db, params)` — From `src/tools/incoming-package-deps/query.js`
+- `queryPackageDeps(db, module, pkg, maxDepth)` — From `src/tools/outgoing-package-deps/query.js`
+
+### Forbidden in E2E Tests
+
+- `queryEdges()` — Generic DB query, not tool logic
+- `queryNodes()` as the primary assertion — Use it only to find IDs for tool queries
+- `db.prepare()`, `db.exec()` — Raw SQL
+- Testing node/edge extraction — Already covered in `src/`
+
+### Example: Correct E2E Test
+
+```typescript
+describe("incomingCallsDeep E2E", () => {
+  it("finds transitive callers across modules", () => {
+    // Setup: find the target node ID
+    const [targetNode] = queryNodes(db, "createUser", { module: "shared" });
+
+    // E2E test: call actual tool query function
+    const callers = queryCallers(db, targetNode.id, { maxDepth: 5 });
+
+    // Assert tool behavior
+    expect(callers.some(c => c.module === "backend")).toBe(true);
+    expect(callers.some(c => c.module === "frontend")).toBe(true);
+  });
+});
+```
 
 ## Adding Test Projects
 
 Each test project needs:
-- `tsconfig.json` - TypeScript configuration
-- `src/` - Source files to index
-- `integration.test.ts` - Tests that index the project and verify queries
+- `tsconfig.json` — TypeScript configuration
+- `src/` — Source files to index
+- `e2e.test.ts` — E2E tests calling actual tool query functions (NOT `integration.test.ts`)
 
 Test pattern:
 ```typescript
@@ -98,29 +166,46 @@ beforeAll(async () => {
   const writer = createSqliteWriter(db);
   await indexProject(config, writer, { projectRoot: join(import.meta.dirname) });
 });
+
+describe("incomingCallsDeep E2E", () => {
+  it("finds callers with depth limiting", () => {
+    const [target] = queryNodes(db, "targetFunction");
+    const callers = queryCallers(db, target.id, { maxDepth: 3 });
+    expect(callers.length).toBeGreaterThan(0);
+  });
+});
 ```
 
 ## Testing Strategy
 
-**Integration tests** and **benchmarks** serve different purposes:
+**E2E tests** and **benchmarks** serve different purposes:
 
-| Aspect | Integration Tests | Benchmarks |
-|--------|------------------|------------|
-| **Purpose** | Verify MCP tool **correctness** | Measure Claude Code **agent performance** |
-| **Question answered** | "Does the code work for this structure?" | "Does MCP help Claude with this query type?" |
-| **Coverage approach** | Every unique structure needs tests | Only representative query types needed |
+| Aspect | E2E Tests | Benchmarks |
+|--------|-----------|------------|
+| **Purpose** | Verify MCP tool **query logic** works | Measure Claude Code **agent performance** |
+| **What they test** | Tool query functions from `src/tools/*/query.ts` | Claude's ability to use MCP tools |
 | **Cost** | Free (in-memory SQLite) | $2-5 per run (real Claude API) |
+| **When to add** | Every tool needs E2E coverage | Only representative query types |
 
-**Why not all projects need benchmarks:**
-- Integration tests guard against regressions in extraction/query code
-- Benchmarks prove MCP's value proposition (cost savings, fewer turns)
-- Once value is proven for a query type (e.g., deep traversal), re-proving with structural variants adds no signal
+**E2E test coverage goals:**
+- Each MCP tool should have E2E tests in at least one sample project
+- Tests should exercise tool-specific logic (depth limiting, cycle detection, etc.)
+- Tests should NOT duplicate unit tests from `src/`
 
-**Current strategy:**
-- `layered-api` benchmarks prove value for **path finding** and **deep call traversal** (`findPath`, `outgoingCallsDeep`)
-- `monorepo` benchmarks prove value for **cross-module/package analysis** and **package dependencies**
-- `mixed-types` benchmarks prove value for **type usage tracking** (`incomingUsesType`)
-- `deep-chain` and `web-app` have integration tests only (query patterns covered by other projects)
+**Current E2E coverage:**
+
+| Tool | Covered By | Status |
+|------|-----------|--------|
+| `incomingCallsDeep` | deep-chain, layered-api, mixed-types, monorepo | ✅ |
+| `outgoingCallsDeep` | deep-chain, layered-api, mixed-types, web-app, monorepo | ✅ |
+| `findPath` | deep-chain, layered-api, mixed-types, web-app, monorepo | ✅ |
+| `analyzeImpact` | mixed-types, web-app, monorepo | ✅ |
+| `incomingPackageDeps` | web-app, monorepo | ✅ |
+| `outgoingPackageDeps` | web-app, monorepo | ✅ |
+
+**Benchmark coverage:**
+- `layered-api` — path finding, deep call traversal
+- `monorepo` — cross-module analysis, package dependencies
 
 ## Benchmarking
 
@@ -181,8 +266,7 @@ sample-project/
 | Project | Prompts | Tools Covered |
 |---------|---------|---------------|
 | `layered-api` | P1-P3 | `outgoingCallsDeep`, `findPath` (+ negative test) |
-| `monorepo` | P1-P5 | `analyzeImpact`, `incomingCallsDeep`, `outgoingImports`, `outgoingPackageDeps`, `incomingPackageDeps` |
-| `mixed-types` | P1 | `incomingUsesType` |
+| `monorepo` | P1-P5 | `analyzeImpact`, `incomingCallsDeep`, `outgoingPackageDeps`, `incomingPackageDeps`, `findPath` |
 
 ### Sample Results (monorepo)
 

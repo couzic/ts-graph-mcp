@@ -6,7 +6,7 @@ A Model Context Protocol (MCP) server that extracts TypeScript code structure in
 
 ts-graph-mcp parses TypeScript source code using AST analysis and builds a graph database of your codebase structure. The graph captures code symbols (functions, classes, interfaces, types, variables) and their relationships (calls, imports, type usage, inheritance).
 
-AI agents can then query this graph through 5 specialized MCP tools to:
+AI agents can then query this graph through 6 specialized MCP tools to:
 
 - Traverse call graphs (who calls this? what does this call?)
 - Analyze code impact (what breaks if I change this?)
@@ -121,8 +121,8 @@ The server exposes 6 tools for querying the code graph:
 |------|---------|----------------|
 | `incomingCallsDeep` | Find all functions/methods that call the target (transitive) | `symbol`, `file?`, `module?`, `package?`, `maxDepth?` |
 | `outgoingCallsDeep` | Find all functions/methods that the source calls (transitive) | `symbol`, `file?`, `module?`, `package?`, `maxDepth?` |
-| `incomingImports` | Find what files import a module | `symbol`, `file?`, `module?`, `package?` |
-| `outgoingImports` | Find what a file imports | `symbol`, `file?`, `module?`, `package?` |
+| `incomingPackageDeps` | Find reverse package dependencies | `package`, `module?`, `maxDepth?`, `outputTypes?` |
+| `outgoingPackageDeps` | Find package dependencies | `package`, `module?`, `maxDepth?`, `outputTypes?` |
 | `analyzeImpact` | Impact analysis - find all code affected by changes | `symbol`, `file?`, `module?`, `package?`, `maxDepth?` |
 | `findPath` | Find shortest path between two symbols | `from: {symbol, ...}`, `to: {symbol, ...}`, `maxDepth?`, `maxPaths?` |
 

@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "ts-graph-mcp": {
-      "command": "node",
-      "args": ["../../dist/mcp/main.js", "--db", ".ts-graph/graph.db"]
-    }
-  }
-}

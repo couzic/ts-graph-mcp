@@ -72,7 +72,7 @@ export const SymbolQuerySchema = z.object({
 **Composition patterns:**
 
 ```typescript
-// Flat: incomingCallsDeep, analyzeImpact, incomingImports, outgoingImports
+// Flat: incomingCallsDeep, outgoingCallsDeep, analyzeImpact
 z.object({ ...SymbolQuerySchema.shape, maxDepth: z.number().optional() })
 
 // Nested: findPath (needs two symbols)
@@ -94,7 +94,7 @@ src/tools/<tool-name>/
 
 ## MCP Tools Reference
 
-The MCP server exposes 10 focused tools organized by relationship type. All tools use symbol-based queries with optional filters (`file`, `module`, `package`) for disambiguation.
+The MCP server exposes 6 focused tools organized by relationship type. All tools use symbol-based queries with optional filters (`file`, `module`, `package`) for disambiguation.
 
 ### Call Graph Tools
 
@@ -121,52 +121,6 @@ Find all functions/methods that the source calls (forward call graph, transitive
 | `module` | | Narrow scope to a specific module |
 | `package` | | Narrow scope to a specific package |
 | `maxDepth` | | Traversal depth (1-100, default: 100) |
-
-### Import Tools
-
-#### `incomingImports`
-Find what files import a module.
-
-| Parameter | Required | Description |
-|-----------|----------|-------------|
-| `symbol` | ✓ | File or module name to search for |
-| `file` | | Narrow scope to a specific file |
-| `module` | | Narrow scope to a specific module |
-| `package` | | Narrow scope to a specific package |
-
-#### `outgoingImports`
-Find what a file imports.
-
-| Parameter | Required | Description |
-|-----------|----------|-------------|
-| `symbol` | ✓ | File name to search from |
-| `file` | | Narrow scope to a specific file |
-| `module` | | Narrow scope to a specific module |
-| `package` | | Narrow scope to a specific package |
-
-### Type Usage Tools
-
-#### `incomingUsesType`
-Find what code uses a type in signatures or declarations.
-
-| Parameter | Required | Description |
-|-----------|----------|-------------|
-| `symbol` | ✓ | Type, Interface, or TypeAlias name |
-| `context` | | Filter: `"parameter"`, `"return"`, `"property"`, `"variable"` |
-| `file` | | Narrow scope to a specific file |
-| `module` | | Narrow scope to a specific module |
-| `package` | | Narrow scope to a specific package |
-
-#### `outgoingUsesType`
-Find what types a function or class references in its signatures.
-
-| Parameter | Required | Description |
-|-----------|----------|-------------|
-| `symbol` | ✓ | Function, Method, or Class name |
-| `context` | | Filter: `"parameter"`, `"return"`, `"property"`, `"variable"` |
-| `file` | | Narrow scope to a specific file |
-| `module` | | Narrow scope to a specific module |
-| `package` | | Narrow scope to a specific package |
 
 ### Package Dependency Tools
 
