@@ -116,6 +116,16 @@ export function formatReportMarkdown(report: BenchmarkReport): string {
 		);
 
 		if (withMcp && withoutMcp) {
+			lines.push(`### ${promptId}: ${withMcp.promptName}`);
+			lines.push("");
+
+			// Skip comparison if baseline failed (no successful runs)
+			if (withoutMcp.successRate === 0) {
+				lines.push("⚠️ _Baseline failed - comparison not available_");
+				lines.push("");
+				continue;
+			}
+
 			// Calculate deltas (negative = MCP is better)
 			const timeDeltaMs = withMcp.avgDurationMs - withoutMcp.avgDurationMs;
 			const costDelta = withMcp.avgCostUsd - withoutMcp.avgCostUsd;
@@ -152,8 +162,6 @@ export function formatReportMarkdown(report: BenchmarkReport): string {
 						? `${turnDelta.toFixed(0)} more`
 						: "same";
 
-			lines.push(`### ${promptId}: ${withMcp.promptName}`);
-			lines.push("");
 			lines.push("| Metric | Without MCP | With MCP | Δ | Result |");
 			lines.push("|:-------|------------:|---------:|--:|:-------|");
 			lines.push(
@@ -205,6 +213,14 @@ export function printComparison(
 		);
 
 		if (withMcp && withoutMcp) {
+			console.log(`${prompt.id} (${prompt.name}):`);
+
+			// Skip comparison if baseline failed (no successful runs)
+			if (withoutMcp.successRate === 0) {
+				console.log("  ⚠️  Baseline failed - comparison not available");
+				continue;
+			}
+
 			// Calculate deltas (negative = MCP is better)
 			const timeDelta = withMcp.avgDurationMs - withoutMcp.avgDurationMs;
 			const costDelta = withMcp.avgCostUsd - withoutMcp.avgCostUsd;
@@ -227,7 +243,6 @@ export function printComparison(
 					? `✅ ${costPct.toFixed(0)}% cheaper`
 					: `❌ ${costPct.toFixed(0)}% more expensive`;
 
-			console.log(`${prompt.id} (${prompt.name}):`);
 			console.log(`  Time: ${timeLabel}`);
 			console.log(`  Cost: ${costLabel}`);
 		}
