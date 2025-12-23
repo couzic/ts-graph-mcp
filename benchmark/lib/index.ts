@@ -32,5 +32,8 @@ export * from "./types.js";
 export * from "./scenarios.js";
 export * from "./report.js";
 export * from "./runner.js";
+export * from "./history.js";
+export * from "./runDecision.js";
+export * from "./historicalComparison.js";
 export { setupBenchmark } from "./setup.js";
 export { runBenchmarks } from "./run.js";

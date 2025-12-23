@@ -20,12 +20,19 @@ import { parseArgs } from "node:util";
 import { scenarios } from "./scenarios.js";
 import { generateReport, formatReportMarkdown, printComparison } from "./report.js";
 import { runBenchmarkIteration, checkDatabase, saveResults } from "./runner.js";
+import { loadHistory, appendRuns } from "./history.js";
+import { shouldRunScenario } from "./runDecision.js";
+import {
+	generateComparison,
+	printHistoricalComparison,
+} from "./historicalComparison.js";
 import type { BenchmarkRun, BenchmarkPrompt, BenchmarkConfig } from "./types.js";
 import type { BenchmarkScenario } from "./types.js";
 
 const DEFAULT_RUNS = 1;
 const DEFAULT_CONCURRENCY = 3;
 const DEFAULT_DB_PATH = ".ts-graph/graph.db";
+const DEFAULT_MIN_RUNS = 5;
 
 interface RunnerOptions {
 	runs: number;
@@ -33,6 +40,8 @@ interface RunnerOptions {
 	scenarioFilter?: string;
 	verbose: boolean;
 	concurrency: number;
+	forceAll: boolean;
+	minRuns: number;
 }
 
 interface BenchmarkTask {
@@ -52,6 +61,8 @@ function parseCliArgs(): { projectPath?: string; options: RunnerOptions } {
 			verbose: { type: "boolean", short: "v", default: false },
 			concurrency: { type: "string", short: "c" },
 			sequential: { type: "boolean", default: false },
+			"force-all": { type: "boolean", default: false },
+			"min-runs": { type: "string" },
 		},
 	});
 
@@ -75,6 +86,15 @@ function parseCliArgs(): { projectPath?: string; options: RunnerOptions } {
 		}
 	}
 
+	// Parse min-runs (default: 5)
+	let minRuns = DEFAULT_MIN_RUNS;
+	if (values["min-runs"] !== undefined) {
+		const parsed = Number.parseInt(values["min-runs"], 10);
+		if (!Number.isNaN(parsed) && parsed > 0) {
+			minRuns = parsed;
+		}
+	}
+
 	return {
 		projectPath: positionals[0],
 		options: {
@@ -83,6 +103,8 @@ function parseCliArgs(): { projectPath?: string; options: RunnerOptions } {
 			scenarioFilter: values.scenario,
 			verbose: values.verbose ?? false,
 			concurrency,
+			forceAll: values["force-all"] ?? false,
+			minRuns,
 		},
 	};
 }
@@ -158,7 +180,51 @@ export async function runBenchmarks(
 		process.exit(1);
 	}
 
-	const totalTasks = selectedPrompts.length * selectedScenarios.length * options.runs;
+	// Load history for smart skipping
+	const history = await loadHistory(config.projectName);
+
+	// Build task list and filter based on history
+	const allTasks: BenchmarkTask[] = [];
+	const skippedTasks: Array<{ prompt: BenchmarkPrompt; scenario: BenchmarkScenario; reason: string; count: number }> = [];
+
+	let allIndex = 0;
+	for (const prompt of selectedPrompts) {
+		for (const scenario of selectedScenarios) {
+			for (let i = 1; i <= options.runs; i++) {
+				allIndex++;
+
+				// Check if we should skip this task based on history
+				if (!options.forceAll) {
+					const decision = shouldRunScenario(
+						prompt.prompt,
+						scenario.id,
+						history,
+						options.minRuns,
+					);
+
+					if (!decision.shouldRun) {
+						// Only log skip once per prompt/scenario combo (not per iteration)
+						if (i === 1) {
+							skippedTasks.push({
+								prompt,
+								scenario,
+								reason: decision.reason,
+								count: decision.existingCount,
+							});
+						}
+						continue;
+					}
+				}
+
+				allTasks.push({ prompt, scenario, iteration: i, index: 0 });
+			}
+		}
+	}
+
+	// Re-index tasks after filtering
+	const tasks = allTasks.map((task, i) => ({ ...task, index: i + 1 }));
+	const totalTasks = tasks.length;
+	const totalPossible = selectedPrompts.length * selectedScenarios.length * options.runs;
 
 	console.log("=".repeat(60));
 	console.log(`BENCHMARK: ${config.projectName}`);
@@ -166,21 +232,22 @@ export async function runBenchmarks(
 	console.log(`Prompts:      ${selectedPrompts.map((p) => p.id).join(", ")}`);
 	console.log(`Scenarios:    ${selectedScenarios.map((s) => s.id).join(", ")}`);
 	console.log(`Iterations:   ${options.runs} per prompt/scenario`);
-	console.log(`Total tasks:  ${totalTasks}`);
+	if (skippedTasks.length > 0) {
+		console.log(`Tasks:        ${totalTasks} to run (${totalPossible - totalTasks} skipped from history)`);
+	} else {
+		console.log(`Total tasks:  ${totalTasks}`);
+	}
 	console.log(`Concurrency:  ${options.concurrency} parallel`);
 	console.log("=".repeat(60));
-	console.log("");
 
-	// Build task list
-	const tasks: BenchmarkTask[] = [];
-	let index = 0;
-	for (const prompt of selectedPrompts) {
-		for (const scenario of selectedScenarios) {
-			for (let i = 1; i <= options.runs; i++) {
-				tasks.push({ prompt, scenario, iteration: i, index: ++index });
-			}
+	// Log skipped tasks
+	if (skippedTasks.length > 0) {
+		console.log("\nSkipped (sufficient history):");
+		for (const skip of skippedTasks) {
+			console.log(`  ${skip.prompt.id} | ${skip.scenario.id}: ${skip.count} runs in history`);
 		}
 	}
+	console.log("");
 
 	// Execute task and log result
 	const executeTask = async (task: BenchmarkTask): Promise<BenchmarkRun> => {
@@ -216,6 +283,18 @@ export async function runBenchmarks(
 		return run;
 	};
 
+	// Handle case where all tasks were skipped
+	if (totalTasks === 0) {
+		console.log("No tasks to run (all skipped from history).\n");
+
+		// Still print historical comparison
+		const comparisons = generateComparison([], selectedPrompts, history);
+		if (comparisons.length > 0) {
+			printHistoricalComparison(comparisons);
+		}
+		return;
+	}
+
 	// Run tasks
 	console.log(`Running ${totalTasks} tasks (${options.concurrency} parallel)...\n`);
 	const runs = await runWithConcurrency(tasks, options.concurrency, executeTask);
@@ -244,6 +323,9 @@ export async function runBenchmarks(
 		process.exit(1);
 	}
 
+	// Append runs to history
+	const updatedHistory = await appendRuns(config.projectName, runs, selectedPrompts);
+
 	// Save results to benchmark/results/<project>/
 	const resultsDir = join(import.meta.dirname, "../results", config.projectName);
 	const markdown = formatReportMarkdown(report);
@@ -263,8 +345,11 @@ export async function runBenchmarks(
 		);
 	}
 
-	// Print comparison
-	printComparison(report, selectedPrompts);
+	// Print historical comparison (vs baseline averages)
+	const comparisons = generateComparison(runs, selectedPrompts, updatedHistory);
+	if (comparisons.length > 0) {
+		printHistoricalComparison(comparisons);
+	}
 }
 
 /**
@@ -283,6 +368,8 @@ async function main() {
 		console.error("  --concurrency, -c <n> Number of parallel tasks (default: 3)");
 		console.error("  --sequential         Run one task at a time");
 		console.error("  --verbose, -v        Show detailed execution info");
+		console.error("  --force-all          Ignore history, run all scenarios");
+		console.error("  --min-runs <n>       Min WITHOUT_MCP runs before skipping (default: 5)");
 		console.error("");
 		console.error("Example:");
 		console.error("  npx tsx benchmark/lib/run.ts sample-projects/deep-chain --runs 3");

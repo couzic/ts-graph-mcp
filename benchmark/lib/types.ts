@@ -105,3 +105,59 @@ export interface BenchmarkReport {
 	runs: BenchmarkRun[];
 	summaries: BenchmarkSummary[];
 }
+
+/**
+ * History of runs for a single prompt.
+ * Keyed by prompt text in BenchmarkHistory.prompts.
+ */
+export interface PromptHistory {
+	/** Display-only prompt ID (may change without affecting identity) */
+	promptId: string;
+	/** Display-only prompt name (may change without affecting identity) */
+	promptName: string;
+	/** All WITH_MCP runs for this prompt */
+	withMcpRuns: BenchmarkRun[];
+	/** All WITHOUT_MCP runs for this prompt */
+	withoutMcpRuns: BenchmarkRun[];
+}
+
+/**
+ * Persistent history of all benchmark runs for a project.
+ * Stored in benchmark/results/<projectName>/history.json
+ */
+export interface BenchmarkHistory {
+	/** Schema version for future migrations */
+	version: 1;
+	/** Project name for identification */
+	projectName: string;
+	/** ISO timestamp of last update */
+	lastUpdated: string;
+	/** Map of prompt text → PromptHistory */
+	prompts: Record<string, PromptHistory>;
+}
+
+/**
+ * Aggregated statistics from a set of runs.
+ */
+export interface HistoricalStats {
+	runCount: number;
+	avgDurationMs: number;
+	avgCostUsd: number;
+	avgTurns: number;
+	successRate: number;
+	validationRate: number;
+}
+
+/**
+ * Comparison of current WITH_MCP run against historical data.
+ */
+export interface HistoricalComparison {
+	promptText: string;
+	promptId: string;
+	/** Current WITH_MCP run statistics */
+	currentWithMcp: HistoricalStats;
+	/** Historical WITHOUT_MCP average (null if no history) */
+	historicalWithoutMcp: HistoricalStats | null;
+	/** Historical WITH_MCP average for trend comparison */
+	historicalWithMcp: HistoricalStats | null;
+}
