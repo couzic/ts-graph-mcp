@@ -3,7 +3,7 @@
  *
  * Each prompt tests L3 monorepo capabilities:
  * - P1: Cross-module impact analysis (analyzeImpact)
- * - P2: Utility usage tracking (incomingCallsDeep)
+ * - P2: Transitive caller discovery (incomingCallsDeep) - requires depth > 1
  * - P3: Transitive package dependencies (outgoingPackageDeps)
  * - P4: Reverse package dependencies (incomingPackageDeps)
  * - P5: Ambiguous symbol resolution (findPath with disambiguation)
@@ -41,10 +41,10 @@ export const prompts: BenchmarkPrompt[] = [
   },
   {
     id: "P2",
-    name: "Utility usage",
+    name: "Transitive callers",
     prompt:
-      "What packages and modules use the validateEmail function from modules/shared/packages/utils/src/validate.ts?",
-    expectedContains: ["frontend", "backend", "state", "services"],
+      "What API handlers call validateEmail, directly or indirectly? Look in modules/shared/packages/utils/src/validate.ts.",
+    expectedContains: ["handleCreateUser", "api", "createUserService"],
     expectedTool: "incomingCallsDeep",
     expectedTurns: 2,
   },
