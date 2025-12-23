@@ -33,6 +33,73 @@ These 6 tools remain because they offer capabilities LSP lacks:
 
 ---
 
+## Code Snippets in Tool Responses
+
+Three tools now return source code snippets automatically when result count is small (≤15 items):
+- Small functions (≤10 lines) show their full body
+- Larger functions show snippets around call sites
+
+### Status
+
+| Tool | Has Snippets | Notes |
+|------|:---:|----------|
+| `incomingCallsDeep` | ✓ | Done |
+| `outgoingCallsDeep` | ✓ | Done |
+| `analyzeImpact` | ✓ | Done (CALLS edges only) |
+| `findPaths` | ✗ | Low priority (format is intentionally minimal) |
+| `incomingPackageDeps` | N/A | Package-level, no function code |
+| `outgoingPackageDeps` | N/A | Package-level, no function code |
+
+### Snippet Benchmarks
+
+All tools with snippets now have benchmarks proving their value (2-3 turns vs 5+ without snippets):
+
+| Tool | Basic Benchmark | Snippet Benchmark |
+|------|:---:|:---:|
+| `incomingCallsDeep` | ✓ monorepo/P2 | ✓ monorepo/P6 |
+| `outgoingCallsDeep` | ✓ layered-api/P2 | ✓ layered-api/P4 |
+| `analyzeImpact` | ✓ monorepo/P1 | ✓ monorepo/P7 |
+
+---
+
+## Tool API Design Philosophy
+
+**Principle: Lean definitions, rich outputs.**
+
+Tool definitions (name, description, schema) are shown to agents upfront in every conversation. Tool outputs only appear when called. This asymmetry drives our API design:
+
+| Aspect | Tool Definition | Tool Output |
+|--------|-----------------|-------------|
+| When seen | Every conversation | Only when called |
+| Token cost | Fixed overhead | Pay-per-use |
+| Goal | Enable tool selection | Enable result interpretation |
+
+### Guidelines
+
+**Tool definitions should be:**
+- Concise (1-2 sentences describing purpose)
+- Focused on "what" not "how"
+- Minimal parameter documentation (types + one-line descriptions)
+- No detailed output format descriptions
+
+**Tool outputs should include:**
+- Interpretation hints (e.g., "depth=1 are direct callers")
+- Suggested next steps (e.g., "For full impact: use analyzeImpact")
+- Contextual guidance based on actual results
+
+### Status
+
+| Tool | Lean Definition | Rich Output Hints |
+|------|:---:|:---:|
+| `incomingCallsDeep` | ✓ | Pending |
+| `outgoingCallsDeep` | ✓ | Pending |
+| `analyzeImpact` | ✓ | Pending |
+| `findPaths` | ✓ | Pending |
+| `incomingPackageDeps` | ✓ | Pending |
+| `outgoingPackageDeps` | ✓ | Pending |
+
+---
+
 ## Near-term Enhancements
 
 ### File Watcher (Phase 7)
@@ -296,7 +363,7 @@ Agent:
 
 Want to help build the future of AI-assisted development?
 
-Pick something from this roadmap that excites you. The codebase is well-tested (562 tests) and documented. Every module has a CLAUDE.md explaining its purpose and patterns.
+Pick something from this roadmap that excites you. The codebase is well-tested (494 tests) and documented. Every module has a CLAUDE.md explaining its purpose and patterns.
 
 **High-impact, low-effort** items are great starting points:
 - Circular dependency detection

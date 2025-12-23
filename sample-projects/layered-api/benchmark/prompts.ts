@@ -5,6 +5,7 @@
  * - P1: Vague architectural question (negative test - should NOT use findPaths)
  * - P2: outgoingCallsDeep with specific symbol
  * - P3: findPaths with precise source and target symbols (positive test)
+ * - P4: outgoingCallsDeep demonstrating snippet value (validation code inline)
  */
 
 import type { BenchmarkConfig, BenchmarkPrompt } from "../../../benchmark/lib/types.js";
@@ -60,6 +61,19 @@ export const prompts: BenchmarkPrompt[] = [
 			"query",
 		],
 		expectedTool: "findPaths",
+		expectedTurns: 3,
+	},
+	{
+		id: "P4",
+		name: "outgoingCallsDeep with snippet value",
+		prompt:
+			"What validation logic runs when registerUser is called? Show the actual validation code.",
+		expectedContains: [
+			"isValidEmail",
+			"findUserByEmail",
+			".test(email)",
+		],
+		expectedTool: "outgoingCallsDeep",
 		expectedTurns: 3,
 	},
 ];

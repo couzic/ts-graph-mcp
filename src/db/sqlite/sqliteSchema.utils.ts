@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS edges (
   target TEXT NOT NULL,
   type TEXT NOT NULL,
   call_count INTEGER,
+  call_sites TEXT,
   is_type_only INTEGER,
   imported_symbols TEXT,
   context TEXT,

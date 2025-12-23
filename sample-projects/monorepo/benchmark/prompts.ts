@@ -7,6 +7,8 @@
  * - P3: Transitive package dependencies (outgoingPackageDeps)
  * - P4: Reverse package dependencies (incomingPackageDeps)
  * - P5: Ambiguous symbol resolution (findPath with disambiguation)
+ * - P6: Snippet value demonstration (incomingCallsDeep with inline code)
+ * - P7: Snippet value demonstration (analyzeImpact with inline code)
  */
 
 import type {
@@ -74,5 +76,33 @@ export const prompts: BenchmarkPrompt[] = [
     expectedContains: ["renderUserCard", "formatDate", "CALLS"],
     expectedTool: "findPaths",
     expectedTurns: 3,
+  },
+  {
+    id: "P6",
+    name: "Snippet value - caller behavior",
+    prompt:
+      "What functions call validateEmail? For each caller, tell me what error they return when email validation fails.",
+    expectedContains: [
+      "createUserService",
+      "createUserStore",
+      "Invalid email format",
+      "false",
+    ],
+    expectedTool: "incomingCallsDeep",
+    expectedTurns: 2,
+  },
+  {
+    id: "P7",
+    name: "Snippet value - impact analysis",
+    prompt:
+      "What code would be impacted if I change the validateEmail function? Show me how each caller handles validation failure.",
+    expectedContains: [
+      "createUserService",
+      "createUserStore",
+      "Invalid email format",
+      "return false",
+    ],
+    expectedTool: "analyzeImpact",
+    expectedTurns: 2,
   },
 ];

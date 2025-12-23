@@ -124,6 +124,7 @@ export interface Edge {
 
 	// CALLS edges
 	callCount?: number;
+	callSites?: number[]; // Line numbers where calls occur
 
 	// IMPORTS edges
 	isTypeOnly?: boolean;

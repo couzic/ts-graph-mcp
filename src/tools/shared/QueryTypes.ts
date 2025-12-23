@@ -29,6 +29,7 @@ export interface EdgeRow {
 	target: string;
 	type: string;
 	call_count: number | null;
+	call_sites: string | null;
 	is_type_only: number | null;
 	imported_symbols: string | null;
 	context: string | null;

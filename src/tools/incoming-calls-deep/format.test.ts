@@ -5,7 +5,7 @@ import {
 	IMPLICIT_PACKAGE_NAME,
 } from "../shared/nodeFormatters.js";
 import type { SymbolLocation } from "../shared/resolveSymbol.js";
-import { formatCallers } from "./format.js";
+import { formatCallers, formatCallersWithSnippets } from "./format.js";
 
 // Helper to create a test SymbolLocation
 function createTarget(
@@ -488,5 +488,243 @@ describe(formatCallers.name, () => {
 			expect(result).toContain("target:");
 			expect(result).toContain("name: formatDate");
 		});
+	});
+
+	describe("snippetsOmitted option", () => {
+		it("shows omission message when snippetsOmitted is true", () => {
+			const target: SymbolLocation = {
+				name: "formatDate",
+				type: "Function",
+				file: "src/utils.ts",
+				offset: 15,
+				limit: 6,
+				module: "utils",
+				package: "main",
+				id: "src/utils.ts:formatDate",
+			};
+			const nodes: Node[] = [
+				{
+					id: "src/api/handler.ts:handleRequest",
+					type: "Function",
+					name: "handleRequest",
+					module: "api",
+					package: "main",
+					filePath: "src/api/handler.ts",
+					startLine: 10,
+					endLine: 15,
+					exported: true,
+				},
+			];
+
+			const result = formatCallers(target, nodes, { snippetsOmitted: true });
+			expect(result).toContain("callers[1]:");
+			expect(result).toContain("(snippets omitted due to high caller count)");
+		});
+
+		it("does not show omission message when snippetsOmitted is false", () => {
+			const target: SymbolLocation = {
+				name: "formatDate",
+				type: "Function",
+				file: "src/utils.ts",
+				offset: 15,
+				limit: 6,
+				module: "utils",
+				package: "main",
+				id: "src/utils.ts:formatDate",
+			};
+			const nodes: Node[] = [
+				{
+					id: "src/api/handler.ts:handleRequest",
+					type: "Function",
+					name: "handleRequest",
+					module: "api",
+					package: "main",
+					filePath: "src/api/handler.ts",
+					startLine: 10,
+					endLine: 15,
+					exported: true,
+				},
+			];
+
+			const result = formatCallers(target, nodes, { snippetsOmitted: false });
+			expect(result).not.toContain("snippets omitted");
+		});
+
+		it("does not show omission message by default", () => {
+			const target: SymbolLocation = {
+				name: "formatDate",
+				type: "Function",
+				file: "src/utils.ts",
+				offset: 15,
+				limit: 6,
+				module: "utils",
+				package: "main",
+				id: "src/utils.ts:formatDate",
+			};
+			const nodes: Node[] = [
+				{
+					id: "src/api/handler.ts:handleRequest",
+					type: "Function",
+					name: "handleRequest",
+					module: "api",
+					package: "main",
+					filePath: "src/api/handler.ts",
+					startLine: 10,
+					endLine: 15,
+					exported: true,
+				},
+			];
+
+			const result = formatCallers(target, nodes);
+			expect(result).not.toContain("snippets omitted");
+		});
+	});
+});
+
+describe(formatCallersWithSnippets.name, () => {
+	it("formats callers with code snippets", () => {
+		const target: SymbolLocation = {
+			name: "formatDate",
+			type: "Function",
+			file: "src/utils.ts",
+			offset: 15,
+			limit: 6,
+			module: "utils",
+			package: "main",
+			id: "src/utils.ts:formatDate",
+		};
+		const callers = [
+			{
+				node: {
+					id: "src/api/handler.ts:handleRequest",
+					type: "Function" as const,
+					name: "handleRequest",
+					module: "api",
+					package: "main",
+					filePath: "src/api/handler.ts",
+					startLine: 10,
+					endLine: 25,
+					exported: true,
+					async: true,
+					parameters: [{ name: "req", type: "Request" }],
+					returnType: "Promise<Response>",
+				},
+				snippets: [
+					{
+						callSiteLine: 18,
+						startLine: 16,
+						endLine: 20,
+						code: "const timestamp = req.body.timestamp;\nconst date = formatDate(timestamp);\nif (date) {",
+					},
+				],
+			},
+		];
+
+		const result = formatCallersWithSnippets(target, callers);
+		expect(result).toContain("target:");
+		expect(result).toContain("name: formatDate");
+		expect(result).toContain("callers[1]:");
+		expect(result).toContain("src/api/handler.ts (1 callers):");
+		expect(result).toContain("call at line 18:");
+		expect(result).toContain("const date = formatDate(timestamp);");
+	});
+
+	it("formats multiple snippets per caller", () => {
+		const target: SymbolLocation = {
+			name: "log",
+			type: "Function",
+			file: "src/logger.ts",
+			offset: 5,
+			limit: 3,
+			module: "utils",
+			package: "main",
+			id: "src/logger.ts:log",
+		};
+		const callers = [
+			{
+				node: {
+					id: "src/service.ts:process",
+					type: "Function" as const,
+					name: "process",
+					module: "core",
+					package: "main",
+					filePath: "src/service.ts",
+					startLine: 10,
+					endLine: 30,
+					exported: true,
+				},
+				snippets: [
+					{
+						callSiteLine: 12,
+						startLine: 11,
+						endLine: 13,
+						code: "// Start processing\nlog('Starting...');",
+					},
+					{
+						callSiteLine: 28,
+						startLine: 27,
+						endLine: 29,
+						code: "// Done\nlog('Finished');",
+					},
+				],
+			},
+		];
+
+		const result = formatCallersWithSnippets(target, callers);
+		expect(result).toContain("call at line 12:");
+		expect(result).toContain("call at line 28:");
+		expect(result).toContain("log('Starting...')");
+		expect(result).toContain("log('Finished')");
+	});
+
+	it("handles empty callers list", () => {
+		const target: SymbolLocation = {
+			name: "unusedFunc",
+			type: "Function",
+			file: "src/unused.ts",
+			offset: 1,
+			limit: 5,
+			module: "utils",
+			package: "main",
+			id: "src/unused.ts:unusedFunc",
+		};
+
+		const result = formatCallersWithSnippets(target, []);
+		expect(result).toContain("callers[0]:");
+		expect(result).toContain("(no callers found)");
+	});
+
+	it("handles caller with no snippets", () => {
+		const target: SymbolLocation = {
+			name: "formatDate",
+			type: "Function",
+			file: "src/utils.ts",
+			offset: 15,
+			limit: 6,
+			module: "utils",
+			package: "main",
+			id: "src/utils.ts:formatDate",
+		};
+		const callers = [
+			{
+				node: {
+					id: "src/api/handler.ts:handleRequest",
+					type: "Function" as const,
+					name: "handleRequest",
+					module: "api",
+					package: "main",
+					filePath: "src/api/handler.ts",
+					startLine: 10,
+					endLine: 25,
+					exported: true,
+				},
+				snippets: [],
+			},
+		];
+
+		const result = formatCallersWithSnippets(target, callers);
+		expect(result).toContain("callers[1]:");
+		expect(result).toContain("handleRequest");
+		expect(result).not.toContain("call at line");
 	});
 });

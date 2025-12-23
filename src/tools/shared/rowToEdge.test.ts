@@ -9,6 +9,7 @@ describe(rowToEdge.name, () => {
 			target: "src/utils.ts:formatDate",
 			type: "CONTAINS",
 			call_count: null,
+			call_sites: null,
 			is_type_only: null,
 			imported_symbols: null,
 			context: null,
@@ -33,6 +34,7 @@ describe(rowToEdge.name, () => {
 			target: "src/db/user.ts:saveUser",
 			type: "CALLS",
 			call_count: 3,
+			call_sites: null,
 			is_type_only: null,
 			imported_symbols: null,
 			context: null,
@@ -43,12 +45,30 @@ describe(rowToEdge.name, () => {
 		expect(edge.callCount).toBe(3);
 	});
 
+	it("parses call_sites JSON array", () => {
+		const row: EdgeRow = {
+			source: "src/api/handler.ts:createUser",
+			target: "src/db/user.ts:saveUser",
+			type: "CALLS",
+			call_count: 3,
+			call_sites: "[12, 45, 87]",
+			is_type_only: null,
+			imported_symbols: null,
+			context: null,
+		};
+
+		const edge = rowToEdge(row);
+
+		expect(edge.callSites).toEqual([12, 45, 87]);
+	});
+
 	it("includes call_count of 0 (falsy but not null)", () => {
 		const row: EdgeRow = {
 			source: "src/foo.ts:bar",
 			target: "src/baz.ts:qux",
 			type: "CALLS",
 			call_count: 0,
+			call_sites: null,
 			is_type_only: null,
 			imported_symbols: null,
 			context: null,
@@ -65,6 +85,7 @@ describe(rowToEdge.name, () => {
 			target: "src/types/User.ts",
 			type: "IMPORTS",
 			call_count: null,
+			call_sites: null,
 			is_type_only: 1,
 			imported_symbols: null,
 			context: null,
@@ -81,6 +102,7 @@ describe(rowToEdge.name, () => {
 			target: "src/utils/validate.ts",
 			type: "IMPORTS",
 			call_count: null,
+			call_sites: null,
 			is_type_only: 0,
 			imported_symbols: null,
 			context: null,
@@ -97,6 +119,7 @@ describe(rowToEdge.name, () => {
 			target: "src/utils.ts",
 			type: "IMPORTS",
 			call_count: null,
+			call_sites: null,
 			is_type_only: null,
 			imported_symbols: '["formatDate", "parseDate", "validateDate"]',
 			context: null,
@@ -117,6 +140,7 @@ describe(rowToEdge.name, () => {
 			target: "src/types/User.ts:User",
 			type: "USES_TYPE",
 			call_count: null,
+			call_sites: null,
 			is_type_only: null,
 			imported_symbols: null,
 			context: "parameter",
@@ -133,6 +157,7 @@ describe(rowToEdge.name, () => {
 			target: "src/b.ts",
 			type: "CONTAINS",
 			call_count: null,
+			call_sites: null,
 			is_type_only: null,
 			imported_symbols: null,
 			context: null,

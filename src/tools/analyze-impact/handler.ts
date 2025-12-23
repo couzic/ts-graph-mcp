@@ -1,8 +1,28 @@
+import { resolve } from "node:path";
 import type Database from "better-sqlite3";
 import { formatAmbiguous, formatNotFound } from "../shared/errorFormatters.js";
+import {
+	extractFunctionBody,
+	extractSnippets,
+} from "../shared/extractSnippet.js";
 import { resolveSymbol } from "../shared/resolveSymbol.js";
-import { formatImpactNodes } from "./format.js";
-import { queryImpactedNodes } from "./query.js";
+import { formatImpactNodes, formatImpactNodesWithSnippets } from "./format.js";
+import {
+	queryImpactedNodes,
+	queryImpactedNodesWithCallSites,
+} from "./query.js";
+
+/**
+ * Maximum number of impacted nodes before snippets are automatically excluded.
+ * When impact count exceeds this, only metadata is returned to prevent context overload.
+ */
+const SNIPPET_THRESHOLD = 15;
+
+/**
+ * Maximum lines for a function to be considered "small".
+ * Small functions show their whole body instead of snippets around call sites.
+ */
+const SMALL_FUNCTION_THRESHOLD = 10;
 
 /**
  * Input parameters for analyzeImpact tool.
@@ -56,11 +76,13 @@ export const analyzeImpactDefinition = {
  *
  * @param db - Database connection
  * @param params - Tool parameters
+ * @param projectRoot - Project root for resolving file paths
  * @returns Formatted string for LLM consumption
  */
 export function executeAnalyzeImpact(
 	db: Database.Database,
 	params: AnalyzeImpactParams,
+	projectRoot: string,
 ): string {
 	const result = resolveSymbol(db, params);
 
@@ -73,8 +95,55 @@ export function executeAnalyzeImpact(
 	}
 
 	const nodeId = result.node.id;
-	const nodes = queryImpactedNodes(db, nodeId, {
-		maxDepth: params.maxDepth,
-	});
-	return formatImpactNodes(result.node, nodes);
+	const options = { maxDepth: params.maxDepth };
+
+	// Query all impacted nodes first to check count
+	const allImpacted = queryImpactedNodes(db, nodeId, options);
+
+	// Auto-include snippets when impact count is manageable
+	if (allImpacted.length <= SNIPPET_THRESHOLD) {
+		// Get impacted nodes with call sites for snippet extraction
+		const impactedWithCallSites = queryImpactedNodesWithCallSites(
+			db,
+			nodeId,
+			options,
+		);
+
+		// Map impacted nodes to include snippets
+		const impactedWithSnippets = impactedWithCallSites.map(
+			({ node, callSites }) => {
+				const absolutePath = resolve(projectRoot, node.filePath);
+				const functionLines = node.endLine - node.startLine + 1;
+
+				// Only extract snippets for CALLS edges (which have call sites)
+				if (node.entryEdgeType === "CALLS") {
+					// For small functions, show the whole body
+					if (functionLines <= SMALL_FUNCTION_THRESHOLD) {
+						const body = extractFunctionBody(
+							absolutePath,
+							node.startLine,
+							node.endLine,
+						);
+						return { node, snippets: body ? [body] : [] };
+					}
+
+					// For larger functions with call sites, show snippets around call sites
+					if (callSites.length > 0) {
+						return {
+							node,
+							snippets: extractSnippets(absolutePath, callSites),
+						};
+					}
+				}
+
+				// Other edge types or CALLS edges without call sites: no snippets
+				return { node, snippets: [] };
+			},
+		);
+
+		return formatImpactNodesWithSnippets(result.node, impactedWithSnippets);
+	}
+
+	// Too many impacted nodes - return list without snippets
+	return formatImpactNodes(result.node, allImpacted, { snippetsOmitted: true });
 }

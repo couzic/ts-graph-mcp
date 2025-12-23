@@ -44,6 +44,8 @@ export const rowToEdge = (row: EdgeRow): Edge => {
 		type: row.type as EdgeType,
 	};
 	if (row.call_count != null) edge.callCount = row.call_count;
+	if (row.call_sites != null)
+		edge.callSites = JSON.parse(row.call_sites) as number[];
 	if (row.is_type_only != null) edge.isTypeOnly = row.is_type_only === 1;
 	if (row.imported_symbols != null)
 		edge.importedSymbols = JSON.parse(row.imported_symbols) as string[];

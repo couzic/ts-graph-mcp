@@ -1,4 +1,5 @@
 import type { EdgeType, NodeType } from "../../db/Types.js";
+import type { Snippet } from "../shared/extractSnippet.js";
 import { TYPE_ORDER, TYPE_PLURALS } from "../shared/formatConstants.js";
 import {
 	formatLocation,
@@ -37,6 +38,22 @@ const EDGE_TYPE_ORDER: EdgeType[] = [
  * Depth tier classification.
  */
 type DepthTier = "direct" | "transitive";
+
+/**
+ * An impacted node with its extracted code snippets.
+ */
+export interface ImpactedNodeWithSnippets {
+	node: ImpactedNode;
+	snippets: Snippet[];
+}
+
+/**
+ * Options for formatting impacted nodes.
+ */
+export interface FormatImpactNodesOptions {
+	/** When true, indicates snippets were omitted due to high impact count */
+	snippetsOmitted?: boolean;
+}
 
 /**
  * Classify depth into tiers.
@@ -283,6 +300,7 @@ function formatDepthTier(
 export function formatImpactNodes(
 	target: SymbolLocation,
 	nodes: ImpactedNode[],
+	options: FormatImpactNodesOptions = {},
 ): string {
 	const lines: string[] = [];
 
@@ -307,6 +325,9 @@ export function formatImpactNodes(
 	// Summary statistics
 	const summary = generateSummary(nodes);
 	lines.push(...formatSummarySection(summary));
+	if (options.snippetsOmitted) {
+		lines.push("(snippets omitted due to high impact count)");
+	}
 	lines.push("");
 
 	// Group nodes by edge type, then by depth tier
@@ -354,4 +375,205 @@ export function formatImpactNodes(
 	}
 
 	return lines.join("\n").trimEnd();
+}
+
+/**
+ * Format impacted nodes with code snippets showing call sites.
+ *
+ * Similar to formatImpactNodes but includes code snippets for CALLS edges.
+ * Snippets are shown after each node's metadata.
+ *
+ * Output format:
+ * ```
+ * target:
+ *   name: formatDate
+ *   ...
+ *
+ * summary:
+ *   total: 5 impacted across 3 files
+ *   ...
+ *
+ * callers[3]:
+ *   direct[2]:
+ *     src/api/handler.ts (1):
+ *       functions[1]:
+ *         handleRequest [10-25] async (req:Request) → Response
+ *           offset: 10, limit: 16
+ *           call at line 18:
+ *             const date = formatDate(req.timestamp);
+ *             if (date) {
+ *               response.headers.set("X-Date", date);
+ *
+ * type_users[2]:
+ *   direct[1]:
+ *     src/models/User.ts (1):
+ *       functions[1]:
+ *         createUser [5-15] (data:UserInput) → User
+ *           offset: 5, limit: 11
+ *           (no snippets for USES_TYPE edges)
+ * ```
+ */
+export function formatImpactNodesWithSnippets(
+	target: SymbolLocation,
+	impacted: ImpactedNodeWithSnippets[],
+): string {
+	const lines: string[] = [];
+
+	// Header - same as formatImpactNodes
+	lines.push("target:");
+	lines.push(`  name: ${target.name}`);
+	lines.push(`  type: ${target.type}`);
+	lines.push(`  file: ${target.file}`);
+	lines.push(`  offset: ${target.offset}`);
+	lines.push(`  limit: ${target.limit}`);
+	lines.push(...formatModulePackageLines(target.module, target.package, "  "));
+	lines.push("");
+
+	if (impacted.length === 0) {
+		lines.push("summary:");
+		lines.push("  total: 0 impacted across 0 files");
+		lines.push("");
+		lines.push("(no impacted code found)");
+		return lines.join("\n");
+	}
+
+	// Summary statistics
+	const nodes = impacted.map((i) => i.node);
+	const summary = generateSummary(nodes);
+	lines.push(...formatSummarySection(summary));
+	lines.push("");
+
+	// Group nodes by edge type, then by depth tier
+	const byEdgeType = new Map<
+		EdgeType,
+		Map<DepthTier, ImpactedNodeWithSnippets[]>
+	>();
+
+	for (const item of impacted) {
+		let tierMap = byEdgeType.get(item.node.entryEdgeType);
+		if (!tierMap) {
+			tierMap = new Map<DepthTier, ImpactedNodeWithSnippets[]>();
+			byEdgeType.set(item.node.entryEdgeType, tierMap);
+		}
+
+		const tier = getDepthTier(item.node.depth);
+		const tierNodes = tierMap.get(tier) ?? [];
+		tierNodes.push(item);
+		tierMap.set(tier, tierNodes);
+	}
+
+	// Output each edge type section in consistent order
+	for (const edgeType of EDGE_TYPE_ORDER) {
+		const tierMap = byEdgeType.get(edgeType);
+		if (!tierMap) continue;
+
+		// Count total for this edge type
+		let totalForType = 0;
+		for (const tierNodes of tierMap.values()) {
+			totalForType += tierNodes.length;
+		}
+
+		const label = EDGE_TYPE_LABELS[edgeType];
+		lines.push(`${label}[${totalForType}]:`);
+
+		// Output depth tiers: direct first, then transitive
+		const directNodes = tierMap.get("direct");
+		if (directNodes && directNodes.length > 0) {
+			lines.push(...formatDepthTierWithSnippets("direct", directNodes, "  "));
+		}
+
+		const transitiveNodes = tierMap.get("transitive");
+		if (transitiveNodes && transitiveNodes.length > 0) {
+			lines.push(
+				...formatDepthTierWithSnippets("transitive", transitiveNodes, "  "),
+			);
+		}
+
+		lines.push("");
+	}
+
+	return lines.join("\n").trimEnd();
+}
+
+/**
+ * Format nodes within a depth tier with snippets, grouped by file → type.
+ */
+function formatDepthTierWithSnippets(
+	tier: DepthTier,
+	items: ImpactedNodeWithSnippets[],
+	indent: string,
+): string[] {
+	const lines: string[] = [];
+
+	lines.push(`${indent}${tier}[${items.length}]:`);
+
+	// Group by file, then by type
+	const fileGroups = new Map<
+		string,
+		Map<NodeType, ImpactedNodeWithSnippets[]>
+	>();
+
+	for (const item of items) {
+		let typeGroups = fileGroups.get(item.node.filePath);
+		if (!typeGroups) {
+			typeGroups = new Map<NodeType, ImpactedNodeWithSnippets[]>();
+			fileGroups.set(item.node.filePath, typeGroups);
+		}
+
+		const existing = typeGroups.get(item.node.type) ?? [];
+		existing.push(item);
+		typeGroups.set(item.node.type, existing);
+	}
+
+	// Sort files alphabetically
+	const sortedFiles = Array.from(fileGroups.keys()).sort();
+
+	for (const filePath of sortedFiles) {
+		const typeGroups = fileGroups.get(filePath);
+		if (!typeGroups) continue;
+
+		// Count total nodes in this file
+		let fileNodeCount = 0;
+		for (const typeItems of typeGroups.values()) {
+			fileNodeCount += typeItems.length;
+		}
+
+		lines.push(`${indent}  ${filePath} (${fileNodeCount}):`);
+
+		// Output types in consistent order
+		for (const type of TYPE_ORDER) {
+			const typeItems = typeGroups.get(type);
+			if (!typeItems || typeItems.length === 0) continue;
+
+			const plural = TYPE_PLURALS[type];
+			lines.push(`${indent}    ${plural}[${typeItems.length}]:`);
+
+			for (const item of typeItems) {
+				const loc = formatLocation(item.node);
+				lines.push(`${indent}      ${formatNode(item.node)}`);
+				lines.push(
+					`${indent}        offset: ${loc.offset}, limit: ${loc.limit}`,
+				);
+
+				// Add snippets if present
+				for (const snippet of item.snippets) {
+					// callSiteLine undefined = whole function body
+					if (snippet.callSiteLine === undefined) {
+						lines.push(`${indent}        function body:`);
+					} else {
+						lines.push(
+							`${indent}        call at line ${snippet.callSiteLine}:`,
+						);
+					}
+					// Indent each line of code
+					const codeLines = snippet.code.split("\n");
+					for (const codeLine of codeLines) {
+						lines.push(`${indent}          ${codeLine}`);
+					}
+				}
+			}
+		}
+	}
+
+	return lines;
 }

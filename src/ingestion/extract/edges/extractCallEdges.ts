@@ -173,8 +173,8 @@ const extractCallsFromCallable = (
 
 	if (nodesToSearch.length === 0) return;
 
-	// Count calls to each target
-	const callCounts = new Map<string, number>();
+	// Collect call site line numbers for each target
+	const callSitesByTarget = new Map<string, number[]>();
 
 	for (const nodeToSearch of nodesToSearch) {
 		// Get all call expressions (including the node itself if it's a call expression)
@@ -195,19 +195,23 @@ const extractCallsFromCallable = (
 			if (calleeName && symbolMap.has(calleeName)) {
 				const targetId = symbolMap.get(calleeName);
 				if (targetId) {
-					callCounts.set(targetId, (callCounts.get(targetId) || 0) + 1);
+					const lineNumber = callExpr.getStartLineNumber();
+					const sites = callSitesByTarget.get(targetId) ?? [];
+					sites.push(lineNumber);
+					callSitesByTarget.set(targetId, sites);
 				}
 			}
 		}
 	}
 
-	// Create edges with call counts
-	for (const [targetId, count] of callCounts) {
+	// Create edges with call sites
+	for (const [targetId, sites] of callSitesByTarget) {
 		edges.push({
 			source: callerId,
 			target: targetId,
 			type: "CALLS",
-			callCount: count,
+			callCount: sites.length,
+			callSites: sites,
 		});
 	}
 };

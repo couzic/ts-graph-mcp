@@ -6,6 +6,11 @@ export interface QueryCallersOptions {
 	maxDepth?: number;
 }
 
+export interface CallerWithCallSites {
+	node: Node;
+	callSites: number[];
+}
+
 /**
  * Query all callers of a function/method using recursive CTE.
  *
@@ -41,4 +46,37 @@ export function queryCallers(
 
 	const rows = db.prepare(sql).all(targetId, maxDepth) as NodeRow[];
 	return rows.map(rowToNode);
+}
+
+interface CallerRowWithCallSites extends NodeRow {
+	call_sites: string | null;
+}
+
+/**
+ * Query direct callers of a function/method with their call site line numbers.
+ *
+ * This is used when includeSnippets is true to get the exact lines where calls occur.
+ * Only returns direct callers (depth=1) since call sites are only meaningful for direct calls.
+ *
+ * @param db - Database connection
+ * @param targetId - Node ID of the function/method being called
+ * @returns Array of caller nodes with their call site line numbers
+ */
+export function queryCallersWithCallSites(
+	db: Database.Database,
+	targetId: string,
+): CallerWithCallSites[] {
+	const sql = `
+    SELECT n.*, e.call_sites
+    FROM edges e
+    JOIN nodes n ON n.id = e.source
+    WHERE e.target = ? AND e.type = 'CALLS'
+  `;
+
+	const rows = db.prepare(sql).all(targetId) as CallerRowWithCallSites[];
+
+	return rows.map((row) => ({
+		node: rowToNode(row),
+		callSites: row.call_sites ? JSON.parse(row.call_sites) : [],
+	}));
 }

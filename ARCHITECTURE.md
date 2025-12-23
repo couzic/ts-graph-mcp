@@ -239,6 +239,7 @@ Edge {
 
   // Edge-specific metadata:
   callCount?: number              // CALLS edges
+  callSites?: number[]            // CALLS edges: line numbers where calls occur
   isTypeOnly?: boolean            // IMPORTS edges
   importedSymbols?: string[]      // IMPORTS edges
   context?: "parameter"|"return"  // USES_TYPE edges
@@ -247,7 +248,7 @@ Edge {
 
 **Edge Types**:
 
-1. **CALLS** - Function/method invocations (tracks `callCount`)
+1. **CALLS** - Function/method invocations (tracks `callCount` and `callSites` line numbers)
 2. **IMPORTS** - File-to-file imports (tracks `importedSymbols`, `isTypeOnly`)
 3. **CONTAINS** - File contains top-level symbols (no nested members)
 4. **IMPLEMENTS** - Class implements interface

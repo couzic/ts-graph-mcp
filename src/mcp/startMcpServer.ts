@@ -40,8 +40,12 @@ import {
  * Start the MCP server that exposes TypeScript code graph queries as tools.
  *
  * @param db - Database connection for direct queries
+ * @param projectRoot - Project root directory for resolving file paths
  */
-export async function startMcpServer(db: Database.Database): Promise<void> {
+export async function startMcpServer(
+	db: Database.Database,
+	projectRoot: string,
+): Promise<void> {
 	const server = new Server(
 		{
 			name: "ts-graph-mcp",
@@ -76,7 +80,7 @@ export async function startMcpServer(db: Database.Database): Promise<void> {
 			switch (name) {
 				case "incomingCallsDeep": {
 					const params = args as unknown as IncomingCallsDeepParams;
-					const result = executeIncomingCallsDeep(db, params);
+					const result = executeIncomingCallsDeep(db, params, projectRoot);
 					return {
 						content: [{ type: "text" as const, text: result }],
 					};
@@ -84,7 +88,7 @@ export async function startMcpServer(db: Database.Database): Promise<void> {
 
 				case "outgoingCallsDeep": {
 					const params = args as unknown as OutgoingCallsDeepParams;
-					const result = executeOutgoingCallsDeep(db, params);
+					const result = executeOutgoingCallsDeep(db, params, projectRoot);
 					return {
 						content: [{ type: "text" as const, text: result }],
 					};
@@ -92,7 +96,7 @@ export async function startMcpServer(db: Database.Database): Promise<void> {
 
 				case "analyzeImpact": {
 					const params = args as unknown as AnalyzeImpactParams;
-					const result = executeAnalyzeImpact(db, params);
+					const result = executeAnalyzeImpact(db, params, projectRoot);
 					return {
 						content: [{ type: "text" as const, text: result }],
 					};

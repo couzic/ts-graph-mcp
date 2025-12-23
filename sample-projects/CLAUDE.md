@@ -299,7 +299,7 @@ sample-project/
    }
    ```
 
-2. **Create `benchmark/prompts.ts`** - this is the only file you need:
+2. **Create `benchmark/prompts.ts`** following the [prompt guidelines](benchmark-prompt-guidelines.md):
    ```typescript
    import type { BenchmarkConfig, BenchmarkPrompt } from "../../../benchmark/lib/types.js";
 

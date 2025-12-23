@@ -31,10 +31,11 @@ export const calculate = (x: number, y: number): number => add(x, y);
 			target: generateNodeId("test.ts", "add"),
 			type: "CALLS",
 			callCount: 1,
+			callSites: [3],
 		});
 	});
 
-	it("counts multiple calls to the same function", () => {
+	it("collects call site line numbers for multiple calls", () => {
 		const project = createProject();
 		const sourceFile = project.createSourceFile(
 			"test.ts",
@@ -56,6 +57,7 @@ export const doWork = () => {
 			target: generateNodeId("test.ts", "log"),
 			type: "CALLS",
 			callCount: 3,
+			callSites: [4, 5, 6],
 		});
 	});
 
@@ -84,6 +86,7 @@ export class User {
 			target: generateNodeId("test.ts", "validate"),
 			type: "CALLS",
 			callCount: 1,
+			callSites: [8],
 		});
 	});
 
@@ -126,6 +129,7 @@ export const processEvent = (timestamp: Date): string => {
 			target: generateNodeId("utils.ts", "formatDate"),
 			type: "CALLS",
 			callCount: 1,
+			callSites: [5],
 		});
 	});
 });

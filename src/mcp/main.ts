@@ -121,7 +121,7 @@ export const main = async (): Promise<void> => {
 
 		// Start MCP server
 		console.error("Starting MCP server on stdio...");
-		await startMcpServer(db);
+		await startMcpServer(db, projectRoot);
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
 		console.error(`Fatal error: ${message}`);

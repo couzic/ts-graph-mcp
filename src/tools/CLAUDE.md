@@ -111,6 +111,8 @@ Find all functions/methods that call the target (reverse call graph, transitive)
 
 **Output**: Includes `callCount` and `depth` (1 = direct, 2+ = transitive).
 
+**Automatic Code Snippets**: When the number of callers is ≤15, the response includes source code snippets showing how the function is called at each call site. When there are many callers (>15), snippets are omitted to prevent context overload, and a note indicates this. The agent can still use the `offset`/`limit` coordinates with the Read tool to inspect specific callers.
+
 #### `outgoingCallsDeep`
 Find all functions/methods that the source calls (forward call graph, transitive).
 
