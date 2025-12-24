@@ -20,6 +20,7 @@ import { extractEdges } from "./extract/edges/extractEdges.js";
 | `extractInheritanceEdges.ts` | `EXTENDS` | Class/interface → parent |
 | `extractInheritanceEdges.ts` | `IMPLEMENTS` | Class → interface |
 | `extractTypeUsageEdges.ts` | `USES_TYPE` | Symbol → type (tracks context) |
+| `extractReferenceEdges.ts` | `REFERENCES` | Symbol → symbol (function passed/stored, tracks referenceContext) |
 
 ## Extraction Order
 
@@ -63,6 +64,13 @@ interface EdgeExtractionContext {
 - Filters built-in types (String, Array, Promise, etc.)
 - Tracks context: `"parameter"` | `"return"` | `"variable"` | `"property"`
 
+### REFERENCES Edges
+- Captures when functions are **passed or stored** (not directly invoked)
+- Patterns: callback arguments, object properties, array elements, return values, variable assignments, variable access
+- Uses `buildImportMap` for cross-file resolution
+- Tracks referenceContext: `"callback"` | `"property"` | `"array"` | `"return"` | `"assignment"` | `"access"`
+- Enables multi-hop path finding through intermediate storage (e.g., `dispatch → userFormatters → formatCustomer`)
+
 ## Import Resolution
 
 Cross-file edges (CALLS, USES_TYPE) use `buildImportMap.ts` for import resolution:
@@ -76,6 +84,7 @@ Each extractor has colocated tests:
 - `extractContainsEdges.test.ts` - 2 tests
 - `extractImportEdges.test.ts` - 4 tests
 - `extractCallEdges.test.ts` - 4 tests
-- `extractInheritanceEdges.test.ts` - 5 tests
+- `extractInheritanceEdges.test.ts` - 9 tests
 - `extractTypeUsageEdges.test.ts` - 5 tests
+- `extractReferenceEdges.test.ts` - 13 tests
 - `extractEdges.test.ts` - 1 integration test

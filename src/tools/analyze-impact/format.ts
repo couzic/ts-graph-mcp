@@ -20,6 +20,7 @@ const EDGE_TYPE_LABELS: Record<EdgeType, string> = {
 	EXTENDS: "extenders",
 	IMPLEMENTS: "implementers",
 	CONTAINS: "containers",
+	REFERENCES: "references",
 };
 
 /**

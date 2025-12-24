@@ -138,7 +138,7 @@ The schema intentionally omits FK constraints on edges table for three key reaso
 - `indexProject.ts` - Public API (`indexProject`)
 - `Extractor.ts` - Orchestrates extraction: nodes first, then edges
 - `NodeExtractors.ts` - Extracts 8 node types from AST (Function, Class, Method, etc.)
-- `EdgeExtractors.ts` - Extracts 6 edge types from AST (CALLS, IMPORTS, etc.)
+- `EdgeExtractors.ts` - Extracts 7 edge types from AST (CALLS, IMPORTS, REFERENCES, etc.)
 - `generateNodeId.ts` - Generates deterministic node IDs (`{filePath}:{symbolPath}`)
 - `normalizeTypeText.ts` - Collapses multiline TypeScript types to single line
 
@@ -227,7 +227,7 @@ BaseNode {
 7. **File** - `extension`
 8. **Property** - `propertyType`, `optional`, `readonly`
 
-### Edge Types (6 Total)
+### Edge Types (7 Total)
 
 All edges have source/target/type plus edge-specific metadata:
 
@@ -235,7 +235,7 @@ All edges have source/target/type plus edge-specific metadata:
 Edge {
   source: string          // Source node ID
   target: string          // Target node ID
-  type: EdgeType          // CALLS|IMPORTS|CONTAINS|etc.
+  type: EdgeType          // CALLS|IMPORTS|CONTAINS|REFERENCES|etc.
 
   // Edge-specific metadata:
   callCount?: number              // CALLS edges
@@ -243,6 +243,7 @@ Edge {
   isTypeOnly?: boolean            // IMPORTS edges
   importedSymbols?: string[]      // IMPORTS edges
   context?: "parameter"|"return"  // USES_TYPE edges
+  referenceContext?: "callback"|"property"|"array"|"return"|"assignment"|"access"  // REFERENCES edges
 }
 ```
 
@@ -254,6 +255,7 @@ Edge {
 4. **IMPLEMENTS** - Class implements interface
 5. **EXTENDS** - Class/interface inheritance
 6. **USES_TYPE** - Type references in parameters/returns/properties (tracks `context`)
+7. **REFERENCES** - Function passed/stored (callbacks, properties, arrays, returns, assignments; tracks `referenceContext`)
 
 ### Node ID Format
 
@@ -497,34 +499,6 @@ The built-in LSP tool provides:
 - `incomingCalls` - Find direct callers of a function
 - `outgoingCalls` - Find direct callees of a function
 
-### Feature Comparison
-
-| Feature | LSP Tool | ts-graph-mcp | Overlap |
-|---------|----------|--------------|---------|
-| Symbols in file | `documentSymbol` | ❌ (removed) | None - use LSP |
-| Search symbols | `workspaceSymbol` | ❌ (removed) | None - use LSP |
-| Direct callers | `incomingCalls` | `incomingCallsDeep(maxDepth=1)` | **Partial** - ts-graph has transitive traversal |
-| Direct callees | `outgoingCalls` | `outgoingCallsDeep(maxDepth=1)` | **Partial** - ts-graph has transitive traversal |
-| Implementations | `goToImplementation` | ❌ (removed) | None - use LSP |
-| Definition lookup | `goToDefinition` | ❌ | None |
-| Hover docs | `hover` | ❌ | None |
-| **Transitive call graph** | ❌ | `incomingCallsDeep/outgoingCallsDeep` | **Unique** |
-| **Package dependencies** | ❌ | `outgoingPackageDeps/incomingPackageDeps` | **Unique** |
-| **Impact analysis** | ❌ | `analyzeImpact` | **Unique** |
-| **Path finding** | ❌ | `findPaths` | **Unique** |
-
-### Removed Tools
-
-**`get_file_symbols`** - Removed entirely (previously deprecated). Use LSP `documentSymbol` instead, which provides real-time results without pre-indexing.
-
-**`getNeighborhood`** - Removed in favor of focused tools. The generic neighborhood query returned ALL edge types (CALLS, IMPORTS, USES_TYPE, etc.), causing exponential output growth. Replaced by focused tools that each traverse one relationship type.
-
-**`incomingExtends/outgoingExtends`** - Removed because modern TypeScript favors composition over deep inheritance. Class hierarchies are typically shallow (2-3 levels) and localized, making simple grep patterns (`extends ClassName`) sufficient. Benchmarks showed MCP overhead exceeded benefit for realistic inheritance queries.
-
-**`incomingUsesType/outgoingUsesType`** - Removed because LSP `findReferences` + `analyzeImpact` cover the use cases better. The unique feature (context filtering: parameter/return/property) is rarely needed in practice. For "what uses this type?" use LSP; for "what breaks if I change this type?" use `analyzeImpact`.
-
-**`incomingImports/outgoingImports`** - Removed because import relationships are direct (no transitivity needed) and visible (at top of every file). LSP `findReferences` handles "what imports this export" and reading the file shows "what does this file import".
-
 ### When to Use Each
 
 **Use LSP when:**
@@ -534,10 +508,7 @@ The built-in LSP tool provides:
 
 **Use ts-graph-mcp when:**
 - You need **transitive** analysis (callers of callers, all downstream dependencies)
-- **Impact analysis** (what breaks if I change this?)
 - **Path finding** (how does data flow from A to B?)
-- **Architectural queries** (filter by module/package, visualize neighborhoods)
-- Working with **pre-indexed** data for consistent snapshots
 
 ---
 
@@ -595,8 +566,6 @@ Each MCP tool has its own `format.ts` file producing hierarchical text output op
 - Type-grouped output with counts
 - Mermaid diagrams for subgraph visualization
 
-See `docs/toon-optimization/` for historical analysis that informed the current format.
-
 ### 4. SQLite Only
 
 The `DbWriter` interface exists for writes, but query logic is embedded in each tool's `query.ts` file using direct SQLite queries.
@@ -610,5 +579,4 @@ Server doesn't auto-refresh on code changes. Requires restart to pick up changes
 ## Further Reading
 
 - **[ISSUES.md](ISSUES.md)** - Known bugs and technical debt
-- **[docs/configuration.md](docs/configuration.md)** - Configuration file reference
 - **[ROADMAP.md](ROADMAP.md)** - Development roadmap

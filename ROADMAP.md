@@ -33,6 +33,47 @@ These 6 tools remain because they offer capabilities LSP lacks:
 
 ---
 
+## REFERENCES Edge Type
+
+**Status: ✅ IMPLEMENTED**
+
+The `REFERENCES` edge type captures when functions are **passed or stored** but not directly invoked. This enables multi-hop path finding through intermediate storage patterns.
+
+### Patterns Captured
+
+| Pattern | Example | Edge Created |
+|---------|---------|--------------|
+| Callback argument | `array.map(fn)` | caller → fn |
+| Object property | `{ handler: fn }` | variable → fn |
+| Array element | `[fn1, fn2]` | variable → fn |
+| Return value | `return fn` | function → fn |
+| Variable assignment | `const x = fn` | x → fn |
+| Variable access | `handlers[type]` | function → handlers |
+
+### Why This Matters for AI Agents
+
+**Without REFERENCES edges** (manual tracing):
+```
+Agent reads dispatch() → sees userFormatters[type]
+Agent reads userFormatters definition → sees { customer: formatCustomer }
+Agent connects: dispatch → userFormatters → formatCustomer
+Result: 3+ turns, multiple file reads
+```
+
+**With REFERENCES edges** (single query):
+```
+Agent calls findPaths(dispatch, formatCustomer)
+Result: dispatch → userFormatters → formatCustomer (1 turn)
+```
+
+### Benchmark Coverage
+
+| Project | Prompts | Key Demonstration |
+|---------|---------|-------------------|
+| `references` | P1-P3 | Multi-hop path finding through stored functions |
+
+---
+
 ## Code Snippets in Tool Responses
 
 Three tools now return source code snippets automatically when result count is small (≤15 items):

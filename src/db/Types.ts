@@ -16,7 +16,8 @@ export type EdgeType =
 	| "CONTAINS"
 	| "IMPLEMENTS"
 	| "EXTENDS"
-	| "USES_TYPE";
+	| "USES_TYPE"
+	| "REFERENCES";
 
 // Base Node (shared properties)
 export interface BaseNode {
@@ -132,6 +133,15 @@ export interface Edge {
 
 	// USES_TYPE edges
 	context?: "parameter" | "return" | "property" | "variable";
+
+	// REFERENCES edges
+	referenceContext?:
+		| "callback"
+		| "property"
+		| "array"
+		| "return"
+		| "assignment"
+		| "access";
 }
 
 // Path

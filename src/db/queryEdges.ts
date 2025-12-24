@@ -22,6 +22,15 @@ export interface EdgeFilters {
 
 	/** Filter by context (for USES_TYPE edges) */
 	context?: "parameter" | "return" | "property" | "variable";
+
+	/** Filter by reference context (for REFERENCES edges) */
+	referenceContext?:
+		| "callback"
+		| "property"
+		| "array"
+		| "return"
+		| "assignment"
+		| "access";
 }
 
 interface EdgeRow {
@@ -32,6 +41,7 @@ interface EdgeRow {
 	is_type_only: number | null;
 	imported_symbols: string | null;
 	context: string | null;
+	reference_context: string | null;
 }
 
 const rowToEdge = (row: EdgeRow): Edge => {
@@ -55,6 +65,10 @@ const rowToEdge = (row: EdgeRow): Edge => {
 
 	if (row.context !== null) {
 		edge.context = row.context as Edge["context"];
+	}
+
+	if (row.reference_context !== null) {
+		edge.referenceContext = row.reference_context as Edge["referenceContext"];
 	}
 
 	return edge;
@@ -124,9 +138,14 @@ export function queryEdges(
 		params.push(filters.context);
 	}
 
+	if (filters.referenceContext) {
+		conditions.push("reference_context = ?");
+		params.push(filters.referenceContext);
+	}
+
 	const whereClause =
 		conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
-	const sql = `SELECT source, target, type, call_count, is_type_only, imported_symbols, context FROM edges ${whereClause}`;
+	const sql = `SELECT source, target, type, call_count, is_type_only, imported_symbols, context, reference_context FROM edges ${whereClause}`;
 
 	const stmt = db.prepare<(string | number)[], EdgeRow>(sql);
 	const rows = stmt.all(...params);

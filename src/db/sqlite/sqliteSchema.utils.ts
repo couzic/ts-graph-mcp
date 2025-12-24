@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS edges (
   is_type_only INTEGER,
   imported_symbols TEXT,
   context TEXT,
+  reference_context TEXT,
   PRIMARY KEY (source, target, type)
 )`;
 

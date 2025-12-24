@@ -51,6 +51,26 @@ export const MAX_PATH_LENGTH = 20;
 
 ---
 
+### REFERENCES Edge Test Gaps
+
+**Impact:** Medium (edge case coverage)
+
+The REFERENCES edge extractor has basic coverage (13 unit tests, 16 e2e tests) but lacks:
+
+1. **Nested patterns** - Objects inside arrays (`[{ handler: fn }]`) not extracted
+2. **Method call arguments** - `map.set(key, fn)` not captured as callback
+3. **Destructuring patterns** - `const { handler } = obj; handler()` not tracked
+4. **Spread patterns** - `[...handlers]` not tracked
+5. **Database query tests** - No tests for `referenceContext` filtering via `queryEdges`
+
+**Current coverage:**
+- `extractReferenceEdges.test.ts` — 13 unit tests (basic patterns)
+- `references/e2e.test.ts` — 16 tests via `queryPath` (tool behavior)
+
+**Fix approach:** Add unit tests for edge cases; document unsupported patterns.
+
+---
+
 ### Watcher Tests Missing
 
 Watcher module lacks unit and system tests. Medium priority.

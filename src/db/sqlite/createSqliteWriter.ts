@@ -46,14 +46,15 @@ export const createSqliteWriter = (db: Database.Database): DbWriter => {
   `);
 
 	const upsertEdgeStmt = db.prepare(`
-    INSERT INTO edges (source, target, type, call_count, call_sites, is_type_only, imported_symbols, context)
-    VALUES (@source, @target, @type, @callCount, @callSites, @isTypeOnly, @importedSymbols, @context)
+    INSERT INTO edges (source, target, type, call_count, call_sites, is_type_only, imported_symbols, context, reference_context)
+    VALUES (@source, @target, @type, @callCount, @callSites, @isTypeOnly, @importedSymbols, @context, @referenceContext)
     ON CONFLICT(source, target, type) DO UPDATE SET
       call_count = excluded.call_count,
       call_sites = excluded.call_sites,
       is_type_only = excluded.is_type_only,
       imported_symbols = excluded.imported_symbols,
-      context = excluded.context
+      context = excluded.context,
+      reference_context = excluded.reference_context
   `);
 
 	const deleteNodesByFileStmt = db.prepare(`
@@ -100,6 +101,7 @@ export const createSqliteWriter = (db: Database.Database): DbWriter => {
 					? JSON.stringify(edge.importedSymbols)
 					: null,
 				context: edge.context ?? null,
+				referenceContext: edge.referenceContext ?? null,
 			});
 		}
 	});

@@ -72,6 +72,21 @@ All 8 node types: Function, Class, Method, Interface, TypeAlias, Variable, Prope
 
 **Status:** ✅ Correctly tests tool query functions
 
+### `references/`
+Function reference patterns: callbacks, object properties, array elements, return values, variable assignments, multi-hop chains.
+
+**E2E tests for:** `queryPath` with REFERENCES edges
+- Callback arguments: `processItems → transformItem` (via `array.map(fn)`)
+- Array elements: `validators → validateInput` (via `[fn]`)
+- Return values: `getErrorHandler → logError` (via `return fn`)
+- Variable assignments: `validate → validateInput` (via `const x = fn`)
+- Object properties: `userFormatters → formatCustomer` (via `{ key: fn }`)
+- **Multi-hop paths**: `dispatch → userFormatters → formatCustomer` (2-hop chain)
+
+**Benchmarks:** `findPaths` with REFERENCES edges (multi-hop through stored functions)
+
+**Status:** ✅ Correctly tests REFERENCES edges via `queryPath` tool
+
 ## Planned Projects
 
 See **PLANNED.md** for the full roadmap of test projects to be created, including:

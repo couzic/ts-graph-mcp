@@ -5,6 +5,7 @@ import { extractCallEdges } from "./extractCallEdges.js";
 import { extractContainsEdges } from "./extractContainsEdges.js";
 import { extractImportEdges } from "./extractImportEdges.js";
 import { extractInheritanceEdges } from "./extractInheritanceEdges.js";
+import { extractReferenceEdges } from "./extractReferenceEdges.js";
 import { extractTypeUsageEdges } from "./extractTypeUsageEdges.js";
 
 export type { EdgeExtractionContext };
@@ -26,6 +27,7 @@ export const extractEdges = (
 	edges.push(...extractCallEdges(sourceFile, context));
 	edges.push(...extractInheritanceEdges(sourceFile, context));
 	edges.push(...extractTypeUsageEdges(sourceFile, context));
+	edges.push(...extractReferenceEdges(sourceFile, context));
 
 	return edges;
 };
