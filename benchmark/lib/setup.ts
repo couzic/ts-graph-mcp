@@ -12,8 +12,7 @@
  * The test project must have a benchmark/prompts.ts that exports a `config` object.
  */
 
-import { access } from "node:fs/promises";
-import { mkdir } from "node:fs/promises";
+import { access, mkdir, unlink } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { closeDatabase, openDatabase } from "../../src/db/sqlite/sqliteConnection.utils.js";
 import { initializeSchema } from "../../src/db/sqlite/sqliteSchema.utils.js";
@@ -61,6 +60,15 @@ export async function setupBenchmark(config: BenchmarkConfig): Promise<void> {
 	// Create directory if needed
 	const dbDir = join(config.projectRoot, ".ts-graph");
 	await mkdir(dbDir, { recursive: true });
+
+	// Delete existing database to ensure fresh schema
+	// This avoids schema mismatch errors when columns are added/removed
+	try {
+		await unlink(fullDbPath);
+		console.log("Deleted existing database (ensuring fresh schema)");
+	} catch {
+		// File doesn't exist, that's fine
+	}
 
 	// Open database (will create if doesn't exist)
 	const db = openDatabase({ path: fullDbPath });
