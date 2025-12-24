@@ -13,22 +13,44 @@ export interface PathResult {
 	edges: Edge[];
 }
 
+/** Default maximum path length */
+const DEFAULT_MAX_DEPTH = 20;
+
+/** Default number of paths to return */
+const DEFAULT_MAX_PATHS = 3;
+
 /**
- * Query the shortest path between two nodes using BFS.
+ * Query options for path finding.
+ */
+export interface QueryPathOptions {
+	/** Maximum path length (default: 20) */
+	maxDepth?: number;
+	/** Maximum number of paths to return (default: 3) */
+	maxPaths?: number;
+}
+
+/**
+ * Query paths between two nodes using BFS.
  *
  * Uses recursive CTE with JSON array for path tracking and cycle detection.
+ * Returns up to maxPaths shortest paths, ordered by length.
  *
  * @param db - Database connection
  * @param sourceId - Starting node ID
  * @param targetId - Target node ID
- * @returns Path result or null if no path exists
+ * @param options - Query options (maxDepth, maxPaths)
+ * @returns Array of path results (empty if no path exists)
  */
 export function queryPath(
 	db: Database.Database,
 	sourceId: string,
 	targetId: string,
-): PathResult | null {
-	// BFS to find shortest path using recursive CTE with path tracking
+	options: QueryPathOptions = {},
+): PathResult[] {
+	const maxDepth = options.maxDepth ?? DEFAULT_MAX_DEPTH;
+	const maxPaths = options.maxPaths ?? DEFAULT_MAX_PATHS;
+
+	// BFS to find shortest paths using recursive CTE with path tracking
 	const sql = `
 		WITH RECURSIVE path_search(node_id, path_nodes, path_length) AS (
 			SELECT ?, json_array(?), 0
@@ -41,8 +63,8 @@ export function queryPath(
 				p.path_length + 1
 			FROM edges e
 			JOIN path_search p ON e.source = p.node_id
-			WHERE p.path_length < 20
-				AND json_array_length(p.path_nodes) <= 20
+			WHERE p.path_length < ?
+				AND json_array_length(p.path_nodes) <= ?
 				AND NOT EXISTS (
 					SELECT 1 FROM json_each(p.path_nodes)
 					WHERE json_each.value = e.target
@@ -52,32 +74,35 @@ export function queryPath(
 		FROM path_search
 		WHERE node_id = ?
 		ORDER BY path_length
-		LIMIT 1
+		LIMIT ?
 	`;
 
-	const row = db.prepare(sql).get(sourceId, sourceId, targetId) as
-		| { path_nodes: string; path_length: number }
-		| undefined;
+	const rows = db
+		.prepare(sql)
+		.all(sourceId, sourceId, maxDepth, maxDepth, targetId, maxPaths) as Array<{
+		path_nodes: string;
+		path_length: number;
+	}>;
 
-	if (!row) return null;
+	return rows.map((row) => {
+		const nodes = JSON.parse(row.path_nodes) as string[];
 
-	const nodes = JSON.parse(row.path_nodes) as string[];
-
-	// Fetch edges along the path
-	const edges: Edge[] = [];
-	for (let i = 0; i < nodes.length - 1; i++) {
-		const from = nodes[i];
-		const to = nodes[i + 1];
-		if (from === undefined || to === undefined) continue;
-		const edgeRow = db
-			.prepare<[string, string], EdgeRow>(
-				"SELECT * FROM edges WHERE source = ? AND target = ? LIMIT 1",
-			)
-			.get(from, to);
-		if (edgeRow) {
-			edges.push(rowToEdge(edgeRow));
+		// Fetch edges along the path
+		const edges: Edge[] = [];
+		for (let i = 0; i < nodes.length - 1; i++) {
+			const from = nodes[i];
+			const to = nodes[i + 1];
+			if (from === undefined || to === undefined) continue;
+			const edgeRow = db
+				.prepare<[string, string], EdgeRow>(
+					"SELECT * FROM edges WHERE source = ? AND target = ? LIMIT 1",
+				)
+				.get(from, to);
+			if (edgeRow) {
+				edges.push(rowToEdge(edgeRow));
+			}
 		}
-	}
 
-	return { nodes, edges };
+		return { nodes, edges };
+	});
 }

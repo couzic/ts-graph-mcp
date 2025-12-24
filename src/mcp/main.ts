@@ -111,9 +111,6 @@ export const main = async (): Promise<void> => {
 				console.error(
 					"To index your project, either create a ts-graph-mcp.config.json file or ensure tsconfig.json exists.",
 				);
-				console.error(
-					"See https://github.com/couzic/ts-graph-mcp/tree/master/docs/configuration.md for configuration examples.",
-				);
 			}
 		} else {
 			console.error("Using existing database.");

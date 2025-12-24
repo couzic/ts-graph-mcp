@@ -2,80 +2,52 @@
 
 @ARCHITECTURE.md
 
-## Documentation Strategy
+## Philosophy
 
-Each document has a specific purpose — keep them focused:
+**Built for Claude Code, by Claude Code.** The agent using this tool is also its developer.
 
-| Document | Purpose | Rule |
-|----------|---------|------|
-| `ARCHITECTURE.md` | How the system works now | Update when adding features, changing patterns |
-| `ISSUES.md` | Active bugs and tech debt | Only open issues; remove when fixed |
-| `ROADMAP.md` | Future plans | Only upcoming work; remove when done |
-| Module `CLAUDE.md` | AI context for that module | Must-know info for working in that module |
+Code is fundamentally a graph — we store it as text for practical reasons, but its true nature is nodes (symbols) and edges (relationships). Grep and LSP require multiple hops to trace connections. ts-graph-mcp captures code as a graph, enabling instant traversal of entire call chains.
 
-**When completing work:**
-- Remove items from ISSUES.md/ROADMAP.md
-- Document the resulting patterns in ARCHITECTURE.md
-- Don't track completion history (no CHANGELOG until release)
+**Complements LSP**: LSP gives point-to-point queries. ts-graph-mcp gives transitive paths — "How does A reach B?" in one query instead of manual file-by-file tracing.
 
-**Quick references:**
-- **Known bugs/debt** → check `ISSUES.md`
-- **What to work on next** → check `ROADMAP.md`
+**Simplicity is a feature.** Each tool should do one thing well. If a tool tries to do multiple things, split it. The code, the architecture, the tools — all should reflect simplicity.
 
-**Update `ARCHITECTURE.md` when making significant changes:**
-- Adding/removing modules or major components
-- Changing data model (node types, edge types)
-- Modifying MCP tools or their parameters
-- Altering the data flow or indexing pipeline
+## Architecture
+
+**Vertical slices**: Each MCP tool owns its complete stack (`src/tools/<tool>/`). Tools are independent — easy to understand, modify, or remove without affecting others.
+
+## Documentation
+
+| Document | Purpose |
+|----------|---------|
+| `ARCHITECTURE.md` | How the system works |
+| `ISSUES.md` | Active bugs and tech debt |
+| `ROADMAP.md` | Upcoming work |
+| Module `CLAUDE.md` | Must-know info for that module |
+
+Remove items from ISSUES.md/ROADMAP.md when done. Update ARCHITECTURE.md when adding features.
 
 ## Code Style
 
 - Functional style (no classes)
 - Named exports only (no default exports)
-- File naming: One primary export per file, named after that export
-  - **Function** → camelCase: `generateNodeId.ts` exports `generateNodeId`
-  - **Type/Interface/Class** → PascalCase: `Node.ts` exports `Node`
-  - **Collection files** use suffixes when multiple related exports are needed:
-    - `*.types.ts` - Type/interface collections: `Config.types.ts`
-    - `*.schemas.ts` - Zod schema collections: `Config.schemas.ts`
-    - `*.utils.ts` - Utility function collections: `sqliteConnection.utils.ts`
-    - `*.constants.ts` - Constant collections: `query.constants.ts`
-  - No `index.ts` barrel files
-- Tests: Use `describe(functionName.name, ...)` instead of string literals for refactoring safety
-
-## Project Structure
-
-- Each module must be documented with its own CLAUDE.md file. The CLAUDE.md condenses the most critical information about the module, all the "must know".
-- Direct imports: `import { createSqliteWriter } from './db/sqlite/createSqliteWriter.js'`
-- Each file exports one primary item matching its filename (see File naming convention above)
+- One primary export per file, named after that export:
+  - **Function** → camelCase: `generateNodeId.ts`
+  - **Type/Interface** → PascalCase: `Node.ts`
+  - **Collections** → suffixes: `*.types.ts`, `*.schemas.ts`, `*.utils.ts`
+- No `index.ts` barrel files
+- Direct imports only
+- Tests colocated with implementation
 
 ## Scripts
 
-- `npm run check` - Run tests, build, and lint **(always use this to verify changes)**
-- `npm run build` - Compile TypeScript to `dist/`
-- `npm test` - Run tests once
-- `npm run test:watch` - Run tests in watch mode
-- `npm run lint` - Check code with Biome
-- `npm run lint:fix` - Auto-fix linting issues
-
-## Verification
-
-**Always run `npm run check` to verify changes are correct.** This runs tests, build, and lint in sequence.
+- `npm run check` — **Always use this to verify changes** (tests + build + lint)
+- `npm test` — Run tests
+- `npm run build` — Compile TypeScript
 
 ## Database Abstraction
 
-Integration tests MUST be database-agnostic. When we switch to Neo4j/Memgraph, all tests must still pass.
+Integration tests must be database-agnostic (no raw SQL in tests).
 
-**Rules:**
-- ❌ NEVER use `db.prepare()`, raw SQL, or SQLite-specific APIs in tests
-- ✅ Use query functions: `querySearchNodes()`, `queryCallers()`, `queryCallees()`, `queryEdges()`, etc.
-- ✅ Use `DbWriter` interface for writes: `writer.addNodes()`, `writer.addEdges()`
-
-**Query functions** (import from `src/`):
-- `queryNodes(db, pattern, filters?)` - Search nodes by name pattern (import from `src/db/queryNodes.js`)
-- `queryCallers(db, nodeId, options?)` - Find callers of a function
-- `queryCallees(db, nodeId, maxDepth?)` - Find callees of a function
-- `queryEdges(db, filters?)` - Query edges with filters (type, sourcePattern, targetPattern, etc.)
-- `queryImpactedNodes(db, nodeId, options?)` - Impact analysis
-- `queryPath(db, sourceId, targetId)` - Find shortest path
-- `queryNeighbors(db, nodeId, distance, direction?)` - Get neighborhood subgraph
+- Use query functions: `queryCallers()`, `queryCallees()`, `queryPath()`, etc.
+- Use `DbWriter` interface for writes

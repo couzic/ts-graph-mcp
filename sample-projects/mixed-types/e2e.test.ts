@@ -165,29 +165,29 @@ describe("mixed-types e2e", () => {
 	});
 
 	describe(queryPath.name, () => {
-		it("returns null for Entity to AuditLog (wrong direction)", () => {
+		it("returns empty array for Entity to AuditLog (wrong direction)", () => {
 			const entity = findNode("Entity", "Interface");
 			const auditLog = findNode("AuditLog", "Class");
 			expect(entity).toBeDefined();
 			expect(auditLog).toBeDefined();
 
-			const path = queryPath(db, entity!.id, auditLog!.id);
+			const paths = queryPath(db, entity!.id, auditLog!.id);
 
 			// EXTENDS/IMPLEMENTS edges go child->parent, so Entity->AuditLog has no path
 			// (Auditable extends Entity, AuditLog implements Auditable)
-			expect(path).toBeNull();
+			expect(paths).toEqual([]);
 		});
 
-		it("finds path from BaseService to AdminService through inheritance", () => {
+		it("returns empty array from BaseService to AdminService (wrong direction)", () => {
 			const baseService = findNode("BaseService", "Class");
 			const adminService = findNode("AdminService", "Class");
 			expect(baseService).toBeDefined();
 			expect(adminService).toBeDefined();
 
 			// Note: EXTENDS edges go child->parent, so AdminService->UserService->BaseService
-			// Querying in reverse direction (BaseService->AdminService) should return null
-			const path = queryPath(db, baseService!.id, adminService!.id);
-			expect(path).toBeNull();
+			// Querying in reverse direction (BaseService->AdminService) should return empty
+			const paths = queryPath(db, baseService!.id, adminService!.id);
+			expect(paths).toEqual([]);
 		});
 
 		it("finds path from AdminService to BaseService (following EXTENDS edges)", () => {
@@ -196,14 +196,14 @@ describe("mixed-types e2e", () => {
 			expect(adminService).toBeDefined();
 			expect(baseService).toBeDefined();
 
-			const path = queryPath(db, adminService!.id, baseService!.id);
+			const paths = queryPath(db, adminService!.id, baseService!.id);
 
-			expect(path).not.toBeNull();
-			expect(path?.nodes).toContain(adminService!.id);
-			expect(path?.nodes).toContain(baseService!.id);
+			expect(paths.length).toBeGreaterThan(0);
+			expect(paths[0]?.nodes).toContain(adminService!.id);
+			expect(paths[0]?.nodes).toContain(baseService!.id);
 			// Path should go through UserService
 			const userService = findNode("UserService", "Class");
-			expect(path?.nodes).toContain(userService!.id);
+			expect(paths[0]?.nodes).toContain(userService!.id);
 		});
 
 		it("finds path from AuditLog to Auditable (IMPLEMENTS edge)", () => {
@@ -212,25 +212,25 @@ describe("mixed-types e2e", () => {
 			expect(auditLog).toBeDefined();
 			expect(auditable).toBeDefined();
 
-			const path = queryPath(db, auditLog!.id, auditable!.id);
+			const paths = queryPath(db, auditLog!.id, auditable!.id);
 
-			expect(path).not.toBeNull();
-			expect(path?.nodes).toHaveLength(2);
-			expect(path?.nodes[0]).toBe(auditLog!.id);
-			expect(path?.nodes[1]).toBe(auditable!.id);
-			expect(path?.edges).toHaveLength(1);
-			expect(path?.edges[0]?.type).toBe("IMPLEMENTS");
+			expect(paths.length).toBeGreaterThan(0);
+			expect(paths[0]?.nodes).toHaveLength(2);
+			expect(paths[0]?.nodes[0]).toBe(auditLog!.id);
+			expect(paths[0]?.nodes[1]).toBe(auditable!.id);
+			expect(paths[0]?.edges).toHaveLength(1);
+			expect(paths[0]?.edges[0]?.type).toBe("IMPLEMENTS");
 		});
 
-		it("returns null for unconnected nodes", () => {
+		it("returns empty array for unconnected nodes", () => {
 			const greet = findNode("greet", "Function");
 			const user = findNode("User", "Interface");
 			expect(greet).toBeDefined();
 			expect(user).toBeDefined();
 
-			const path = queryPath(db, greet!.id, user!.id);
+			const paths = queryPath(db, greet!.id, user!.id);
 
-			expect(path).toBeNull();
+			expect(paths).toEqual([]);
 		});
 	});
 

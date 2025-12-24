@@ -203,12 +203,12 @@ describe("web-app e2e", () => {
 			expect(getUser).toBeDefined();
 			expect(createUser).toBeDefined();
 
-			const path = queryPath(db, getUser!.id, createUser!.id);
+			const paths = queryPath(db, getUser!.id, createUser!.id);
 
-			expect(path).not.toBeNull();
-			expect(path!.nodes.length).toBe(2); // getUser -> createUser
-			expect(path!.nodes[0]).toBe(getUser!.id);
-			expect(path!.nodes[1]).toBe(createUser!.id);
+			expect(paths.length).toBeGreaterThan(0);
+			expect(paths[0]!.nodes.length).toBe(2); // getUser -> createUser
+			expect(paths[0]!.nodes[0]).toBe(getUser!.id);
+			expect(paths[0]!.nodes[1]).toBe(createUser!.id);
 		});
 
 		it("finds path from listUsers to createUser (backend -> shared)", () => {
@@ -218,13 +218,13 @@ describe("web-app e2e", () => {
 			expect(listUsers).toBeDefined();
 			expect(createUser).toBeDefined();
 
-			const path = queryPath(db, listUsers!.id, createUser!.id);
+			const paths = queryPath(db, listUsers!.id, createUser!.id);
 
-			expect(path).not.toBeNull();
-			expect(path!.nodes.length).toBe(2); // listUsers -> createUser
+			expect(paths.length).toBeGreaterThan(0);
+			expect(paths[0]!.nodes.length).toBe(2); // listUsers -> createUser
 		});
 
-		it("returns null when no path exists", () => {
+		it("returns empty array when no path exists", () => {
 			// frontend functions don't call backend functions
 			const formatUserName = findNodeByPackage("formatUserName", "frontend");
 			const getUser = findNodeByPackage("getUser", "backend");
@@ -232,9 +232,9 @@ describe("web-app e2e", () => {
 			expect(formatUserName).toBeDefined();
 			expect(getUser).toBeDefined();
 
-			const path = queryPath(db, formatUserName!.id, getUser!.id);
+			const paths = queryPath(db, formatUserName!.id, getUser!.id);
 
-			expect(path).toBeNull();
+			expect(paths).toEqual([]);
 		});
 	});
 

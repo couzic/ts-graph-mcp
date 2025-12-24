@@ -1,7 +1,7 @@
 import type Database from "better-sqlite3";
 import { resolveSymbol } from "../shared/resolveSymbol.js";
 import type { SymbolQuery } from "../shared/SymbolQuery.js";
-import { formatAmbiguous, formatNotFound, formatPath } from "./format.js";
+import { formatAmbiguous, formatNotFound, formatPaths } from "./format.js";
 import { queryPath } from "./query.js";
 
 /**
@@ -128,6 +128,9 @@ export function executeFindPaths(
 	const targetId = toResult.node.id;
 
 	// Query path(s)
-	const path = queryPath(db, sourceId, targetId);
-	return formatPath(fromResult.node, toResult.node, path);
+	const paths = queryPath(db, sourceId, targetId, {
+		maxDepth: params.maxDepth,
+		maxPaths: params.maxPaths,
+	});
+	return formatPaths(fromResult.node, toResult.node, paths);
 }

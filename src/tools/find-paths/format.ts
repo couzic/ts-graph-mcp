@@ -128,9 +128,9 @@ function generateFindPathsExamples(
 }
 
 /**
- * Format a path result for LLM consumption.
+ * Format path results for LLM consumption.
  *
- * Uses a compact linear notation that shows the path as a chain:
+ * Uses a compact linear notation that shows paths as chains:
  * ```
  * from: formatDate (Function)
  *   file: src/utils.ts
@@ -140,21 +140,24 @@ function generateFindPathsExamples(
  *   file: src/db.ts
  *   offset: 42, limit: 8
  *
- * found: true
- * length: 2
+ * paths: 2
  *
- * path: formatDate --CALLS--> process --CALLS--> saveData
+ * [1] length: 1
+ *     formatDate --CALLS--> saveData
+ *
+ * [2] length: 2
+ *     formatDate --CALLS--> process --CALLS--> saveData
  * ```
  *
  * @param from - The source symbol location
  * @param to - The target symbol location
- * @param path - The path result, or null if no path found
+ * @param paths - Array of path results (empty if no paths found)
  * @returns Formatted string for LLM consumption
  */
-export function formatPath(
+export function formatPaths(
 	from: SymbolLocation,
 	to: SymbolLocation,
-	path: PathResult | null,
+	paths: PathResult[],
 ): string {
 	const lines: string[] = [];
 
@@ -172,20 +175,30 @@ export function formatPath(
 	lines.push(`  offset: ${to.offset}, limit: ${to.limit}`);
 	lines.push("");
 
-	if (!path) {
-		lines.push("found: false");
+	if (paths.length === 0) {
+		lines.push("paths: 0");
 		lines.push("");
-		lines.push("(no path exists between these nodes)");
+		lines.push("(no path exists between these symbols)");
 		return lines.join("\n");
 	}
 
-	lines.push("found: true");
-	lines.push(`length: ${path.edges.length}`);
+	lines.push(`paths: ${paths.length}`);
 	lines.push("");
 
-	// Build the linear path chain (using symbol names, not full IDs)
-	const pathChain = buildPathChain(path.nodes, path.edges);
-	lines.push(`path: ${pathChain}`);
+	// Format each path
+	for (let i = 0; i < paths.length; i++) {
+		const path = paths[i];
+		if (!path) continue;
+
+		const pathChain = buildPathChain(path.nodes, path.edges);
+		lines.push(`[${i + 1}] length: ${path.edges.length}`);
+		lines.push(`    ${pathChain}`);
+
+		// Add blank line between paths (but not after the last one)
+		if (i < paths.length - 1) {
+			lines.push("");
+		}
+	}
 
 	return lines.join("\n");
 }

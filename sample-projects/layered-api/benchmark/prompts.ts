@@ -1,11 +1,11 @@
 /**
  * Benchmark prompts for layered-api test project.
  *
- * Each prompt tests a different MCP tool capability:
- * - P1: Vague architectural question (negative test - should NOT use findPaths)
- * - P2: outgoingCallsDeep with specific symbol
- * - P3: findPaths with precise source and target symbols (positive test)
- * - P4: outgoingCallsDeep demonstrating snippet value (validation code inline)
+ * Each prompt represents a realistic developer scenario:
+ * - P1: Onboarding to a new codebase (negative test - vague, should NOT use findPaths)
+ * - P2: Debugging a slow endpoint (outgoingCallsDeep)
+ * - P3: Planning to add caching (findPaths)
+ * - P4: Investigating a validation bug report (outgoingCallsDeep with snippets)
  */
 
 import type { BenchmarkConfig, BenchmarkPrompt } from "../../../benchmark/lib/types.js";
@@ -23,9 +23,9 @@ export const config: BenchmarkConfig = {
 export const prompts: BenchmarkPrompt[] = [
 	{
 		id: "P1",
-		name: "Vague architecture question (negative)",
+		name: "Onboarding to codebase (negative)",
 		prompt:
-			"How does a user request reach the database? Trace the path from the user routes to the database layer.",
+			"I'm new to this project. Can you explain how the API is structured?",
 		expectedContains: [
 			"handleGetUser",
 			"getUserById",
@@ -38,22 +38,18 @@ export const prompts: BenchmarkPrompt[] = [
 	},
 	{
 		id: "P2",
-		name: "outgoingCallsDeep with specific symbol",
+		name: "Slow endpoint debugging",
 		prompt:
-			"What code is between the routes and the database? Start from handleGetUser and show what it calls transitively.",
-		expectedContains: [
-			"getUserById",
-			"findUserById",
-			"query",
-		],
+			"GET /users/:id is taking 500ms. The handler is handleGetUser.",
+		expectedContains: ["getUserById", "findUserById", "query"],
 		expectedTool: "outgoingCallsDeep",
 		expectedTurns: 2,
 	},
 	{
 		id: "P3",
-		name: "findPaths with precise symbols",
+		name: "Add caching for user lookups",
 		prompt:
-			"Find the call path from handleGetUser to the query function.",
+			"I want to add Redis caching for user lookups. The endpoint is handleGetUser.",
 		expectedContains: [
 			"handleGetUser",
 			"getUserById",
@@ -65,14 +61,10 @@ export const prompts: BenchmarkPrompt[] = [
 	},
 	{
 		id: "P4",
-		name: "outgoingCallsDeep with snippet value",
+		name: "Registration validation bug",
 		prompt:
-			"What validation logic runs when registerUser is called? Show the actual validation code.",
-		expectedContains: [
-			"isValidEmail",
-			"findUserByEmail",
-			".test(email)",
-		],
+			"A user reported that 'test@valid.co' was rejected during registration.",
+		expectedContains: ["isValidEmail", "findUserByEmail", ".test(email)"],
 		expectedTool: "outgoingCallsDeep",
 		expectedTurns: 3,
 	},

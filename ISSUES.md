@@ -1,33 +1,5 @@
 # Known Issues
 
-## Enhancements
-
-### 19. Benchmark Prompts Lack Realism
-
-**Impact:** Medium (benchmark validity)
-
-Current benchmark prompts read like tool verification commands rather than realistic developer questions. Average realism score: 2.9/5.
-
-**Common issues:**
-- Tool jargon ("transitively", "call path") instead of natural language
-- Full file paths that developers wouldn't know/cite
-- Command-style phrasing ("Find the call path...") instead of questions
-- Missing developer motivation (debugging, refactoring context)
-
-**Guidelines:** See [`sample-projects/benchmark-prompt-guidelines.md`](sample-projects/benchmark-prompt-guidelines.md)
-
-**Fix approach:** Rewrite prompts in `monorepo/benchmark/prompts.ts` and `layered-api/benchmark/prompts.ts` following the guidelines.
-
----
-
-### 13. `findPaths` Multiple Paths
-
-**Impact:** Low
-
-Currently returns only shortest path. Could add a `limit` parameter for top N paths.
-
----
-
 ## Technical Debt
 
 ### 18. Magic Numbers for Traversal Depth Limits

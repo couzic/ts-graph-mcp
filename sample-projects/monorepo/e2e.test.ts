@@ -262,16 +262,16 @@ describe("monorepo e2e", () => {
 			expect(handleCreateUser).toBeDefined();
 			expect(validateEmail).toBeDefined();
 
-			const result = queryPath(db, handleCreateUser!.id, validateEmail!.id);
+			const paths = queryPath(db, handleCreateUser!.id, validateEmail!.id);
 
-			expect(result).not.toBeNull();
+			expect(paths.length).toBeGreaterThan(0);
 			// Path: handleCreateUser -> createUserService -> validateEmail (3 nodes, 2 edges)
-			expect(result!.nodes).toHaveLength(3);
-			expect(result!.edges).toHaveLength(2);
+			expect(paths[0]!.nodes).toHaveLength(3);
+			expect(paths[0]!.edges).toHaveLength(2);
 
-			expect(result!.nodes.some((id) => id.includes("handleCreateUser"))).toBe(true);
-			expect(result!.nodes.some((id) => id.includes("createUserService"))).toBe(true);
-			expect(result!.nodes.some((id) => id.includes("validateEmail"))).toBe(true);
+			expect(paths[0]!.nodes.some((id) => id.includes("handleCreateUser"))).toBe(true);
+			expect(paths[0]!.nodes.some((id) => id.includes("createUserService"))).toBe(true);
+			expect(paths[0]!.nodes.some((id) => id.includes("validateEmail"))).toBe(true);
 		});
 
 		it("finds direct path from renderUserCard to formatDate (frontend -> shared)", () => {
@@ -289,15 +289,15 @@ describe("monorepo e2e", () => {
 			expect(renderUserCard).toBeDefined();
 			expect(formatDate).toBeDefined();
 
-			const result = queryPath(db, renderUserCard!.id, formatDate!.id);
+			const paths = queryPath(db, renderUserCard!.id, formatDate!.id);
 
-			expect(result).not.toBeNull();
+			expect(paths.length).toBeGreaterThan(0);
 			// Direct call: renderUserCard -> formatDate (2 nodes, 1 edge)
-			expect(result!.nodes).toHaveLength(2);
-			expect(result!.edges).toHaveLength(1);
+			expect(paths[0]!.nodes).toHaveLength(2);
+			expect(paths[0]!.edges).toHaveLength(1);
 		});
 
-		it("returns null for path in wrong direction", () => {
+		it("returns empty array for path in wrong direction", () => {
 			const validateEmail = findNode("validateEmail", {
 				type: "Function",
 				module: "shared",
@@ -313,8 +313,8 @@ describe("monorepo e2e", () => {
 			expect(handleCreateUser).toBeDefined();
 
 			// No path from leaf function back to API handler
-			const result = queryPath(db, validateEmail!.id, handleCreateUser!.id);
-			expect(result).toBeNull();
+			const paths = queryPath(db, validateEmail!.id, handleCreateUser!.id);
+			expect(paths).toEqual([]);
 		});
 
 		it("finds path from handleGetUserSummary to formatDate (through getUserSummary)", () => {
@@ -332,14 +332,14 @@ describe("monorepo e2e", () => {
 			expect(handleGetUserSummary).toBeDefined();
 			expect(formatDate).toBeDefined();
 
-			const result = queryPath(db, handleGetUserSummary!.id, formatDate!.id);
+			const paths = queryPath(db, handleGetUserSummary!.id, formatDate!.id);
 
-			expect(result).not.toBeNull();
+			expect(paths.length).toBeGreaterThan(0);
 			// Path: handleGetUserSummary -> getUserSummary -> formatDate (3 nodes, 2 edges)
-			expect(result!.nodes).toHaveLength(3);
-			expect(result!.edges).toHaveLength(2);
+			expect(paths[0]!.nodes).toHaveLength(3);
+			expect(paths[0]!.edges).toHaveLength(2);
 
-			expect(result!.nodes.some((id) => id.includes("getUserSummary"))).toBe(true);
+			expect(paths[0]!.nodes.some((id) => id.includes("getUserSummary"))).toBe(true);
 		});
 	});
 

@@ -135,15 +135,15 @@ describe("deep-chain integration", () => {
 
 	describe(queryPath.name, () => {
 		it("finds 10-node path from entry to step10", () => {
-			const result = queryPath(
+			const paths = queryPath(
 				db,
 				"src/step01.ts:entry",
 				"src/step10.ts:step10",
 			);
 
-			expect(result).not.toBeNull();
-			expect(result?.nodes).toHaveLength(10);
-			expect(result?.nodes).toEqual([
+			expect(paths.length).toBeGreaterThan(0);
+			expect(paths[0]?.nodes).toHaveLength(10);
+			expect(paths[0]?.nodes).toEqual([
 				"src/step01.ts:entry",
 				"src/step02.ts:step02",
 				"src/step03.ts:step03",
@@ -155,31 +155,31 @@ describe("deep-chain integration", () => {
 				"src/step09.ts:step09",
 				"src/step10.ts:step10",
 			]);
-			expect(result?.edges).toHaveLength(9);
-			expect(result?.edges.every((e) => e.type === "CALLS")).toBe(true);
+			expect(paths[0]?.edges).toHaveLength(9);
+			expect(paths[0]?.edges.every((e) => e.type === "CALLS")).toBe(true);
 		});
 
 		it("finds shorter path from midpoint", () => {
-			const result = queryPath(
+			const paths = queryPath(
 				db,
 				"src/step05.ts:step05",
 				"src/step10.ts:step10",
 			);
 
-			expect(result).not.toBeNull();
-			expect(result?.nodes).toHaveLength(6);
-			expect(result?.nodes[0]).toBe("src/step05.ts:step05");
-			expect(result?.nodes[5]).toBe("src/step10.ts:step10");
+			expect(paths.length).toBeGreaterThan(0);
+			expect(paths[0]?.nodes).toHaveLength(6);
+			expect(paths[0]?.nodes[0]).toBe("src/step05.ts:step05");
+			expect(paths[0]?.nodes[5]).toBe("src/step10.ts:step10");
 		});
 
-		it("returns null for path in wrong direction", () => {
-			const result = queryPath(
+		it("returns empty array for path in wrong direction", () => {
+			const paths = queryPath(
 				db,
 				"src/step10.ts:step10",
 				"src/step01.ts:entry",
 			);
 
-			expect(result).toBeNull();
+			expect(paths).toEqual([]);
 		});
 	});
 

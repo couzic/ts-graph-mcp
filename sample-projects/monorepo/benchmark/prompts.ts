@@ -1,14 +1,14 @@
 /**
  * Benchmark prompts for monorepo test project.
  *
- * Each prompt tests L3 monorepo capabilities:
- * - P1: Cross-module impact analysis (analyzeImpact)
- * - P2: Transitive caller discovery (incomingCallsDeep) - requires depth > 1
- * - P3: Transitive package dependencies (outgoingPackageDeps)
- * - P4: Reverse package dependencies (incomingPackageDeps)
- * - P5: Ambiguous symbol resolution (findPath with disambiguation)
- * - P6: Snippet value demonstration (incomingCallsDeep with inline code)
- * - P7: Snippet value demonstration (analyzeImpact with inline code)
+ * Each prompt represents a realistic developer scenario:
+ * - P1: Adding a field to a shared type (analyzeImpact)
+ * - P2: Debugging an email validation bug (incomingCallsDeep)
+ * - P3: Extracting a package to its own repo (outgoingPackageDeps)
+ * - P4: Planning breaking changes to a shared package (incomingPackageDeps)
+ * - P5: Investigating a date format bug (findPaths)
+ * - P6: Changing a function's return type (incomingCallsDeep with snippets)
+ * - P7: Changing error handling strategy (analyzeImpact with snippets)
  */
 
 import type {
@@ -28,9 +28,8 @@ export const config: BenchmarkConfig = {
 export const prompts: BenchmarkPrompt[] = [
   {
     id: "P1",
-    name: "Cross-module impact",
-    prompt:
-      "If I change the User interface in modules/shared/packages/types/src/User.ts, what code across all modules would be affected?",
+    name: "Add field to User type",
+    prompt: "I need to add an `emailVerified` field to the User type.",
     expectedContains: [
       "frontend",
       "backend",
@@ -43,45 +42,48 @@ export const prompts: BenchmarkPrompt[] = [
   },
   {
     id: "P2",
-    name: "Transitive callers",
+    name: "International email bug",
     prompt:
-      "What API handlers call validateEmail, directly or indirectly? Look in modules/shared/packages/utils/src/validate.ts.",
+      "International emails like `name@例え.jp` are being rejected during registration.",
     expectedContains: ["handleCreateUser", "api", "createUserService"],
     expectedTool: "incomingCallsDeep",
     expectedTurns: 2,
   },
   {
     id: "P3",
-    name: "Transitive package dependencies",
-    prompt:
-      "What packages does backend/api depend on? Show me the transitive package dependencies.",
+    name: "Extract package to own repo",
+    prompt: "I want to extract backend/api into its own repository.",
     expectedContains: ["backend/services", "shared/types", "shared/utils"],
     expectedTool: "outgoingPackageDeps",
     expectedTurns: 2,
   },
   {
     id: "P4",
-    name: "Reverse package dependencies",
-    prompt:
-      "What packages depend on shared/types? I want to know what would be affected if I changed this package.",
-    expectedContains: ["frontend/ui", "frontend/state", "backend/api", "backend/services"],
+    name: "Rename types in shared package",
+    prompt: "I'm going to rename some types in shared/types.",
+    expectedContains: [
+      "frontend/ui",
+      "frontend/state",
+      "backend/api",
+      "backend/services",
+    ],
     expectedTool: "incomingPackageDeps",
     expectedTurns: 2,
   },
   {
     id: "P5",
-    name: "Ambiguous symbol resolution",
+    name: "Date format bug in user card",
     prompt:
-      "Find the call path from renderUserCard to the formatDate function in shared utilities.",
+      "The user card shows dates like '2024-01-15' but it should be 'Jan 15, 2024'.",
     expectedContains: ["renderUserCard", "formatDate", "CALLS"],
     expectedTool: "findPaths",
     expectedTurns: 3,
   },
   {
     id: "P6",
-    name: "Snippet value - caller behavior",
+    name: "Change validateEmail return type",
     prompt:
-      "What functions call validateEmail? For each caller, tell me what error they return when email validation fails.",
+      "I want validateEmail to return an error message instead of a boolean.",
     expectedContains: [
       "createUserService",
       "createUserStore",
@@ -93,9 +95,9 @@ export const prompts: BenchmarkPrompt[] = [
   },
   {
     id: "P7",
-    name: "Snippet value - impact analysis",
+    name: "Change validateEmail to throw",
     prompt:
-      "What code would be impacted if I change the validateEmail function? Show me how each caller handles validation failure.",
+      "validateEmail should throw an exception instead of returning false.",
     expectedContains: [
       "createUserService",
       "createUserStore",

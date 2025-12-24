@@ -81,11 +81,11 @@ describe("layered-api integration (layered architecture)", () => {
 			expect(handleGetUser).toBeDefined();
 			expect(queryFn).toBeDefined();
 
-			const result = queryPath(db, handleGetUser!.id, queryFn!.id);
+			const paths = queryPath(db, handleGetUser!.id, queryFn!.id);
 
-			expect(result).not.toBeNull();
+			expect(paths.length).toBeGreaterThan(0);
 			// Path: handleGetUser → getUserById → findUserById → query (4 nodes)
-			expect(result!.nodes.length).toBeGreaterThanOrEqual(4);
+			expect(paths[0]!.nodes.length).toBeGreaterThanOrEqual(4);
 		});
 
 		it("finds path from handleCreateOrder to query", () => {
@@ -95,13 +95,13 @@ describe("layered-api integration (layered architecture)", () => {
 			expect(handleCreateOrder).toBeDefined();
 			expect(queryFn).toBeDefined();
 
-			const result = queryPath(db, handleCreateOrder!.id, queryFn!.id);
+			const paths = queryPath(db, handleCreateOrder!.id, queryFn!.id);
 
-			expect(result).not.toBeNull();
-			expect(result!.nodes.length).toBeGreaterThanOrEqual(4);
+			expect(paths.length).toBeGreaterThan(0);
+			expect(paths[0]!.nodes.length).toBeGreaterThanOrEqual(4);
 		});
 
-		it("returns null for reverse path (query to controller)", () => {
+		it("returns empty array for reverse path (query to controller)", () => {
 			const handleGetUser = findFunction("handleGetUser");
 			const queryFn = findFunction("query");
 
@@ -109,8 +109,8 @@ describe("layered-api integration (layered architecture)", () => {
 			expect(queryFn).toBeDefined();
 
 			// No path should exist from leaf back to controller
-			const result = queryPath(db, queryFn!.id, handleGetUser!.id);
-			expect(result).toBeNull();
+			const paths = queryPath(db, queryFn!.id, handleGetUser!.id);
+			expect(paths).toEqual([]);
 		});
 	});
 

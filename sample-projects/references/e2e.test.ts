@@ -86,29 +86,29 @@ describe("references e2e", () => {
 	 */
 	describe("callback argument paths", () => {
 		it("finds path: processItems → transformItem (via callback reference)", () => {
-			const path = queryPath(
+			const paths = queryPath(
 				db,
 				"src/callbacks.ts:processItems",
 				"src/handlers.ts:transformItem",
 			);
 
-			expect(path).not.toBeNull();
-			expect(path?.nodes).toHaveLength(2);
-			expect(path?.nodes[0]).toBe("src/callbacks.ts:processItems");
-			expect(path?.nodes[1]).toBe("src/handlers.ts:transformItem");
-			expect(path?.edges[0]?.type).toBe("REFERENCES");
+			expect(paths.length).toBeGreaterThan(0);
+			expect(paths[0]?.nodes).toHaveLength(2);
+			expect(paths[0]?.nodes[0]).toBe("src/callbacks.ts:processItems");
+			expect(paths[0]?.nodes[1]).toBe("src/handlers.ts:transformItem");
+			expect(paths[0]?.edges[0]?.type).toBe("REFERENCES");
 		});
 
 		it("finds path: filterItems → filterActive (via callback reference)", () => {
-			const path = queryPath(
+			const paths = queryPath(
 				db,
 				"src/callbacks.ts:filterItems",
 				"src/handlers.ts:filterActive",
 			);
 
-			expect(path).not.toBeNull();
-			expect(path?.nodes).toHaveLength(2);
-			expect(path?.edges[0]?.type).toBe("REFERENCES");
+			expect(paths.length).toBeGreaterThan(0);
+			expect(paths[0]?.nodes).toHaveLength(2);
+			expect(paths[0]?.edges[0]?.type).toBe("REFERENCES");
 		});
 	});
 
@@ -120,27 +120,27 @@ describe("references e2e", () => {
 	 */
 	describe("array element paths", () => {
 		it("finds path: validators → validateInput (via array storage)", () => {
-			const path = queryPath(
+			const paths = queryPath(
 				db,
 				"src/registry.ts:validators",
 				"src/handlers.ts:validateInput",
 			);
 
-			expect(path).not.toBeNull();
-			expect(path?.nodes).toHaveLength(2);
-			expect(path?.edges[0]?.type).toBe("REFERENCES");
+			expect(paths.length).toBeGreaterThan(0);
+			expect(paths[0]?.nodes).toHaveLength(2);
+			expect(paths[0]?.edges[0]?.type).toBe("REFERENCES");
 		});
 
 		it("finds path: formatters → formatOutput (via array storage)", () => {
-			const path = queryPath(
+			const paths = queryPath(
 				db,
 				"src/registry.ts:formatters",
 				"src/handlers.ts:formatOutput",
 			);
 
-			expect(path).not.toBeNull();
-			expect(path?.nodes).toHaveLength(2);
-			expect(path?.edges[0]?.type).toBe("REFERENCES");
+			expect(paths.length).toBeGreaterThan(0);
+			expect(paths[0]?.nodes).toHaveLength(2);
+			expect(paths[0]?.edges[0]?.type).toBe("REFERENCES");
 		});
 	});
 
@@ -152,27 +152,27 @@ describe("references e2e", () => {
 	 */
 	describe("return value paths", () => {
 		it("finds path: getErrorHandler → logError (via return reference)", () => {
-			const path = queryPath(
+			const paths = queryPath(
 				db,
 				"src/factory.ts:getErrorHandler",
 				"src/handlers.ts:logError",
 			);
 
-			expect(path).not.toBeNull();
-			expect(path?.nodes).toHaveLength(2);
-			expect(path?.edges[0]?.type).toBe("REFERENCES");
+			expect(paths.length).toBeGreaterThan(0);
+			expect(paths[0]?.nodes).toHaveLength(2);
+			expect(paths[0]?.edges[0]?.type).toBe("REFERENCES");
 		});
 
 		it("finds path: createProcessor → transformItem (via return reference)", () => {
-			const path = queryPath(
+			const paths = queryPath(
 				db,
 				"src/factory.ts:createProcessor",
 				"src/handlers.ts:transformItem",
 			);
 
-			expect(path).not.toBeNull();
-			expect(path?.nodes).toHaveLength(2);
-			expect(path?.edges[0]?.type).toBe("REFERENCES");
+			expect(paths.length).toBeGreaterThan(0);
+			expect(paths[0]?.nodes).toHaveLength(2);
+			expect(paths[0]?.edges[0]?.type).toBe("REFERENCES");
 		});
 	});
 
@@ -184,27 +184,27 @@ describe("references e2e", () => {
 	 */
 	describe("variable assignment paths", () => {
 		it("finds path: validate → validateInput (via assignment)", () => {
-			const path = queryPath(
+			const paths = queryPath(
 				db,
 				"src/aliases.ts:validate",
 				"src/handlers.ts:validateInput",
 			);
 
-			expect(path).not.toBeNull();
-			expect(path?.nodes).toHaveLength(2);
-			expect(path?.edges[0]?.type).toBe("REFERENCES");
+			expect(paths.length).toBeGreaterThan(0);
+			expect(paths[0]?.nodes).toHaveLength(2);
+			expect(paths[0]?.edges[0]?.type).toBe("REFERENCES");
 		});
 
 		it("finds path: format → formatOutput (via assignment)", () => {
-			const path = queryPath(
+			const paths = queryPath(
 				db,
 				"src/aliases.ts:format",
 				"src/handlers.ts:formatOutput",
 			);
 
-			expect(path).not.toBeNull();
-			expect(path?.nodes).toHaveLength(2);
-			expect(path?.edges[0]?.type).toBe("REFERENCES");
+			expect(paths.length).toBeGreaterThan(0);
+			expect(paths[0]?.nodes).toHaveLength(2);
+			expect(paths[0]?.edges[0]?.type).toBe("REFERENCES");
 		});
 	});
 
@@ -220,61 +220,61 @@ describe("references e2e", () => {
 	 */
 	describe("multi-hop chains (function → variable → function)", () => {
 		it("finds 2-hop path: dispatch → userFormatters → formatCustomer", () => {
-			const path = queryPath(
+			const paths = queryPath(
 				db,
 				"src/dispatcher.ts:dispatch",
 				"src/dispatcher.ts:formatCustomer",
 			);
 
-			expect(path).not.toBeNull();
-			expect(path?.nodes).toHaveLength(3);
-			expect(path?.nodes).toEqual([
+			expect(paths.length).toBeGreaterThan(0);
+			expect(paths[0]?.nodes).toHaveLength(3);
+			expect(paths[0]?.nodes).toEqual([
 				"src/dispatcher.ts:dispatch",
 				"src/dispatcher.ts:userFormatters",
 				"src/dispatcher.ts:formatCustomer",
 			]);
-			expect(path?.edges).toHaveLength(2);
-			expect(path?.edges.every((e) => e.type === "REFERENCES")).toBe(true);
+			expect(paths[0]?.edges).toHaveLength(2);
+			expect(paths[0]?.edges.every((e) => e.type === "REFERENCES")).toBe(true);
 		});
 
 		it("finds 2-hop path: dispatch → userFormatters → formatAdmin", () => {
-			const path = queryPath(
+			const paths = queryPath(
 				db,
 				"src/dispatcher.ts:dispatch",
 				"src/dispatcher.ts:formatAdmin",
 			);
 
-			expect(path).not.toBeNull();
-			expect(path?.nodes).toHaveLength(3);
-			expect(path?.nodes[0]).toBe("src/dispatcher.ts:dispatch");
-			expect(path?.nodes[1]).toBe("src/dispatcher.ts:userFormatters");
-			expect(path?.nodes[2]).toBe("src/dispatcher.ts:formatAdmin");
+			expect(paths.length).toBeGreaterThan(0);
+			expect(paths[0]?.nodes).toHaveLength(3);
+			expect(paths[0]?.nodes[0]).toBe("src/dispatcher.ts:dispatch");
+			expect(paths[0]?.nodes[1]).toBe("src/dispatcher.ts:userFormatters");
+			expect(paths[0]?.nodes[2]).toBe("src/dispatcher.ts:formatAdmin");
 		});
 
 		it("finds 2-hop path: getFormatter → userFormatters → formatCustomer", () => {
-			const path = queryPath(
+			const paths = queryPath(
 				db,
 				"src/dispatcher.ts:getFormatter",
 				"src/dispatcher.ts:formatCustomer",
 			);
 
-			expect(path).not.toBeNull();
-			expect(path?.nodes).toHaveLength(3);
-			expect(path?.nodes[1]).toBe("src/dispatcher.ts:userFormatters");
+			expect(paths.length).toBeGreaterThan(0);
+			expect(paths[0]?.nodes).toHaveLength(3);
+			expect(paths[0]?.nodes[1]).toBe("src/dispatcher.ts:userFormatters");
 		});
 
 		it("finds 2-hop path: getFormatter → userFormatters → formatAdmin", () => {
-			const path = queryPath(
+			const paths = queryPath(
 				db,
 				"src/dispatcher.ts:getFormatter",
 				"src/dispatcher.ts:formatAdmin",
 			);
 
-			expect(path).not.toBeNull();
-			expect(path?.nodes).toHaveLength(3);
-			expect(path?.nodes[0]).toBe("src/dispatcher.ts:getFormatter");
-			expect(path?.nodes[1]).toBe("src/dispatcher.ts:userFormatters");
-			expect(path?.nodes[2]).toBe("src/dispatcher.ts:formatAdmin");
+			expect(paths.length).toBeGreaterThan(0);
+			expect(paths[0]?.nodes).toHaveLength(3);
+			expect(paths[0]?.nodes[0]).toBe("src/dispatcher.ts:getFormatter");
+			expect(paths[0]?.nodes[1]).toBe("src/dispatcher.ts:userFormatters");
+			expect(paths[0]?.nodes[2]).toBe("src/dispatcher.ts:formatAdmin");
 		});
 	});
 
@@ -286,27 +286,27 @@ describe("references e2e", () => {
 	 */
 	describe("object property paths", () => {
 		it("finds path: userFormatters → formatCustomer (via object property)", () => {
-			const path = queryPath(
+			const paths = queryPath(
 				db,
 				"src/dispatcher.ts:userFormatters",
 				"src/dispatcher.ts:formatCustomer",
 			);
 
-			expect(path).not.toBeNull();
-			expect(path?.nodes).toHaveLength(2);
-			expect(path?.edges[0]?.type).toBe("REFERENCES");
+			expect(paths.length).toBeGreaterThan(0);
+			expect(paths[0]?.nodes).toHaveLength(2);
+			expect(paths[0]?.edges[0]?.type).toBe("REFERENCES");
 		});
 
 		it("finds path: userFormatters → formatAdmin (via object property)", () => {
-			const path = queryPath(
+			const paths = queryPath(
 				db,
 				"src/dispatcher.ts:userFormatters",
 				"src/dispatcher.ts:formatAdmin",
 			);
 
-			expect(path).not.toBeNull();
-			expect(path?.nodes).toHaveLength(2);
-			expect(path?.edges[0]?.type).toBe("REFERENCES");
+			expect(paths.length).toBeGreaterThan(0);
+			expect(paths[0]?.nodes).toHaveLength(2);
+			expect(paths[0]?.edges[0]?.type).toBe("REFERENCES");
 		});
 	});
 });

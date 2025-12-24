@@ -39,7 +39,7 @@ describe(queryPath.name, () => {
 		closeDatabase(db);
 	});
 
-	it("returns null when no path exists", async () => {
+	it("returns empty array when no path exists", async () => {
 		const writer = createSqliteWriter(db);
 		const nodeA = fn("fnA");
 		const nodeB = fn("fnB");
@@ -49,7 +49,7 @@ describe(queryPath.name, () => {
 
 		const result = queryPath(db, nodeA.id, nodeB.id);
 
-		expect(result).toBeNull();
+		expect(result).toEqual([]);
 	});
 
 	it("finds direct path", async () => {
@@ -63,11 +63,11 @@ describe(queryPath.name, () => {
 
 		const result = queryPath(db, nodeA.id, nodeB.id);
 
-		expect(result).not.toBeNull();
-		expect(result?.nodes).toEqual([nodeA.id, nodeB.id]);
-		expect(result?.edges).toHaveLength(1);
-		expect(result?.edges[0]?.source).toBe(nodeA.id);
-		expect(result?.edges[0]?.target).toBe(nodeB.id);
+		expect(result).toHaveLength(1);
+		expect(result[0]?.nodes).toEqual([nodeA.id, nodeB.id]);
+		expect(result[0]?.edges).toHaveLength(1);
+		expect(result[0]?.edges[0]?.source).toBe(nodeA.id);
+		expect(result[0]?.edges[0]?.target).toBe(nodeB.id);
 	});
 
 	it("finds multi-hop path", async () => {
@@ -85,12 +85,12 @@ describe(queryPath.name, () => {
 
 		const result = queryPath(db, nodeA.id, nodeC.id);
 
-		expect(result).not.toBeNull();
-		expect(result?.nodes).toEqual([nodeA.id, nodeB.id, nodeC.id]);
-		expect(result?.edges).toHaveLength(2);
+		expect(result).toHaveLength(1);
+		expect(result[0]?.nodes).toEqual([nodeA.id, nodeB.id, nodeC.id]);
+		expect(result[0]?.edges).toHaveLength(2);
 	});
 
-	it("finds shortest path", async () => {
+	it("finds shortest path first", async () => {
 		const writer = createSqliteWriter(db);
 		const nodeA = fn("fnA");
 		const nodeB = fn("fnB");
@@ -106,14 +106,15 @@ describe(queryPath.name, () => {
 
 		const result = queryPath(db, nodeA.id, nodeC.id);
 
-		expect(result).not.toBeNull();
-		expect(result?.nodes).toEqual([nodeA.id, nodeC.id]);
-		expect(result?.edges).toHaveLength(1);
-		expect(result?.edges[0]?.source).toBe(nodeA.id);
-		expect(result?.edges[0]?.target).toBe(nodeC.id);
+		expect(result.length).toBeGreaterThanOrEqual(1);
+		// First path should be shortest (direct)
+		expect(result[0]?.nodes).toEqual([nodeA.id, nodeC.id]);
+		expect(result[0]?.edges).toHaveLength(1);
+		expect(result[0]?.edges[0]?.source).toBe(nodeA.id);
+		expect(result[0]?.edges[0]?.target).toBe(nodeC.id);
 	});
 
-	it("returns null for non-existent source", async () => {
+	it("returns empty array for non-existent source", async () => {
 		const writer = createSqliteWriter(db);
 		const nodeB = fn("fnB");
 
@@ -121,10 +122,10 @@ describe(queryPath.name, () => {
 
 		const result = queryPath(db, "nonexistent:node", nodeB.id);
 
-		expect(result).toBeNull();
+		expect(result).toEqual([]);
 	});
 
-	it("returns null for non-existent target", async () => {
+	it("returns empty array for non-existent target", async () => {
 		const writer = createSqliteWriter(db);
 		const nodeA = fn("fnA");
 
@@ -132,7 +133,7 @@ describe(queryPath.name, () => {
 
 		const result = queryPath(db, nodeA.id, "nonexistent:node");
 
-		expect(result).toBeNull();
+		expect(result).toEqual([]);
 	});
 
 	it("includes edges in path result", async () => {
@@ -152,16 +153,81 @@ describe(queryPath.name, () => {
 
 		const result = queryPath(db, nodeA.id, nodeD.id);
 
-		expect(result).not.toBeNull();
-		expect(result?.nodes).toEqual([nodeA.id, nodeB.id, nodeC.id, nodeD.id]);
-		expect(result?.edges).toHaveLength(3);
+		expect(result).toHaveLength(1);
+		expect(result[0]?.nodes).toEqual([nodeA.id, nodeB.id, nodeC.id, nodeD.id]);
+		expect(result[0]?.edges).toHaveLength(3);
 
 		// Verify edges connect consecutive nodes
-		expect(result?.edges[0]?.source).toBe(nodeA.id);
-		expect(result?.edges[0]?.target).toBe(nodeB.id);
-		expect(result?.edges[1]?.source).toBe(nodeB.id);
-		expect(result?.edges[1]?.target).toBe(nodeC.id);
-		expect(result?.edges[2]?.source).toBe(nodeC.id);
-		expect(result?.edges[2]?.target).toBe(nodeD.id);
+		expect(result[0]?.edges[0]?.source).toBe(nodeA.id);
+		expect(result[0]?.edges[0]?.target).toBe(nodeB.id);
+		expect(result[0]?.edges[1]?.source).toBe(nodeB.id);
+		expect(result[0]?.edges[1]?.target).toBe(nodeC.id);
+		expect(result[0]?.edges[2]?.source).toBe(nodeC.id);
+		expect(result[0]?.edges[2]?.target).toBe(nodeD.id);
+	});
+
+	describe("multiple paths", () => {
+		it("returns multiple paths when maxPaths > 1", async () => {
+			const writer = createSqliteWriter(db);
+			const nodeA = fn("fnA");
+			const nodeB = fn("fnB");
+			const nodeC = fn("fnC");
+			const nodeD = fn("fnD");
+
+			// Two paths from A to D:
+			// Path 1: A → D (direct, length 1)
+			// Path 2: A → B → D (length 2)
+			// Path 3: A → C → D (length 2)
+			await writer.addNodes([nodeA, nodeB, nodeC, nodeD]);
+			await writer.addEdges([
+				calls(nodeA.id, nodeD.id), // Direct path
+				calls(nodeA.id, nodeB.id),
+				calls(nodeB.id, nodeD.id), // Via B
+				calls(nodeA.id, nodeC.id),
+				calls(nodeC.id, nodeD.id), // Via C
+			]);
+
+			const result = queryPath(db, nodeA.id, nodeD.id, { maxPaths: 3 });
+
+			expect(result).toHaveLength(3);
+			// Shortest path first
+			expect(result[0]?.nodes).toEqual([nodeA.id, nodeD.id]);
+			// Then longer paths (order of B vs C may vary)
+			expect(result[1]?.nodes).toHaveLength(3);
+			expect(result[2]?.nodes).toHaveLength(3);
+		});
+
+		it("respects maxDepth parameter", async () => {
+			const writer = createSqliteWriter(db);
+			const nodeA = fn("fnA");
+			const nodeB = fn("fnB");
+			const nodeC = fn("fnC");
+			const nodeD = fn("fnD");
+
+			// A → B → C → D (length 3)
+			await writer.addNodes([nodeA, nodeB, nodeC, nodeD]);
+			await writer.addEdges([
+				calls(nodeA.id, nodeB.id),
+				calls(nodeB.id, nodeC.id),
+				calls(nodeC.id, nodeD.id),
+			]);
+
+			// maxDepth=2 should not find path of length 3
+			const result = queryPath(db, nodeA.id, nodeD.id, { maxDepth: 2 });
+
+			expect(result).toHaveLength(0);
+		});
+
+		it("returns empty array when no path exists", async () => {
+			const writer = createSqliteWriter(db);
+			const nodeA = fn("fnA");
+			const nodeB = fn("fnB");
+
+			await writer.addNodes([nodeA, nodeB]);
+
+			const result = queryPath(db, nodeA.id, nodeB.id, { maxPaths: 3 });
+
+			expect(result).toEqual([]);
+		});
 	});
 });
