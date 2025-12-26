@@ -1,9 +1,15 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.3.8/schema.json",
-	"files": { "includes": ["src/**/*.ts", "test/**/*.ts"] },
-	"linter": {
-		"rules": {
-			"recommended": true
-		}
-	}
+  "$schema": "https://biomejs.dev/schemas/2.3.8/schema.json",
+  "files": {
+    "includes": ["benchmark/**/*.ts", "sample-projects/**/*.ts", "src/**/*.ts"]
+  },
+  "formatter": {
+    "indentStyle": "space",
+    "indentWidth": 2
+  },
+  "linter": {
+    "rules": {
+      "recommended": true
+    }
+  }
 }

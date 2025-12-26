@@ -7,7 +7,7 @@ Shared utilities for running benchmarks across ts-graph-mcp test projects.
 ```bash
 # From project root
 npm run benchmark:setup    # Pre-index test project (run once)
-npm run benchmark          # Default: 1 run, 3 concurrent
+npm run benchmark          # Default: 1 run, 6 concurrent
 npm run benchmark:full     # 3 runs per prompt/scenario
 npm run benchmark:quick    # Skip setup, just run (if already indexed)
 
@@ -84,8 +84,8 @@ benchmark/
 
 sample-projects/
 └── <project>/
-    ├── .mcp-enabled.json      # MCP server configuration (for WITH MCP scenario)
-    ├── .mcp-disabled.json     # Empty config (for WITHOUT MCP scenario)
+    ├── .mcp.json              # MCP server configuration (for WITH MCP scenario)
+    ├── .no-mcp.json           # Empty config (for WITHOUT MCP scenario)
     ├── tsconfig.json
     ├── src/                   # Source files to index
     └── benchmark/

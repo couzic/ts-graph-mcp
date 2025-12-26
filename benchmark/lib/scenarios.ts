@@ -14,8 +14,8 @@ import type { BenchmarkScenario } from "./types.js";
  *
  * How it works:
  * - Each sample project has two MCP config files:
- *   - `.mcp-enabled.json` - Configures ts-graph-mcp server
- *   - `.mcp-disabled.json` - Empty config (no MCP servers)
+ *   - `.mcp.json` - Configures ts-graph-mcp server
+ *   - `.no-mcp.json` - Empty config (no MCP servers)
  * - `--strict-mcp-config` ensures ONLY the specified config is loaded
  *   (ignores global and project-level .mcp.json files)
  * - `--allowedTools` whitelists the MCP tools for execution
@@ -31,7 +31,7 @@ export const scenarios: BenchmarkScenario[] = [
 		name: "WITH MCP",
 		cliFlags: [
 			"--mcp-config",
-			".mcp-enabled.json",
+			".mcp.json",
 			"--strict-mcp-config",
 			"--allowedTools",
 			"mcp__ts-graph-mcp__*",
@@ -41,7 +41,7 @@ export const scenarios: BenchmarkScenario[] = [
 	{
 		id: "without-mcp",
 		name: "WITHOUT MCP",
-		cliFlags: ["--mcp-config", ".mcp-disabled.json", "--strict-mcp-config"],
+		cliFlags: ["--mcp-config", ".no-mcp.json", "--strict-mcp-config"],
 		description: "No MCP servers - clean baseline",
 	},
 ];

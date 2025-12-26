@@ -150,19 +150,41 @@ import { queryEdges } from "../../src/db/queryEdges.js";  // NO!
 - `db.prepare()`, `db.exec()` — Raw SQL
 - Testing node/edge extraction — Already covered in `src/`
 
-### Example: Correct E2E Test
+### Golden Master Testing
+
+E2E tests use **golden master assertions** — exact `.toBe()` matching against the complete tool output:
 
 ```typescript
-describe("dependentsOf E2E", () => {
-  it("finds callers of step05", () => {
-    const result = dependentsOf(db, projectRoot, "src/lib/step05.ts", "step05");
+it("finds all callees of entry", () => {
+  const output = dependenciesOf(db, projectRoot, "src/entry.ts", "entry");
 
-    // Assert tool output format
-    expect(result).toContain("## Graph");
-    expect(result).toContain("step04 --CALLS--> step05");
-  });
+  // Golden master: exact output match
+  expect(output).toBe(`## Graph
+
+entry --CALLS--> step02 --CALLS--> step03
+
+## Nodes
+
+step02:
+  file: src/handlers/step02.ts
+  offset: 3, limit: 3
+  snippet:
+    3: export function step02(): string {
+    4: \treturn step03() + "-02";
+    5: }
+`);
 });
 ```
+
+**Why golden master?**
+- Catches unintended output changes (formatting, ordering, content)
+- Documents exact expected behavior
+- No partial matches that might miss regressions
+
+**Updating golden masters:**
+1. Run test to see actual output
+2. Verify output is correct
+3. Copy exact output into test assertion
 
 ## Adding Test Projects
 
@@ -182,9 +204,19 @@ beforeAll(async () => {
 
 describe("dependenciesOf E2E", () => {
   it("finds forward dependencies", () => {
-    const result = dependenciesOf(db, projectRoot, "src/entry.ts", "entry");
-    expect(result).toContain("## Graph");
-    expect(result).toContain("--CALLS-->");
+    const output = dependenciesOf(db, projectRoot, "src/entry.ts", "entry");
+
+    // Golden master assertion - exact match
+    expect(output).toBe(`## Graph
+
+entry --CALLS--> step02
+
+## Nodes
+
+step02:
+  file: src/step02.ts
+  ...
+`);
   });
 });
 ```
@@ -227,7 +259,7 @@ describe("dependenciesOf E2E", () => {
 ```bash
 # From project root
 npm run benchmark:setup    # Pre-index deep-chain (run once)
-npm run benchmark          # Default: 1 run, 3 concurrent
+npm run benchmark          # Default: 1 run, 6 concurrent
 npm run benchmark:full     # 3 runs per prompt/scenario
 
 # Adjust runs and concurrency
@@ -263,8 +295,8 @@ benchmark/
 **Each test project only needs ONE file:**
 ```
 sample-project/
-├── .mcp-enabled.json      # MCP server config (for WITH MCP scenario)
-├── .mcp-disabled.json     # Empty config (for WITHOUT MCP scenario)
+├── .mcp.json              # MCP server config (for WITH MCP scenario)
+├── .no-mcp.json           # Empty config (for WITHOUT MCP scenario)
 ├── .ts-graph/graph.db     # Pre-indexed database (created by setup)
 ├── tsconfig.json
 ├── src/
@@ -292,7 +324,7 @@ sample-project/
 
 1. **Create MCP config files** in the test project root:
 
-   `.mcp-enabled.json` (for WITH MCP scenario):
+   `.mcp.json` (for WITH MCP scenario):
    ```json
    {
      "mcpServers": {
@@ -304,7 +336,7 @@ sample-project/
    }
    ```
 
-   `.mcp-disabled.json` (for WITHOUT MCP scenario):
+   `.no-mcp.json` (for WITHOUT MCP scenario):
    ```json
    {
      "mcpServers": {}
@@ -355,3 +387,7 @@ sample-project/
 **monorepo example:**
 - WITHOUT MCP: Claude must navigate 6 packages across 3 modules to trace dependencies
 - WITH MCP: `dependentsOf` instantly finds all callers, `dependenciesOf` shows all dependencies
+
+## Tool Output Design
+
+The MCP tool output is designed **for Claude Code consumption**. When considering format changes, ask Claude what works best — it's both the developer and the user of this tool.

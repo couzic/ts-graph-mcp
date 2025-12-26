@@ -144,6 +144,11 @@ export async function appendRuns(
 			continue;
 		}
 
+		// Don't save invalid WITHOUT_MCP runs — they shouldn't count toward skip threshold
+		if (run.scenarioId === "without-mcp" && !run.answerValid) {
+			continue;
+		}
+
 		const promptText = promptDef.prompt;
 
 		// Create prompt history if it doesn't exist

@@ -50,8 +50,12 @@ export function generateComparison(
 ): HistoricalComparison[] {
 	const comparisons: HistoricalComparison[] = [];
 
-	// Get timestamps of all runs from current execution to exclude from historical data
-	const currentTimestamps = new Set(currentRuns.map((r) => r.timestamp));
+	// Get timestamps of current WITH_MCP runs (to exclude from trend comparison)
+	const currentWithMcpTimestamps = new Set(
+		currentRuns
+			.filter((r) => r.scenarioId === "with-mcp")
+			.map((r) => r.timestamp),
+	);
 
 	for (const prompt of prompts) {
 		const promptText = prompt.prompt;
@@ -64,15 +68,15 @@ export function generateComparison(
 		// If no current runs, try to build comparison from history only
 		const currentStats = calculateStats(currentWithMcp);
 
-		// Get historical runs, excluding any from current execution
+		// Get all runs from history
 		const allWithoutMcp = getHistoricalRuns(history, promptText, "without-mcp");
 		const allWithMcp = getHistoricalRuns(history, promptText, "with-mcp");
 
-		// Filter to only truly historical runs (from past sessions)
-		const pastWithoutMcp = allWithoutMcp.filter((r) => !currentTimestamps.has(r.timestamp));
-		const pastWithMcp = allWithMcp.filter((r) => !currentTimestamps.has(r.timestamp));
+		// WITHOUT_MCP baseline: include ALL runs (current + past) since they're all valid baseline data
+		// WITH_MCP trend: exclude current runs to compare against past performance
+		const pastWithMcp = allWithMcp.filter((r) => !currentWithMcpTimestamps.has(r.timestamp));
 
-		const historicalWithoutMcpStats = calculateStats(pastWithoutMcp);
+		const historicalWithoutMcpStats = calculateStats(allWithoutMcp);
 		const historicalWithMcpStats = calculateStats(pastWithMcp);
 
 		// Only include if we have something to compare
