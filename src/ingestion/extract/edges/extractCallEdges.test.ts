@@ -132,4 +132,31 @@ export const processEvent = (timestamp: Date): string => {
 			callSites: [5],
 		});
 	});
+
+	it("extracts indirect call through local variable alias", () => {
+		const project = createProject();
+
+		const sourceFile = project.createSourceFile(
+			"test.ts",
+			`
+export const target = (): string => "result";
+
+export const caller = (): string => {
+  const fn = target;
+  return fn();
+};
+        `,
+		);
+
+		const edges = extractCallEdges(sourceFile, defaultContext);
+
+		expect(edges).toHaveLength(1);
+		expect(edges[0]).toEqual({
+			source: generateNodeId("test.ts", "caller"),
+			target: generateNodeId("test.ts", "target"),
+			type: "CALLS",
+			callCount: 1,
+			callSites: [6],
+		});
+	});
 });

@@ -148,6 +148,43 @@ const addLocalSymbols = (
 };
 
 /**
+ * Build a map of local variable aliases within a callable body.
+ * Maps variable names to their original symbol names when assigned from known symbols.
+ * E.g., `const fn = target` creates alias: fn -> target
+ */
+const buildLocalAliasMap = (
+	callable: FunctionDeclaration | ArrowFunction | MethodDeclaration,
+	symbolMap: SymbolMap,
+): Map<string, string> => {
+	const aliasMap = new Map<string, string>();
+
+	const body = callable.getBody();
+	if (!body) return aliasMap;
+
+	// Find all variable declarations in the body
+	const variableDeclarations = body.getDescendantsOfKind(
+		SyntaxKind.VariableDeclaration,
+	);
+
+	for (const varDecl of variableDeclarations) {
+		const varName = varDecl.getName();
+		const initializer = varDecl.getInitializer();
+
+		if (!initializer) continue;
+
+		// Check if initializer is an identifier that's in our symbol map
+		if (TsMorphNode.isIdentifier(initializer)) {
+			const initializerName = initializer.getText();
+			if (symbolMap.has(initializerName)) {
+				aliasMap.set(varName, initializerName);
+			}
+		}
+	}
+
+	return aliasMap;
+};
+
+/**
  * Extract call expressions from a callable (function, arrow function, or method).
  */
 const extractCallsFromCallable = (
@@ -173,6 +210,9 @@ const extractCallsFromCallable = (
 
 	if (nodesToSearch.length === 0) return;
 
+	// Build alias map for local variables that reference known symbols
+	const aliasMap = buildLocalAliasMap(callable, symbolMap);
+
 	// Collect call site line numbers for each target
 	const callSitesByTarget = new Map<string, number[]>();
 
@@ -192,8 +232,13 @@ const extractCallsFromCallable = (
 			const expression = callExpr.getExpression();
 			const calleeName = expression.getText().split(".")[0]; // Handle foo.bar() -> foo
 
-			if (calleeName && symbolMap.has(calleeName)) {
-				const targetId = symbolMap.get(calleeName);
+			if (!calleeName) continue;
+
+			// Resolve alias if this is a local variable pointing to a known symbol
+			const resolvedName = aliasMap.get(calleeName) ?? calleeName;
+
+			if (symbolMap.has(resolvedName)) {
+				const targetId = symbolMap.get(resolvedName);
 				if (targetId) {
 					const lineNumber = callExpr.getStartLineNumber();
 					const sites = callSitesByTarget.get(targetId) ?? [];
