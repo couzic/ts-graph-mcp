@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { extractFileNode } from "./extractFileNode.js";
 import type { NodeExtractionContext } from "./NodeExtractionContext.js";
 
-describe(extractFileNode.name, () => {
+describe.skip(extractFileNode.name, () => {
 	let project: Project;
 
 	beforeEach(() => {

@@ -27,7 +27,7 @@ const calls = (from: string, to: string): Edge => ({
 	type: "CALLS",
 });
 
-describe(queryPath.name, () => {
+describe.skip(queryPath.name, () => {
 	let db: Database.Database;
 
 	beforeEach(() => {

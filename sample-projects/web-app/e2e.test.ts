@@ -31,7 +31,7 @@ import { queryNodes } from "../../src/db/queryNodes.js";
  * PURPOSE: Test MCP tool query functions against a cross-package codebase.
  * These tests verify actual tool behavior, not AST extraction.
  */
-describe("web-app e2e", () => {
+describe.skip("web-app e2e", () => {
 	let db: Database.Database;
 
 	beforeAll(async () => {

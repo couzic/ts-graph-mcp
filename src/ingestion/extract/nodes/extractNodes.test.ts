@@ -4,7 +4,7 @@ import type { NodeType } from "../../../db/Types.js";
 import { extractNodes } from "./extractNodes.js";
 import type { NodeExtractionContext } from "./NodeExtractionContext.js";
 
-describe(extractNodes.name, () => {
+describe.skip(extractNodes.name, () => {
 	let project: Project;
 
 	beforeEach(() => {

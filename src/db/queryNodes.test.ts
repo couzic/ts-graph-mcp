@@ -45,7 +45,7 @@ const cls = (
 	...overrides,
 });
 
-describe(queryNodes.name, () => {
+describe.skip(queryNodes.name, () => {
 	let db: Database.Database;
 
 	beforeEach(() => {

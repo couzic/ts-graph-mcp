@@ -8,7 +8,7 @@ The graph captures:
 - **Nodes**: Code symbols (functions, classes, methods, interfaces, types, variables, files, properties)
 - **Edges**: Relationships between symbols (calls, imports, type usage, inheritance, etc.)
 
-The MCP server exposes tools for AI agents to traverse call graphs, find paths between symbols, and analyze package dependencies.
+The MCP server exposes tools for AI agents to traverse call graphs, find dependencies, and trace paths between symbols.
 
 ## High-Level Architecture
 
@@ -19,10 +19,9 @@ The MCP server exposes tools for AI agents to traverse call graphs, find paths b
 ├─────────────────────────────────────────────────────────────────┤
 │                     Vertical Slice Tools                        │
 │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐            │
-│  │incomingCalls │ │outgoingCalls │ │  findPaths   │    ...     │
+│  │dependenciesOf│ │ dependentsOf │ │ pathsBetween │            │
 │  │  handler.ts  │ │  handler.ts  │ │  handler.ts  │            │
-│  │  query.ts    │ │  query.ts    │ │  query.ts    │            │
-│  │  format.ts   │ │  format.ts   │ │  format.ts   │            │
+│  │  <tool>.ts   │ │  <tool>.ts   │ │  <tool>.ts   │            │
 │  └──────┬───────┘ └──────┬───────┘ └──────┬───────┘            │
 │         │ direct SQL     │                │                     │
 └─────────┼────────────────┼────────────────┼─────────────────────┘
@@ -76,14 +75,13 @@ The schema omits FK constraints intentionally:
 
 ## MCP Tools
 
-| Category | Tool | Purpose |
-|----------|------|---------|
-| **Call Graph** | `incomingCallsDeep` | Find callers (transitive) |
-| | `outgoingCallsDeep` | Find callees (transitive) |
-| **Package Deps** | `incomingPackageDeps` | Find reverse package deps |
-| | `outgoingPackageDeps` | Find package dependencies |
-| **Analysis** | `analyzeImpact` | Impact analysis |
-| | `findPaths` | Find paths between symbols |
+All tools follow the Read tool pattern: `file_path` first (required), then `symbol`. The tool decides internal limits (depth, result count) for optimal performance.
+
+| Constraint | Tool | Query |
+|------------|------|-------|
+| Start only | `dependenciesOf(file_path, symbol)` | "What does this depend on?" |
+| End only | `dependentsOf(file_path, symbol)` | "Who depends on this?" |
+| Both | `pathsBetween(from, to)` | "How does A reach B?" |
 
 See [`src/tools/CLAUDE.md`](src/tools/CLAUDE.md) for parameter details.
 

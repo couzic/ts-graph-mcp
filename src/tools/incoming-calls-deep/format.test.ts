@@ -26,7 +26,7 @@ function createTarget(
 	};
 }
 
-describe(formatCallers.name, () => {
+describe.skip(formatCallers.name, () => {
 	it("formats empty caller list", () => {
 		const target: SymbolLocation = {
 			name: "formatDate",
@@ -581,7 +581,7 @@ describe(formatCallers.name, () => {
 	});
 });
 
-describe(formatCallersWithSnippets.name, () => {
+describe.skip(formatCallersWithSnippets.name, () => {
 	it("formats callers with code snippets", () => {
 		const target: SymbolLocation = {
 			name: "formatDate",

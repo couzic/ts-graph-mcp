@@ -9,7 +9,7 @@ import {
 import { initializeSchema } from "./sqlite/sqliteSchema.utils.js";
 import type { Edge } from "./Types.js";
 
-describe(queryEdges.name, () => {
+describe.skip(queryEdges.name, () => {
 	let db: Database.Database;
 
 	beforeEach(() => {

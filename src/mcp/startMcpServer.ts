@@ -6,35 +6,20 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import type Database from "better-sqlite3";
 import {
-	type AnalyzeImpactParams,
-	analyzeImpactDefinition,
-	executeAnalyzeImpact,
-} from "../tools/analyze-impact/handler.js";
+	type DependenciesOfParams,
+	dependenciesOfDefinition,
+	executeDependenciesOf,
+} from "../tools/dependencies-of/handler.js";
 import {
-	executeFindPaths,
-	type FindPathsParams,
-	findPathsDefinition,
-} from "../tools/find-paths/handler.js";
+	type DependentsOfParams,
+	dependentsOfDefinition,
+	executeDependentsOf,
+} from "../tools/dependents-of/handler.js";
 import {
-	executeIncomingCallsDeep,
-	type IncomingCallsDeepParams,
-	incomingCallsDeepDefinition,
-} from "../tools/incoming-calls-deep/handler.js";
-import {
-	executeIncomingPackageDeps,
-	type IncomingPackageDepsParams,
-	incomingPackageDepsDefinition,
-} from "../tools/incoming-package-deps/handler.js";
-import {
-	executeOutgoingCallsDeep,
-	type OutgoingCallsDeepParams,
-	outgoingCallsDeepDefinition,
-} from "../tools/outgoing-calls-deep/handler.js";
-import {
-	executeOutgoingPackageDeps,
-	type OutgoingPackageDepsParams,
-	outgoingPackageDepsDefinition,
-} from "../tools/outgoing-package-deps/handler.js";
+	executePathsBetween,
+	type PathsBetweenParams,
+	pathsBetweenDefinition,
+} from "../tools/paths-between/handler.js";
 
 /**
  * Start the MCP server that exposes TypeScript code graph queries as tools.
@@ -62,12 +47,9 @@ export async function startMcpServer(
 	server.setRequestHandler(ListToolsRequestSchema, async () => {
 		return {
 			tools: [
-				incomingCallsDeepDefinition,
-				outgoingCallsDeepDefinition,
-				incomingPackageDepsDefinition,
-				outgoingPackageDepsDefinition,
-				analyzeImpactDefinition,
-				findPathsDefinition,
+				dependenciesOfDefinition,
+				dependentsOfDefinition,
+				pathsBetweenDefinition,
 			],
 		};
 	});
@@ -78,49 +60,25 @@ export async function startMcpServer(
 
 		try {
 			switch (name) {
-				case "incomingCallsDeep": {
-					const params = args as unknown as IncomingCallsDeepParams;
-					const result = executeIncomingCallsDeep(db, params, projectRoot);
+				case "dependenciesOf": {
+					const params = args as unknown as DependenciesOfParams;
+					const result = executeDependenciesOf(db, params, projectRoot);
 					return {
 						content: [{ type: "text" as const, text: result }],
 					};
 				}
 
-				case "outgoingCallsDeep": {
-					const params = args as unknown as OutgoingCallsDeepParams;
-					const result = executeOutgoingCallsDeep(db, params, projectRoot);
+				case "dependentsOf": {
+					const params = args as unknown as DependentsOfParams;
+					const result = executeDependentsOf(db, params, projectRoot);
 					return {
 						content: [{ type: "text" as const, text: result }],
 					};
 				}
 
-				case "analyzeImpact": {
-					const params = args as unknown as AnalyzeImpactParams;
-					const result = executeAnalyzeImpact(db, params, projectRoot);
-					return {
-						content: [{ type: "text" as const, text: result }],
-					};
-				}
-
-				case "findPaths": {
-					const params = args as unknown as FindPathsParams;
-					const result = executeFindPaths(db, params);
-					return {
-						content: [{ type: "text" as const, text: result }],
-					};
-				}
-
-				case "incomingPackageDeps": {
-					const params = args as unknown as IncomingPackageDepsParams;
-					const result = executeIncomingPackageDeps(db, params);
-					return {
-						content: [{ type: "text" as const, text: result }],
-					};
-				}
-
-				case "outgoingPackageDeps": {
-					const params = args as unknown as OutgoingPackageDepsParams;
-					const result = executeOutgoingPackageDeps(db, params);
+				case "pathsBetween": {
+					const params = args as unknown as PathsBetweenParams;
+					const result = executePathsBetween(db, params, projectRoot);
 					return {
 						content: [{ type: "text" as const, text: result }],
 					};

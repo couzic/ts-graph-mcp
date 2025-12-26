@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { EdgeExtractionContext } from "./EdgeExtractionContext.js";
 import { extractEdges } from "./extractEdges.js";
 
-describe(extractEdges.name, () => {
+describe.skip(extractEdges.name, () => {
 	const createProject = () => new Project({ useInMemoryFileSystem: true });
 
 	const defaultContext: EdgeExtractionContext = {

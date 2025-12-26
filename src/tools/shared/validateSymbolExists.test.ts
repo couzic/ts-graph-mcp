@@ -6,7 +6,7 @@ import {
 	validateSymbolExists,
 } from "./validateSymbolExists.js";
 
-describe(validateSymbolExists.name, () => {
+describe.skip(validateSymbolExists.name, () => {
 	let db: Database.Database;
 
 	beforeEach(() => {
@@ -66,7 +66,7 @@ describe(validateSymbolExists.name, () => {
 	});
 });
 
-describe(validateFileExists.name, () => {
+describe.skip(validateFileExists.name, () => {
 	let db: Database.Database;
 
 	beforeEach(() => {

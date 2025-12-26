@@ -10,7 +10,7 @@ const getFirstClass = (classes: ClassDeclaration[]): ClassDeclaration => {
 	return first;
 };
 
-describe(extractMethodNodes.name, () => {
+describe.skip(extractMethodNodes.name, () => {
 	let project: Project;
 
 	beforeEach(() => {

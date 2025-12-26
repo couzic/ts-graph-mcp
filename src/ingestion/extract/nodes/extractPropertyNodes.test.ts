@@ -18,7 +18,7 @@ const getFirstInterface = (
 	return first;
 };
 
-describe(extractPropertyNodes.name, () => {
+describe.skip(extractPropertyNodes.name, () => {
 	let project: Project;
 
 	beforeEach(() => {

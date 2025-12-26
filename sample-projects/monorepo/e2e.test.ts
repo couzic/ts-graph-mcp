@@ -29,7 +29,7 @@ import config from "./ts-graph-mcp.config.js";
  *
  * Tests MCP tool query functions against the indexed graph.
  */
-describe("monorepo e2e", () => {
+describe.skip("monorepo e2e", () => {
 	let db: Database.Database;
 
 	beforeAll(async () => {

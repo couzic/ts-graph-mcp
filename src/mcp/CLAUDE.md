@@ -2,9 +2,7 @@
 
 ## Purpose
 
-Exposes the TypeScript code graph as an MCP (Model Context Protocol) server that provides 6 tools for AI coding agents to query and explore code structure. This is the primary interface for the ts-graph-mcp project.
-
-**For tool documentation, see [`../tools/CLAUDE.md`](../tools/CLAUDE.md).**
+Exposes the TypeScript code graph as an MCP (Model Context Protocol) server that provides 3 tools for AI coding agents to query and explore code structure. This is the primary interface for the ts-graph-mcp project.
 
 ## Architecture: Vertical Slices
 
@@ -12,105 +10,64 @@ Each tool is implemented as a self-contained vertical slice in `src/tools/<tool-
 
 ```
 src/tools/
-├── incoming-calls-deep/
-├── outgoing-calls-deep/
-├── incoming-package-deps/
-├── outgoing-package-deps/
-├── analyze-impact/
-├── find-paths/
-└── shared/                 (SymbolQuery.ts, resolveSymbol.ts, nodeFormatters.ts)
+├── dependencies-of/       # What does this depend on?
+├── dependents-of/         # Who depends on this?
+├── paths-between/         # How does A reach B?
+└── shared/                # formatGraph.ts, formatNodes.ts, extractSnippet.ts
 ```
 
 **Each slice contains:**
-- `handler.ts` - Tool definition and execution entry point
-- `query.ts` - Direct SQL queries (no shared abstraction)
-- `format.ts` - Hierarchical text output formatting
-- `format.test.ts` - Unit tests for formatting
+- `handler.ts` - MCP tool definition and execution entry point
+- `<tool>.ts` - Core function (e.g., `dependenciesOf.ts`)
 
 **Shared utilities:**
-- `SymbolQuery.ts` - Type definitions for symbol queries with optional filters
-- `resolveSymbol.ts` - Resolves symbol names to node IDs using file/module/package filters
+- `formatGraph.ts` - Chain-compacted graph rendering
+- `formatNodes.ts` - Nodes section with code snippets
+- `extractSnippet.ts` - Code snippet extraction
 
 ## Key Exports
 
-### `startMcpServer(db: Database.Database): Promise<void>`
+### `startMcpServer(db: Database.Database, projectRoot: string): Promise<void>`
 **File:** `startMcpServer.ts`
 
-Initializes and starts the MCP server on stdio transport with 6 registered tools. Dispatches tool calls to vertical slice handlers. See [`../tools/CLAUDE.md`](../tools/CLAUDE.md) for tool details.
+Initializes and starts the MCP server on stdio transport with 3 registered tools.
 
 ### `main(): Promise<void>`
 **File:** `main.ts`
 
-CLI entry point that orchestrates database initialization and server startup. Handles:
-- Command-line argument parsing (`--db` flag for database path)
-- Auto-indexing if database doesn't exist (looks for config file)
-- Database connection management
-- Error handling and logging to stderr
+CLI entry point that orchestrates database initialization and server startup.
 
-## Critical Information
+## MCP Tools
 
-### Server Architecture
-- **Transport:** Stdio only (designed for MCP protocol)
-- **Response format:** Hierarchical text output (~60-70% token reduction vs JSON)
-- **Error handling:** All tool errors caught and returned as MCP error responses
-- **Database access:** Direct SQL via better-sqlite3 (no shared DbReader abstraction)
-
-### Database Initialization
-- Default database path: `.ts-graph/graph.db`
-- If database doesn't exist on startup, attempts to auto-index using config file
-- Falls back to empty database if no config found
-- Uses `:memory:` for in-memory database (pass `--db :memory:`)
-
-### Tool Response Format
-
-All tools return hierarchical text optimized for LLM consumption:
+All tools follow the same output format:
 
 ```
-# incomingCallsDeep example
-target: saveUser (Function)
-file: src/db/user.ts
-offset: 15, limit: 8
-count: 2
+## Graph
 
-src/api/handler.ts (1 callers):
-functions[1]:
-  handleRequest async (req:Request) → Promise<Response>
-    offset: 9, limit: 17
-    callCount: 1, depth: 1
+entry --CALLS--> step02 --CALLS--> step03
+
+## Nodes
+
+step02:
+  file: src/step02.ts
+  offset: 3, limit: 3
+  snippet:
+    3: export function step02(): string {
+    4:   return step03() + "-02";
+    5: }
 ```
 
-### Dependencies
-- Uses `better-sqlite3` for direct database queries
-- Uses `@modelcontextprotocol/sdk` for MCP server implementation
-- Graph traversals implemented via recursive CTEs in each tool's `query.ts`
+### `dependenciesOf(file_path, symbol)`
+Find all code that a symbol depends on (forward dependencies).
 
-## Integration Points
+### `dependentsOf(file_path, symbol)`
+Find all code that depends on a symbol (reverse dependencies).
 
-### Starting the server
-```typescript
-import { openDatabase } from "../db/sqlite/SqliteConnection.js";
-import { startMcpServer } from "./McpServer.js";
-
-const db = openDatabase({ path: "./graph.db" });
-await startMcpServer(db);
-```
-
-### CLI usage
-```bash
-# Use default database path (.ts-graph/graph.db)
-ts-graph-mcp
-
-# Use custom database path
-ts-graph-mcp --db /path/to/graph.db
-
-# Use in-memory database
-ts-graph-mcp --db :memory:
-```
+### `pathsBetween(from, to)`
+Find how two symbols connect. Bidirectional: finds path regardless of query direction.
 
 ## Important Notes
 
 - **Logging:** All logs go to stderr to avoid interfering with stdio transport
-- **Symbol queries:** All tools accept symbol names with optional filters (file, module, package) instead of raw node IDs. The `resolveSymbol()` utility handles ambiguity resolution and provides clear error messages when symbols don't exist or match multiple nodes.
-- **Auto-indexing:** Only happens on first run when database doesn't exist
-- **No file watching:** Server doesn't auto-refresh on code changes (use external tooling or restart server)
-- **Tool execution:** All tools are read-only - no mutations to the code graph via MCP interface
+- **No file watching:** Server doesn't auto-refresh on code changes
+- **Tool execution:** All tools are read-only

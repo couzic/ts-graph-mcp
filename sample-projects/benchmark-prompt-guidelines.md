@@ -2,6 +2,10 @@
 
 Guidelines for writing realistic benchmark prompts that reflect how developers actually ask questions.
 
+> **CRITICAL**: Benchmark prompts must ABSOLUTELY reflect what a human developer would realistically prompt. Look at `monorepo/benchmark/prompts.ts` and `layered-api/benchmark/prompts.ts` for realistic examples.
+
+> **CRITICAL**: All prompts must imply read-only actions. The MCP tools are for *understanding* code, not modifying it. Prompts should ask "what would be affected?" or "where does this come from?" — not "refactor this" or "fix this bug".
+
 ## Why Realism Matters
 
 Unrealistic prompts test **tool functionality**, not **real-world effectiveness**. If prompts don't match how developers actually ask questions, benchmark scores won't predict whether the MCP tools genuinely help users.

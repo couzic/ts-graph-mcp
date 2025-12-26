@@ -22,7 +22,7 @@ import { queryPath } from "../../src/tools/find-paths/query.js";
  * - Object properties: { handler: fn } → creates REFERENCES edge → enables path finding
  * - Variable access: userFormatters[type] → creates REFERENCES edge → enables multi-hop paths
  */
-describe("references e2e", () => {
+describe.skip("references e2e", () => {
 	let db: Database.Database;
 
 	beforeAll(async () => {

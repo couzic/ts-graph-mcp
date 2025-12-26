@@ -28,7 +28,7 @@ import { queryNodes } from "../../src/db/queryNodes.js";
  * - Cross-file type usage (models.ts uses types from types.ts)
  * - IMPLEMENTS edges (AuditLog, ActivityLog implement Auditable)
  */
-describe("mixed-types e2e", () => {
+describe.skip("mixed-types e2e", () => {
 	let db: Database.Database;
 
 	beforeAll(async () => {

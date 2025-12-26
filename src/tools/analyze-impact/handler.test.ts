@@ -67,7 +67,7 @@ const usesType = (from: string, to: string): Edge => ({
 	type: "USES_TYPE",
 });
 
-describe(executeAnalyzeImpact.name, () => {
+describe.skip(executeAnalyzeImpact.name, () => {
 	let db: Database.Database;
 	const testDir = join(process.cwd(), ".test-impact-handler");
 

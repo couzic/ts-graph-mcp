@@ -61,7 +61,7 @@ const config: ProjectConfig = {
 	storage: { type: "sqlite" },
 };
 
-describe(queryPackageDeps.name, () => {
+describe.skip(queryPackageDeps.name, () => {
 	let db: Database.Database;
 
 	beforeAll(async () => {

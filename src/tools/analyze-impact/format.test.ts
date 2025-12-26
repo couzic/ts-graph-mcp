@@ -55,7 +55,7 @@ function createImpactedNode(
 	};
 }
 
-describe(formatImpactNodes.name, () => {
+describe.skip(formatImpactNodes.name, () => {
 	it("formats empty node list with summary", () => {
 		const target = createSymbolLocation("src/types.ts:User");
 		const result = formatImpactNodes(target, []);

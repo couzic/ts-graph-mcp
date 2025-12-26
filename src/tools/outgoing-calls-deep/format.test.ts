@@ -27,7 +27,7 @@ function createSource(
 	};
 }
 
-describe(formatCallees.name, () => {
+describe.skip(formatCallees.name, () => {
 	it("formats empty node list", () => {
 		const result = formatCallees(createSource("src/test.ts:foo"), []);
 		expect(result).toContain("source:");

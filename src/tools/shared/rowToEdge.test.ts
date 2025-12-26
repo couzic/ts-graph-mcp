@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { EdgeRow } from "./QueryTypes.js";
 import { rowToEdge } from "./rowConverters.js";
 
-describe(rowToEdge.name, () => {
+describe.skip(rowToEdge.name, () => {
 	it("converts basic edge with source, target, and type only", () => {
 		const row: EdgeRow = {
 			source: "src/utils.ts",

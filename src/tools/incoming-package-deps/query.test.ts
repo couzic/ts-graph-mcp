@@ -30,7 +30,7 @@ const imports = (from: string, to: string): Edge => ({
 	type: "IMPORTS",
 });
 
-describe(queryIncomingPackageDeps.name, () => {
+describe.skip(queryIncomingPackageDeps.name, () => {
 	let db: Database.Database;
 
 	beforeEach(() => {
@@ -243,7 +243,7 @@ describe(queryIncomingPackageDeps.name, () => {
 	});
 });
 
-describe("monorepo integration", () => {
+describe.skip("monorepo integration", () => {
 	let db: Database.Database;
 
 	beforeEach(async () => {

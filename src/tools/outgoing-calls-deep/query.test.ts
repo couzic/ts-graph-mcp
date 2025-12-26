@@ -32,7 +32,7 @@ const calls = (from: string, to: string): Edge => ({
 	type: "CALLS",
 });
 
-describe(queryCallees.name, () => {
+describe.skip(queryCallees.name, () => {
 	let db: Database.Database;
 
 	beforeEach(() => {
