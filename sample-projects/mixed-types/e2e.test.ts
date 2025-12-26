@@ -60,7 +60,7 @@ describe.skip("mixed-types e2e", () => {
       const user = findNode("User", "Interface");
       expect(user).toBeDefined();
 
-      const impacted = queryImpactedNodes(db, user!.id, { maxDepth: 5 });
+      const impacted = queryImpactedNodes(db, user?.id, { maxDepth: 5 });
 
       const impactedNames = impacted.map((n) => n.name);
       // User is used by UserService.addUser (parameter) and UserService.users (property)
@@ -72,7 +72,7 @@ describe.skip("mixed-types e2e", () => {
       const entity = findNode("Entity", "Interface");
       expect(entity).toBeDefined();
 
-      const impacted = queryImpactedNodes(db, entity!.id, { maxDepth: 5 });
+      const impacted = queryImpactedNodes(db, entity?.id, { maxDepth: 5 });
 
       const impactedNames = impacted.map((n) => n.name);
       // Entity is extended by Auditable, which is implemented by AuditLog and ActivityLog
@@ -83,7 +83,7 @@ describe.skip("mixed-types e2e", () => {
       const auditable = findNode("Auditable", "Interface");
       expect(auditable).toBeDefined();
 
-      const impacted = queryImpactedNodes(db, auditable!.id, { maxDepth: 5 });
+      const impacted = queryImpactedNodes(db, auditable?.id, { maxDepth: 5 });
 
       const impactedNames = impacted.map((n) => n.name);
       // AuditLog and ActivityLog implement Auditable
@@ -96,12 +96,12 @@ describe.skip("mixed-types e2e", () => {
       expect(entity).toBeDefined();
 
       // With maxDepth=1, should only find direct dependents (Auditable extends Entity)
-      const shallowImpact = queryImpactedNodes(db, entity!.id, { maxDepth: 1 });
+      const shallowImpact = queryImpactedNodes(db, entity?.id, { maxDepth: 1 });
       const shallowNames = shallowImpact.map((n) => n.name);
       expect(shallowNames).toContain("Auditable");
 
       // With maxDepth=2, should also find AuditLog/ActivityLog (implement Auditable)
-      const deeperImpact = queryImpactedNodes(db, entity!.id, { maxDepth: 2 });
+      const deeperImpact = queryImpactedNodes(db, entity?.id, { maxDepth: 2 });
       const deeperNames = deeperImpact.map((n) => n.name);
       expect(deeperNames).toContain("AuditLog");
       expect(deeperNames).toContain("ActivityLog");
@@ -113,7 +113,7 @@ describe.skip("mixed-types e2e", () => {
       const getId = findNode("getId", "Method");
       expect(getId).toBeDefined();
 
-      const callers = queryCallers(db, getId!.id, { maxDepth: 5 });
+      const callers = queryCallers(db, getId?.id, { maxDepth: 5 });
 
       // getId is defined but never called in the test project
       expect(callers).toHaveLength(0);
@@ -123,7 +123,7 @@ describe.skip("mixed-types e2e", () => {
       const getAdminLevel = findNode("getAdminLevel", "Method");
       expect(getAdminLevel).toBeDefined();
 
-      const callers = queryCallers(db, getAdminLevel!.id, { maxDepth: 5 });
+      const callers = queryCallers(db, getAdminLevel?.id, { maxDepth: 5 });
 
       // getAdminLevel is defined but never called in the test project
       expect(callers).toHaveLength(0);
@@ -135,7 +135,7 @@ describe.skip("mixed-types e2e", () => {
       const addUser = findNode("addUser", "Method");
       expect(addUser).toBeDefined();
 
-      const callees = queryCallees(db, addUser!.id, 5);
+      const callees = queryCallees(db, addUser?.id, 5);
 
       // addUser only calls this.users.push which is not tracked as a function node
       expect(callees).toHaveLength(0);
@@ -145,7 +145,7 @@ describe.skip("mixed-types e2e", () => {
       const greet = findNode("greet", "Function");
       expect(greet).toBeDefined();
 
-      const callees = queryCallees(db, greet!.id, 5);
+      const callees = queryCallees(db, greet?.id, 5);
 
       // greet function only returns a template literal, no function calls
       expect(callees).toHaveLength(0);
@@ -155,7 +155,7 @@ describe.skip("mixed-types e2e", () => {
       const logMessage = findNode("logMessage", "Function");
       expect(logMessage).toBeDefined();
 
-      const callees = queryCallees(db, logMessage!.id, 5);
+      const callees = queryCallees(db, logMessage?.id, 5);
 
       // console.log is a built-in, not tracked in the graph
       expect(callees).toHaveLength(0);
@@ -169,7 +169,7 @@ describe.skip("mixed-types e2e", () => {
       expect(entity).toBeDefined();
       expect(auditLog).toBeDefined();
 
-      const paths = queryPath(db, entity!.id, auditLog!.id);
+      const paths = queryPath(db, entity?.id, auditLog?.id);
 
       // EXTENDS/IMPLEMENTS edges go child->parent, so Entity->AuditLog has no path
       // (Auditable extends Entity, AuditLog implements Auditable)
@@ -184,7 +184,7 @@ describe.skip("mixed-types e2e", () => {
 
       // Note: EXTENDS edges go child->parent, so AdminService->UserService->BaseService
       // Querying in reverse direction (BaseService->AdminService) should return empty
-      const paths = queryPath(db, baseService!.id, adminService!.id);
+      const paths = queryPath(db, baseService?.id, adminService?.id);
       expect(paths).toEqual([]);
     });
 
@@ -194,14 +194,14 @@ describe.skip("mixed-types e2e", () => {
       expect(adminService).toBeDefined();
       expect(baseService).toBeDefined();
 
-      const paths = queryPath(db, adminService!.id, baseService!.id);
+      const paths = queryPath(db, adminService?.id, baseService?.id);
 
       expect(paths.length).toBeGreaterThan(0);
-      expect(paths[0]?.nodes).toContain(adminService!.id);
-      expect(paths[0]?.nodes).toContain(baseService!.id);
+      expect(paths[0]?.nodes).toContain(adminService?.id);
+      expect(paths[0]?.nodes).toContain(baseService?.id);
       // Path should go through UserService
       const userService = findNode("UserService", "Class");
-      expect(paths[0]?.nodes).toContain(userService!.id);
+      expect(paths[0]?.nodes).toContain(userService?.id);
     });
 
     it("finds path from AuditLog to Auditable (IMPLEMENTS edge)", () => {
@@ -210,12 +210,12 @@ describe.skip("mixed-types e2e", () => {
       expect(auditLog).toBeDefined();
       expect(auditable).toBeDefined();
 
-      const paths = queryPath(db, auditLog!.id, auditable!.id);
+      const paths = queryPath(db, auditLog?.id, auditable?.id);
 
       expect(paths.length).toBeGreaterThan(0);
       expect(paths[0]?.nodes).toHaveLength(2);
-      expect(paths[0]?.nodes[0]).toBe(auditLog!.id);
-      expect(paths[0]?.nodes[1]).toBe(auditable!.id);
+      expect(paths[0]?.nodes[0]).toBe(auditLog?.id);
+      expect(paths[0]?.nodes[1]).toBe(auditable?.id);
       expect(paths[0]?.edges).toHaveLength(1);
       expect(paths[0]?.edges[0]?.type).toBe("IMPLEMENTS");
     });
@@ -226,7 +226,7 @@ describe.skip("mixed-types e2e", () => {
       expect(greet).toBeDefined();
       expect(user).toBeDefined();
 
-      const paths = queryPath(db, greet!.id, user!.id);
+      const paths = queryPath(db, greet?.id, user?.id);
 
       expect(paths).toEqual([]);
     });
@@ -238,7 +238,7 @@ describe.skip("mixed-types e2e", () => {
       expect(user).toBeDefined();
       expect(user?.filePath).toBe("src/types.ts");
 
-      const impacted = queryImpactedNodes(db, user!.id, { maxDepth: 5 });
+      const impacted = queryImpactedNodes(db, user?.id, { maxDepth: 5 });
 
       // Should find cross-file dependents in models.ts
       const modelsFileNodes = impacted.filter(
@@ -257,7 +257,7 @@ describe.skip("mixed-types e2e", () => {
       const baseService = findNode("BaseService", "Class");
       expect(baseService).toBeDefined();
 
-      const impacted = queryImpactedNodes(db, baseService!.id, { maxDepth: 5 });
+      const impacted = queryImpactedNodes(db, baseService?.id, { maxDepth: 5 });
 
       const impactedNames = impacted.map((n) => n.name);
       // BaseService <- UserService <- AdminService
@@ -269,7 +269,7 @@ describe.skip("mixed-types e2e", () => {
       const baseService = findNode("BaseService", "Class");
       expect(baseService).toBeDefined();
 
-      const impacted = queryImpactedNodes(db, baseService!.id, { maxDepth: 1 });
+      const impacted = queryImpactedNodes(db, baseService?.id, { maxDepth: 1 });
 
       const impactedNames = impacted.map((n) => n.name);
       // Only direct dependent at depth 1

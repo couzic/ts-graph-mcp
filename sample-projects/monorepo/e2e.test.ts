@@ -184,7 +184,7 @@ describe.skip("monorepo e2e", () => {
       });
       expect(userNode).toBeDefined();
 
-      const impacted = queryImpactedNodes(db, userNode!.id, { maxDepth: 5 });
+      const impacted = queryImpactedNodes(db, userNode?.id, { maxDepth: 5 });
 
       const modules = [...new Set(impacted.map((n) => n.module))];
 
@@ -201,7 +201,7 @@ describe.skip("monorepo e2e", () => {
       });
       expect(validateEmailNode).toBeDefined();
 
-      const impacted = queryImpactedNodes(db, validateEmailNode!.id, {
+      const impacted = queryImpactedNodes(db, validateEmailNode?.id, {
         maxDepth: 5,
       });
 
@@ -222,7 +222,7 @@ describe.skip("monorepo e2e", () => {
       });
       expect(formatDateNode).toBeDefined();
 
-      const impacted = queryImpactedNodes(db, formatDateNode!.id, {
+      const impacted = queryImpactedNodes(db, formatDateNode?.id, {
         maxDepth: 5,
       });
 
@@ -241,7 +241,7 @@ describe.skip("monorepo e2e", () => {
       });
       expect(createUserServiceNode).toBeDefined();
 
-      const impacted = queryImpactedNodes(db, createUserServiceNode!.id, {
+      const impacted = queryImpactedNodes(db, createUserServiceNode?.id, {
         maxDepth: 5,
       });
 
@@ -271,20 +271,20 @@ describe.skip("monorepo e2e", () => {
       expect(handleCreateUser).toBeDefined();
       expect(validateEmail).toBeDefined();
 
-      const paths = queryPath(db, handleCreateUser!.id, validateEmail!.id);
+      const paths = queryPath(db, handleCreateUser?.id, validateEmail?.id);
 
       expect(paths.length).toBeGreaterThan(0);
       // Path: handleCreateUser -> createUserService -> validateEmail (3 nodes, 2 edges)
-      expect(paths[0]!.nodes).toHaveLength(3);
-      expect(paths[0]!.edges).toHaveLength(2);
+      expect(paths[0]?.nodes).toHaveLength(3);
+      expect(paths[0]?.edges).toHaveLength(2);
 
       expect(
-        paths[0]!.nodes.some((id) => id.includes("handleCreateUser")),
+        paths[0]?.nodes.some((id) => id.includes("handleCreateUser")),
       ).toBe(true);
       expect(
-        paths[0]!.nodes.some((id) => id.includes("createUserService")),
+        paths[0]?.nodes.some((id) => id.includes("createUserService")),
       ).toBe(true);
-      expect(paths[0]!.nodes.some((id) => id.includes("validateEmail"))).toBe(
+      expect(paths[0]?.nodes.some((id) => id.includes("validateEmail"))).toBe(
         true,
       );
     });
@@ -304,12 +304,12 @@ describe.skip("monorepo e2e", () => {
       expect(renderUserCard).toBeDefined();
       expect(formatDate).toBeDefined();
 
-      const paths = queryPath(db, renderUserCard!.id, formatDate!.id);
+      const paths = queryPath(db, renderUserCard?.id, formatDate?.id);
 
       expect(paths.length).toBeGreaterThan(0);
       // Direct call: renderUserCard -> formatDate (2 nodes, 1 edge)
-      expect(paths[0]!.nodes).toHaveLength(2);
-      expect(paths[0]!.edges).toHaveLength(1);
+      expect(paths[0]?.nodes).toHaveLength(2);
+      expect(paths[0]?.edges).toHaveLength(1);
     });
 
     it("returns empty array for path in wrong direction", () => {
@@ -328,7 +328,7 @@ describe.skip("monorepo e2e", () => {
       expect(handleCreateUser).toBeDefined();
 
       // No path from leaf function back to API handler
-      const paths = queryPath(db, validateEmail!.id, handleCreateUser!.id);
+      const paths = queryPath(db, validateEmail?.id, handleCreateUser?.id);
       expect(paths).toEqual([]);
     });
 
@@ -347,14 +347,14 @@ describe.skip("monorepo e2e", () => {
       expect(handleGetUserSummary).toBeDefined();
       expect(formatDate).toBeDefined();
 
-      const paths = queryPath(db, handleGetUserSummary!.id, formatDate!.id);
+      const paths = queryPath(db, handleGetUserSummary?.id, formatDate?.id);
 
       expect(paths.length).toBeGreaterThan(0);
       // Path: handleGetUserSummary -> getUserSummary -> formatDate (3 nodes, 2 edges)
-      expect(paths[0]!.nodes).toHaveLength(3);
-      expect(paths[0]!.edges).toHaveLength(2);
+      expect(paths[0]?.nodes).toHaveLength(3);
+      expect(paths[0]?.edges).toHaveLength(2);
 
-      expect(paths[0]!.nodes.some((id) => id.includes("getUserSummary"))).toBe(
+      expect(paths[0]?.nodes.some((id) => id.includes("getUserSummary"))).toBe(
         true,
       );
     });
@@ -369,7 +369,7 @@ describe.skip("monorepo e2e", () => {
       });
       expect(validateEmail).toBeDefined();
 
-      const callers = queryCallers(db, validateEmail!.id, { maxDepth: 5 });
+      const callers = queryCallers(db, validateEmail?.id, { maxDepth: 5 });
 
       const callerNames = callers.map((n) => n.name);
 
@@ -390,7 +390,7 @@ describe.skip("monorepo e2e", () => {
       });
       expect(createUserService).toBeDefined();
 
-      const callers = queryCallers(db, createUserService!.id, { maxDepth: 3 });
+      const callers = queryCallers(db, createUserService?.id, { maxDepth: 3 });
 
       const callerNames = callers.map((n) => n.name);
 
@@ -407,10 +407,10 @@ describe.skip("monorepo e2e", () => {
       });
       expect(validateEmail).toBeDefined();
 
-      const directCallers = queryCallers(db, validateEmail!.id, {
+      const directCallers = queryCallers(db, validateEmail?.id, {
         maxDepth: 1,
       });
-      const allCallers = queryCallers(db, validateEmail!.id, { maxDepth: 5 });
+      const allCallers = queryCallers(db, validateEmail?.id, { maxDepth: 5 });
 
       // Should have fewer callers with depth limit
       expect(directCallers.length).toBeLessThan(allCallers.length);
@@ -435,7 +435,7 @@ describe.skip("monorepo e2e", () => {
       });
       expect(handleCreateUser).toBeDefined();
 
-      const callees = queryCallees(db, handleCreateUser!.id, 5);
+      const callees = queryCallees(db, handleCreateUser?.id, 5);
 
       const calleeNames = callees.map((n) => n.name);
 
@@ -456,7 +456,7 @@ describe.skip("monorepo e2e", () => {
       });
       expect(createUserService).toBeDefined();
 
-      const callees = queryCallees(db, createUserService!.id, 3);
+      const callees = queryCallees(db, createUserService?.id, 3);
 
       const calleeNames = callees.map((n) => n.name);
 
@@ -474,8 +474,8 @@ describe.skip("monorepo e2e", () => {
       });
       expect(handleCreateUser).toBeDefined();
 
-      const directCallees = queryCallees(db, handleCreateUser!.id, 1);
-      const allCallees = queryCallees(db, handleCreateUser!.id, 5);
+      const directCallees = queryCallees(db, handleCreateUser?.id, 1);
+      const allCallees = queryCallees(db, handleCreateUser?.id, 5);
 
       // Should have fewer callees with depth limit
       expect(directCallees.length).toBeLessThan(allCallees.length);

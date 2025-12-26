@@ -50,10 +50,6 @@ describe.skip("web-app e2e", () => {
 
   afterAll(() => closeDatabase(db));
 
-  function findNode(name: string, type?: string) {
-    return queryNodes(db, name, type ? { type } : undefined)[0];
-  }
-
   function findNodeByPackage(name: string, pkg: string) {
     return queryNodes(db, name, { package: pkg })[0];
   }
@@ -137,7 +133,7 @@ describe.skip("web-app e2e", () => {
       const userNode = findNodeByPackage("User", "shared");
       expect(userNode).toBeDefined();
 
-      const impacted = queryImpactedNodes(db, userNode!.id, { maxDepth: 5 });
+      const impacted = queryImpactedNodes(db, userNode?.id, { maxDepth: 5 });
 
       const frontendImpacted = impacted.filter((n) => n.package === "frontend");
       // formatUserName directly uses User type in its parameter
@@ -148,7 +144,7 @@ describe.skip("web-app e2e", () => {
       const userNode = findNodeByPackage("User", "shared");
       expect(userNode).toBeDefined();
 
-      const impacted = queryImpactedNodes(db, userNode!.id, { maxDepth: 5 });
+      const impacted = queryImpactedNodes(db, userNode?.id, { maxDepth: 5 });
 
       const impactedNames = impacted.map((n) => n.name);
       // Backend functions that use User type
@@ -160,7 +156,7 @@ describe.skip("web-app e2e", () => {
       const userNode = findNodeByPackage("User", "shared");
       expect(userNode).toBeDefined();
 
-      const impacted = queryImpactedNodes(db, userNode!.id, { maxDepth: 5 });
+      const impacted = queryImpactedNodes(db, userNode?.id, { maxDepth: 5 });
       const packages = [...new Set(impacted.map((n) => n.package))];
 
       // Key assertion: Impact crosses package boundaries
@@ -172,7 +168,7 @@ describe.skip("web-app e2e", () => {
       const createUserNode = findNodeByPackage("createUser", "shared");
       expect(createUserNode).toBeDefined();
 
-      const impacted = queryImpactedNodes(db, createUserNode!.id, {
+      const impacted = queryImpactedNodes(db, createUserNode?.id, {
         maxDepth: 5,
       });
 
@@ -186,7 +182,7 @@ describe.skip("web-app e2e", () => {
       const configNode = findNodeByPackage("Config", "shared");
       expect(configNode).toBeDefined();
 
-      const impacted = queryImpactedNodes(db, configNode!.id, { maxDepth: 5 });
+      const impacted = queryImpactedNodes(db, configNode?.id, { maxDepth: 5 });
 
       const impactedNames = impacted.map((n) => n.name);
       expect(impactedNames).toContain("getConfig");
@@ -201,12 +197,12 @@ describe.skip("web-app e2e", () => {
       expect(getUser).toBeDefined();
       expect(createUser).toBeDefined();
 
-      const paths = queryPath(db, getUser!.id, createUser!.id);
+      const paths = queryPath(db, getUser?.id, createUser?.id);
 
       expect(paths.length).toBeGreaterThan(0);
-      expect(paths[0]!.nodes.length).toBe(2); // getUser -> createUser
-      expect(paths[0]!.nodes[0]).toBe(getUser!.id);
-      expect(paths[0]!.nodes[1]).toBe(createUser!.id);
+      expect(paths[0]?.nodes.length).toBe(2); // getUser -> createUser
+      expect(paths[0]?.nodes[0]).toBe(getUser?.id);
+      expect(paths[0]?.nodes[1]).toBe(createUser?.id);
     });
 
     it("finds path from listUsers to createUser (backend -> shared)", () => {
@@ -216,10 +212,10 @@ describe.skip("web-app e2e", () => {
       expect(listUsers).toBeDefined();
       expect(createUser).toBeDefined();
 
-      const paths = queryPath(db, listUsers!.id, createUser!.id);
+      const paths = queryPath(db, listUsers?.id, createUser?.id);
 
       expect(paths.length).toBeGreaterThan(0);
-      expect(paths[0]!.nodes.length).toBe(2); // listUsers -> createUser
+      expect(paths[0]?.nodes.length).toBe(2); // listUsers -> createUser
     });
 
     it("returns empty array when no path exists", () => {
@@ -230,7 +226,7 @@ describe.skip("web-app e2e", () => {
       expect(formatUserName).toBeDefined();
       expect(getUser).toBeDefined();
 
-      const paths = queryPath(db, formatUserName!.id, getUser!.id);
+      const paths = queryPath(db, formatUserName?.id, getUser?.id);
 
       expect(paths).toEqual([]);
     });
@@ -241,7 +237,7 @@ describe.skip("web-app e2e", () => {
       const createUser = findNodeByPackage("createUser", "shared");
       expect(createUser).toBeDefined();
 
-      const callers = queryCallers(db, createUser!.id, { maxDepth: 5 });
+      const callers = queryCallers(db, createUser?.id, { maxDepth: 5 });
 
       const callerNames = callers.map((n) => n.name);
       expect(callerNames).toContain("getUser");
@@ -252,7 +248,7 @@ describe.skip("web-app e2e", () => {
       const createUser = findNodeByPackage("createUser", "shared");
       expect(createUser).toBeDefined();
 
-      const callers = queryCallers(db, createUser!.id, { maxDepth: 5 });
+      const callers = queryCallers(db, createUser?.id, { maxDepth: 5 });
 
       // All callers should be from backend (frontend doesn't call createUser)
       expect(callers.every((n) => n.package === "backend")).toBe(true);
@@ -262,7 +258,7 @@ describe.skip("web-app e2e", () => {
       const createUser = findNodeByPackage("createUser", "shared");
       expect(createUser).toBeDefined();
 
-      const callers = queryCallers(db, createUser!.id, { maxDepth: 5 });
+      const callers = queryCallers(db, createUser?.id, { maxDepth: 5 });
 
       // No callers from shared (it's the source package)
       expect(callers.some((n) => n.package === "shared")).toBe(false);
@@ -274,7 +270,7 @@ describe.skip("web-app e2e", () => {
       const getUser = findNodeByPackage("getUser", "backend");
       expect(getUser).toBeDefined();
 
-      const callees = queryCallees(db, getUser!.id);
+      const callees = queryCallees(db, getUser?.id);
 
       const calleeNames = callees.map((n) => n.name);
       expect(calleeNames).toContain("createUser");
@@ -284,7 +280,7 @@ describe.skip("web-app e2e", () => {
       const listUsers = findNodeByPackage("listUsers", "backend");
       expect(listUsers).toBeDefined();
 
-      const callees = queryCallees(db, listUsers!.id);
+      const callees = queryCallees(db, listUsers?.id);
 
       const calleeNames = callees.map((n) => n.name);
       expect(calleeNames).toContain("createUser");
@@ -294,7 +290,7 @@ describe.skip("web-app e2e", () => {
       const getConfig = findNodeByPackage("getConfig", "backend");
       expect(getConfig).toBeDefined();
 
-      const callees = queryCallees(db, getConfig!.id);
+      const callees = queryCallees(db, getConfig?.id);
 
       // getConfig just returns defaultConfig, no function calls
       expect(callees.length).toBe(0);
@@ -304,7 +300,7 @@ describe.skip("web-app e2e", () => {
       const getUser = findNodeByPackage("getUser", "backend");
       expect(getUser).toBeDefined();
 
-      const callees = queryCallees(db, getUser!.id);
+      const callees = queryCallees(db, getUser?.id);
 
       // getUser's callees should be from shared (createUser)
       expect(callees.some((n) => n.package === "shared")).toBe(true);

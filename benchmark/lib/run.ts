@@ -22,11 +22,7 @@ import {
   printHistoricalComparison,
 } from "./historicalComparison.js";
 import { appendRuns, loadHistory } from "./history.js";
-import {
-  formatReportMarkdown,
-  generateReport,
-  printComparison,
-} from "./report.js";
+import { formatReportMarkdown, generateReport } from "./report.js";
 import { shouldRunScenario } from "./runDecision.js";
 import { checkDatabase, runBenchmarkIteration, saveResults } from "./runner.js";
 import { scenarios } from "./scenarios.js";
@@ -200,12 +196,9 @@ export async function runBenchmarks(
     count: number;
   }> = [];
 
-  let allIndex = 0;
   for (const prompt of selectedPrompts) {
     for (const scenario of selectedScenarios) {
       for (let i = 1; i <= options.runs; i++) {
-        allIndex++;
-
         // Check if we should skip this task based on history
         if (!options.forceAll) {
           const decision = shouldRunScenario(
@@ -335,7 +328,7 @@ export async function runBenchmarks(
   // Check for turn limit violations (expectedTurns quality gate)
   const violations = runs.filter((r) => r.turnLimitExceeded);
   if (violations.length > 0) {
-    console.error("\n" + "=".repeat(60));
+    console.error(`\n${"=".repeat(60)}`);
     console.error("❌ EXPECTED TURNS EXCEEDED");
     console.error("=".repeat(60));
     for (const v of violations) {
@@ -367,7 +360,7 @@ export async function runBenchmarks(
   console.log(`  MD:   ${mdPath}`);
 
   // Print summary to console
-  console.log("\n" + "=".repeat(60));
+  console.log(`\n${"=".repeat(60)}`);
   console.log("SUMMARY");
   console.log("=".repeat(60));
 

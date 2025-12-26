@@ -1,4 +1,4 @@
-import type { Auditable, Entity, User } from "./types.js";
+import type { Auditable, User } from "./types.js";
 
 // Base class for testing EXTENDS edges
 export class BaseService {

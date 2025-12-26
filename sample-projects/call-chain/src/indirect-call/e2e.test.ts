@@ -67,7 +67,7 @@ step03:
   snippet:
     4: export function step03(): string {
     5:   const nextStep = step04;
-    6:   return nextStep() + "-03";
+    6:   return \`\${nextStep()}-03\`;
     7: }
 
 step02:
@@ -76,7 +76,7 @@ step02:
   snippet:
     4: export function step02(): string {
     5:   const nextStep = step03;
-    6:   return nextStep() + "-02";
+    6:   return \`\${nextStep()}-02\`;
     7: }
 
 step05:
@@ -93,7 +93,7 @@ step04:
   snippet:
     4: export function step04(): string {
     5:   const nextStep = step05;
-    6:   return nextStep() + "-04";
+    6:   return \`\${nextStep()}-04\`;
     7: }
 `);
     });
@@ -131,7 +131,7 @@ step03:
   snippet:
     4: export function step03(): string {
     5:   const nextStep = step04;
-    6:   return nextStep() + "-03";
+    6:   return \`\${nextStep()}-03\`;
     7: }
 
 entry:
@@ -140,7 +140,7 @@ entry:
   snippet:
     4: export function entry(): string {
     5:   const nextStep = step02;
-    6:   return nextStep() + "-01";
+    6:   return \`\${nextStep()}-01\`;
     7: }
 
 step02:
@@ -149,7 +149,7 @@ step02:
   snippet:
     4: export function step02(): string {
     5:   const nextStep = step03;
-    6:   return nextStep() + "-02";
+    6:   return \`\${nextStep()}-02\`;
     7: }
 
 step04:
@@ -158,7 +158,7 @@ step04:
   snippet:
     4: export function step04(): string {
     5:   const nextStep = step05;
-    6:   return nextStep() + "-04";
+    6:   return \`\${nextStep()}-04\`;
     7: }
 `);
     });
@@ -196,7 +196,7 @@ step03:
   snippet:
     4: export function step03(): string {
     5:   const nextStep = step04;
-    6:   return nextStep() + "-03";
+    6:   return \`\${nextStep()}-03\`;
     7: }
 
 step02:
@@ -205,7 +205,7 @@ step02:
   snippet:
     4: export function step02(): string {
     5:   const nextStep = step03;
-    6:   return nextStep() + "-02";
+    6:   return \`\${nextStep()}-02\`;
     7: }
 
 step04:
@@ -214,7 +214,7 @@ step04:
   snippet:
     4: export function step04(): string {
     5:   const nextStep = step05;
-    6:   return nextStep() + "-04";
+    6:   return \`\${nextStep()}-04\`;
     7: }
 `);
     });
@@ -239,7 +239,7 @@ step04:
   snippet:
     4: export function step04(): string {
     5:   const nextStep = step05;
-    6:   return nextStep() + "-04";
+    6:   return \`\${nextStep()}-04\`;
     7: }
 `);
     });

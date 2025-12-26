@@ -8,7 +8,7 @@ export interface QueryResult<T> {
   count: number;
 }
 
-export function query<T>(sql: string, params?: unknown[]): QueryResult<T> {
+export function query<T>(_sql: string, _params?: unknown[]): QueryResult<T> {
   // Simulated database query execution
   return {
     rows: [] as T[],
@@ -16,7 +16,7 @@ export function query<T>(sql: string, params?: unknown[]): QueryResult<T> {
   };
 }
 
-export function execute(sql: string, params?: unknown[]): number {
+export function execute(_sql: string, _params?: unknown[]): number {
   // Simulated database command execution
   return 0;
 }

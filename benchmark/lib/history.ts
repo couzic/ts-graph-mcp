@@ -10,7 +10,6 @@ import type {
   BenchmarkHistory,
   BenchmarkPrompt,
   BenchmarkRun,
-  PromptHistory,
 } from "./types.js";
 
 const HISTORY_FILENAME = "history.json";
@@ -116,16 +115,6 @@ export function getHistoricalRuns(
   }
 
   return [];
-}
-
-/**
- * Find a prompt by its text in the prompts array.
- */
-function findPromptByText(
-  prompts: BenchmarkPrompt[],
-  promptText: string,
-): BenchmarkPrompt | undefined {
-  return prompts.find((p) => p.prompt === promptText);
 }
 
 /**

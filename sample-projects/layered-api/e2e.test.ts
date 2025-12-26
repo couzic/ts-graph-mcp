@@ -66,13 +66,6 @@ describe.skip("layered-api integration (layered architecture)", () => {
     return queryNodes(db, name, { type: "Function" })[0];
   }
 
-  // Helper to find functions in a specific layer
-  function findFunctionsInLayer(layer: string) {
-    return queryNodes(db, "*", { type: "Function" }).filter((n) =>
-      n.filePath.includes(`${layer}/`),
-    );
-  }
-
   describe(queryPath.name, () => {
     it("finds path from handleGetUser to query through all layers", () => {
       const handleGetUser = findFunction("handleGetUser");
@@ -81,11 +74,11 @@ describe.skip("layered-api integration (layered architecture)", () => {
       expect(handleGetUser).toBeDefined();
       expect(queryFn).toBeDefined();
 
-      const paths = queryPath(db, handleGetUser!.id, queryFn!.id);
+      const paths = queryPath(db, handleGetUser?.id, queryFn?.id);
 
       expect(paths.length).toBeGreaterThan(0);
       // Path: handleGetUser → getUserById → findUserById → query (4 nodes)
-      expect(paths[0]!.nodes.length).toBeGreaterThanOrEqual(4);
+      expect(paths[0]?.nodes.length).toBeGreaterThanOrEqual(4);
     });
 
     it("finds path from handleCreateOrder to query", () => {
@@ -95,10 +88,10 @@ describe.skip("layered-api integration (layered architecture)", () => {
       expect(handleCreateOrder).toBeDefined();
       expect(queryFn).toBeDefined();
 
-      const paths = queryPath(db, handleCreateOrder!.id, queryFn!.id);
+      const paths = queryPath(db, handleCreateOrder?.id, queryFn?.id);
 
       expect(paths.length).toBeGreaterThan(0);
-      expect(paths[0]!.nodes.length).toBeGreaterThanOrEqual(4);
+      expect(paths[0]?.nodes.length).toBeGreaterThanOrEqual(4);
     });
 
     it("returns empty array for reverse path (query to controller)", () => {
@@ -109,7 +102,7 @@ describe.skip("layered-api integration (layered architecture)", () => {
       expect(queryFn).toBeDefined();
 
       // No path should exist from leaf back to controller
-      const paths = queryPath(db, queryFn!.id, handleGetUser!.id);
+      const paths = queryPath(db, queryFn?.id, handleGetUser?.id);
       expect(paths).toEqual([]);
     });
   });
@@ -119,7 +112,7 @@ describe.skip("layered-api integration (layered architecture)", () => {
       const handleGetUser = findFunction("handleGetUser");
       expect(handleGetUser).toBeDefined();
 
-      const result = queryCallees(db, handleGetUser!.id, 10);
+      const result = queryCallees(db, handleGetUser?.id, 10);
 
       // Should find functions from all downstream layers
       const names = result.map((n) => n.name);
@@ -132,7 +125,7 @@ describe.skip("layered-api integration (layered architecture)", () => {
       const handleGetUser = findFunction("handleGetUser");
       expect(handleGetUser).toBeDefined();
 
-      const result = queryCallees(db, handleGetUser!.id, 1);
+      const result = queryCallees(db, handleGetUser?.id, 1);
 
       // At depth 1, should only see service layer function
       const names = result.map((n) => n.name);
@@ -145,7 +138,7 @@ describe.skip("layered-api integration (layered architecture)", () => {
       const getUserById = findFunction("getUserById");
       expect(getUserById).toBeDefined();
 
-      const result = queryCallees(db, getUserById!.id, 10);
+      const result = queryCallees(db, getUserById?.id, 10);
 
       const names = result.map((n) => n.name);
       expect(names).toContain("findUserById");
@@ -156,7 +149,7 @@ describe.skip("layered-api integration (layered architecture)", () => {
       const placeOrder = findFunction("placeOrder");
       expect(placeOrder).toBeDefined();
 
-      const result = queryCallees(db, placeOrder!.id, 10);
+      const result = queryCallees(db, placeOrder?.id, 10);
 
       const names = result.map((n) => n.name);
       // placeOrder calls both createOrder (OrderRepo) and getUserById (UserService)
@@ -168,7 +161,7 @@ describe.skip("layered-api integration (layered architecture)", () => {
       const queryFn = findFunction("query");
       expect(queryFn).toBeDefined();
 
-      const result = queryCallees(db, queryFn!.id, 10);
+      const result = queryCallees(db, queryFn?.id, 10);
       expect(result).toHaveLength(0);
     });
   });
@@ -178,7 +171,7 @@ describe.skip("layered-api integration (layered architecture)", () => {
       const queryFn = findFunction("query");
       expect(queryFn).toBeDefined();
 
-      const result = queryCallers(db, queryFn!.id, { maxDepth: 1 });
+      const result = queryCallers(db, queryFn?.id, { maxDepth: 1 });
 
       // Both findUserById and findOrderById (and others) should call query
       const callerPaths = result.map((n) => n.filePath);
@@ -189,7 +182,7 @@ describe.skip("layered-api integration (layered architecture)", () => {
       const queryFn = findFunction("query");
       expect(queryFn).toBeDefined();
 
-      const result = queryCallers(db, queryFn!.id, { maxDepth: 10 });
+      const result = queryCallers(db, queryFn?.id, { maxDepth: 10 });
 
       // Should find callers from all upstream layers
       const filePaths = result.map((n) => n.filePath);
@@ -202,7 +195,7 @@ describe.skip("layered-api integration (layered architecture)", () => {
       const getUserById = findFunction("getUserById");
       expect(getUserById).toBeDefined();
 
-      const result = queryCallers(db, getUserById!.id, { maxDepth: 1 });
+      const result = queryCallers(db, getUserById?.id, { maxDepth: 1 });
 
       const callerPaths = result.map((n) => n.filePath);
       expect(callerPaths.some((p) => p.includes("controllers/"))).toBe(true);

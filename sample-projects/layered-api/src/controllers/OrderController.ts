@@ -9,7 +9,6 @@ import {
   getOrderById,
   getOrdersByUserId,
   listOrders,
-  type Order,
   placeOrder,
   removeOrder,
 } from "../services/OrderService";

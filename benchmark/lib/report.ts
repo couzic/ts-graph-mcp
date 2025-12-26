@@ -198,7 +198,7 @@ export function printComparison(
   report: BenchmarkReport,
   prompts: BenchmarkPrompt[],
 ): void {
-  console.log("\n" + "-".repeat(60));
+  console.log(`\n${"-".repeat(60)}`);
   console.log("MCP COMPARISON");
   console.log("-".repeat(60));
 

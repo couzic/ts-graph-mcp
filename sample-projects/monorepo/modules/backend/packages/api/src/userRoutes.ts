@@ -43,7 +43,7 @@ export function handleCreateUser(req: Request): Response {
  * Handle GET /users/:id/summary - get user summary.
  * Tests cross-package CALLS edge: → getUserSummary
  */
-export function handleGetUserSummary(req: Request, user: User): Response {
+export function handleGetUserSummary(_req: Request, user: User): Response {
   const summary = getUserSummary(user);
   return { status: 200, body: { summary } };
 }

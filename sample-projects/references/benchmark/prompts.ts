@@ -24,7 +24,7 @@ import type {
 
 export const config: BenchmarkConfig = {
   projectName: "references",
-  projectRoot: import.meta.dirname + "/..",
+  projectRoot: `${import.meta.dirname}/..`,
   tsconfig: "tsconfig.json",
 };
 

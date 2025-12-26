@@ -144,7 +144,7 @@ export function printHistoricalComparison(
   );
 
   if (withBaseline.length === 0) {
-    console.log("\n" + "-".repeat(60));
+    console.log(`\n${"-".repeat(60)}`);
     console.log("HISTORICAL COMPARISON");
     console.log("-".repeat(60));
     console.log("No historical WITHOUT_MCP baseline data yet.");
@@ -152,13 +152,13 @@ export function printHistoricalComparison(
     return;
   }
 
-  console.log("\n" + "-".repeat(60));
+  console.log(`\n${"-".repeat(60)}`);
   console.log("MCP vs BASELINE (historical averages)");
   console.log("-".repeat(60));
 
   for (const c of withBaseline) {
     const current = c.currentWithMcp;
-    const baseline = c.historicalWithoutMcp!;
+    const baseline = c.historicalWithoutMcp as HistoricalStats;
 
     const time = formatMetricChange(
       current.avgDurationMs,

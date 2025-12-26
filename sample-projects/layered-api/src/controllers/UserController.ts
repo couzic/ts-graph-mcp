@@ -10,7 +10,6 @@ import {
   modifyUser,
   registerUser,
   removeUser,
-  type User,
 } from "../services/UserService";
 
 export interface HttpRequest {
