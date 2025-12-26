@@ -61,15 +61,6 @@ entry --CALLS--> step02 --CALLS--> step03 --CALLS--> step04 --CALLS--> step05
 
 ## Nodes
 
-step03:
-  file: src/indirect-call/core/step03.ts
-  offset: 4, limit: 4
-  snippet:
-    4: export function step03(): string {
-    5:   const nextStep = step04;
-    6:   return \`\${nextStep()}-03\`;
-    7: }
-
 step02:
   file: src/indirect-call/handlers/step02.ts
   offset: 4, limit: 4
@@ -79,13 +70,14 @@ step02:
     6:   return \`\${nextStep()}-02\`;
     7: }
 
-step05:
-  file: src/indirect-call/lib/step05.ts
-  offset: 2, limit: 3
+step03:
+  file: src/indirect-call/core/step03.ts
+  offset: 4, limit: 4
   snippet:
-    2: export function step05(): string {
-    3:   return "05";
-    4: }
+    4: export function step03(): string {
+    5:   const nextStep = step04;
+    6:   return \`\${nextStep()}-03\`;
+    7: }
 
 step04:
   file: src/indirect-call/utils/step04.ts
@@ -95,6 +87,14 @@ step04:
     5:   const nextStep = step05;
     6:   return \`\${nextStep()}-04\`;
     7: }
+
+step05:
+  file: src/indirect-call/lib/step05.ts
+  offset: 2, limit: 3
+  snippet:
+    2: export function step05(): string {
+    3:   return "05";
+    4: }
 `);
     });
 
@@ -125,15 +125,6 @@ entry --CALLS--> step02 --CALLS--> step03 --CALLS--> step04 --CALLS--> step05
 
 ## Nodes
 
-step03:
-  file: src/indirect-call/core/step03.ts
-  offset: 4, limit: 4
-  snippet:
-    4: export function step03(): string {
-    5:   const nextStep = step04;
-    6:   return \`\${nextStep()}-03\`;
-    7: }
-
 entry:
   file: src/indirect-call/entry.ts
   offset: 4, limit: 4
@@ -150,6 +141,15 @@ step02:
     4: export function step02(): string {
     5:   const nextStep = step03;
     6:   return \`\${nextStep()}-02\`;
+    7: }
+
+step03:
+  file: src/indirect-call/core/step03.ts
+  offset: 4, limit: 4
+  snippet:
+    4: export function step03(): string {
+    5:   const nextStep = step04;
+    6:   return \`\${nextStep()}-03\`;
     7: }
 
 step04:
@@ -190,15 +190,6 @@ entry --CALLS--> step02 --CALLS--> step03 --CALLS--> step04 --CALLS--> step05
 
 ## Nodes
 
-step03:
-  file: src/indirect-call/core/step03.ts
-  offset: 4, limit: 4
-  snippet:
-    4: export function step03(): string {
-    5:   const nextStep = step04;
-    6:   return \`\${nextStep()}-03\`;
-    7: }
-
 step02:
   file: src/indirect-call/handlers/step02.ts
   offset: 4, limit: 4
@@ -206,6 +197,15 @@ step02:
     4: export function step02(): string {
     5:   const nextStep = step03;
     6:   return \`\${nextStep()}-02\`;
+    7: }
+
+step03:
+  file: src/indirect-call/core/step03.ts
+  offset: 4, limit: 4
+  snippet:
+    4: export function step03(): string {
+    5:   const nextStep = step04;
+    6:   return \`\${nextStep()}-03\`;
     7: }
 
 step04:

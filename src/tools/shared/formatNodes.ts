@@ -12,11 +12,13 @@ const SNIPPET_THRESHOLD = 15;
  * - Excludes query input nodes (passed in excludeIds)
  * - Shows file, offset, limit for Read tool compatibility
  * - Includes snippets when <= SNIPPET_THRESHOLD nodes
+ * - Orders nodes by appearance in Graph section (if nodeOrder provided)
  *
  * @param nodes - All nodes to potentially include
  * @param displayNames - Map of nodeId → display name (for ordering/labeling)
  * @param projectRoot - Project root for reading source files
  * @param excludeIds - Node IDs to exclude (query inputs)
+ * @param nodeOrder - Optional order of node IDs (from formatGraph traversal)
  * @returns Formatted Nodes section string
  */
 export const formatNodes = (
@@ -24,9 +26,20 @@ export const formatNodes = (
   displayNames: Map<string, string>,
   projectRoot: string,
   excludeIds: Set<string>,
+  nodeOrder?: string[],
 ): string => {
   // Filter out excluded nodes
-  const included = nodes.filter((n) => !excludeIds.has(n.id));
+  let included = nodes.filter((n) => !excludeIds.has(n.id));
+
+  // Sort by graph appearance order if provided
+  if (nodeOrder && nodeOrder.length > 0) {
+    const orderIndex = new Map(nodeOrder.map((id, i) => [id, i]));
+    included = included.sort((a, b) => {
+      const aIdx = orderIndex.get(a.id) ?? Number.MAX_SAFE_INTEGER;
+      const bIdx = orderIndex.get(b.id) ?? Number.MAX_SAFE_INTEGER;
+      return aIdx - bIdx;
+    });
+  }
 
   if (included.length === 0) return "";
 

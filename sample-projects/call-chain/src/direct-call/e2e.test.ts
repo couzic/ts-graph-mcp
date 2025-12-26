@@ -61,6 +61,14 @@ entry --CALLS--> step02 --CALLS--> step03 --CALLS--> step04 --CALLS--> step05
 
 ## Nodes
 
+step02:
+  file: src/direct-call/handlers/step02.ts
+  offset: 3, limit: 3
+  snippet:
+    3: export function step02(): string {
+    4:   return \`\${step03()}-02\`;
+    5: }
+
 step03:
   file: src/direct-call/core/step03.ts
   offset: 3, limit: 3
@@ -69,12 +77,12 @@ step03:
     4:   return \`\${step04()}-03\`;
     5: }
 
-step02:
-  file: src/direct-call/handlers/step02.ts
+step04:
+  file: src/direct-call/utils/step04.ts
   offset: 3, limit: 3
   snippet:
-    3: export function step02(): string {
-    4:   return \`\${step03()}-02\`;
+    3: export function step04(): string {
+    4:   return \`\${step05()}-04\`;
     5: }
 
 step05:
@@ -84,14 +92,6 @@ step05:
     1: export function step05(): string {
     2:   return "05";
     3: }
-
-step04:
-  file: src/direct-call/utils/step04.ts
-  offset: 3, limit: 3
-  snippet:
-    3: export function step04(): string {
-    4:   return \`\${step05()}-04\`;
-    5: }
 `);
     });
 
@@ -122,14 +122,6 @@ entry --CALLS--> step02 --CALLS--> step03 --CALLS--> step04 --CALLS--> step05
 
 ## Nodes
 
-step03:
-  file: src/direct-call/core/step03.ts
-  offset: 3, limit: 3
-  snippet:
-    3: export function step03(): string {
-    4:   return \`\${step04()}-03\`;
-    5: }
-
 entry:
   file: src/direct-call/entry.ts
   offset: 3, limit: 3
@@ -144,6 +136,14 @@ step02:
   snippet:
     3: export function step02(): string {
     4:   return \`\${step03()}-02\`;
+    5: }
+
+step03:
+  file: src/direct-call/core/step03.ts
+  offset: 3, limit: 3
+  snippet:
+    3: export function step03(): string {
+    4:   return \`\${step04()}-03\`;
     5: }
 
 step04:
@@ -183,20 +183,20 @@ entry --CALLS--> step02 --CALLS--> step03 --CALLS--> step04 --CALLS--> step05
 
 ## Nodes
 
-step03:
-  file: src/direct-call/core/step03.ts
-  offset: 3, limit: 3
-  snippet:
-    3: export function step03(): string {
-    4:   return \`\${step04()}-03\`;
-    5: }
-
 step02:
   file: src/direct-call/handlers/step02.ts
   offset: 3, limit: 3
   snippet:
     3: export function step02(): string {
     4:   return \`\${step03()}-02\`;
+    5: }
+
+step03:
+  file: src/direct-call/core/step03.ts
+  offset: 3, limit: 3
+  snippet:
+    3: export function step03(): string {
+    4:   return \`\${step04()}-03\`;
     5: }
 
 step04:
@@ -249,20 +249,20 @@ entry --CALLS--> step02 --CALLS--> step03 --CALLS--> step04 --CALLS--> step05
 
 ## Nodes
 
-step03:
-  file: src/direct-call/core/step03.ts
-  offset: 3, limit: 3
-  snippet:
-    3: export function step03(): string {
-    4:   return \`\${step04()}-03\`;
-    5: }
-
 step02:
   file: src/direct-call/handlers/step02.ts
   offset: 3, limit: 3
   snippet:
     3: export function step02(): string {
     4:   return \`\${step03()}-02\`;
+    5: }
+
+step03:
+  file: src/direct-call/core/step03.ts
+  offset: 3, limit: 3
+  snippet:
+    3: export function step03(): string {
+    4:   return \`\${step04()}-03\`;
     5: }
 
 step04:

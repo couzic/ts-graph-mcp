@@ -1,5 +1,11 @@
 import type { GraphEdge } from "./GraphTypes.js";
 
+/** Result of formatGraph including traversal order */
+export interface FormatGraphResult {
+  text: string;
+  nodeOrder: string[];
+}
+
 /**
  * Extract symbol name from node ID.
  * "src/utils.ts:formatDate" → "formatDate"
@@ -57,10 +63,10 @@ export const buildDisplayNames = (nodeIds: string[]): Map<string, string> => {
  * - Uses symbol names, not full IDs
  * - Disambiguates with #N when names collide
  *
- * @returns Multi-line string for the Graph section
+ * @returns Object with formatted text and node order (for consistent Nodes section ordering)
  */
-export const formatGraph = (edges: GraphEdge[]): string => {
-  if (edges.length === 0) return "";
+export const formatGraph = (edges: GraphEdge[]): FormatGraphResult => {
+  if (edges.length === 0) return { text: "", nodeOrder: [] };
 
   // Collect all node IDs
   const allNodeIds = new Set<string>();
@@ -97,13 +103,23 @@ export const formatGraph = (edges: GraphEdge[]): string => {
 
   const lines: string[] = [];
   const visitedEdges = new Set<string>();
+  const nodeOrder: string[] = [];
+  const visitedNodes = new Set<string>();
 
   const edgeKey = (e: GraphEdge): string => `${e.source}|${e.target}|${e.type}`;
 
   const getDisplayName = (nodeId: string): string =>
     displayNames.get(nodeId) ?? extractSymbol(nodeId);
 
+  const trackNode = (nodeId: string): void => {
+    if (!visitedNodes.has(nodeId)) {
+      visitedNodes.add(nodeId);
+      nodeOrder.push(nodeId);
+    }
+  };
+
   const buildChain = (startNode: string): void => {
+    trackNode(startNode);
     let line = getDisplayName(startNode);
     let current = startNode;
     const branchPoints: Array<{ node: string; edges: GraphEdge[] }> = [];
@@ -119,6 +135,7 @@ export const formatGraph = (edges: GraphEdge[]): string => {
       if (!edge) break;
 
       visitedEdges.add(edgeKey(edge));
+      trackNode(edge.target);
       line += ` --${edge.type}--> ${getDisplayName(edge.target)}`;
 
       // If there are more unvisited edges, save as branch points
@@ -151,6 +168,7 @@ export const formatGraph = (edges: GraphEdge[]): string => {
 
         if (targetOuts.length > 0) {
           // Build chain from this branch
+          trackNode(edge.target);
           let branchLine = `${branchName} --${edge.type}--> ${targetName}`;
           let branchCurrent = edge.target;
 
@@ -163,12 +181,14 @@ export const formatGraph = (edges: GraphEdge[]): string => {
             if (!nextEdge) break;
 
             visitedEdges.add(edgeKey(nextEdge));
+            trackNode(nextEdge.target);
             branchLine += ` --${nextEdge.type}--> ${getDisplayName(nextEdge.target)}`;
             branchCurrent = nextEdge.target;
           }
 
           lines.push(branchLine);
         } else {
+          trackNode(edge.target);
           lines.push(`${branchName} --${edge.type}--> ${targetName}`);
         }
       }
@@ -183,5 +203,5 @@ export const formatGraph = (edges: GraphEdge[]): string => {
     }
   }
 
-  return lines.join("\n");
+  return { text: lines.join("\n"), nodeOrder };
 };

@@ -62,6 +62,17 @@ entry --REFERENCES--> processor
 
 ## Nodes
 
+orchestrate:
+  file: src/function-argument/handlers/orchestrate.ts
+  offset: 4, limit: 6
+  snippet:
+    4: export function orchestrate(
+    5:   items: string[],
+    6:   callback: (value: string) => string,
+    7: ): string[] {
+    8:   return transform(items, callback);
+    9: }
+
 transform:
   file: src/function-argument/core/transform.ts
   offset: 4, limit: 7
@@ -74,25 +85,6 @@ transform:
     9:   return validate(trimmed, callback);
     10: }
 
-orchestrate:
-  file: src/function-argument/handlers/orchestrate.ts
-  offset: 4, limit: 6
-  snippet:
-    4: export function orchestrate(
-    5:   items: string[],
-    6:   callback: (value: string) => string,
-    7: ): string[] {
-    8:   return transform(items, callback);
-    9: }
-
-processor:
-  file: src/function-argument/lib/processor.ts
-  offset: 2, limit: 3
-  snippet:
-    2: export function processor(value: string): string {
-    3:   return value.toUpperCase();
-    4: }
-
 validate:
   file: src/function-argument/utils/validate.ts
   offset: 2, limit: 6
@@ -103,6 +95,14 @@ validate:
     5: ): string[] {
     6:   return items.filter((item) => item.length > 0).map(callback);
     7: }
+
+processor:
+  file: src/function-argument/lib/processor.ts
+  offset: 2, limit: 3
+  snippet:
+    2: export function processor(value: string): string {
+    3:   return value.toUpperCase();
+    4: }
 `);
     });
   });

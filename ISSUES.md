@@ -51,12 +51,3 @@ Watcher module lacks unit and system tests. Medium priority.
 
 Format tests have good happy-path coverage but lack edge cases and negative tests. Low priority.
 
----
-
-### Nodes Section Ordering
-
-**Impact:** High (test maintainability)
-
-Tool output `## Nodes` section has arbitrary ordering based on graph traversal. Sorting nodes would make golden master tests more readable and diffs easier to review.
-
-**Fix approach:** Order nodes by appearance in the Graph section.

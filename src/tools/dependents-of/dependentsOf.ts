@@ -150,12 +150,13 @@ export function dependentsOf(
   const displayNames = buildDisplayNames(allNodeIds);
 
   // 8. Format output
-  const graphSection = formatGraph(edges);
+  const { text: graphSection, nodeOrder } = formatGraph(edges);
   const nodesSection = formatNodes(
     nodes,
     displayNames,
     projectRoot,
     new Set([nodeId]),
+    nodeOrder,
   );
 
   return `## Graph\n\n${graphSection}\n\n## Nodes\n\n${nodesSection}`;

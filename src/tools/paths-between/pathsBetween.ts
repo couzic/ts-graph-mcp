@@ -133,12 +133,13 @@ export function pathsBetween(
   const displayNames = buildDisplayNames(allNodeIds);
 
   // 11. Format output
-  const graphSection = formatGraph(edges);
+  const { text: graphSection, nodeOrder } = formatGraph(edges);
   const nodesSection = formatNodes(
     nodes,
     displayNames,
     projectRoot,
     new Set([fromId, toId]),
+    nodeOrder,
   );
 
   // Handle case where there are no intermediate nodes
