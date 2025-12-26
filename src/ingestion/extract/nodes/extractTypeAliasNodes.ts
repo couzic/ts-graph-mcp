@@ -8,31 +8,31 @@ import { normalizeTypeText } from "./normalizeTypeText.js";
  * Extract type alias nodes from a source file.
  */
 export const extractTypeAliasNodes = (
-	sourceFile: SourceFile,
-	context: NodeExtractionContext,
+  sourceFile: SourceFile,
+  context: NodeExtractionContext,
 ): TypeAliasNode[] => {
-	const typeAliases = sourceFile.getTypeAliases();
-	return typeAliases.map((typeAlias) => {
-		const name = typeAlias.getName();
-		const startLine = typeAlias.getStartLineNumber();
-		const endLine = typeAlias.getEndLineNumber();
-		const exported = typeAlias.isExported();
+  const typeAliases = sourceFile.getTypeAliases();
+  return typeAliases.map((typeAlias) => {
+    const name = typeAlias.getName();
+    const startLine = typeAlias.getStartLineNumber();
+    const endLine = typeAlias.getEndLineNumber();
+    const exported = typeAlias.isExported();
 
-		// Extract aliased type
-		const typeNode = typeAlias.getTypeNode();
-		const aliasedType = normalizeTypeText(typeNode?.getText());
+    // Extract aliased type
+    const typeNode = typeAlias.getTypeNode();
+    const aliasedType = normalizeTypeText(typeNode?.getText());
 
-		return {
-			id: generateNodeId(context.filePath, name),
-			type: "TypeAlias",
-			name,
-			module: context.module,
-			package: context.package,
-			filePath: context.filePath,
-			startLine,
-			endLine,
-			exported,
-			aliasedType,
-		};
-	});
+    return {
+      id: generateNodeId(context.filePath, name),
+      type: "TypeAlias",
+      name,
+      module: context.module,
+      package: context.package,
+      filePath: context.filePath,
+      startLine,
+      endLine,
+      exported,
+      aliasedType,
+    };
+  });
 };

@@ -28,12 +28,12 @@
  * ```
  */
 
-export * from "./types.js";
-export * from "./scenarios.js";
-export * from "./report.js";
-export * from "./runner.js";
-export * from "./history.js";
-export * from "./runDecision.js";
 export * from "./historicalComparison.js";
-export { setupBenchmark } from "./setup.js";
+export * from "./history.js";
+export * from "./report.js";
 export { runBenchmarks } from "./run.js";
+export * from "./runDecision.js";
+export * from "./runner.js";
+export * from "./scenarios.js";
+export { setupBenchmark } from "./setup.js";
+export * from "./types.js";

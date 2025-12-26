@@ -1,3 +1,3 @@
 export function step05(): string {
-	return "05";
+  return "05";
 }

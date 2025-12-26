@@ -18,95 +18,95 @@ type SymbolMap = Map<string, string>;
  * - Imported symbols: Resolved via ts-morph + import map
  */
 export const extractInheritanceEdges = (
-	sourceFile: SourceFile,
-	context: EdgeExtractionContext,
+  sourceFile: SourceFile,
+  context: EdgeExtractionContext,
 ): Edge[] => {
-	const edges: Edge[] = [];
+  const edges: Edge[] = [];
 
-	// Build combined symbol map from local definitions + imports
-	const symbolMap = buildCombinedSymbolMap(sourceFile, context.filePath);
+  // Build combined symbol map from local definitions + imports
+  const symbolMap = buildCombinedSymbolMap(sourceFile, context.filePath);
 
-	// Process classes
-	const classes = sourceFile.getClasses();
-	for (const classDecl of classes) {
-		const className = classDecl.getName();
-		if (!className) continue;
+  // Process classes
+  const classes = sourceFile.getClasses();
+  for (const classDecl of classes) {
+    const className = classDecl.getName();
+    if (!className) continue;
 
-		const sourceId = generateNodeId(context.filePath, className);
+    const sourceId = generateNodeId(context.filePath, className);
 
-		// EXTENDS edges (class to class)
-		const extendsExpr = classDecl.getExtends();
-		if (extendsExpr) {
-			const parentName = extendsExpr.getExpression().getText();
-			const targetId = resolveSymbol(symbolMap, context.filePath, parentName);
-			edges.push({
-				source: sourceId,
-				target: targetId,
-				type: "EXTENDS",
-			});
-		}
+    // EXTENDS edges (class to class)
+    const extendsExpr = classDecl.getExtends();
+    if (extendsExpr) {
+      const parentName = extendsExpr.getExpression().getText();
+      const targetId = resolveSymbol(symbolMap, context.filePath, parentName);
+      edges.push({
+        source: sourceId,
+        target: targetId,
+        type: "EXTENDS",
+      });
+    }
 
-		// IMPLEMENTS edges (class to interface)
-		const implementsExprs = classDecl.getImplements();
-		for (const implementsExpr of implementsExprs) {
-			const interfaceName = implementsExpr.getExpression().getText();
-			const targetId = resolveSymbol(
-				symbolMap,
-				context.filePath,
-				interfaceName,
-			);
-			edges.push({
-				source: sourceId,
-				target: targetId,
-				type: "IMPLEMENTS",
-			});
-		}
-	}
+    // IMPLEMENTS edges (class to interface)
+    const implementsExprs = classDecl.getImplements();
+    for (const implementsExpr of implementsExprs) {
+      const interfaceName = implementsExpr.getExpression().getText();
+      const targetId = resolveSymbol(
+        symbolMap,
+        context.filePath,
+        interfaceName,
+      );
+      edges.push({
+        source: sourceId,
+        target: targetId,
+        type: "IMPLEMENTS",
+      });
+    }
+  }
 
-	// Process interfaces
-	const interfaces = sourceFile.getInterfaces();
-	for (const interfaceDecl of interfaces) {
-		const interfaceName = interfaceDecl.getName();
-		const sourceId = generateNodeId(context.filePath, interfaceName);
+  // Process interfaces
+  const interfaces = sourceFile.getInterfaces();
+  for (const interfaceDecl of interfaces) {
+    const interfaceName = interfaceDecl.getName();
+    const sourceId = generateNodeId(context.filePath, interfaceName);
 
-		// EXTENDS edges (interface to interface)
-		const extendsExprs = interfaceDecl.getExtends();
-		for (const extendsExpr of extendsExprs) {
-			const parentName = extendsExpr.getExpression().getText();
-			const targetId = resolveSymbol(symbolMap, context.filePath, parentName);
-			edges.push({
-				source: sourceId,
-				target: targetId,
-				type: "EXTENDS",
-			});
-		}
-	}
+    // EXTENDS edges (interface to interface)
+    const extendsExprs = interfaceDecl.getExtends();
+    for (const extendsExpr of extendsExprs) {
+      const parentName = extendsExpr.getExpression().getText();
+      const targetId = resolveSymbol(symbolMap, context.filePath, parentName);
+      edges.push({
+        source: sourceId,
+        target: targetId,
+        type: "EXTENDS",
+      });
+    }
+  }
 
-	return edges;
+  return edges;
 };
 
 /**
  * Build a combined symbol map from local definitions and imports.
  */
 const buildCombinedSymbolMap = (
-	sourceFile: SourceFile,
-	filePath: string,
+  sourceFile: SourceFile,
+  filePath: string,
 ): SymbolMap => {
-	const map: SymbolMap = new Map();
+  const map: SymbolMap = new Map();
 
-	// 1. Add local symbols (defined in this file)
-	addLocalSymbols(map, sourceFile, filePath);
+  // 1. Add local symbols (defined in this file)
+  addLocalSymbols(map, sourceFile, filePath);
 
-	// 2. Add imported symbols (from import declarations)
-	// MUST include type-only imports since EXTENDS/IMPLEMENTS reference types
-	const importMap = buildImportMap(sourceFile, filePath, {
-		includeTypeImports: true,
-	});
-	for (const [name, targetId] of importMap) {
-		map.set(name, targetId);
-	}
+  // 2. Add imported symbols (from import declarations)
+  // MUST include type-only imports since EXTENDS/IMPLEMENTS reference types
+  const importMap = buildImportMap(sourceFile, filePath, {
+    includeTypeImports: true,
+  });
+  for (const [name, targetId] of importMap) {
+    map.set(name, targetId);
+  }
 
-	return map;
+  return map;
 };
 
 /**
@@ -114,23 +114,23 @@ const buildCombinedSymbolMap = (
  * Only adds classes and interfaces (the types that can be extended/implemented).
  */
 const addLocalSymbols = (
-	map: SymbolMap,
-	sourceFile: SourceFile,
-	filePath: string,
+  map: SymbolMap,
+  sourceFile: SourceFile,
+  filePath: string,
 ): void => {
-	// Classes
-	for (const classDecl of sourceFile.getClasses()) {
-		const className = classDecl.getName();
-		if (className) {
-			map.set(className, `${filePath}:${className}`);
-		}
-	}
+  // Classes
+  for (const classDecl of sourceFile.getClasses()) {
+    const className = classDecl.getName();
+    if (className) {
+      map.set(className, `${filePath}:${className}`);
+    }
+  }
 
-	// Interfaces
-	for (const iface of sourceFile.getInterfaces()) {
-		const name = iface.getName();
-		map.set(name, `${filePath}:${name}`);
-	}
+  // Interfaces
+  for (const iface of sourceFile.getInterfaces()) {
+    const name = iface.getName();
+    map.set(name, `${filePath}:${name}`);
+  }
 };
 
 /**
@@ -138,9 +138,9 @@ const addLocalSymbols = (
  * Uses the symbol map if available, otherwise falls back to same-file resolution.
  */
 const resolveSymbol = (
-	symbolMap: SymbolMap,
-	filePath: string,
-	symbolName: string,
+  symbolMap: SymbolMap,
+  filePath: string,
+  symbolName: string,
 ): string => {
-	return symbolMap.get(symbolName) ?? generateNodeId(filePath, symbolName);
+  return symbolMap.get(symbolName) ?? generateNodeId(filePath, symbolName);
 };

@@ -10,12 +10,12 @@ import type { User } from "../../../../shared/packages/types/src/User.js";
  * Different from shared/utils/formatDate which uses locale format.
  */
 export function formatDate(date: Date): string {
-	return date.toISOString();
+  return date.toISOString();
 }
 
 /**
  * Format a user for API response.
  */
 export function formatUserResponse(user: User): string {
-	return `User: ${user.name} (${user.email})`;
+  return `User: ${user.name} (${user.email})`;
 }

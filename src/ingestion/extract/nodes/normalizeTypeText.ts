@@ -8,8 +8,8 @@
  * normalizeTypeText(undefined) // undefined
  */
 export const normalizeTypeText = (
-	text: string | undefined,
+  text: string | undefined,
 ): string | undefined => {
-	if (text === undefined) return undefined;
-	return text.replace(/\s+/g, " ").trim();
+  if (text === undefined) return undefined;
+  return text.replace(/\s+/g, " ").trim();
 };

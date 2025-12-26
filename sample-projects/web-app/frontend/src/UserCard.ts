@@ -6,13 +6,13 @@
 import type { User } from "@shared/common";
 
 export interface UserCardProps {
-	user: User;
-	showEmail?: boolean;
+  user: User;
+  showEmail?: boolean;
 }
 
 export function renderUserCard(props: UserCardProps): string {
-	const { user, showEmail = false } = props;
-	return `
+  const { user, showEmail = false } = props;
+  return `
 		<div class="user-card">
 			<h2>${user.name}</h2>
 			${showEmail ? `<p>${user.email}</p>` : ""}
@@ -21,5 +21,5 @@ export function renderUserCard(props: UserCardProps): string {
 }
 
 export function formatUserName(user: User): string {
-	return user.name.toUpperCase();
+  return user.name.toUpperCase();
 }

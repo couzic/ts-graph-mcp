@@ -3,7 +3,7 @@ import type { EdgeType, Node } from "../../db/Types.js";
 import { type NodeRow, rowToNode } from "../shared/rowConverters.js";
 
 export interface ImpactQueryOptions {
-	maxDepth?: number;
+  maxDepth?: number;
 }
 
 /**
@@ -11,19 +11,19 @@ export interface ImpactQueryOptions {
  * Uses intersection type since Node is a union type.
  */
 export type ImpactedNode = Node & {
-	/** Minimum depth from target (1 = direct, 2+ = transitive) */
-	depth: number;
+  /** Minimum depth from target (1 = direct, 2+ = transitive) */
+  depth: number;
 
-	/** The edge type that first connected this node to the impact chain */
-	entryEdgeType: EdgeType;
+  /** The edge type that first connected this node to the impact chain */
+  entryEdgeType: EdgeType;
 };
 
 /**
  * Raw row returned from the impact query.
  */
 interface ImpactedNodeRow extends NodeRow {
-	min_depth: number;
-	entry_edge_type: string;
+  min_depth: number;
+  entry_edge_type: string;
 }
 
 /**
@@ -40,19 +40,19 @@ interface ImpactedNodeRow extends NodeRow {
  * @returns Array of impacted nodes with depth and entry edge type
  */
 export function queryImpactedNodes(
-	db: Database.Database,
-	nodeId: string,
-	options?: ImpactQueryOptions,
+  db: Database.Database,
+  nodeId: string,
+  options?: ImpactQueryOptions,
 ): ImpactedNode[] {
-	const maxDepth = options?.maxDepth ?? 100;
+  const maxDepth = options?.maxDepth ?? 100;
 
-	// Impact analysis: traverse incoming edges (what depends on this node?)
-	// Track both minimum depth and the edge type that first connected each node.
-	//
-	// The CTE tracks (id, depth, entry_edge_type) tuples. We use MIN(depth)
-	// to get the shortest path, and a subquery to find the entry edge type
-	// at that minimum depth.
-	const sql = `
+  // Impact analysis: traverse incoming edges (what depends on this node?)
+  // Track both minimum depth and the edge type that first connected each node.
+  //
+  // The CTE tracks (id, depth, entry_edge_type) tuples. We use MIN(depth)
+  // to get the shortest path, and a subquery to find the entry edge type
+  // at that minimum depth.
+  const sql = `
     WITH RECURSIVE impacted(id, depth, entry_edge_type) AS (
       -- Base case: direct dependents (depth 1)
       SELECT e.source, 1, e.type
@@ -90,31 +90,31 @@ export function queryImpactedNodes(
     ORDER BY wet.min_depth, n.file_path, n.name
   `;
 
-	const rows = db.prepare(sql).all(nodeId, maxDepth) as ImpactedNodeRow[];
+  const rows = db.prepare(sql).all(nodeId, maxDepth) as ImpactedNodeRow[];
 
-	return rows.map((row) => ({
-		...rowToNode(row),
-		depth: row.min_depth,
-		entryEdgeType: row.entry_edge_type as EdgeType,
-	}));
+  return rows.map((row) => ({
+    ...rowToNode(row),
+    depth: row.min_depth,
+    entryEdgeType: row.entry_edge_type as EdgeType,
+  }));
 }
 
 /**
  * An impacted node with call sites (only for CALLS edges).
  */
 export interface ImpactedNodeWithCallSites {
-	node: ImpactedNode;
-	/** Call sites for CALLS edges, empty array for other edge types */
-	callSites: number[];
+  node: ImpactedNode;
+  /** Call sites for CALLS edges, empty array for other edge types */
+  callSites: number[];
 }
 
 /**
  * Raw row returned from the impact query with call sites.
  */
 interface ImpactedNodeRowWithCallSites extends NodeRow {
-	min_depth: number;
-	entry_edge_type: string;
-	call_sites: string | null;
+  min_depth: number;
+  entry_edge_type: string;
+  call_sites: string | null;
 }
 
 /**
@@ -130,14 +130,14 @@ interface ImpactedNodeRowWithCallSites extends NodeRow {
  * @returns Array of impacted nodes with call sites
  */
 export function queryImpactedNodesWithCallSites(
-	db: Database.Database,
-	nodeId: string,
-	options?: ImpactQueryOptions,
+  db: Database.Database,
+  nodeId: string,
+  options?: ImpactQueryOptions,
 ): ImpactedNodeWithCallSites[] {
-	const maxDepth = options?.maxDepth ?? 100;
+  const maxDepth = options?.maxDepth ?? 100;
 
-	// Impact analysis with call sites for CALLS edges
-	const sql = `
+  // Impact analysis with call sites for CALLS edges
+  const sql = `
     WITH RECURSIVE impacted(id, depth, entry_edge_type) AS (
       -- Base case: direct dependents (depth 1)
       SELECT e.source, 1, e.type
@@ -176,16 +176,16 @@ export function queryImpactedNodesWithCallSites(
     ORDER BY wet.min_depth, n.file_path, n.name
   `;
 
-	const rows = db
-		.prepare(sql)
-		.all(nodeId, maxDepth, nodeId) as ImpactedNodeRowWithCallSites[];
+  const rows = db
+    .prepare(sql)
+    .all(nodeId, maxDepth, nodeId) as ImpactedNodeRowWithCallSites[];
 
-	return rows.map((row) => ({
-		node: {
-			...rowToNode(row),
-			depth: row.min_depth,
-			entryEdgeType: row.entry_edge_type as EdgeType,
-		},
-		callSites: row.call_sites ? JSON.parse(row.call_sites) : [],
-	}));
+  return rows.map((row) => ({
+    node: {
+      ...rowToNode(row),
+      depth: row.min_depth,
+      entryEdgeType: row.entry_edge_type as EdgeType,
+    },
+    callSites: row.call_sites ? JSON.parse(row.call_sites) : [],
+  }));
 }

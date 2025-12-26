@@ -1,7 +1,7 @@
 import {
-	type ProjectConfig,
-	type ProjectConfigInput,
-	ProjectConfigInputSchema,
+  type ProjectConfig,
+  type ProjectConfigInput,
+  ProjectConfigInputSchema,
 } from "./Config.schemas.js";
 
 /**
@@ -9,15 +9,15 @@ import {
  * Flat format creates an implicit "main" module containing all packages.
  */
 export const normalizeConfig = (input: ProjectConfigInput): ProjectConfig => {
-	if ("modules" in input) {
-		return input;
-	}
-	// Flat format: create implicit "main" module
-	return {
-		modules: [{ name: "main", packages: input.packages }],
-		storage: input.storage,
-		watch: input.watch,
-	};
+  if ("modules" in input) {
+    return input;
+  }
+  // Flat format: create implicit "main" module
+  return {
+    modules: [{ name: "main", packages: input.packages }],
+    storage: input.storage,
+    watch: input.watch,
+  };
 };
 
 /**
@@ -33,6 +33,6 @@ export const normalizeConfig = (input: ProjectConfigInput): ProjectConfig => {
  * @throws ZodError if validation fails
  */
 export const defineConfig = (config: ProjectConfigInput): ProjectConfig => {
-	const parsed = ProjectConfigInputSchema.parse(config);
-	return normalizeConfig(parsed);
+  const parsed = ProjectConfigInputSchema.parse(config);
+  return normalizeConfig(parsed);
 };

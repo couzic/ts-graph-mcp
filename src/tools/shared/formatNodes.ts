@@ -20,49 +20,49 @@ const SNIPPET_THRESHOLD = 15;
  * @returns Formatted Nodes section string
  */
 export const formatNodes = (
-	nodes: NodeInfo[],
-	displayNames: Map<string, string>,
-	projectRoot: string,
-	excludeIds: Set<string>,
+  nodes: NodeInfo[],
+  displayNames: Map<string, string>,
+  projectRoot: string,
+  excludeIds: Set<string>,
 ): string => {
-	// Filter out excluded nodes
-	const included = nodes.filter((n) => !excludeIds.has(n.id));
+  // Filter out excluded nodes
+  const included = nodes.filter((n) => !excludeIds.has(n.id));
 
-	if (included.length === 0) return "";
+  if (included.length === 0) return "";
 
-	const includeSnippets = included.length <= SNIPPET_THRESHOLD;
+  const includeSnippets = included.length <= SNIPPET_THRESHOLD;
 
-	const lines: string[] = [];
+  const lines: string[] = [];
 
-	for (const node of included) {
-		const displayName = displayNames.get(node.id) || node.name;
-		const limit = node.endLine - node.startLine + 1;
+  for (const node of included) {
+    const displayName = displayNames.get(node.id) || node.name;
+    const limit = node.endLine - node.startLine + 1;
 
-		lines.push(`${displayName}:`);
-		lines.push(`  file: ${node.filePath}`);
-		lines.push(`  offset: ${node.startLine}, limit: ${limit}`);
+    lines.push(`${displayName}:`);
+    lines.push(`  file: ${node.filePath}`);
+    lines.push(`  offset: ${node.startLine}, limit: ${limit}`);
 
-		if (includeSnippets) {
-			const absolutePath = join(projectRoot, node.filePath);
-			const snippet = extractFunctionBody(
-				absolutePath,
-				node.startLine,
-				node.endLine,
-			);
+    if (includeSnippets) {
+      const absolutePath = join(projectRoot, node.filePath);
+      const snippet = extractFunctionBody(
+        absolutePath,
+        node.startLine,
+        node.endLine,
+      );
 
-			if (snippet) {
-				lines.push(`  snippet:`);
-				// Format snippet with line numbers
-				const codeLines = snippet.code.split("\n");
-				for (let i = 0; i < codeLines.length; i++) {
-					const lineNum = snippet.startLine + i;
-					lines.push(`    ${lineNum}: ${codeLines[i]}`);
-				}
-			}
-		}
+      if (snippet) {
+        lines.push(`  snippet:`);
+        // Format snippet with line numbers
+        const codeLines = snippet.code.split("\n");
+        for (let i = 0; i < codeLines.length; i++) {
+          const lineNum = snippet.startLine + i;
+          lines.push(`    ${lineNum}: ${codeLines[i]}`);
+        }
+      }
+    }
 
-		lines.push(""); // Blank line between nodes
-	}
+    lines.push(""); // Blank line between nodes
+  }
 
-	return lines.join("\n");
+  return lines.join("\n");
 };

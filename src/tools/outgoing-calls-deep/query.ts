@@ -3,8 +3,8 @@ import type { Node } from "../../db/Types.js";
 import { type NodeRow, rowToNode } from "../shared/rowConverters.js";
 
 export interface CalleeWithCallSites {
-	node: Node;
-	callSites: number[];
+  node: Node;
+  callSites: number[];
 }
 
 /**
@@ -17,11 +17,11 @@ export interface CalleeWithCallSites {
  * @returns List of nodes that the source calls
  */
 export function queryCallees(
-	db: Database.Database,
-	sourceId: string,
-	maxDepth = 100,
+  db: Database.Database,
+  sourceId: string,
+  maxDepth = 100,
 ): Node[] {
-	const sql = `
+  const sql = `
     WITH RECURSIVE callees(id, depth) AS (
       SELECT target, 1
       FROM edges e
@@ -39,13 +39,13 @@ export function queryCallees(
     JOIN nodes n ON n.id = c.id
   `;
 
-	const stmt = db.prepare<[string, number], NodeRow>(sql);
-	const rows = stmt.all(sourceId, maxDepth);
-	return rows.map(rowToNode);
+  const stmt = db.prepare<[string, number], NodeRow>(sql);
+  const rows = stmt.all(sourceId, maxDepth);
+  return rows.map(rowToNode);
 }
 
 interface CalleeRowWithCallSites extends NodeRow {
-	call_sites: string | null;
+  call_sites: string | null;
 }
 
 /**
@@ -59,20 +59,20 @@ interface CalleeRowWithCallSites extends NodeRow {
  * @returns Array of callee nodes with their call site line numbers
  */
 export function queryCalleesWithCallSites(
-	db: Database.Database,
-	sourceId: string,
+  db: Database.Database,
+  sourceId: string,
 ): CalleeWithCallSites[] {
-	const sql = `
+  const sql = `
     SELECT n.*, e.call_sites
     FROM edges e
     JOIN nodes n ON n.id = e.target
     WHERE e.source = ? AND e.type = 'CALLS'
   `;
 
-	const rows = db.prepare(sql).all(sourceId) as CalleeRowWithCallSites[];
+  const rows = db.prepare(sql).all(sourceId) as CalleeRowWithCallSites[];
 
-	return rows.map((row) => ({
-		node: rowToNode(row),
-		callSites: row.call_sites ? JSON.parse(row.call_sites) : [],
-	}));
+  return rows.map((row) => ({
+    node: rowToNode(row),
+    callSites: row.call_sites ? JSON.parse(row.call_sites) : [],
+  }));
 }

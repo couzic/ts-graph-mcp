@@ -4,19 +4,19 @@ import type { EdgeExtractionContext } from "./EdgeExtractionContext.js";
 import { extractEdges } from "./extractEdges.js";
 
 describe.skip(extractEdges.name, () => {
-	const createProject = () => new Project({ useInMemoryFileSystem: true });
+  const createProject = () => new Project({ useInMemoryFileSystem: true });
 
-	const defaultContext: EdgeExtractionContext = {
-		filePath: "test.ts",
-		module: "test-module",
-		package: "test-package",
-	};
+  const defaultContext: EdgeExtractionContext = {
+    filePath: "test.ts",
+    module: "test-module",
+    package: "test-package",
+  };
 
-	it("extracts all edge types from a source file", () => {
-		const project = createProject();
-		const sourceFile = project.createSourceFile(
-			"test.ts",
-			`
+  it("extracts all edge types from a source file", () => {
+    const project = createProject();
+    const sourceFile = project.createSourceFile(
+      "test.ts",
+      `
 import type { Config } from './config.js';
 
 export interface User {
@@ -35,20 +35,20 @@ export const createUser = (name: string): User => {
   return { name };
 };
         `,
-		);
+    );
 
-		const edges = extractEdges(sourceFile, defaultContext);
+    const edges = extractEdges(sourceFile, defaultContext);
 
-		// Should contain IMPORTS edges
-		const importEdges = edges.filter((e) => e.type === "IMPORTS");
-		expect(importEdges.length).toBeGreaterThan(0);
+    // Should contain IMPORTS edges
+    const importEdges = edges.filter((e) => e.type === "IMPORTS");
+    expect(importEdges.length).toBeGreaterThan(0);
 
-		// Should contain CONTAINS edges (File contains User, UserService, createUser)
-		const containsEdges = edges.filter((e) => e.type === "CONTAINS");
-		expect(containsEdges.length).toBe(3);
+    // Should contain CONTAINS edges (File contains User, UserService, createUser)
+    const containsEdges = edges.filter((e) => e.type === "CONTAINS");
+    expect(containsEdges.length).toBe(3);
 
-		// Should contain USES_TYPE edges
-		const usesTypeEdges = edges.filter((e) => e.type === "USES_TYPE");
-		expect(usesTypeEdges.length).toBeGreaterThan(0);
-	});
+    // Should contain USES_TYPE edges
+    const usesTypeEdges = edges.filter((e) => e.type === "USES_TYPE");
+    expect(usesTypeEdges.length).toBeGreaterThan(0);
+  });
 });

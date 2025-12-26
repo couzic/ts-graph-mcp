@@ -17,17 +17,17 @@ export type { EdgeExtractionContext };
  * for cross-file resolution. No global nodes array needed.
  */
 export const extractEdges = (
-	sourceFile: SourceFile,
-	context: EdgeExtractionContext,
+  sourceFile: SourceFile,
+  context: EdgeExtractionContext,
 ): Edge[] => {
-	const edges: Edge[] = [];
+  const edges: Edge[] = [];
 
-	edges.push(...extractContainsEdges(sourceFile, context));
-	edges.push(...extractImportEdges(sourceFile, context));
-	edges.push(...extractCallEdges(sourceFile, context));
-	edges.push(...extractInheritanceEdges(sourceFile, context));
-	edges.push(...extractTypeUsageEdges(sourceFile, context));
-	edges.push(...extractReferenceEdges(sourceFile, context));
+  edges.push(...extractContainsEdges(sourceFile, context));
+  edges.push(...extractImportEdges(sourceFile, context));
+  edges.push(...extractCallEdges(sourceFile, context));
+  edges.push(...extractInheritanceEdges(sourceFile, context));
+  edges.push(...extractTypeUsageEdges(sourceFile, context));
+  edges.push(...extractReferenceEdges(sourceFile, context));
 
-	return edges;
+  return edges;
 };

@@ -1,9 +1,9 @@
-import type { User } from "@shared/types/User";
 import {
   createUserService,
   getUserSummary,
   type UserServiceResponse,
 } from "@backend/services/userService";
+import type { User } from "@shared/types/User";
 
 /**
  * HTTP request type (simplified).

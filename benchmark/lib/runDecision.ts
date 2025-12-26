@@ -6,9 +6,9 @@ import { getHistoricalRuns } from "./history.js";
 import type { BenchmarkHistory } from "./types.js";
 
 export interface RunDecision {
-	shouldRun: boolean;
-	reason: "always" | "bootstrap" | "sufficient";
-	existingCount: number;
+  shouldRun: boolean;
+  reason: "always" | "bootstrap" | "sufficient";
+  existingCount: number;
 }
 
 /**
@@ -20,35 +20,35 @@ export interface RunDecision {
  * - without-mcp with >=minRuns runs: Skip (sufficient history)
  */
 export function shouldRunScenario(
-	promptText: string,
-	scenarioId: string,
-	history: BenchmarkHistory,
-	minRuns: number,
+  promptText: string,
+  scenarioId: string,
+  history: BenchmarkHistory,
+  minRuns: number,
 ): RunDecision {
-	// WITH_MCP always runs
-	if (scenarioId === "with-mcp") {
-		return {
-			shouldRun: true,
-			reason: "always",
-			existingCount: 0,
-		};
-	}
+  // WITH_MCP always runs
+  if (scenarioId === "with-mcp") {
+    return {
+      shouldRun: true,
+      reason: "always",
+      existingCount: 0,
+    };
+  }
 
-	// For WITHOUT_MCP, check history
-	const existingRuns = getHistoricalRuns(history, promptText, scenarioId);
-	const existingCount = existingRuns.length;
+  // For WITHOUT_MCP, check history
+  const existingRuns = getHistoricalRuns(history, promptText, scenarioId);
+  const existingCount = existingRuns.length;
 
-	if (existingCount >= minRuns) {
-		return {
-			shouldRun: false,
-			reason: "sufficient",
-			existingCount,
-		};
-	}
+  if (existingCount >= minRuns) {
+    return {
+      shouldRun: false,
+      reason: "sufficient",
+      existingCount,
+    };
+  }
 
-	return {
-		shouldRun: true,
-		reason: "bootstrap",
-		existingCount,
-	};
+  return {
+    shouldRun: true,
+    reason: "bootstrap",
+    existingCount,
+  };
 }

@@ -12,15 +12,15 @@ import { defineConfig } from "../../src/config/defineConfig.js";
  * - Neighborhood analysis around service layer
  */
 export default defineConfig({
-	modules: [
-		{
-			name: "api",
-			packages: [
-				{
-					name: "main",
-					tsconfig: "./tsconfig.json",
-				},
-			],
-		},
-	],
+  modules: [
+    {
+      name: "api",
+      packages: [
+        {
+          name: "main",
+          tsconfig: "./tsconfig.json",
+        },
+      ],
+    },
+  ],
 });

@@ -1,13 +1,13 @@
 import { join } from "node:path";
-import { type Database } from "better-sqlite3";
+import type { Database } from "better-sqlite3";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { ProjectConfig } from "../../../../src/config/Config.schemas.js";
+import { createSqliteWriter } from "../../../../src/db/sqlite/createSqliteWriter.js";
 import {
   closeDatabase,
   openDatabase,
 } from "../../../../src/db/sqlite/sqliteConnection.utils.js";
 import { initializeSchema } from "../../../../src/db/sqlite/sqliteSchema.utils.js";
-import { createSqliteWriter } from "../../../../src/db/sqlite/createSqliteWriter.js";
 import { indexProject } from "../../../../src/ingestion/indexProject.js";
 import { dependenciesOf } from "../../../../src/tools/dependencies-of/dependenciesOf.js";
 import { dependentsOf } from "../../../../src/tools/dependents-of/dependentsOf.js";

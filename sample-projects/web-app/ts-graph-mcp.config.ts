@@ -12,9 +12,9 @@ import { defineConfig } from "../../src/config/defineConfig.js";
  * For cross-MODULE edge testing, see the monorepo sample project.
  */
 export default defineConfig({
-	packages: [
-		{ name: "shared", tsconfig: "./shared/tsconfig.json" },
-		{ name: "frontend", tsconfig: "./frontend/tsconfig.json" },
-		{ name: "backend", tsconfig: "./backend/tsconfig.json" },
-	],
+  packages: [
+    { name: "shared", tsconfig: "./shared/tsconfig.json" },
+    { name: "frontend", tsconfig: "./frontend/tsconfig.json" },
+    { name: "backend", tsconfig: "./backend/tsconfig.json" },
+  ],
 });

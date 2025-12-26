@@ -14,16 +14,16 @@
  * @returns Unique node ID
  */
 export const generateNodeId = (
-	filePath: string,
-	...symbolParts: string[]
+  filePath: string,
+  ...symbolParts: string[]
 ): string => {
-	// Normalize Windows paths to forward slashes
-	const normalizedPath = filePath.replace(/\\/g, "/");
+  // Normalize Windows paths to forward slashes
+  const normalizedPath = filePath.replace(/\\/g, "/");
 
-	if (symbolParts.length === 0) {
-		return normalizedPath;
-	}
+  if (symbolParts.length === 0) {
+    return normalizedPath;
+  }
 
-	const symbolPath = symbolParts.join(".");
-	return `${normalizedPath}:${symbolPath}`;
+  const symbolPath = symbolParts.join(".");
+  return `${normalizedPath}:${symbolPath}`;
 };

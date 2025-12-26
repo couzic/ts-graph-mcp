@@ -14,10 +14,10 @@ type Processor = (item: string) => string;
 
 // Factory returns a function reference (not a direct call)
 export function getErrorHandler(): ErrorHandler {
-	return logError;
+  return logError;
 }
 
 // Factory that returns the handler
 export function createProcessor(): Processor {
-	return transformItem;
+  return transformItem;
 }

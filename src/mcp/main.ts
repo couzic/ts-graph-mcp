@@ -19,20 +19,20 @@ const DEFAULT_DB_PATH = ".ts-graph/graph.db";
  * @returns Database path (absolute or ':memory:')
  */
 const parseArgs = (): string => {
-	const args = process.argv.slice(2);
+  const args = process.argv.slice(2);
 
-	// Look for --db flag
-	const dbFlagIndex = args.indexOf("--db");
-	if (dbFlagIndex !== -1 && args[dbFlagIndex + 1]) {
-		const dbPath = args[dbFlagIndex + 1];
-		if (dbPath === undefined) {
-			throw new Error("--db flag requires a path argument");
-		}
-		return dbPath === ":memory:" ? dbPath : resolve(dbPath);
-	}
+  // Look for --db flag
+  const dbFlagIndex = args.indexOf("--db");
+  if (dbFlagIndex !== -1 && args[dbFlagIndex + 1]) {
+    const dbPath = args[dbFlagIndex + 1];
+    if (dbPath === undefined) {
+      throw new Error("--db flag requires a path argument");
+    }
+    return dbPath === ":memory:" ? dbPath : resolve(dbPath);
+  }
 
-	// Use default database path
-	return resolve(DEFAULT_DB_PATH);
+  // Use default database path
+  return resolve(DEFAULT_DB_PATH);
 };
 
 /**
@@ -42,10 +42,10 @@ const parseArgs = (): string => {
  * @returns True if the database exists and is initialized
  */
 const isDatabaseInitialized = (dbPath: string): boolean => {
-	if (dbPath === ":memory:") {
-		return false;
-	}
-	return existsSync(dbPath);
+  if (dbPath === ":memory:") {
+    return false;
+  }
+  return existsSync(dbPath);
 };
 
 /**
@@ -53,86 +53,86 @@ const isDatabaseInitialized = (dbPath: string): boolean => {
  * Starts the server with database connection and optional indexing.
  */
 export const main = async (): Promise<void> => {
-	try {
-		// Parse command-line arguments
-		const dbPath = parseArgs();
-		const projectRoot = process.cwd();
+  try {
+    // Parse command-line arguments
+    const dbPath = parseArgs();
+    const projectRoot = process.cwd();
 
-		console.error(`Starting ts-graph-mcp server...`);
-		console.error(`Database: ${dbPath}`);
-		console.error(`Project root: ${projectRoot}`);
+    console.error(`Starting ts-graph-mcp server...`);
+    console.error(`Database: ${dbPath}`);
+    console.error(`Project root: ${projectRoot}`);
 
-		// Check if database exists
-		const dbExists = isDatabaseInitialized(dbPath);
+    // Check if database exists
+    const dbExists = isDatabaseInitialized(dbPath);
 
-		// Open database connection (creates and initializes schema if new)
-		const db = openDatabase({ path: dbPath });
+    // Open database connection (creates and initializes schema if new)
+    const db = openDatabase({ path: dbPath });
 
-		// If database doesn't exist, try to index the project
-		if (!dbExists) {
-			console.error("Database not found. Attempting to index project...");
+    // If database doesn't exist, try to index the project
+    if (!dbExists) {
+      console.error("Database not found. Attempting to index project...");
 
-			// Try to find config or auto-detect from tsconfig.json
-			const configResult = await loadConfigOrDetect(projectRoot);
+      // Try to find config or auto-detect from tsconfig.json
+      const configResult = await loadConfigOrDetect(projectRoot);
 
-			if (configResult) {
-				// Log how config was obtained
-				if (configResult.source === "explicit") {
-					console.error(`Using config: ${configResult.configPath}`);
-				} else {
-					console.error(
-						"No config file found. Auto-detected tsconfig.json, using default configuration.",
-					);
-				}
+      if (configResult) {
+        // Log how config was obtained
+        if (configResult.source === "explicit") {
+          console.error(`Using config: ${configResult.configPath}`);
+        } else {
+          console.error(
+            "No config file found. Auto-detected tsconfig.json, using default configuration.",
+          );
+        }
 
-				// Index the project
-				const writer = createSqliteWriter(db);
-				const result = await indexProject(configResult.config, writer, {
-					projectRoot,
-					clearFirst: false,
-				});
+        // Index the project
+        const writer = createSqliteWriter(db);
+        const result = await indexProject(configResult.config, writer, {
+          projectRoot,
+          clearFirst: false,
+        });
 
-				console.error(
-					`Indexed ${result.filesProcessed} files (${result.nodesAdded} symbols, ${result.edgesAdded} connections) in ${result.durationMs}ms`,
-				);
+        console.error(
+          `Indexed ${result.filesProcessed} files (${result.nodesAdded} symbols, ${result.edgesAdded} connections) in ${result.durationMs}ms`,
+        );
 
-				if (result.errors && result.errors.length > 0) {
-					console.error(
-						`Indexing completed with ${result.errors.length} errors:`,
-					);
-					for (const error of result.errors) {
-						console.error(`  - ${error.file}: ${error.message}`);
-					}
-				}
-			} else {
-				console.error(
-					"No config file or tsconfig.json found. Starting server with empty database.",
-				);
-				console.error(
-					"To index your project, either create a ts-graph-mcp.config.json file or ensure tsconfig.json exists.",
-				);
-			}
-		} else {
-			console.error("Using existing database.");
-		}
+        if (result.errors && result.errors.length > 0) {
+          console.error(
+            `Indexing completed with ${result.errors.length} errors:`,
+          );
+          for (const error of result.errors) {
+            console.error(`  - ${error.file}: ${error.message}`);
+          }
+        }
+      } else {
+        console.error(
+          "No config file or tsconfig.json found. Starting server with empty database.",
+        );
+        console.error(
+          "To index your project, either create a ts-graph-mcp.config.json file or ensure tsconfig.json exists.",
+        );
+      }
+    } else {
+      console.error("Using existing database.");
+    }
 
-		// Start MCP server
-		console.error("Starting MCP server on stdio...");
-		await startMcpServer(db, projectRoot);
-	} catch (error) {
-		const message = error instanceof Error ? error.message : String(error);
-		console.error(`Fatal error: ${message}`);
-		if (error instanceof Error && error.stack) {
-			console.error(error.stack);
-		}
-		process.exit(1);
-	}
+    // Start MCP server
+    console.error("Starting MCP server on stdio...");
+    await startMcpServer(db, projectRoot);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`Fatal error: ${message}`);
+    if (error instanceof Error && error.stack) {
+      console.error(error.stack);
+    }
+    process.exit(1);
+  }
 };
 
 // Run main if executed directly
 if (import.meta.url === `file://${process.argv[1]}`) {
-	main().catch((error) => {
-		console.error("Unhandled error:", error);
-		process.exit(1);
-	});
+  main().catch((error) => {
+    console.error("Unhandled error:", error);
+    process.exit(1);
+  });
 }

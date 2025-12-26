@@ -7,7 +7,7 @@
  * - format → formatOutput (variable assignment)
  */
 
-import { validateInput, formatOutput } from "./handlers.js";
+import { formatOutput, validateInput } from "./handlers.js";
 
 // Function assigned to variable (not directly called here)
 export const validate = validateInput;

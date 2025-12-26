@@ -19,12 +19,12 @@ export type ImportMap = Map<string, string>;
  * Options for building an import map.
  */
 export interface BuildImportMapOptions {
-	/**
-	 * Include type-only imports in the map.
-	 * Default: false (skip type-only imports since they can't be called).
-	 * Set to true when building a map for USES_TYPE edge resolution.
-	 */
-	includeTypeImports?: boolean;
+  /**
+   * Include type-only imports in the map.
+   * Default: false (skip type-only imports since they can't be called).
+   * Set to true when building a map for USES_TYPE edge resolution.
+   */
+  includeTypeImports?: boolean;
 }
 
 /**
@@ -41,96 +41,96 @@ export interface BuildImportMapOptions {
  * @returns A map from local symbol names to target node IDs
  */
 export const buildImportMap = (
-	sourceFile: SourceFile,
-	filePath: string,
-	options?: BuildImportMapOptions,
+  sourceFile: SourceFile,
+  filePath: string,
+  options?: BuildImportMapOptions,
 ): ImportMap => {
-	const map: ImportMap = new Map();
-	const includeTypeImports = options?.includeTypeImports ?? false;
+  const map: ImportMap = new Map();
+  const includeTypeImports = options?.includeTypeImports ?? false;
 
-	// Derive project root from source file path
-	const absolutePath = sourceFile.getFilePath().replace(/\\/g, "/");
-	const projectRoot = deriveProjectRoot(absolutePath, filePath);
+  // Derive project root from source file path
+  const absolutePath = sourceFile.getFilePath().replace(/\\/g, "/");
+  const projectRoot = deriveProjectRoot(absolutePath, filePath);
 
-	const imports = sourceFile.getImportDeclarations();
+  const imports = sourceFile.getImportDeclarations();
 
-	for (const importDecl of imports) {
-		// Skip type-only imports unless includeTypeImports is true
-		if (importDecl.isTypeOnly() && !includeTypeImports) {
-			continue;
-		}
+  for (const importDecl of imports) {
+    // Skip type-only imports unless includeTypeImports is true
+    if (importDecl.isTypeOnly() && !includeTypeImports) {
+      continue;
+    }
 
-		// Use ts-morph to resolve the import (handles path aliases like @shared/*)
-		const resolvedSourceFile = importDecl.getModuleSpecifierSourceFile();
-		if (!resolvedSourceFile) {
-			// Could not resolve - might be external module or unresolvable
-			// Try fallback for relative imports
-			const moduleSpecifier = importDecl.getModuleSpecifierValue();
-			if (moduleSpecifier.startsWith(".") || moduleSpecifier.startsWith("/")) {
-				const targetPath = resolveRelativeImport(filePath, moduleSpecifier);
-				if (targetPath) {
-					addImportsToMap(map, importDecl, targetPath, includeTypeImports);
-				}
-			}
-			continue;
-		}
+    // Use ts-morph to resolve the import (handles path aliases like @shared/*)
+    const resolvedSourceFile = importDecl.getModuleSpecifierSourceFile();
+    if (!resolvedSourceFile) {
+      // Could not resolve - might be external module or unresolvable
+      // Try fallback for relative imports
+      const moduleSpecifier = importDecl.getModuleSpecifierValue();
+      if (moduleSpecifier.startsWith(".") || moduleSpecifier.startsWith("/")) {
+        const targetPath = resolveRelativeImport(filePath, moduleSpecifier);
+        if (targetPath) {
+          addImportsToMap(map, importDecl, targetPath, includeTypeImports);
+        }
+      }
+      continue;
+    }
 
-		// Get target file's relative path
-		const targetAbsolutePath = resolvedSourceFile
-			.getFilePath()
-			.replace(/\\/g, "/");
-		const targetPath = targetAbsolutePath.startsWith(projectRoot)
-			? targetAbsolutePath.slice(projectRoot.length)
-			: targetAbsolutePath;
+    // Get target file's relative path
+    const targetAbsolutePath = resolvedSourceFile
+      .getFilePath()
+      .replace(/\\/g, "/");
+    const targetPath = targetAbsolutePath.startsWith(projectRoot)
+      ? targetAbsolutePath.slice(projectRoot.length)
+      : targetAbsolutePath;
 
-		addImportsToMap(map, importDecl, targetPath, includeTypeImports);
-	}
+    addImportsToMap(map, importDecl, targetPath, includeTypeImports);
+  }
 
-	return map;
+  return map;
 };
 
 /**
  * Add imports from an import declaration to the map.
  */
 const addImportsToMap = (
-	map: ImportMap,
-	importDecl: ReturnType<SourceFile["getImportDeclarations"]>[number],
-	targetPath: string,
-	includeTypeImports: boolean,
+  map: ImportMap,
+  importDecl: ReturnType<SourceFile["getImportDeclarations"]>[number],
+  targetPath: string,
+  includeTypeImports: boolean,
 ): void => {
-	// Process named imports: import { formatDate, parseDate as pd } from './utils'
-	const namedImports = importDecl.getNamedImports();
-	for (const namedImport of namedImports) {
-		// Skip type-only named imports unless includeTypeImports is true
-		if (namedImport.isTypeOnly() && !includeTypeImports) {
-			continue;
-		}
+  // Process named imports: import { formatDate, parseDate as pd } from './utils'
+  const namedImports = importDecl.getNamedImports();
+  for (const namedImport of namedImports) {
+    // Skip type-only named imports unless includeTypeImports is true
+    if (namedImport.isTypeOnly() && !includeTypeImports) {
+      continue;
+    }
 
-		// getName() returns the original exported name (e.g., "formatDate")
-		const originalName = namedImport.getName();
+    // getName() returns the original exported name (e.g., "formatDate")
+    const originalName = namedImport.getName();
 
-		// getAliasNode() returns the local alias if one exists (e.g., "fd" in "formatDate as fd")
-		const aliasNode = namedImport.getAliasNode();
-		const localName = aliasNode ? aliasNode.getText() : originalName;
+    // getAliasNode() returns the local alias if one exists (e.g., "fd" in "formatDate as fd")
+    const aliasNode = namedImport.getAliasNode();
+    const localName = aliasNode ? aliasNode.getText() : originalName;
 
-		// Construct target node ID directly: targetPath:symbolName
-		const targetId = `${targetPath}:${originalName}`;
-		map.set(localName, targetId);
-	}
+    // Construct target node ID directly: targetPath:symbolName
+    const targetId = `${targetPath}:${originalName}`;
+    map.set(localName, targetId);
+  }
 
-	// Process default imports: import utils from './utils'
-	const defaultImport = importDecl.getDefaultImport();
-	if (defaultImport) {
-		const localName = defaultImport.getText();
-		// For default exports, we use 'default' as the symbol name
-		// This is a simplification - default exports may have different names
-		const targetId = `${targetPath}:default`;
-		map.set(localName, targetId);
-	}
+  // Process default imports: import utils from './utils'
+  const defaultImport = importDecl.getDefaultImport();
+  if (defaultImport) {
+    const localName = defaultImport.getText();
+    // For default exports, we use 'default' as the symbol name
+    // This is a simplification - default exports may have different names
+    const targetId = `${targetPath}:default`;
+    map.set(localName, targetId);
+  }
 
-	// Note: Namespace imports (import * as utils from './utils') are not
-	// directly added since they're accessed as utils.foo() which requires
-	// different resolution logic
+  // Note: Namespace imports (import * as utils from './utils') are not
+  // directly added since they're accessed as utils.foo() which requires
+  // different resolution logic
 };
 
 /**
@@ -139,14 +139,14 @@ const addImportsToMap = (
  *          => projectRoot="/home/user/project/"
  */
 const deriveProjectRoot = (
-	absolutePath: string,
-	relativePath: string,
+  absolutePath: string,
+  relativePath: string,
 ): string => {
-	if (absolutePath.endsWith(relativePath)) {
-		return absolutePath.slice(0, absolutePath.length - relativePath.length);
-	}
-	// Fallback: if paths don't match, return empty (will use absolute paths)
-	return "";
+  if (absolutePath.endsWith(relativePath)) {
+    return absolutePath.slice(0, absolutePath.length - relativePath.length);
+  }
+  // Fallback: if paths don't match, return empty (will use absolute paths)
+  return "";
 };
 
 /**
@@ -158,45 +158,45 @@ const deriveProjectRoot = (
  * @returns The resolved target file path
  */
 const resolveRelativeImport = (
-	sourceFilePath: string,
-	moduleSpecifier: string,
+  sourceFilePath: string,
+  moduleSpecifier: string,
 ): string => {
-	// Get the directory of the source file
-	const lastSlash = sourceFilePath.lastIndexOf("/");
-	const sourceDir =
-		lastSlash >= 0 ? sourceFilePath.substring(0, lastSlash) : "";
+  // Get the directory of the source file
+  const lastSlash = sourceFilePath.lastIndexOf("/");
+  const sourceDir =
+    lastSlash >= 0 ? sourceFilePath.substring(0, lastSlash) : "";
 
-	// Resolve the relative path
-	const parts = (
-		sourceDir ? `${sourceDir}/${moduleSpecifier}` : moduleSpecifier
-	)
-		.split("/")
-		.filter((p) => p !== ".");
+  // Resolve the relative path
+  const parts = (
+    sourceDir ? `${sourceDir}/${moduleSpecifier}` : moduleSpecifier
+  )
+    .split("/")
+    .filter((p) => p !== ".");
 
-	// Process .. to go up directories
-	const resolved: string[] = [];
-	for (const part of parts) {
-		if (part === "..") {
-			resolved.pop();
-		} else {
-			resolved.push(part);
-		}
-	}
+  // Process .. to go up directories
+  const resolved: string[] = [];
+  for (const part of parts) {
+    if (part === "..") {
+      resolved.pop();
+    } else {
+      resolved.push(part);
+    }
+  }
 
-	const basePath = resolved.join("/");
+  const basePath = resolved.join("/");
 
-	// Convert JS extensions to TS (ESM pattern: import from .js but source is .ts)
-	if (basePath.endsWith(".js")) {
-		return `${basePath.slice(0, -3)}.ts`;
-	}
-	if (basePath.endsWith(".jsx")) {
-		return `${basePath.slice(0, -4)}.tsx`;
-	}
+  // Convert JS extensions to TS (ESM pattern: import from .js but source is .ts)
+  if (basePath.endsWith(".js")) {
+    return `${basePath.slice(0, -3)}.ts`;
+  }
+  if (basePath.endsWith(".jsx")) {
+    return `${basePath.slice(0, -4)}.tsx`;
+  }
 
-	// For extensionless imports, add .ts
-	if (!basePath.match(/\.[jt]sx?$/)) {
-		return `${basePath}.ts`;
-	}
+  // For extensionless imports, add .ts
+  if (!basePath.match(/\.[jt]sx?$/)) {
+    return `${basePath}.ts`;
+  }
 
-	return basePath;
+  return basePath;
 };

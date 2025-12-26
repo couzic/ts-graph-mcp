@@ -42,18 +42,18 @@ CREATE TABLE IF NOT EXISTS edges (
 )`;
 
 const INDEXES = [
-	// Node indexes
-	"CREATE INDEX IF NOT EXISTS idx_nodes_file_path ON nodes(file_path)",
-	"CREATE INDEX IF NOT EXISTS idx_nodes_type ON nodes(type)",
-	"CREATE INDEX IF NOT EXISTS idx_nodes_name ON nodes(name)",
-	"CREATE INDEX IF NOT EXISTS idx_nodes_module ON nodes(module)",
-	"CREATE INDEX IF NOT EXISTS idx_nodes_package ON nodes(package)",
-	"CREATE INDEX IF NOT EXISTS idx_nodes_exported ON nodes(exported)",
+  // Node indexes
+  "CREATE INDEX IF NOT EXISTS idx_nodes_file_path ON nodes(file_path)",
+  "CREATE INDEX IF NOT EXISTS idx_nodes_type ON nodes(type)",
+  "CREATE INDEX IF NOT EXISTS idx_nodes_name ON nodes(name)",
+  "CREATE INDEX IF NOT EXISTS idx_nodes_module ON nodes(module)",
+  "CREATE INDEX IF NOT EXISTS idx_nodes_package ON nodes(package)",
+  "CREATE INDEX IF NOT EXISTS idx_nodes_exported ON nodes(exported)",
 
-	// Edge indexes for traversal queries
-	"CREATE INDEX IF NOT EXISTS idx_edges_source ON edges(source)",
-	"CREATE INDEX IF NOT EXISTS idx_edges_target ON edges(target)",
-	"CREATE INDEX IF NOT EXISTS idx_edges_type ON edges(type)",
+  // Edge indexes for traversal queries
+  "CREATE INDEX IF NOT EXISTS idx_edges_source ON edges(source)",
+  "CREATE INDEX IF NOT EXISTS idx_edges_target ON edges(target)",
+  "CREATE INDEX IF NOT EXISTS idx_edges_type ON edges(type)",
 ];
 
 /**
@@ -63,14 +63,14 @@ const INDEXES = [
  * @param db - better-sqlite3 database instance
  */
 export const initializeSchema = (db: Database.Database): void => {
-	// Create tables
-	db.exec(NODES_TABLE);
-	db.exec(EDGES_TABLE);
+  // Create tables
+  db.exec(NODES_TABLE);
+  db.exec(EDGES_TABLE);
 
-	// Create indexes
-	for (const indexSql of INDEXES) {
-		db.exec(indexSql);
-	}
+  // Create indexes
+  for (const indexSql of INDEXES) {
+    db.exec(indexSql);
+  }
 };
 
 /**
@@ -79,6 +79,6 @@ export const initializeSchema = (db: Database.Database): void => {
  * @param db - better-sqlite3 database instance
  */
 export const dropAllTables = (db: Database.Database): void => {
-	db.exec("DROP TABLE IF EXISTS edges");
-	db.exec("DROP TABLE IF EXISTS nodes");
+  db.exec("DROP TABLE IF EXISTS edges");
+  db.exec("DROP TABLE IF EXISTS nodes");
 };

@@ -7,14 +7,16 @@
  * - filterItems → filterActive (callback arg)
  */
 
-import { transformItem, filterActive } from "./handlers.js";
+import { filterActive, transformItem } from "./handlers.js";
 
 export function processItems(items: string[]): string[] {
-	// transformItem is passed as callback, not directly invoked
-	return items.map(transformItem);
+  // transformItem is passed as callback, not directly invoked
+  return items.map(transformItem);
 }
 
-export function filterItems(items: Array<{ active: boolean }>): Array<{ active: boolean }> {
-	// filterActive is passed as callback, not directly invoked
-	return items.filter(filterActive);
+export function filterItems(
+  items: Array<{ active: boolean }>,
+): Array<{ active: boolean }> {
+  // filterActive is passed as callback, not directly invoked
+  return items.filter(filterActive);
 }

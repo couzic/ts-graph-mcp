@@ -1,7 +1,7 @@
 import type { User } from "@shared/types/User";
 import { createUser } from "@shared/types/User";
-import { validateEmail, validateRequired } from "@shared/utils/validate";
 import { formatDate } from "@shared/utils/formatDate";
+import { validateEmail, validateRequired } from "@shared/utils/validate";
 
 /**
  * User service response type.
@@ -20,7 +20,7 @@ export interface UserServiceResponse<T> {
  */
 export function createUserService(
   name: string,
-  email: string
+  email: string,
 ): UserServiceResponse<User> {
   if (!validateRequired(name)) {
     return { success: false, error: "Name is required" };
@@ -47,7 +47,7 @@ export function getUserSummary(user: User): string {
  * Tests USES_TYPE with User[] array type.
  */
 export function createUsersService(
-  userInputs: Array<{ name: string; email: string }>
+  userInputs: Array<{ name: string; email: string }>,
 ): UserServiceResponse<User[]> {
   const users: User[] = [];
 

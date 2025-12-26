@@ -5,28 +5,28 @@
  * - CALLS: backend → shared (createUser function call)
  */
 
-import { type User, type Config, createUser } from "@shared/common";
+import { type Config, createUser, type User } from "@shared/common";
 
 const defaultConfig: Config = {
-	apiUrl: "https://api.example.com",
-	debug: false,
+  apiUrl: "https://api.example.com",
+  debug: false,
 };
 
 export function getUser(id: string): User | null {
-	// Simulated database lookup
-	if (id === "1") {
-		return createUser("John Doe", "john@example.com");
-	}
-	return null;
+  // Simulated database lookup
+  if (id === "1") {
+    return createUser("John Doe", "john@example.com");
+  }
+  return null;
 }
 
 export function listUsers(): User[] {
-	return [
-		createUser("Alice", "alice@example.com"),
-		createUser("Bob", "bob@example.com"),
-	];
+  return [
+    createUser("Alice", "alice@example.com"),
+    createUser("Bob", "bob@example.com"),
+  ];
 }
 
 export function getConfig(): Config {
-	return defaultConfig;
+  return defaultConfig;
 }

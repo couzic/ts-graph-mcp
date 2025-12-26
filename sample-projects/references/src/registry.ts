@@ -8,7 +8,12 @@
  * - registerHandlers → handleRead (Map value)
  */
 
-import { validateInput, formatOutput, handleCreate, handleRead } from "./handlers.js";
+import {
+  formatOutput,
+  handleCreate,
+  handleRead,
+  validateInput,
+} from "./handlers.js";
 
 type Validator = (input: unknown) => boolean;
 type Handler = (...args: unknown[]) => void;
@@ -20,8 +25,8 @@ export const validators: Validator[] = [validateInput];
 const handlerMap = new Map<string, Handler>();
 
 export function registerHandlers(): void {
-	handlerMap.set("create", handleCreate);
-	handlerMap.set("read", handleRead as unknown as Handler);
+  handlerMap.set("create", handleCreate);
+  handlerMap.set("read", handleRead as unknown as Handler);
 }
 
 // Exported for reference (array literal)

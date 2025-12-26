@@ -4,81 +4,74 @@
  */
 
 import {
-	findUserById,
-	findUserByEmail,
-	findAllUsers,
-	createUser,
-	updateUser,
-	deleteUser,
-	type UserEntity,
+  createUser,
+  deleteUser,
+  findAllUsers,
+  findUserByEmail,
+  findUserById,
+  type UserEntity,
+  updateUser,
 } from "../repositories/UserRepository";
 
 export interface User {
-	id: string;
-	name: string;
-	email: string;
-	createdAt: Date;
+  id: string;
+  name: string;
+  email: string;
+  createdAt: Date;
 }
 
 export function getUserById(id: string): User | null {
-	const entity = findUserById(id);
-	return entity ? mapToUser(entity) : null;
+  const entity = findUserById(id);
+  return entity ? mapToUser(entity) : null;
 }
 
 export function getUserByEmail(email: string): User | null {
-	const entity = findUserByEmail(email);
-	return entity ? mapToUser(entity) : null;
+  const entity = findUserByEmail(email);
+  return entity ? mapToUser(entity) : null;
 }
 
 export function listUsers(): User[] {
-	const entities = findAllUsers();
-	return entities.map(mapToUser);
+  const entities = findAllUsers();
+  return entities.map(mapToUser);
 }
 
-export function registerUser(
-	name: string,
-	email: string,
-): User | null {
-	// Business logic: validate email format
-	if (!isValidEmail(email)) {
-		throw new Error("Invalid email format");
-	}
+export function registerUser(name: string, email: string): User | null {
+  // Business logic: validate email format
+  if (!isValidEmail(email)) {
+    throw new Error("Invalid email format");
+  }
 
-	// Check for existing user
-	if (findUserByEmail(email)) {
-		throw new Error("User already exists");
-	}
+  // Check for existing user
+  if (findUserByEmail(email)) {
+    throw new Error("User already exists");
+  }
 
-	const entity = createUser(name, email);
-	return entity ? mapToUser(entity) : null;
+  const entity = createUser(name, email);
+  return entity ? mapToUser(entity) : null;
 }
 
-export function modifyUser(
-	id: string,
-	name: string,
-	email: string,
-): boolean {
-	// Business logic: validate email format
-	if (!isValidEmail(email)) {
-		throw new Error("Invalid email format");
-	}
+export function modifyUser(id: string, name: string, email: string): boolean {
+  // Business logic: validate email format
+  if (!isValidEmail(email)) {
+    throw new Error("Invalid email format");
+  }
 
-	return updateUser(id, name, email);
+  return updateUser(id, name, email);
 }
 
 export function removeUser(id: string): boolean {
-	return deleteUser(id);
+  return deleteUser(id);
 }
 
 function mapToUser(entity: UserEntity): User {
-	return {
-		id: entity.id,
-		name: entity.name,
-		email: entity.email,
-		createdAt: entity.createdAt,
-	};
+  return {
+    id: entity.id,
+    name: entity.name,
+    email: entity.email,
+    createdAt: entity.createdAt,
+  };
 }
 
 function isValidEmail(email: string): boolean {
-	return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }

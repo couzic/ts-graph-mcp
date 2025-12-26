@@ -10,24 +10,24 @@ export type { ExtractionContext };
  * Statistics from extraction.
  */
 export interface ExtractionStats {
-	/** File path that was processed */
-	filePath: string;
-	/** Number of nodes extracted */
-	nodeCount: number;
-	/** Number of edges extracted */
-	edgeCount: number;
+  /** File path that was processed */
+  filePath: string;
+  /** Number of nodes extracted */
+  nodeCount: number;
+  /** Number of edges extracted */
+  edgeCount: number;
 }
 
 /**
  * Result from extracting a source file.
  */
 export interface ExtractionResult {
-	/** All extracted nodes */
-	nodes: Node[];
-	/** All extracted edges */
-	edges: Edge[];
-	/** Extraction statistics */
-	stats: ExtractionStats;
+  /** All extracted nodes */
+  nodes: Node[];
+  /** All extracted edges */
+  edges: Edge[];
+  /** Extraction statistics */
+  stats: ExtractionStats;
 }
 
 /**
@@ -38,32 +38,32 @@ export interface ExtractionResult {
  * @returns Extraction result with nodes, edges, and stats
  */
 export const extractFromSourceFile = (
-	sourceFile: SourceFile,
-	context: ExtractionContext,
+  sourceFile: SourceFile,
+  context: ExtractionContext,
 ): ExtractionResult => {
-	// Extract nodes
-	const nodes = extractNodes(sourceFile, context);
+  // Extract nodes
+  const nodes = extractNodes(sourceFile, context);
 
-	// Extract edges (all edge extractors now use AST directly via import maps)
-	const edges = extractEdges(sourceFile, context);
+  // Extract edges (all edge extractors now use AST directly via import maps)
+  const edges = extractEdges(sourceFile, context);
 
-	return {
-		nodes,
-		edges,
-		stats: {
-			filePath: context.filePath,
-			nodeCount: nodes.length,
-			edgeCount: edges.length,
-		},
-	};
+  return {
+    nodes,
+    edges,
+    stats: {
+      filePath: context.filePath,
+      nodeCount: nodes.length,
+      edgeCount: edges.length,
+    },
+  };
 };
 
 /**
  * Options for extracting from a file path.
  */
 export interface ExtractFromFileOptions {
-	/** Existing ts-morph project to use (creates new if not provided) */
-	project?: Project;
-	/** tsconfig.json path (optional, for proper type resolution) */
-	tsConfigFilePath?: string;
+  /** Existing ts-morph project to use (creates new if not provided) */
+  project?: Project;
+  /** tsconfig.json path (optional, for proper type resolution) */
+  tsConfigFilePath?: string;
 }

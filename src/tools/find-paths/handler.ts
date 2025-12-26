@@ -8,79 +8,79 @@ import { queryPath } from "./query.js";
  * Input parameters for findPaths tool.
  */
 export interface FindPathsParams {
-	from: SymbolQuery;
-	to: SymbolQuery;
-	maxDepth?: number;
-	maxPaths?: number;
+  from: SymbolQuery;
+  to: SymbolQuery;
+  maxDepth?: number;
+  maxPaths?: number;
 }
 
 /**
  * MCP tool definition for findPaths.
  */
 export const findPathsDefinition = {
-	name: "findPaths",
-	description:
-		"Find how two symbols are connected via call/import chains. Use this to answer 'How does function A eventually call function B?' or 'What's the dependency path between these modules?' Returns path(s) as symbol sequences with edge types. IMPORTANT: Requires SPECIFIC symbol names for both source and target. Do NOT use for vague architectural questions like 'how does a request reach the database' - instead read 2-3 key files to understand the layer structure. Only use when you already know the exact symbols to trace between.",
-	inputSchema: {
-		type: "object" as const,
-		properties: {
-			from: {
-				type: "object",
-				description: "Source symbol query",
-				properties: {
-					symbol: {
-						type: "string",
-						description: "Symbol name (e.g., 'formatDate', 'User.save')",
-					},
-					file: {
-						type: "string",
-						description: "Narrow scope to a file",
-					},
-					module: {
-						type: "string",
-						description: "Narrow scope to a module",
-					},
-					package: {
-						type: "string",
-						description: "Narrow scope to a package",
-					},
-				},
-				required: ["symbol"],
-			},
-			to: {
-				type: "object",
-				description: "Target symbol query",
-				properties: {
-					symbol: {
-						type: "string",
-						description: "Symbol name (e.g., 'formatDate', 'User.save')",
-					},
-					file: {
-						type: "string",
-						description: "Narrow scope to a file",
-					},
-					module: {
-						type: "string",
-						description: "Narrow scope to a module",
-					},
-					package: {
-						type: "string",
-						description: "Narrow scope to a package",
-					},
-				},
-				required: ["symbol"],
-			},
-			maxDepth: {
-				type: "number",
-				description: "Maximum path length (1-100, default: 20)",
-			},
-			maxPaths: {
-				type: "number",
-				description: "Maximum paths to return (1-10, default: 3)",
-			},
-		},
-		required: ["from", "to"],
-	},
+  name: "findPaths",
+  description:
+    "Find how two symbols are connected via call/import chains. Use this to answer 'How does function A eventually call function B?' or 'What's the dependency path between these modules?' Returns path(s) as symbol sequences with edge types. IMPORTANT: Requires SPECIFIC symbol names for both source and target. Do NOT use for vague architectural questions like 'how does a request reach the database' - instead read 2-3 key files to understand the layer structure. Only use when you already know the exact symbols to trace between.",
+  inputSchema: {
+    type: "object" as const,
+    properties: {
+      from: {
+        type: "object",
+        description: "Source symbol query",
+        properties: {
+          symbol: {
+            type: "string",
+            description: "Symbol name (e.g., 'formatDate', 'User.save')",
+          },
+          file: {
+            type: "string",
+            description: "Narrow scope to a file",
+          },
+          module: {
+            type: "string",
+            description: "Narrow scope to a module",
+          },
+          package: {
+            type: "string",
+            description: "Narrow scope to a package",
+          },
+        },
+        required: ["symbol"],
+      },
+      to: {
+        type: "object",
+        description: "Target symbol query",
+        properties: {
+          symbol: {
+            type: "string",
+            description: "Symbol name (e.g., 'formatDate', 'User.save')",
+          },
+          file: {
+            type: "string",
+            description: "Narrow scope to a file",
+          },
+          module: {
+            type: "string",
+            description: "Narrow scope to a module",
+          },
+          package: {
+            type: "string",
+            description: "Narrow scope to a package",
+          },
+        },
+        required: ["symbol"],
+      },
+      maxDepth: {
+        type: "number",
+        description: "Maximum path length (1-100, default: 20)",
+      },
+      maxPaths: {
+        type: "number",
+        description: "Maximum paths to return (1-10, default: 3)",
+      },
+    },
+    required: ["from", "to"],
+  },
 };
 
 /**
@@ -91,46 +91,46 @@ export const findPathsDefinition = {
  * @returns Formatted string for LLM consumption
  */
 export function executeFindPaths(
-	db: Database.Database,
-	params: FindPathsParams,
+  db: Database.Database,
+  params: FindPathsParams,
 ): string {
-	// Resolve 'from' symbol
-	const fromResult = resolveSymbol(db, params.from);
-	if (fromResult.status === "not_found") {
-		return formatNotFound(
-			`from.symbol: ${params.from.symbol}`,
-			fromResult.suggestions,
-		);
-	}
-	if (fromResult.status === "ambiguous") {
-		return formatAmbiguous(
-			`from.symbol: ${params.from.symbol}`,
-			fromResult.candidates,
-		);
-	}
+  // Resolve 'from' symbol
+  const fromResult = resolveSymbol(db, params.from);
+  if (fromResult.status === "not_found") {
+    return formatNotFound(
+      `from.symbol: ${params.from.symbol}`,
+      fromResult.suggestions,
+    );
+  }
+  if (fromResult.status === "ambiguous") {
+    return formatAmbiguous(
+      `from.symbol: ${params.from.symbol}`,
+      fromResult.candidates,
+    );
+  }
 
-	// Resolve 'to' symbol
-	const toResult = resolveSymbol(db, params.to);
-	if (toResult.status === "not_found") {
-		return formatNotFound(
-			`to.symbol: ${params.to.symbol}`,
-			toResult.suggestions,
-		);
-	}
-	if (toResult.status === "ambiguous") {
-		return formatAmbiguous(
-			`to.symbol: ${params.to.symbol}`,
-			toResult.candidates,
-		);
-	}
+  // Resolve 'to' symbol
+  const toResult = resolveSymbol(db, params.to);
+  if (toResult.status === "not_found") {
+    return formatNotFound(
+      `to.symbol: ${params.to.symbol}`,
+      toResult.suggestions,
+    );
+  }
+  if (toResult.status === "ambiguous") {
+    return formatAmbiguous(
+      `to.symbol: ${params.to.symbol}`,
+      toResult.candidates,
+    );
+  }
 
-	const sourceId = fromResult.node.id;
-	const targetId = toResult.node.id;
+  const sourceId = fromResult.node.id;
+  const targetId = toResult.node.id;
 
-	// Query path(s)
-	const paths = queryPath(db, sourceId, targetId, {
-		maxDepth: params.maxDepth,
-		maxPaths: params.maxPaths,
-	});
-	return formatPaths(fromResult.node, toResult.node, paths);
+  // Query path(s)
+  const paths = queryPath(db, sourceId, targetId, {
+    maxDepth: params.maxDepth,
+    maxPaths: params.maxPaths,
+  });
+  return formatPaths(fromResult.node, toResult.node, paths);
 }

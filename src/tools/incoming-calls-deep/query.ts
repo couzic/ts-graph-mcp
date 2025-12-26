@@ -3,12 +3,12 @@ import type { Node } from "../../db/Types.js";
 import { type NodeRow, rowToNode } from "../shared/rowConverters.js";
 
 export interface QueryCallersOptions {
-	maxDepth?: number;
+  maxDepth?: number;
 }
 
 export interface CallerWithCallSites {
-	node: Node;
-	callSites: number[];
+  node: Node;
+  callSites: number[];
 }
 
 /**
@@ -20,13 +20,13 @@ export interface CallerWithCallSites {
  * @returns Array of nodes that call the target
  */
 export function queryCallers(
-	db: Database.Database,
-	targetId: string,
-	options?: QueryCallersOptions,
+  db: Database.Database,
+  targetId: string,
+  options?: QueryCallersOptions,
 ): Node[] {
-	const maxDepth = options?.maxDepth ?? 100;
+  const maxDepth = options?.maxDepth ?? 100;
 
-	const sql = `
+  const sql = `
     WITH RECURSIVE callers(id, depth) AS (
       SELECT source, 1
       FROM edges e
@@ -44,12 +44,12 @@ export function queryCallers(
     JOIN nodes n ON n.id = c.id
   `;
 
-	const rows = db.prepare(sql).all(targetId, maxDepth) as NodeRow[];
-	return rows.map(rowToNode);
+  const rows = db.prepare(sql).all(targetId, maxDepth) as NodeRow[];
+  return rows.map(rowToNode);
 }
 
 interface CallerRowWithCallSites extends NodeRow {
-	call_sites: string | null;
+  call_sites: string | null;
 }
 
 /**
@@ -63,20 +63,20 @@ interface CallerRowWithCallSites extends NodeRow {
  * @returns Array of caller nodes with their call site line numbers
  */
 export function queryCallersWithCallSites(
-	db: Database.Database,
-	targetId: string,
+  db: Database.Database,
+  targetId: string,
 ): CallerWithCallSites[] {
-	const sql = `
+  const sql = `
     SELECT n.*, e.call_sites
     FROM edges e
     JOIN nodes n ON n.id = e.source
     WHERE e.target = ? AND e.type = 'CALLS'
   `;
 
-	const rows = db.prepare(sql).all(targetId) as CallerRowWithCallSites[];
+  const rows = db.prepare(sql).all(targetId) as CallerRowWithCallSites[];
 
-	return rows.map((row) => ({
-		node: rowToNode(row),
-		callSites: row.call_sites ? JSON.parse(row.call_sites) : [],
-	}));
+  return rows.map((row) => ({
+    node: rowToNode(row),
+    callSites: row.call_sites ? JSON.parse(row.call_sites) : [],
+  }));
 }

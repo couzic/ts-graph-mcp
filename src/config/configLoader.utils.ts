@@ -2,8 +2,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { IMPLICIT_MODULE_NAME } from "../tools/shared/nodeFormatters.js";
 import {
-	type ProjectConfig,
-	ProjectConfigInputSchema,
+  type ProjectConfig,
+  ProjectConfigInputSchema,
 } from "./Config.schemas.js";
 import { normalizeConfig } from "./defineConfig.js";
 
@@ -18,33 +18,33 @@ import { normalizeConfig } from "./defineConfig.js";
  * @throws Error if package.json exists but contains invalid JSON
  */
 export const readPackageName = (directory: string): string => {
-	const packageJsonPath = join(directory, "package.json");
-	const directoryName = basename(directory);
+  const packageJsonPath = join(directory, "package.json");
+  const directoryName = basename(directory);
 
-	if (!existsSync(packageJsonPath)) {
-		return directoryName;
-	}
+  if (!existsSync(packageJsonPath)) {
+    return directoryName;
+  }
 
-	const content = readFileSync(packageJsonPath, "utf-8");
-	let pkg: unknown;
-	try {
-		pkg = JSON.parse(content);
-	} catch {
-		throw new Error(
-			`Failed to parse package.json in ${directory}: invalid JSON`,
-		);
-	}
+  const content = readFileSync(packageJsonPath, "utf-8");
+  let pkg: unknown;
+  try {
+    pkg = JSON.parse(content);
+  } catch {
+    throw new Error(
+      `Failed to parse package.json in ${directory}: invalid JSON`,
+    );
+  }
 
-	const name =
-		pkg !== null &&
-		typeof pkg === "object" &&
-		"name" in pkg &&
-		typeof pkg.name === "string" &&
-		pkg.name.length > 0
-			? pkg.name
-			: directoryName;
+  const name =
+    pkg !== null &&
+    typeof pkg === "object" &&
+    "name" in pkg &&
+    typeof pkg.name === "string" &&
+    pkg.name.length > 0
+      ? pkg.name
+      : directoryName;
 
-	return name;
+  return name;
 };
 
 /**
@@ -54,8 +54,8 @@ export const readPackageName = (directory: string): string => {
  * @returns Relative path to tsconfig.json or null if not found
  */
 export const detectTsconfig = (directory: string): string | null => {
-	const tsconfigPath = join(directory, "tsconfig.json");
-	return existsSync(tsconfigPath) ? "./tsconfig.json" : null;
+  const tsconfigPath = join(directory, "tsconfig.json");
+  return existsSync(tsconfigPath) ? "./tsconfig.json" : null;
 };
 
 /**
@@ -66,24 +66,24 @@ export const detectTsconfig = (directory: string): string | null => {
  * @returns Default ProjectConfig
  */
 export const createDefaultConfig = (
-	tsconfigPath: string,
-	packageName: string,
+  tsconfigPath: string,
+  packageName: string,
 ): ProjectConfig => ({
-	modules: [
-		{
-			name: IMPLICIT_MODULE_NAME,
-			packages: [{ name: packageName, tsconfig: tsconfigPath }],
-		},
-	],
+  modules: [
+    {
+      name: IMPLICIT_MODULE_NAME,
+      packages: [{ name: packageName, tsconfig: tsconfigPath }],
+    },
+  ],
 });
 
 /**
  * Supported config file names in order of precedence.
  */
 export const CONFIG_FILE_NAMES = [
-	"ts-graph-mcp.config.ts",
-	"ts-graph-mcp.config.js",
-	"ts-graph-mcp.config.json",
+  "ts-graph-mcp.config.ts",
+  "ts-graph-mcp.config.js",
+  "ts-graph-mcp.config.json",
 ] as const;
 
 /**
@@ -93,13 +93,13 @@ export const CONFIG_FILE_NAMES = [
  * @returns Path to config file, or null if not found
  */
 export const findConfigFile = (directory: string): string | null => {
-	for (const name of CONFIG_FILE_NAMES) {
-		const configPath = join(directory, name);
-		if (existsSync(configPath)) {
-			return configPath;
-		}
-	}
-	return null;
+  for (const name of CONFIG_FILE_NAMES) {
+    const configPath = join(directory, name);
+    if (existsSync(configPath)) {
+      return configPath;
+    }
+  }
+  return null;
 };
 
 /**
@@ -110,42 +110,42 @@ export const findConfigFile = (directory: string): string | null => {
  * @throws Error if file cannot be loaded or config is invalid
  */
 export const loadConfig = async (
-	configPath: string,
+  configPath: string,
 ): Promise<ProjectConfig> => {
-	if (!existsSync(configPath)) {
-		throw new Error(`Config file not found: ${configPath}`);
-	}
+  if (!existsSync(configPath)) {
+    throw new Error(`Config file not found: ${configPath}`);
+  }
 
-	const ext = configPath.split(".").pop();
+  const ext = configPath.split(".").pop();
 
-	let rawConfig: unknown;
+  let rawConfig: unknown;
 
-	if (ext === "json") {
-		const content = readFileSync(configPath, "utf-8");
-		try {
-			rawConfig = JSON.parse(content);
-		} catch (_e) {
-			throw new Error(`Failed to parse JSON config: ${configPath}`);
-		}
-	} else if (ext === "ts" || ext === "js") {
-		// For TypeScript/JavaScript configs, we need to dynamically import
-		// The config file should export a default config object
-		try {
-			const module = await import(configPath);
-			rawConfig = module.default ?? module;
-		} catch (e) {
-			throw new Error(
-				`Failed to load config: ${configPath} - ${(e as Error).message}`,
-			);
-		}
-	} else {
-		throw new Error(`Unsupported config file extension: ${ext}`);
-	}
+  if (ext === "json") {
+    const content = readFileSync(configPath, "utf-8");
+    try {
+      rawConfig = JSON.parse(content);
+    } catch (_e) {
+      throw new Error(`Failed to parse JSON config: ${configPath}`);
+    }
+  } else if (ext === "ts" || ext === "js") {
+    // For TypeScript/JavaScript configs, we need to dynamically import
+    // The config file should export a default config object
+    try {
+      const module = await import(configPath);
+      rawConfig = module.default ?? module;
+    } catch (e) {
+      throw new Error(
+        `Failed to load config: ${configPath} - ${(e as Error).message}`,
+      );
+    }
+  } else {
+    throw new Error(`Unsupported config file extension: ${ext}`);
+  }
 
-	// Validate with Zod schema (accepts both full and flat formats)
-	const parsed = ProjectConfigInputSchema.parse(rawConfig);
-	// Normalize flat format to full format
-	return normalizeConfig(parsed);
+  // Validate with Zod schema (accepts both full and flat formats)
+  const parsed = ProjectConfigInputSchema.parse(rawConfig);
+  // Normalize flat format to full format
+  return normalizeConfig(parsed);
 };
 
 /**
@@ -156,22 +156,22 @@ export const loadConfig = async (
  * @throws Error if no config file found or config is invalid
  */
 export const loadConfigFromDirectory = async (
-	directory: string,
+  directory: string,
 ): Promise<ProjectConfig> => {
-	const configPath = findConfigFile(directory);
-	if (!configPath) {
-		throw new Error(`No config file found in: ${directory}`);
-	}
-	return loadConfig(configPath);
+  const configPath = findConfigFile(directory);
+  if (!configPath) {
+    throw new Error(`No config file found in: ${directory}`);
+  }
+  return loadConfig(configPath);
 };
 
 /**
  * Result type for loadConfigOrDetect indicating how config was obtained.
  */
 export type ConfigResult = {
-	config: ProjectConfig;
-	source: "explicit" | "auto-detected";
-	configPath?: string;
+  config: ProjectConfig;
+  source: "explicit" | "auto-detected";
+  configPath?: string;
 };
 
 /**
@@ -186,23 +186,23 @@ export type ConfigResult = {
  * @returns Config with source info, or null if no config possible
  */
 export const loadConfigOrDetect = async (
-	directory: string,
+  directory: string,
 ): Promise<ConfigResult | null> => {
-	// 1. Try explicit config file first
-	const configPath = findConfigFile(directory);
-	if (configPath) {
-		const config = await loadConfig(configPath);
-		return { config, source: "explicit", configPath };
-	}
+  // 1. Try explicit config file first
+  const configPath = findConfigFile(directory);
+  if (configPath) {
+    const config = await loadConfig(configPath);
+    return { config, source: "explicit", configPath };
+  }
 
-	// 2. Try auto-detect tsconfig.json
-	const tsconfigPath = detectTsconfig(directory);
-	if (tsconfigPath) {
-		const packageName = readPackageName(directory);
-		const config = createDefaultConfig(tsconfigPath, packageName);
-		return { config, source: "auto-detected" };
-	}
+  // 2. Try auto-detect tsconfig.json
+  const tsconfigPath = detectTsconfig(directory);
+  if (tsconfigPath) {
+    const packageName = readPackageName(directory);
+    const config = createDefaultConfig(tsconfigPath, packageName);
+    return { config, source: "auto-detected" };
+  }
 
-	// 3. No config possible
-	return null;
+  // 3. No config possible
+  return null;
 };

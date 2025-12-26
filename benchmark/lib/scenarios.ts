@@ -26,22 +26,22 @@ import type { BenchmarkScenario } from "./types.js";
  * 3. Explicit, auditable configuration per scenario
  */
 export const scenarios: BenchmarkScenario[] = [
-	{
-		id: "with-mcp",
-		name: "WITH MCP",
-		cliFlags: [
-			"--mcp-config",
-			".mcp.json",
-			"--strict-mcp-config",
-			"--allowedTools",
-			"mcp__ts-graph-mcp__*",
-		],
-		description: "ts-graph-mcp tools available",
-	},
-	{
-		id: "without-mcp",
-		name: "WITHOUT MCP",
-		cliFlags: ["--mcp-config", ".no-mcp.json", "--strict-mcp-config"],
-		description: "No MCP servers - clean baseline",
-	},
+  {
+    id: "with-mcp",
+    name: "WITH MCP",
+    cliFlags: [
+      "--mcp-config",
+      ".mcp.json",
+      "--strict-mcp-config",
+      "--allowedTools",
+      "mcp__ts-graph-mcp__*",
+    ],
+    description: "ts-graph-mcp tools available",
+  },
+  {
+    id: "without-mcp",
+    name: "WITHOUT MCP",
+    cliFlags: ["--mcp-config", ".no-mcp.json", "--strict-mcp-config"],
+    description: "No MCP servers - clean baseline",
+  },
 ];

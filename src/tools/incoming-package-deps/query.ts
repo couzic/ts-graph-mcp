@@ -1,31 +1,31 @@
 import type Database from "better-sqlite3";
 
 export interface PackageDependency {
-	/** Package identifier: "module/package" */
-	packageId: string;
-	/** Module name */
-	module: string;
-	/** Package name */
-	package: string;
-	/** Depth from center (0 = center, 1 = direct dependent, 2+ = transitive) */
-	depth: number;
+  /** Package identifier: "module/package" */
+  packageId: string;
+  /** Module name */
+  module: string;
+  /** Package name */
+  package: string;
+  /** Depth from center (0 = center, 1 = direct dependent, 2+ = transitive) */
+  depth: number;
 }
 
 export interface PackageDepsResult {
-	/** Whether the center package exists */
-	centerExists: boolean;
-	/** Center package info */
-	center: {
-		module: string;
-		package: string;
-	};
-	/** All packages in the result (including center) */
-	packages: PackageDependency[];
-	/** All dependency edges (from → to) */
-	dependencies: Array<{
-		from: string; // "module/package"
-		to: string; // "module/package"
-	}>;
+  /** Whether the center package exists */
+  centerExists: boolean;
+  /** Center package info */
+  center: {
+    module: string;
+    package: string;
+  };
+  /** All packages in the result (including center) */
+  packages: PackageDependency[];
+  /** All dependency edges (from → to) */
+  dependencies: Array<{
+    from: string; // "module/package"
+    to: string; // "module/package"
+  }>;
 }
 
 /**
@@ -42,55 +42,55 @@ export interface PackageDepsResult {
  * @returns Package dependency graph
  */
 export function queryIncomingPackageDeps(
-	db: Database.Database,
-	params: {
-		module?: string;
-		package: string;
-		maxDepth: number;
-	},
+  db: Database.Database,
+  params: {
+    module?: string;
+    package: string;
+    maxDepth: number;
+  },
 ): PackageDepsResult {
-	const { module, package: pkg, maxDepth } = params;
+  const { module, package: pkg, maxDepth } = params;
 
-	// Check if target package exists
-	const existsCheckSql = module
-		? "SELECT 1 FROM nodes WHERE module = ? AND package = ? LIMIT 1"
-		: "SELECT 1 FROM nodes WHERE package = ? LIMIT 1";
-	const existsParams = module ? [module, pkg] : [pkg];
-	const exists = db.prepare(existsCheckSql).get(...existsParams);
+  // Check if target package exists
+  const existsCheckSql = module
+    ? "SELECT 1 FROM nodes WHERE module = ? AND package = ? LIMIT 1"
+    : "SELECT 1 FROM nodes WHERE package = ? LIMIT 1";
+  const existsParams = module ? [module, pkg] : [pkg];
+  const exists = db.prepare(existsCheckSql).get(...existsParams);
 
-	if (!exists) {
-		return {
-			centerExists: false,
-			center: { module: module ?? "", package: pkg },
-			packages: [],
-			dependencies: [],
-		};
-	}
+  if (!exists) {
+    return {
+      centerExists: false,
+      center: { module: module ?? "", package: pkg },
+      packages: [],
+      dependencies: [],
+    };
+  }
 
-	// Build the center package ID for comparison
-	// When no module filter is provided, we need to find the actual module from the first node
-	let centerModule = module ?? "";
-	let centerPackageId: string;
+  // Build the center package ID for comparison
+  // When no module filter is provided, we need to find the actual module from the first node
+  let centerModule = module ?? "";
+  let centerPackageId: string;
 
-	if (module) {
-		centerPackageId = `${module}/${pkg}`;
-	} else {
-		// No module filter: query for any node with this package name to get the module
-		const nodeQuery = "SELECT module FROM nodes WHERE package = ? LIMIT 1";
-		const nodeRow = db.prepare(nodeQuery).get(pkg) as
-			| { module: string }
-			| undefined;
-		if (nodeRow) {
-			centerModule = nodeRow.module;
-			centerPackageId = `${nodeRow.module}/${pkg}`;
-		} else {
-			// Shouldn't happen since we checked exists above
-			centerPackageId = pkg;
-		}
-	}
+  if (module) {
+    centerPackageId = `${module}/${pkg}`;
+  } else {
+    // No module filter: query for any node with this package name to get the module
+    const nodeQuery = "SELECT module FROM nodes WHERE package = ? LIMIT 1";
+    const nodeRow = db.prepare(nodeQuery).get(pkg) as
+      | { module: string }
+      | undefined;
+    if (nodeRow) {
+      centerModule = nodeRow.module;
+      centerPackageId = `${nodeRow.module}/${pkg}`;
+    } else {
+      // Shouldn't happen since we checked exists above
+      centerPackageId = pkg;
+    }
+  }
 
-	// Query 1: Find all dependent packages using recursive CTE
-	const packagesSql = `
+  // Query 1: Find all dependent packages using recursive CTE
+  const packagesSql = `
     WITH RECURSIVE
     -- Aggregate file-level IMPORTS to package-level dependencies
     package_imports AS (
@@ -125,39 +125,39 @@ export function queryIncomingPackageDeps(
     ORDER BY depth, pkg_id
   `;
 
-	const packagesRows = db
-		.prepare(packagesSql)
-		.all(centerPackageId, maxDepth) as Array<{
-		pkg_id: string;
-		depth: number;
-	}>;
+  const packagesRows = db
+    .prepare(packagesSql)
+    .all(centerPackageId, maxDepth) as Array<{
+    pkg_id: string;
+    depth: number;
+  }>;
 
-	// Parse package results
-	const packages: PackageDependency[] = packagesRows.map((row) => {
-		const [pkgModule, pkgName] = row.pkg_id.includes("/")
-			? row.pkg_id.split("/")
-			: ["", row.pkg_id];
-		return {
-			packageId: row.pkg_id,
-			module: pkgModule || "",
-			package: pkgName || row.pkg_id,
-			depth: row.depth,
-		};
-	});
+  // Parse package results
+  const packages: PackageDependency[] = packagesRows.map((row) => {
+    const [pkgModule, pkgName] = row.pkg_id.includes("/")
+      ? row.pkg_id.split("/")
+      : ["", row.pkg_id];
+    return {
+      packageId: row.pkg_id,
+      module: pkgModule || "",
+      package: pkgName || row.pkg_id,
+      depth: row.depth,
+    };
+  });
 
-	// Query 2: Find all edges between the discovered packages
-	const packageIds = packages.map((p) => p.packageId);
-	if (packageIds.length === 0) {
-		return {
-			centerExists: true,
-			center: { module: centerModule, package: pkg },
-			packages: [],
-			dependencies: [],
-		};
-	}
+  // Query 2: Find all edges between the discovered packages
+  const packageIds = packages.map((p) => p.packageId);
+  if (packageIds.length === 0) {
+    return {
+      centerExists: true,
+      center: { module: centerModule, package: pkg },
+      packages: [],
+      dependencies: [],
+    };
+  }
 
-	const placeholders = packageIds.map(() => "?").join(", ");
-	const edgesSql = `
+  const placeholders = packageIds.map(() => "?").join(", ");
+  const edgesSql = `
     SELECT DISTINCT
       source_node.module || '/' || source_node.package AS from_pkg,
       target_node.module || '/' || target_node.package AS to_pkg
@@ -172,22 +172,22 @@ export function queryIncomingPackageDeps(
       AND (source_node.module || '/' || source_node.package) != (target_node.module || '/' || target_node.package)
   `;
 
-	const edgesRows = db
-		.prepare(edgesSql)
-		.all(...packageIds, ...packageIds) as Array<{
-		from_pkg: string;
-		to_pkg: string;
-	}>;
+  const edgesRows = db
+    .prepare(edgesSql)
+    .all(...packageIds, ...packageIds) as Array<{
+    from_pkg: string;
+    to_pkg: string;
+  }>;
 
-	const dependencies = edgesRows.map((row) => ({
-		from: row.from_pkg,
-		to: row.to_pkg,
-	}));
+  const dependencies = edgesRows.map((row) => ({
+    from: row.from_pkg,
+    to: row.to_pkg,
+  }));
 
-	return {
-		centerExists: true,
-		center: { module: centerModule, package: pkg },
-		packages,
-		dependencies,
-	};
+  return {
+    centerExists: true,
+    center: { module: centerModule, package: pkg },
+    packages,
+    dependencies,
+  };
 }

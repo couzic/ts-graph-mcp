@@ -1,13 +1,13 @@
 import { join } from "node:path";
-import { type Database } from "better-sqlite3";
+import type { Database } from "better-sqlite3";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { ProjectConfig } from "../../../../src/config/Config.schemas.js";
+import { createSqliteWriter } from "../../../../src/db/sqlite/createSqliteWriter.js";
 import {
-	closeDatabase,
-	openDatabase,
+  closeDatabase,
+  openDatabase,
 } from "../../../../src/db/sqlite/sqliteConnection.utils.js";
 import { initializeSchema } from "../../../../src/db/sqlite/sqliteSchema.utils.js";
-import { createSqliteWriter } from "../../../../src/db/sqlite/createSqliteWriter.js";
 import { indexProject } from "../../../../src/ingestion/indexProject.js";
 import { dependenciesOf } from "../../../../src/tools/dependencies-of/dependenciesOf.js";
 import { dependentsOf } from "../../../../src/tools/dependents-of/dependentsOf.js";
@@ -22,35 +22,40 @@ import { pathsBetween } from "../../../../src/tools/paths-between/pathsBetween.j
  * Tests the 3 core tools by asserting on exact formatted output.
  */
 describe("direct call chain E2E tests", () => {
-	let db: Database;
-	let projectRoot: string;
+  let db: Database;
+  let projectRoot: string;
 
-	beforeAll(async () => {
-		db = openDatabase({ path: ":memory:" });
-		initializeSchema(db);
+  beforeAll(async () => {
+    db = openDatabase({ path: ":memory:" });
+    initializeSchema(db);
 
-		projectRoot = join(import.meta.dirname, "../..");
-		const config: ProjectConfig = {
-			modules: [
-				{
-					name: "test",
-					packages: [{ name: "main", tsconfig: "tsconfig.json" }],
-				},
-			],
-		};
-		const writer = createSqliteWriter(db);
-		await indexProject(config, writer, { projectRoot });
-	});
+    projectRoot = join(import.meta.dirname, "../..");
+    const config: ProjectConfig = {
+      modules: [
+        {
+          name: "test",
+          packages: [{ name: "main", tsconfig: "tsconfig.json" }],
+        },
+      ],
+    };
+    const writer = createSqliteWriter(db);
+    await indexProject(config, writer, { projectRoot });
+  });
 
-	afterAll(() => {
-		closeDatabase(db);
-	});
+  afterAll(() => {
+    closeDatabase(db);
+  });
 
-	describe("dependenciesOf", () => {
-		it("finds all callees of entry", () => {
-			const output = dependenciesOf(db, projectRoot, "src/direct-call/entry.ts", "entry");
+  describe("dependenciesOf", () => {
+    it("finds all callees of entry", () => {
+      const output = dependenciesOf(
+        db,
+        projectRoot,
+        "src/direct-call/entry.ts",
+        "entry",
+      );
 
-			expect(output).toBe(`## Graph
+      expect(output).toBe(`## Graph
 
 entry --CALLS--> step02 --CALLS--> step03 --CALLS--> step04 --CALLS--> step05
 
@@ -61,7 +66,7 @@ step03:
   offset: 3, limit: 3
   snippet:
     3: export function step03(): string {
-    4: 	return step04() + "-03";
+    4:   return step04() + "-03";
     5: }
 
 step02:
@@ -69,7 +74,7 @@ step02:
   offset: 3, limit: 3
   snippet:
     3: export function step02(): string {
-    4: 	return step03() + "-02";
+    4:   return step03() + "-02";
     5: }
 
 step05:
@@ -77,7 +82,7 @@ step05:
   offset: 1, limit: 3
   snippet:
     1: export function step05(): string {
-    2: 	return "05";
+    2:   return "05";
     3: }
 
 step04:
@@ -85,23 +90,33 @@ step04:
   offset: 3, limit: 3
   snippet:
     3: export function step04(): string {
-    4: 	return step05() + "-04";
+    4:   return step05() + "-04";
     5: }
 `);
-		});
+    });
 
-		it("returns empty for terminal node", () => {
-			const output = dependenciesOf(db, projectRoot, "src/direct-call/lib/step05.ts", "step05");
+    it("returns empty for terminal node", () => {
+      const output = dependenciesOf(
+        db,
+        projectRoot,
+        "src/direct-call/lib/step05.ts",
+        "step05",
+      );
 
-			expect(output).toBe(`No dependencies found.`);
-		});
-	});
+      expect(output).toBe(`No dependencies found.`);
+    });
+  });
 
-	describe("dependentsOf", () => {
-		it("finds all callers of step05", () => {
-			const output = dependentsOf(db, projectRoot, "src/direct-call/lib/step05.ts", "step05");
+  describe("dependentsOf", () => {
+    it("finds all callers of step05", () => {
+      const output = dependentsOf(
+        db,
+        projectRoot,
+        "src/direct-call/lib/step05.ts",
+        "step05",
+      );
 
-			expect(output).toBe(`## Graph
+      expect(output).toBe(`## Graph
 
 entry --CALLS--> step02 --CALLS--> step03 --CALLS--> step04 --CALLS--> step05
 
@@ -112,7 +127,7 @@ step03:
   offset: 3, limit: 3
   snippet:
     3: export function step03(): string {
-    4: 	return step04() + "-03";
+    4:   return step04() + "-03";
     5: }
 
 entry:
@@ -120,7 +135,7 @@ entry:
   offset: 3, limit: 3
   snippet:
     3: export function entry(): string {
-    4: 	return step02() + "-01";
+    4:   return step02() + "-01";
     5: }
 
 step02:
@@ -128,7 +143,7 @@ step02:
   offset: 3, limit: 3
   snippet:
     3: export function step02(): string {
-    4: 	return step03() + "-02";
+    4:   return step03() + "-02";
     5: }
 
 step04:
@@ -136,28 +151,33 @@ step04:
   offset: 3, limit: 3
   snippet:
     3: export function step04(): string {
-    4: 	return step05() + "-04";
+    4:   return step05() + "-04";
     5: }
 `);
-		});
+    });
 
-		it("returns empty for entry point", () => {
-			const output = dependentsOf(db, projectRoot, "src/direct-call/entry.ts", "entry");
+    it("returns empty for entry point", () => {
+      const output = dependentsOf(
+        db,
+        projectRoot,
+        "src/direct-call/entry.ts",
+        "entry",
+      );
 
-			expect(output).toBe(`No dependents found.`);
-		});
-	});
+      expect(output).toBe(`No dependents found.`);
+    });
+  });
 
-	describe("pathsBetween", () => {
-		it("finds path from entry to step05", () => {
-			const output = pathsBetween(
-				db,
-				projectRoot,
-				{ file_path: "src/direct-call/entry.ts", symbol: "entry" },
-				{ file_path: "src/direct-call/lib/step05.ts", symbol: "step05" },
-			);
+  describe("pathsBetween", () => {
+    it("finds path from entry to step05", () => {
+      const output = pathsBetween(
+        db,
+        projectRoot,
+        { file_path: "src/direct-call/entry.ts", symbol: "entry" },
+        { file_path: "src/direct-call/lib/step05.ts", symbol: "step05" },
+      );
 
-			expect(output).toBe(`## Graph
+      expect(output).toBe(`## Graph
 
 entry --CALLS--> step02 --CALLS--> step03 --CALLS--> step04 --CALLS--> step05
 
@@ -168,7 +188,7 @@ step03:
   offset: 3, limit: 3
   snippet:
     3: export function step03(): string {
-    4: 	return step04() + "-03";
+    4:   return step04() + "-03";
     5: }
 
 step02:
@@ -176,7 +196,7 @@ step02:
   offset: 3, limit: 3
   snippet:
     3: export function step02(): string {
-    4: 	return step03() + "-02";
+    4:   return step03() + "-02";
     5: }
 
 step04:
@@ -184,20 +204,20 @@ step04:
   offset: 3, limit: 3
   snippet:
     3: export function step04(): string {
-    4: 	return step05() + "-04";
+    4:   return step05() + "-04";
     5: }
 `);
-		});
+    });
 
-		it("finds shorter path from midpoint", () => {
-			const output = pathsBetween(
-				db,
-				projectRoot,
-				{ file_path: "src/direct-call/core/step03.ts", symbol: "step03" },
-				{ file_path: "src/direct-call/lib/step05.ts", symbol: "step05" },
-			);
+    it("finds shorter path from midpoint", () => {
+      const output = pathsBetween(
+        db,
+        projectRoot,
+        { file_path: "src/direct-call/core/step03.ts", symbol: "step03" },
+        { file_path: "src/direct-call/lib/step05.ts", symbol: "step05" },
+      );
 
-			expect(output).toBe(`## Graph
+      expect(output).toBe(`## Graph
 
 step03 --CALLS--> step04 --CALLS--> step05
 
@@ -208,22 +228,22 @@ step04:
   offset: 3, limit: 3
   snippet:
     3: export function step04(): string {
-    4: 	return step05() + "-04";
+    4:   return step05() + "-04";
     5: }
 `);
-		});
+    });
 
-		it("finds path regardless of query direction", () => {
-			// Query is step05 → entry, but actual path is entry → step05
-			// Bidirectional search finds the path; arrows show actual direction
-			const output = pathsBetween(
-				db,
-				projectRoot,
-				{ file_path: "src/direct-call/lib/step05.ts", symbol: "step05" },
-				{ file_path: "src/direct-call/entry.ts", symbol: "entry" },
-			);
+    it("finds path regardless of query direction", () => {
+      // Query is step05 → entry, but actual path is entry → step05
+      // Bidirectional search finds the path; arrows show actual direction
+      const output = pathsBetween(
+        db,
+        projectRoot,
+        { file_path: "src/direct-call/lib/step05.ts", symbol: "step05" },
+        { file_path: "src/direct-call/entry.ts", symbol: "entry" },
+      );
 
-			expect(output).toBe(`## Graph
+      expect(output).toBe(`## Graph
 
 entry --CALLS--> step02 --CALLS--> step03 --CALLS--> step04 --CALLS--> step05
 
@@ -234,7 +254,7 @@ step03:
   offset: 3, limit: 3
   snippet:
     3: export function step03(): string {
-    4: 	return step04() + "-03";
+    4:   return step04() + "-03";
     5: }
 
 step02:
@@ -242,7 +262,7 @@ step02:
   offset: 3, limit: 3
   snippet:
     3: export function step02(): string {
-    4: 	return step03() + "-02";
+    4:   return step03() + "-02";
     5: }
 
 step04:
@@ -250,20 +270,22 @@ step04:
   offset: 3, limit: 3
   snippet:
     3: export function step04(): string {
-    4: 	return step05() + "-04";
+    4:   return step05() + "-04";
     5: }
 `);
-		});
+    });
 
-		it("returns error for same node", () => {
-			const output = pathsBetween(
-				db,
-				projectRoot,
-				{ file_path: "src/direct-call/core/step03.ts", symbol: "step03" },
-				{ file_path: "src/direct-call/core/step03.ts", symbol: "step03" },
-			);
+    it("returns error for same node", () => {
+      const output = pathsBetween(
+        db,
+        projectRoot,
+        { file_path: "src/direct-call/core/step03.ts", symbol: "step03" },
+        { file_path: "src/direct-call/core/step03.ts", symbol: "step03" },
+      );
 
-			expect(output).toBe(`Invalid query: source and target are the same symbol.`);
-		});
-	});
+      expect(output).toBe(
+        `Invalid query: source and target are the same symbol.`,
+      );
+    });
+  });
 });

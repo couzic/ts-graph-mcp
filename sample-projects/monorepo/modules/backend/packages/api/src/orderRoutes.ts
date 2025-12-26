@@ -1,5 +1,5 @@
-import type { User } from "@shared/types/User";
 import type { Config } from "@shared/types/Config";
+import type { User } from "@shared/types/User";
 import { formatDate } from "./formatUtils.js";
 
 /**
