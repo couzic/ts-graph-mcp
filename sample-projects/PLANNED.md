@@ -24,11 +24,7 @@ This document tracks test projects to be created for integration testing and ben
 
 | Query Pattern | Covered By | Status |
 |--------------|------------|--------|
-| Deep transitive traversal | `deep-chain` | ✅ Done |
-| Cross-module/package analysis | `monorepo` | ✅ Done |
-| Wide fan-in (many→one) | `monorepo` | ✅ Done (P3: validateEmail utility usage) |
 | Type hierarchy analysis | `type-system` | 🔜 Planned |
-| Realistic layered paths | `layered-api` | ✅ Done |
 
 ### Projects That Need Benchmarks
 
@@ -47,18 +43,12 @@ This document tracks test projects to be created for integration testing and ben
 
 | Project | Structure | What It Tests | Status |
 |---------|-----------|---------------|--------|
-| `deep-chain` | L1: 10 files | Deep cross-file call chain (10 hops) | **Active** - 20 tests |
 | `mixed-types` | L1: 3 files | All 8 node types | **Merge** into `type-system` when implemented |
 | `web-app` | L2: 3 modules, 1 pkg each | Cross-module edges, Issue #5 regression | **Active** - 15 tests |
 | `monorepo` | L3: 3 modules, 2 pkg each | Cross-package + cross-module edges | **Active** - 30 tests |
 | `layered-api` | L1: 5-layer architecture | Multi-layer paths (routes→controllers→services→repos→db) | **Active** - 19 tests |
 
 ### Migration Notes
-
-**`call-chain` → `deep-chain`:**
-- `call-chain` tested same-file calls (trivial case)
-- `deep-chain` tests cross-file calls at depth 10 (comprehensive)
-- Same-file is a subset of cross-file; no value in keeping both
 
 **`mixed-types` → `type-system`:**
 - When implementing `type-system`, include the node type variations from `mixed-types`:
@@ -271,22 +261,11 @@ defineConfig({
 
 ## Coverage Matrix
 
-### By MCP Tool
-
-| Tool | Existing | Planned |
-|------|----------|---------|
-| `incomingCallsDeep` | deep-chain, monorepo | shared-utils |
-| `outgoingCallsDeep` | deep-chain, layered-api | - |
-| `incomingPackageDeps` | web-app, monorepo | multi-package |
-| `outgoingPackageDeps` | web-app, monorepo | multi-package |
-| `analyzeImpact` | web-app, monorepo | shared-utils, type-system, property-access, multi-package, event-system |
-| `findPaths` | deep-chain, layered-api | - |
-
 ### By Edge Type
 
 | Edge | Existing | Planned |
 |------|----------|---------|
-| CALLS | deep-chain, web-app, monorepo, layered-api | shared-utils, event-system |
+| CALLS | call-chain, web-app, monorepo, layered-api | shared-utils, event-system |
 | IMPORTS | web-app, monorepo | multi-package |
 | CONTAINS | All (implicit) | - |
 | USES_TYPE | web-app, monorepo | type-system, multi-package |
@@ -299,7 +278,7 @@ defineConfig({
 
 | Level | Existing | Planned |
 |-------|----------|---------|
-| L1: Single package | deep-chain, mixed-types, layered-api | shared-utils, type-system, property-access, event-system |
+| L1: Single package | call-chain, mixed-types, layered-api | shared-utils, type-system, property-access, event-system |
 | L2: Multi-package | - | multi-package |
 | L2: Multi-module (1 pkg/module) | web-app | - |
 | L3: Multi-module (multi-pkg) | monorepo | - |

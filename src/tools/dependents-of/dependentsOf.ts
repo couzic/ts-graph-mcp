@@ -1,7 +1,10 @@
 import type Database from "better-sqlite3";
 import { collectNodeIds } from "../shared/collectNodeIds.js";
 import { EDGE_TYPES, MAX_DEPTH } from "../shared/constants.js";
-import { formatToolOutput } from "../shared/formatToolOutput.js";
+import {
+  enrichNodesWithCallSites,
+  formatToolOutput,
+} from "../shared/formatToolOutput.js";
 import { loadNodeSnippets } from "../shared/loadNodeSnippets.js";
 import {
   type EdgeRowWithCallSites,
@@ -84,8 +87,16 @@ export function dependentsOf(
   const nodeIds = collectNodeIds(edges, nodeId);
   const nodes = queryNodeInfos(db, nodeIds);
 
+  // Enrich with call sites BEFORE loading snippets
+  // (so extractSnippet can truncate around call sites)
+  const enrichedNodes = enrichNodesWithCallSites(nodes, edges);
+
   // Load snippets (I/O boundary)
-  const nodesWithSnippets = loadNodeSnippets(nodes, projectRoot, nodes.length);
+  const nodesWithSnippets = loadNodeSnippets(
+    enrichedNodes,
+    projectRoot,
+    nodes.length,
+  );
 
   // Format output (pure)
   return formatToolOutput({

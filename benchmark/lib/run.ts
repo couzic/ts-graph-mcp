@@ -3,12 +3,12 @@
  * Shared benchmark runner for test projects.
  *
  * Usage:
- *   npx tsx benchmark/lib/run.ts sample-projects/deep-chain
- *   npx tsx benchmark/lib/run.ts sample-projects/deep-chain --runs 5
- *   npx tsx benchmark/lib/run.ts sample-projects/deep-chain --prompt P1
- *   npx tsx benchmark/lib/run.ts sample-projects/deep-chain --scenario with-mcp
- *   npx tsx benchmark/lib/run.ts sample-projects/deep-chain --concurrency 5
- *   npx tsx benchmark/lib/run.ts sample-projects/deep-chain --sequential
+ *   npx tsx benchmark/lib/run.ts sample-projects/call-chain
+ *   npx tsx benchmark/lib/run.ts sample-projects/call-chain --runs 5
+ *   npx tsx benchmark/lib/run.ts sample-projects/call-chain --prompt P1
+ *   npx tsx benchmark/lib/run.ts sample-projects/call-chain --scenario with-mcp
+ *   npx tsx benchmark/lib/run.ts sample-projects/call-chain --concurrency 5
+ *   npx tsx benchmark/lib/run.ts sample-projects/call-chain --sequential
  *
  * The test project must have a benchmark/prompts.ts that exports:
  *   - config: BenchmarkConfig
@@ -408,7 +408,7 @@ async function main() {
     console.error("");
     console.error("Example:");
     console.error(
-      "  npx tsx benchmark/lib/run.ts sample-projects/deep-chain --runs 3",
+      "  npx tsx benchmark/lib/run.ts sample-projects/call-chain --runs 3",
     );
     process.exit(1);
   }

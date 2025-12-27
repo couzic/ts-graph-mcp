@@ -29,9 +29,6 @@ Sample projects exist for **two purposes only**:
 
 **Status:** ✅ Correctly tests tool query functions
 
-### `deep-chain/`
-10-file cross-file call chain (`entry` → `step02` → ... → `step10`).
-
 **E2E tests for:** `dependenciesOf`, `dependentsOf`, `pathsBetween`
 - Extreme depth traversal (10 hops)
 - Depth limiting behavior
@@ -258,7 +255,7 @@ step02:
 
 ```bash
 # From project root
-npm run benchmark:setup    # Pre-index deep-chain (run once)
+npm run benchmark:setup    # Pre-index (run once)
 npm run benchmark          # Default: 1 run, 6 concurrent
 npm run benchmark:full     # 3 runs per prompt/scenario
 

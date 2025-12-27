@@ -81,8 +81,11 @@ export const formatToolOutput = (input: FormatInput): string => {
 /**
  * Enrich nodes with call site information extracted from edges.
  * Call sites belong to the SOURCE node (the caller), not the target.
+ *
+ * IMPORTANT: Must be called BEFORE loadNodeSnippets so that
+ * extractSnippet can truncate long functions around call sites.
  */
-const enrichNodesWithCallSites = (
+export const enrichNodesWithCallSites = (
   nodes: NodeInfo[],
   edges: EdgeWithCallSites[],
 ): NodeInfo[] => {

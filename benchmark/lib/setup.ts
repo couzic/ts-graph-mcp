@@ -6,7 +6,7 @@
  * has data ready for benchmarks.
  *
  * Usage:
- *   npx tsx benchmark/lib/setup.ts sample-projects/deep-chain
+ *   npx tsx benchmark/lib/setup.ts sample-projects/call-chain
  *   npx tsx benchmark/lib/setup.ts sample-projects/mixed-types
  *
  * The test project must have a benchmark/prompts.ts that exports a `config` object.
@@ -181,7 +181,7 @@ async function main() {
     console.error("");
     console.error("Example:");
     console.error(
-      "  npx tsx benchmark/lib/setup.ts sample-projects/deep-chain",
+      "  npx tsx benchmark/lib/setup.ts sample-projects/call-chain",
     );
     process.exit(1);
   }
