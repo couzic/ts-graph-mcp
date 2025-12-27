@@ -1,54 +1,36 @@
 import { readFileSync } from "node:fs";
+import type { CallSiteRange } from "../../db/Types.js";
 
 /**
- * A code snippet extracted from a source file.
+ * A line of code with its line number.
  */
-export interface Snippet {
-  /** Line number where the call occurs (undefined = whole function body) */
-  callSiteLine?: number;
-  /** Start line of the snippet (1-indexed) */
-  startLine: number;
-  /** End line of the snippet (1-indexed) */
-  endLine: number;
-  /** The extracted code */
+export interface LOC {
+  line: number;
   code: string;
 }
 
 /**
- * Options for snippet extraction.
- */
-export interface SnippetOptions {
-  /** Lines of context before/after call site (default: 3) */
-  contextLines?: number;
-  /** Maximum snippets to return per caller (default: 3) */
-  maxSnippets?: number;
-  /** Maximum lines per snippet before truncation (default: 15) */
-  maxSnippetLines?: number;
-}
-
-const DEFAULT_CONTEXT_LINES = 3;
-const DEFAULT_MAX_SNIPPETS = 3;
-const DEFAULT_MAX_SNIPPET_LINES = 15;
-
-/**
- * Extract code snippets around specified call site line numbers.
+ * Extract lines of code around call sites.
+ *
+ * Algorithm:
+ * 1. Read file
+ * 2. Compute which lines to keep (call sites + context)
+ * 3. Filter to keep only those lines
+ * 4. Return LOC[]
+ *
+ * The caller (formatNodes) detects gaps between consecutive LOCs
+ * and renders "... N lines omitted ...".
  *
  * @param filePath - Absolute path to source file
- * @param callSites - Line numbers where calls occur (1-indexed)
- * @param options - Extraction options
- * @returns Array of code snippets, or empty array if file cannot be read
+ * @param callSites - Line ranges where calls occur (1-indexed)
+ * @param contextLines - Lines of context before/after each call site
+ * @returns Array of LOC, or empty array if file cannot be read
  */
-export const extractSnippets = (
+export const extractLOCs = (
   filePath: string,
-  callSites: number[],
-  options: SnippetOptions = {},
-): Snippet[] => {
-  const {
-    contextLines = DEFAULT_CONTEXT_LINES,
-    maxSnippets = DEFAULT_MAX_SNIPPETS,
-    maxSnippetLines = DEFAULT_MAX_SNIPPET_LINES,
-  } = options;
-
+  callSites: CallSiteRange[],
+  contextLines: number,
+): LOC[] => {
   if (callSites.length === 0) {
     return [];
   }
@@ -57,92 +39,63 @@ export const extractSnippets = (
   try {
     content = readFileSync(filePath, "utf-8");
   } catch {
-    // File not found or read error - return empty
     return [];
   }
 
   const lines = content.split("\n");
-  const sortedSites = [...callSites].sort((a, b) => a - b);
-  const snippets: Snippet[] = [];
+  const totalLines = lines.length;
 
-  for (const site of sortedSites) {
-    if (snippets.length >= maxSnippets) break;
-
-    // Calculate context window (1-indexed to 0-indexed conversion)
-    const startLine = Math.max(1, site - contextLines);
-    const endLine = Math.min(lines.length, site + contextLines);
-
-    // Check for overlap with previous snippet - merge if overlapping
-    const prevSnippet = snippets[snippets.length - 1];
-    if (prevSnippet && startLine <= prevSnippet.endLine + 1) {
-      // Extend previous snippet instead of creating new one
-      prevSnippet.endLine = endLine;
-      const codeLines = lines.slice(prevSnippet.startLine - 1, endLine);
-      prevSnippet.code = truncateCode(codeLines, maxSnippetLines);
-      continue;
+  // Step 1: Compute which lines to keep
+  const keepSet = new Set<number>();
+  for (const site of callSites) {
+    const rangeStart = Math.max(1, site.start - contextLines);
+    const rangeEnd = Math.min(totalLines, site.end + contextLines);
+    for (let line = rangeStart; line <= rangeEnd; line++) {
+      keepSet.add(line);
     }
-
-    // Extract lines (1-indexed to 0-indexed)
-    const codeLines = lines.slice(startLine - 1, endLine);
-    const code = truncateCode(codeLines, maxSnippetLines);
-
-    snippets.push({
-      callSiteLine: site,
-      startLine,
-      endLine,
-      code,
-    });
   }
 
-  return snippets;
+  // Step 2: Filter and build LOC[]
+  const locs: LOC[] = [];
+  for (const [i, code] of lines.entries()) {
+    const lineNum = i + 1; // 1-indexed
+    if (keepSet.has(lineNum)) {
+      locs.push({ line: lineNum, code });
+    }
+  }
+
+  return locs;
 };
 
 /**
- * Truncate code if it exceeds max lines, keeping beginning and end.
- */
-const truncateCode = (lines: string[], maxLines: number): string => {
-  if (lines.length <= maxLines) {
-    return lines.join("\n");
-  }
-
-  const half = Math.floor(maxLines / 2);
-  const top = lines.slice(0, half);
-  const bottom = lines.slice(-half);
-  const omitted = lines.length - maxLines;
-
-  return [...top, `  // ... ${omitted} lines omitted ...`, ...bottom].join(
-    "\n",
-  );
-};
-
-/**
- * Extract the whole function body as a single snippet.
- * Used for small functions (≤10 lines) to provide complete context.
+ * Extract the whole function body as LOC[].
  *
  * @param filePath - Absolute path to source file
  * @param startLine - Function start line (1-indexed)
  * @param endLine - Function end line (1-indexed)
- * @returns Single snippet with the whole function body, or null if file cannot be read
+ * @returns LOC[] for the function body, or empty array if file cannot be read
  */
 export const extractFunctionBody = (
   filePath: string,
   startLine: number,
   endLine: number,
-): Snippet | null => {
+): LOC[] => {
   let content: string;
   try {
     content = readFileSync(filePath, "utf-8");
   } catch {
-    return null;
+    return [];
   }
 
   const lines = content.split("\n");
-  const codeLines = lines.slice(startLine - 1, endLine);
+  const locs: LOC[] = [];
 
-  return {
-    // callSiteLine omitted = whole function body
-    startLine,
-    endLine,
-    code: codeLines.join("\n"),
-  };
+  for (const [i, code] of lines.entries()) {
+    const lineNum = i + 1; // 1-indexed
+    if (lineNum >= startLine && lineNum <= endLine) {
+      locs.push({ line: lineNum, code });
+    }
+  }
+
+  return locs;
 };

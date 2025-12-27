@@ -6,18 +6,14 @@
 
 **Impact:** Low (maintainability)
 
-Hardcoded depth limits scattered across query files:
+Hardcoded depth limit in query file:
 
-- `src/tools/incoming-calls-deep/query.ts` — `?? 100`
-- `src/tools/outgoing-calls-deep/query.ts` — `= 100`
-- `src/tools/analyze-impact/query.ts` — `?? 100`
-- `src/tools/find-paths/query.ts` — `20` (inconsistent with others)
+- `src/tools/find-paths/query.ts` — `maxDepth = 20`
 
 **Fix approach:**
 
 Create `src/tools/shared/queryConstants.ts`:
 ```typescript
-export const DEFAULT_MAX_TRAVERSAL_DEPTH = 100;
 export const MAX_PATH_LENGTH = 20;
 ```
 
@@ -33,7 +29,7 @@ The REFERENCES edge extractor has basic coverage (13 unit tests, 16 e2e tests) b
 2. **Method call arguments** - `map.set(key, fn)` not captured as callback
 3. **Destructuring patterns** - `const { handler } = obj; handler()` not tracked
 4. **Spread patterns** - `[...handlers]` not tracked
-5. **Database query tests** - No tests for `referenceContext` filtering via `queryEdges`
+5. **Database query tests** - No tests for `referenceContext` filtering
 
 **Current coverage:**
 - `extractReferenceEdges.test.ts` — 13 unit tests (basic patterns)
@@ -50,4 +46,45 @@ Watcher module lacks unit and system tests. Medium priority.
 ### Format Test Gaps
 
 Format tests have good happy-path coverage but lack edge cases and negative tests. Low priority.
+
+---
+
+### Missing E2E Tests for Traversal Edge Cases
+
+**Impact:** Medium (observability)
+
+No E2E tests verify behavior when:
+1. Traversal hits max depth limit — should output indicate truncation?
+2. Results are truncated due to size limits
+3. Circular dependencies are encountered
+
+Users currently can't tell if they're seeing the full picture or a partial view.
+
+**Fix approach:** Add E2E tests that create deep/circular graphs and verify output includes truncation indicators when applicable.
+
+---
+
+### Gap Indicator Threshold Too Low
+
+**Impact:** Low (token efficiency)
+
+The gap indicator `... N lines omitted ...` should only appear when the gap is substantial (3+ lines). For gaps of 1-2 lines, showing the actual lines uses fewer tokens than the gap indicator itself.
+
+**Current behavior:**
+```
+    24: const x = prep();
+    ... 1 lines omitted ...
+    26: target();
+```
+
+**Expected behavior:**
+```
+    24: const x = prep();
+    25: const y = setup();
+    26: target();
+```
+
+**Fix approach:** In `renderLOCs()`, only show gap indicator when `gap >= 3`. For smaller gaps, include the actual lines.
+
+**Location:** `src/tools/shared/formatNodes.ts`
 

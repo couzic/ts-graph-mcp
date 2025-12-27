@@ -19,6 +19,14 @@ export type EdgeType =
   | "USES_TYPE"
   | "REFERENCES";
 
+// Call Site Range (line numbers where a call occurs)
+export interface CallSiteRange {
+  /** Start line number (1-indexed) */
+  start: number;
+  /** End line number (1-indexed) */
+  end: number;
+}
+
 // Base Node (shared properties)
 export interface BaseNode {
   /** Unique ID: "{relativePath}:{symbolPath}" e.g., "src/utils.ts:formatDate" */
@@ -125,7 +133,7 @@ export interface Edge {
 
   // CALLS edges
   callCount?: number;
-  callSites?: number[]; // Line numbers where calls occur
+  callSites?: CallSiteRange[]; // Line ranges where calls occur
 
   // IMPORTS edges
   isTypeOnly?: boolean;

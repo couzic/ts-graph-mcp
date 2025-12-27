@@ -76,30 +76,98 @@ Result: dispatch → userFormatters → formatCustomer (1 turn)
 
 ## Code Snippets in Tool Responses
 
-Three tools now return source code snippets automatically when result count is small (≤15 items):
-- Small functions (≤10 lines) show their full body
-- Larger functions show snippets around call sites
+**Status: ✅ IMPLEMENTED**
 
-### Status
+Tools return source code snippets that adapt based on result count, balancing context richness with output manageability.
+
+### Adaptive Snippet Context
+
+| Nodes | Context Lines | Behavior |
+|-------|---------------|----------|
+| 1-5 | ±10 lines | Full context around each call site |
+| 6-25 | ±`floor((25-x)/2)` | Smooth curve: 10→0 lines as nodes increase |
+| 26-35 | 0 lines | Call site only (full multi-line expression) |
+| 36-50 | — | No snippets + message: "Use Read tool with offset/limit" |
+| 50+ | — | Node list truncated + message: "Refine query" |
+
+**Key invariant**: A call site is always captured in full, even if it spans multiple lines. Context lines are *in addition to* the call site expression.
+
+**Example at x=15 nodes** (context = 5 lines):
+```
+  119: // setup
+  120: const opts = {};
+  121:
+  122: // Process user
+  123: await createUser(
+  124:   validateInput(data),
+  125:   options
+  126: );
+  127:
+  128: // cleanup
+```
+
+**Example at x=30 nodes** (context = 0, call site only):
+```
+  123: await createUser(
+  124:   validateInput(data),
+  125:   options
+  126: );
+```
+
+### Multi-Call-Site Snippet Preservation
+
+When a function contains multiple call sites, all must be preserved. The truncation logic collapses gaps between call sites rather than cutting the middle.
+
+**Example**: Function with call sites at lines 10, 22, and 35:
+```
+    10: firstCall();
+    ... 8 lines omitted ...
+    22: secondCall(arg);
+    ... 10 lines omitted ...
+    35: thirdCall();
+```
+
+**Implementation**: `src/tools/shared/extractSnippet.ts` + `src/tools/shared/formatNodes.ts`
+
+### Call Site Marker
+
+**Status: Pending**
+
+When showing snippets with context, mark the call site line with a `>` prefix so AI agents can instantly identify which line contains the call.
+
+**Current output:**
+```
+  snippet:
+    139:       if (locs.length > 0) {
+    140:         lines.push("  snippet:");
+    141:         lines.push(...renderLOCs(locs));
+    142:       }
+```
+
+**Proposed output:**
+```
+  snippet:
+    139:       if (locs.length > 0) {
+    140:         lines.push("  snippet:");
+  > 141:         lines.push(...renderLOCs(locs));
+    142:       }
+```
+
+**Benefits:**
+- Clean, minimal (2 characters)
+- Visual, easy to scan
+- No code modification
+- Ties directly to Graph section (agent knows `formatNodes --CALLS--> renderLOCs`, marker shows where)
+
+### Tool Coverage
 
 | Tool | Has Snippets | Notes |
 |------|:---:|----------|
-| `incomingCallsDeep` | ✓ | Done |
-| `outgoingCallsDeep` | ✓ | Done |
-| `analyzeImpact` | ✓ | Done (CALLS edges only) |
-| `findPaths` | ✗ | Low priority (format is intentionally minimal) |
+| `dependenciesOf` | ✓ | Uses adaptive model |
+| `dependentsOf` | ✓ | Uses adaptive model |
+| `pathsBetween` | ✓ | Uses adaptive model |
 | `incomingPackageDeps` | N/A | Package-level, no function code |
 | `outgoingPackageDeps` | N/A | Package-level, no function code |
-
-### Snippet Benchmarks
-
-All tools with snippets now have benchmarks proving their value (2-3 turns vs 5+ without snippets):
-
-| Tool | Basic Benchmark | Snippet Benchmark |
-|------|:---:|:---:|
-| `incomingCallsDeep` | ✓ monorepo/P2 | ✓ monorepo/P6 |
-| `outgoingCallsDeep` | ✓ layered-api/P2 | ✓ layered-api/P4 |
-| `analyzeImpact` | ✓ monorepo/P1 | ✓ monorepo/P7 |
 
 ---
 
