@@ -55,7 +55,9 @@ describe("indirect-call E2E tests", () => {
         "entry",
       );
 
-      expect(output).toBe(`## Graph
+      expect(output).toBe(
+        `
+## Graph
 
 entry --CALLS--> step02 --CALLS--> step03 --CALLS--> step04 --CALLS--> step05
 
@@ -95,7 +97,8 @@ step05:
     2: export function step05(): string {
     3:   return "05";
     4: }
-`);
+`.trimStart(),
+      );
     });
 
     it("returns empty for terminal node", () => {
@@ -119,7 +122,9 @@ step05:
         "step05",
       );
 
-      expect(output).toBe(`## Graph
+      expect(output).toBe(
+        `
+## Graph
 
 entry --CALLS--> step02 --CALLS--> step03 --CALLS--> step04 --CALLS--> step05
 
@@ -160,7 +165,8 @@ step04:
     5:   const nextStep = step05;
   > 6:   return \`\${nextStep()}-04\`;
     7: }
-`);
+`.trimStart(),
+      );
     });
 
     it("returns empty for entry point", () => {
@@ -184,7 +190,9 @@ step04:
         { file_path: "src/indirect-call/lib/step05.ts", symbol: "step05" },
       );
 
-      expect(output).toBe(`## Graph
+      expect(output).toBe(
+        `
+## Graph
 
 entry --CALLS--> step02 --CALLS--> step03 --CALLS--> step04 --CALLS--> step05
 
@@ -216,7 +224,8 @@ step04:
     5:   const nextStep = step05;
   > 6:   return \`\${nextStep()}-04\`;
     7: }
-`);
+`.trimStart(),
+      );
     });
 
     it("finds shorter path from midpoint", () => {
@@ -227,7 +236,9 @@ step04:
         { file_path: "src/indirect-call/lib/step05.ts", symbol: "step05" },
       );
 
-      expect(output).toBe(`## Graph
+      expect(output).toBe(
+        `
+## Graph
 
 step03 --CALLS--> step04 --CALLS--> step05
 
@@ -241,7 +252,8 @@ step04:
     5:   const nextStep = step05;
   > 6:   return \`\${nextStep()}-04\`;
     7: }
-`);
+`.trimStart(),
+      );
     });
   });
 });

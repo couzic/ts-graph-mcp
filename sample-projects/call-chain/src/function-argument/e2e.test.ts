@@ -55,7 +55,9 @@ describe("function-argument E2E tests", () => {
         "entry",
       );
 
-      expect(output).toBe(`## Graph
+      expect(output).toBe(
+        `
+## Graph
 
 entry --CALLS--> orchestrate --CALLS--> transform --CALLS--> validate
 entry --REFERENCES--> processor
@@ -103,7 +105,8 @@ processor:
     2: export function processor(value: string): string {
     3:   return value.toUpperCase();
     4: }
-`);
+`.trimStart(),
+      );
     });
   });
 
@@ -116,7 +119,9 @@ processor:
         "processor",
       );
 
-      expect(output).toBe(`## Graph
+      expect(output).toBe(
+        `
+## Graph
 
 entry --REFERENCES--> processor
 
@@ -130,7 +135,8 @@ entry:
     6:   const items = ["hello", "world", ""];
     7:   return orchestrate(items, processor);
     8: }
-`);
+`.trimStart(),
+      );
     });
   });
 
@@ -146,9 +152,13 @@ entry:
         },
       );
 
-      expect(output).toBe(`## Graph
+      expect(output).toBe(
+        `
+## Graph
 
-entry --REFERENCES--> processor`);
+entry --REFERENCES--> processor
+`.trim(),
+      );
     });
   });
 });

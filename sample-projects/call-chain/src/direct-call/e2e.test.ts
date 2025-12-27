@@ -55,7 +55,9 @@ describe("direct call chain E2E tests", () => {
         "entry",
       );
 
-      expect(output).toBe(`## Graph
+      expect(output).toBe(
+        `
+## Graph
 
 entry --CALLS--> step02 --CALLS--> step03 --CALLS--> step04 --CALLS--> step05
 
@@ -92,7 +94,8 @@ step05:
     1: export function step05(): string {
     2:   return "05";
     3: }
-`);
+`.trimStart(),
+      );
     });
 
     it("returns empty for terminal node", () => {
@@ -116,7 +119,9 @@ step05:
         "step05",
       );
 
-      expect(output).toBe(`## Graph
+      expect(output).toBe(
+        `
+## Graph
 
 entry --CALLS--> step02 --CALLS--> step03 --CALLS--> step04 --CALLS--> step05
 
@@ -153,7 +158,8 @@ step04:
     3: export function step04(): string {
   > 4:   return \`\${step05()}-04\`;
     5: }
-`);
+`.trimStart(),
+      );
     });
 
     it("returns empty for entry point", () => {
@@ -177,7 +183,9 @@ step04:
         { file_path: "src/direct-call/lib/step05.ts", symbol: "step05" },
       );
 
-      expect(output).toBe(`## Graph
+      expect(output).toBe(
+        `
+## Graph
 
 entry --CALLS--> step02 --CALLS--> step03 --CALLS--> step04 --CALLS--> step05
 
@@ -206,7 +214,8 @@ step04:
     3: export function step04(): string {
   > 4:   return \`\${step05()}-04\`;
     5: }
-`);
+`.trimStart(),
+      );
     });
 
     it("finds shorter path from midpoint", () => {
@@ -217,7 +226,9 @@ step04:
         { file_path: "src/direct-call/lib/step05.ts", symbol: "step05" },
       );
 
-      expect(output).toBe(`## Graph
+      expect(output).toBe(
+        `
+## Graph
 
 step03 --CALLS--> step04 --CALLS--> step05
 
@@ -230,7 +241,8 @@ step04:
     3: export function step04(): string {
   > 4:   return \`\${step05()}-04\`;
     5: }
-`);
+`.trimStart(),
+      );
     });
 
     it("finds path regardless of query direction", () => {
@@ -243,7 +255,9 @@ step04:
         { file_path: "src/direct-call/entry.ts", symbol: "entry" },
       );
 
-      expect(output).toBe(`## Graph
+      expect(output).toBe(
+        `
+## Graph
 
 entry --CALLS--> step02 --CALLS--> step03 --CALLS--> step04 --CALLS--> step05
 
@@ -272,7 +286,8 @@ step04:
     3: export function step04(): string {
   > 4:   return \`\${step05()}-04\`;
     5: }
-`);
+`.trimStart(),
+      );
     });
 
     it("returns error for same node", () => {

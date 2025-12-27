@@ -58,7 +58,9 @@ describe("record-dispatch E2E tests", () => {
         "formatErrorMessage",
       );
 
-      expect(output).toBe(`## Graph
+      expect(output).toBe(
+        `
+## Graph
 
 formatErrorMessage --REFERENCES--> formatMessageByAccessLevel --REFERENCES--> formatCustomerError
 formatMessageByAccessLevel --REFERENCES--> formatAdminError
@@ -92,7 +94,8 @@ formatAdminError:
     1: export function formatAdminError(error: Error): string {
     2:   return \`[ADMIN] Error: \${error.name} - \${error.message}\\n\${error.stack}\`;
     3: }
-`);
+`.trimStart(),
+      );
     });
   });
 
@@ -105,7 +108,9 @@ formatAdminError:
         "formatCustomerError",
       );
 
-      expect(output).toBe(`## Graph
+      expect(output).toBe(
+        `
+## Graph
 
 formatErrorMessage --REFERENCES--> formatMessageByAccessLevel --REFERENCES--> formatCustomerError
 
@@ -133,7 +138,8 @@ formatMessageByAccessLevel:
     24:   customer: formatCustomerError,
     25:   admin: formatAdminError,
     26: };
-`);
+`.trimStart(),
+      );
     });
   });
 
@@ -152,7 +158,9 @@ formatMessageByAccessLevel:
         },
       );
 
-      expect(output).toBe(`## Graph
+      expect(output).toBe(
+        `
+## Graph
 
 formatErrorMessage --REFERENCES--> formatMessageByAccessLevel --REFERENCES--> formatCustomerError
 
@@ -169,7 +177,8 @@ formatMessageByAccessLevel:
     24:   customer: formatCustomerError,
     25:   admin: formatAdminError,
     26: };
-`);
+`.trimStart(),
+      );
     });
   });
 });
