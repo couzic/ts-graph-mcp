@@ -5,6 +5,11 @@ import { z } from "zod";
 import { dependenciesOf } from "../tools/dependencies-of/dependenciesOf.js";
 import { dependentsOf } from "../tools/dependents-of/dependentsOf.js";
 import { pathsBetween } from "../tools/paths-between/pathsBetween.js";
+import {
+  dependenciesOfDescription,
+  dependentsOfDescription,
+  pathsBetweenDescription,
+} from "./toolDescriptions.js";
 
 /**
  * Start the MCP server that exposes TypeScript code graph queries as tools.
@@ -35,8 +40,7 @@ export async function startMcpServer(
   server.registerTool(
     "dependenciesOf",
     {
-      description:
-        "Find all code that a symbol depends on (forward dependencies). Traces the full call chain with code snippets — use this to understand what happens when a function is called, or to trace execution flow. Answers: 'What does this call?', 'What happens when X runs?', 'What does this symbol depend on?' Returns a Graph section showing the dependency chain and a Nodes section with file locations and code snippets. Prefer this over reading multiple files when tracing calls.",
+      description: dependenciesOfDescription,
       inputSchema: symbolLocationSchema,
     },
     ({ file_path, symbol }) => {
@@ -57,8 +61,7 @@ export async function startMcpServer(
   server.registerTool(
     "dependentsOf",
     {
-      description:
-        "Find all code that depends on a symbol (reverse dependencies). Shows all callers transitively with code snippets — use this to understand impact before changing code. Answers: 'Who calls this?', 'What would break if I changed this?', 'Who depends on this symbol?' Returns a Graph section showing the dependency chain and a Nodes section with file locations and code snippets. Prefer this over reading multiple files when finding usages.",
+      description: dependentsOfDescription,
       inputSchema: symbolLocationSchema,
     },
     ({ file_path, symbol }) => {
@@ -79,8 +82,7 @@ export async function startMcpServer(
   server.registerTool(
     "pathsBetween",
     {
-      description:
-        "Find how two symbols connect through the code graph. Use this to answer 'How does A reach B?' or 'What's the dependency path between these symbols?' Bidirectional: finds the path regardless of which direction you specify. The arrows in the output show the actual direction.",
+      description: pathsBetweenDescription,
       inputSchema: {
         from: z
           .object({

@@ -1,5 +1,35 @@
 # Known Issues
 
+## MCP Tool Discoverability
+
+### Trigger Phrases — Validation Pending
+
+**Impact:** High (tool adoption)
+
+**Problem:** Claude Code uses natural language patterns that should trigger MCP tool calls, but may fall back to Read/Grep in longer sessions.
+
+**Priority phrases** (observed in real usage):
+- "trace the data flow"
+- "trace through the code"
+- "analyze logic"
+
+**Done:**
+- ✅ Updated tool descriptions to include trigger phrases (`src/mcp/toolDescriptions.ts`)
+
+**Remaining:**
+- Run benchmarks to validate trigger phrases work in longer sessions
+- If issues persist, investigate context window / attention patterns
+
+**Full catalog of phrases to support (future):**
+
+| Tool | Phrase Patterns |
+|------|-----------------|
+| `dependenciesOf` | "what happens when X runs", "follow the call chain", "step through X", "walk through X", "execution flow" |
+| `dependentsOf` | "who calls X", "what depends on X", "impact of changing X", "what would break", "find all usages", "callers of X", "refactoring X" |
+| `pathsBetween` | "how does A reach B", "path between A and B", "connection between", "how does A use B", "flow from A to B" |
+
+---
+
 ## Technical Debt
 
 ### 18. Magic Numbers for Traversal Depth Limits
