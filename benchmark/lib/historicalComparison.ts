@@ -11,6 +11,7 @@ import type {
   HistoricalComparison,
   HistoricalStats,
 } from "./types.js";
+import { average, formatMetricChange } from "./utils.js";
 
 /**
  * Calculate aggregate statistics from a list of runs.
@@ -24,14 +25,11 @@ export function calculateStats(runs: BenchmarkRun[]): HistoricalStats | null {
   const successfulRuns = runs.filter((r) => r.success);
   const validRuns = runs.filter((r) => r.answerValid);
 
-  const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
-  const avg = (arr: number[]) => (arr.length > 0 ? sum(arr) / arr.length : 0);
-
   return {
     runCount: runs.length,
-    avgDurationMs: avg(runs.map((r) => r.durationMs)),
-    avgCostUsd: avg(runs.map((r) => r.costUsd)),
-    avgTurns: avg(runs.map((r) => r.numTurns)),
+    avgDurationMs: average(runs.map((r) => r.durationMs)),
+    avgCostUsd: average(runs.map((r) => r.costUsd)),
+    avgTurns: average(runs.map((r) => r.numTurns)),
     successRate: successfulRuns.length / runs.length,
     validationRate: validRuns.length / runs.length,
   };
@@ -104,34 +102,6 @@ export function generateComparison(
 }
 
 /**
- * Format a metric comparison with icon.
- * Returns icon, percentage, and direction string.
- */
-function formatMetricChange(
-  current: number,
-  baseline: number,
-  metricType: "time" | "cost",
-): { icon: string; pct: string; direction: string } {
-  if (baseline === 0) return { icon: "➖", pct: "N/A", direction: "" };
-
-  const change = ((baseline - current) / baseline) * 100;
-  const isImprovement = change > 0; // Lower is always better for time and cost
-  const icon = Math.abs(change) < 1 ? "➖" : isImprovement ? "✅" : "❌";
-  const pct = `${Math.abs(change).toFixed(0)}%`;
-
-  let direction: string;
-  if (Math.abs(change) < 1) {
-    direction = "same";
-  } else if (metricType === "time") {
-    direction = change > 0 ? "faster" : "slower";
-  } else {
-    direction = change > 0 ? "cheaper" : "more expensive";
-  }
-
-  return { icon, pct, direction };
-}
-
-/**
  * Print historical comparison to console.
  * Compares current WITH_MCP runs against historical WITHOUT_MCP baseline.
  */
@@ -172,8 +142,8 @@ export function printHistoricalComparison(
     );
 
     console.log(`${c.promptId} (vs ${baseline.runCount} baseline runs):`);
-    console.log(`  Time: ${time.icon} ${time.pct} ${time.direction}`);
-    console.log(`  Cost: ${cost.icon} ${cost.pct} ${cost.direction}`);
+    console.log(`  ⏱️  Time: ${time.icon} ${time.pct} ${time.direction}`);
+    console.log(`  💰 Cost: ${cost.icon} ${cost.pct} ${cost.direction}`);
 
     // Also show trend vs past WITH_MCP runs
     if (c.historicalWithMcp && c.historicalWithMcp.runCount > 0) {
@@ -191,10 +161,10 @@ export function printHistoricalComparison(
 
       console.log(`  vs ${past.runCount} past WITH_MCP runs:`);
       console.log(
-        `    Time: ${trendTime.icon} ${trendTime.pct} ${trendTime.direction}`,
+        `    ⏱️  Time: ${trendTime.icon} ${trendTime.pct} ${trendTime.direction}`,
       );
       console.log(
-        `    Cost: ${trendCost.icon} ${trendCost.pct} ${trendCost.direction}`,
+        `    💰 Cost: ${trendCost.icon} ${trendCost.pct} ${trendCost.direction}`,
       );
     }
   }

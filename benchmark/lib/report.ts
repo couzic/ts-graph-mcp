@@ -10,11 +10,7 @@ import type {
   BenchmarkScenario,
   BenchmarkSummary,
 } from "./types.js";
-
-function average(values: number[]): number {
-  if (values.length === 0) return 0;
-  return values.reduce((a, b) => a + b, 0) / values.length;
-}
+import { average, formatMetricChange } from "./utils.js";
 
 function computeSummary(
   runs: BenchmarkRun[],
@@ -124,34 +120,24 @@ export function formatReportMarkdown(report: BenchmarkReport): string {
         continue;
       }
 
-      // Calculate deltas (negative = MCP is better)
+      // Calculate deltas for raw values column (negative = MCP is better)
       const timeDeltaMs = withMcp.avgDurationMs - withoutMcp.avgDurationMs;
       const costDelta = withMcp.avgCostUsd - withoutMcp.avgCostUsd;
       const turnDelta = withMcp.avgTurns - withoutMcp.avgTurns;
 
-      // Format time comparison
-      const timeIcon = timeDeltaMs <= 0 ? "✅" : "❌";
-      const timePct =
-        withoutMcp.avgDurationMs > 0
-          ? Math.abs((timeDeltaMs / withoutMcp.avgDurationMs) * 100)
-          : 0;
-      const timeLabel =
-        timeDeltaMs <= 0
-          ? `${timePct.toFixed(0)}% faster`
-          : `${timePct.toFixed(0)}% slower`;
+      // Format comparisons using shared utility
+      const time = formatMetricChange(
+        withMcp.avgDurationMs,
+        withoutMcp.avgDurationMs,
+        "time",
+      );
+      const cost = formatMetricChange(
+        withMcp.avgCostUsd,
+        withoutMcp.avgCostUsd,
+        "cost",
+      );
 
-      // Format cost comparison
-      const costIcon = costDelta <= 0 ? "✅" : "❌";
-      const costPct =
-        withoutMcp.avgCostUsd > 0
-          ? Math.abs((costDelta / withoutMcp.avgCostUsd) * 100)
-          : 0;
-      const costLabel =
-        costDelta <= 0
-          ? `${costPct.toFixed(0)}% cheaper`
-          : `${costPct.toFixed(0)}% more`;
-
-      // Format turns comparison
+      // Format turns comparison (turns are integers, no percentage)
       const turnIcon = turnDelta <= 0 ? "✅" : "❌";
       const turnLabel =
         turnDelta < 0
@@ -163,10 +149,10 @@ export function formatReportMarkdown(report: BenchmarkReport): string {
       lines.push("| Metric | Without MCP | With MCP | Δ | Result |");
       lines.push("|:-------|------------:|---------:|--:|:-------|");
       lines.push(
-        `| ⏱️ Time | ${(withoutMcp.avgDurationMs / 1000).toFixed(1)}s | ${(withMcp.avgDurationMs / 1000).toFixed(1)}s | ${(timeDeltaMs / 1000).toFixed(1)}s | ${timeIcon} **${timeLabel}** |`,
+        `| ⏱️ Time | ${(withoutMcp.avgDurationMs / 1000).toFixed(1)}s | ${(withMcp.avgDurationMs / 1000).toFixed(1)}s | ${(timeDeltaMs / 1000).toFixed(1)}s | ${time.icon} **${time.pct} ${time.direction}** |`,
       );
       lines.push(
-        `| 💰 Cost | $${withoutMcp.avgCostUsd.toFixed(2)} | $${withMcp.avgCostUsd.toFixed(2)} | ${costDelta >= 0 ? "+" : ""}$${costDelta.toFixed(2)} | ${costIcon} **${costLabel}** |`,
+        `| 💰 Cost | $${withoutMcp.avgCostUsd.toFixed(2)} | $${withMcp.avgCostUsd.toFixed(2)} | ${costDelta >= 0 ? "+" : ""}$${costDelta.toFixed(2)} | ${cost.icon} **${cost.pct} ${cost.direction}** |`,
       );
       lines.push(
         `| 🔄 Turns | ${withoutMcp.avgTurns.toFixed(0)} | ${withMcp.avgTurns.toFixed(0)} | ${turnDelta >= 0 ? "+" : ""}${turnDelta.toFixed(0)} | ${turnIcon} **${turnLabel}** |`,
@@ -219,30 +205,19 @@ export function printComparison(
         continue;
       }
 
-      // Calculate deltas (negative = MCP is better)
-      const timeDelta = withMcp.avgDurationMs - withoutMcp.avgDurationMs;
-      const costDelta = withMcp.avgCostUsd - withoutMcp.avgCostUsd;
+      const time = formatMetricChange(
+        withMcp.avgDurationMs,
+        withoutMcp.avgDurationMs,
+        "time",
+      );
+      const cost = formatMetricChange(
+        withMcp.avgCostUsd,
+        withoutMcp.avgCostUsd,
+        "cost",
+      );
 
-      const timePct =
-        withoutMcp.avgDurationMs > 0
-          ? Math.abs((timeDelta / withoutMcp.avgDurationMs) * 100)
-          : 0;
-      const costPct =
-        withoutMcp.avgCostUsd > 0
-          ? Math.abs((costDelta / withoutMcp.avgCostUsd) * 100)
-          : 0;
-
-      const timeLabel =
-        timeDelta <= 0
-          ? `✅ ${timePct.toFixed(0)}% faster`
-          : `❌ ${timePct.toFixed(0)}% slower`;
-      const costLabel =
-        costDelta <= 0
-          ? `✅ ${costPct.toFixed(0)}% cheaper`
-          : `❌ ${costPct.toFixed(0)}% more expensive`;
-
-      console.log(`  Time: ${timeLabel}`);
-      console.log(`  Cost: ${costLabel}`);
+      console.log(`  ⏱️  Time: ${time.icon} ${time.pct} ${time.direction}`);
+      console.log(`  💰 Cost: ${cost.icon} ${cost.pct} ${cost.direction}`);
     }
   }
 }
