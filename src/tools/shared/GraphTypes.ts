@@ -1,6 +1,14 @@
 import type { CallSiteRange } from "../../db/Types.js";
 
 /**
+ * A line of code with its line number.
+ */
+export interface LOC {
+  line: number;
+  code: string;
+}
+
+/**
  * An edge in the code graph.
  */
 export interface GraphEdge {
@@ -19,4 +27,5 @@ export interface NodeInfo {
   startLine: number;
   endLine: number;
   callSites?: CallSiteRange[]; // Line ranges where this node is called (from edges)
+  locs?: LOC[]; // Pre-loaded lines of code for snippet display
 }

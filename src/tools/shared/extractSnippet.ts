@@ -1,51 +1,48 @@
-import { readFileSync } from "node:fs";
 import type { CallSiteRange } from "../../db/Types.js";
+import type { LOC } from "./GraphTypes.js";
 
-/**
- * A line of code with its line number.
- */
-export interface LOC {
-  line: number;
-  code: string;
+export interface ExtractSnippetInput {
+  lines: string[];
+  startLine: number;
+  endLine: number;
+  callSites?: CallSiteRange[];
+  contextLines: number;
 }
 
 /**
- * Extract lines of code around call sites.
+ * Extract a code snippet from source lines.
  *
- * Algorithm:
- * 1. Read file
- * 2. Compute which lines to keep (call sites + context)
- * 3. Filter to keep only those lines
- * 4. Return LOC[]
+ * Strategy:
+ * - Small functions or no call sites: return entire function body
+ * - Large functions with call sites: return context around call sites
  *
- * The caller (formatNodes) detects gaps between consecutive LOCs
- * and renders "... N lines omitted ...".
- *
- * @param filePath - Absolute path to source file
- * @param callSites - Line ranges where calls occur (1-indexed)
- * @param contextLines - Lines of context before/after each call site
- * @returns Array of LOC, or empty array if file cannot be read
+ * @returns Array of LOC with 1-indexed line numbers
  */
-export const extractLOCs = (
-  filePath: string,
+export const extractSnippet = (input: ExtractSnippetInput): LOC[] => {
+  const { lines, startLine, endLine, callSites, contextLines } = input;
+  const functionLines = endLine - startLine + 1;
+
+  // Use call sites only if function is large enough for context to be meaningful
+  const useCallSites =
+    callSites && callSites.length > 0 && functionLines > contextLines * 2;
+
+  if (useCallSites) {
+    return extractLOCsAroundCallSites(lines, callSites, contextLines);
+  }
+  return extractLineRange(lines, startLine, endLine);
+};
+
+/**
+ * Extract lines of code around call sites.
+ */
+const extractLOCsAroundCallSites = (
+  lines: string[],
   callSites: CallSiteRange[],
   contextLines: number,
 ): LOC[] => {
-  if (callSites.length === 0) {
-    return [];
-  }
-
-  let content: string;
-  try {
-    content = readFileSync(filePath, "utf-8");
-  } catch {
-    return [];
-  }
-
-  const lines = content.split("\n");
   const totalLines = lines.length;
 
-  // Step 1: Compute which lines to keep
+  // Compute which lines to keep
   const keepSet = new Set<number>();
   for (const site of callSites) {
     const rangeStart = Math.max(1, site.start - contextLines);
@@ -55,7 +52,7 @@ export const extractLOCs = (
     }
   }
 
-  // Step 2: Filter and build LOC[]
+  // Filter and build LOC[]
   const locs: LOC[] = [];
   for (const [i, code] of lines.entries()) {
     const lineNum = i + 1; // 1-indexed
@@ -68,34 +65,19 @@ export const extractLOCs = (
 };
 
 /**
- * Extract the whole function body as LOC[].
- *
- * @param filePath - Absolute path to source file
- * @param startLine - Function start line (1-indexed)
- * @param endLine - Function end line (1-indexed)
- * @returns LOC[] for the function body, or empty array if file cannot be read
+ * Extract a range of lines as LOC[].
  */
-export const extractFunctionBody = (
-  filePath: string,
+const extractLineRange = (
+  lines: string[],
   startLine: number,
   endLine: number,
 ): LOC[] => {
-  let content: string;
-  try {
-    content = readFileSync(filePath, "utf-8");
-  } catch {
-    return [];
-  }
-
-  const lines = content.split("\n");
   const locs: LOC[] = [];
-
   for (const [i, code] of lines.entries()) {
     const lineNum = i + 1; // 1-indexed
     if (lineNum >= startLine && lineNum <= endLine) {
       locs.push({ line: lineNum, code });
     }
   }
-
   return locs;
 };

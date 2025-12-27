@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { EdgeRow } from "./QueryTypes.js";
-import { rowToEdge } from "./rowConverters.js";
+import { rowToEdge } from "./rowToEdge.js";
 
 describe(rowToEdge.name, () => {
   it("converts basic edge with source, target, and type only", () => {

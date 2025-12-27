@@ -1,7 +1,7 @@
 import type Database from "better-sqlite3";
 import type { Edge } from "../../db/Types.js";
 import type { EdgeRow } from "../shared/QueryTypes.js";
-import { rowToEdge } from "../shared/rowConverters.js";
+import { rowToEdge } from "../shared/rowToEdge.js";
 
 /**
  * Path result from the query.

@@ -1,16 +1,24 @@
-import { join } from "node:path";
 import type { CallSiteRange } from "../../db/Types.js";
-import {
-  computeContextLines,
-  getAdaptiveMessage,
-  MAX_NODES,
-} from "./adaptiveSnippets.js";
-import {
-  extractFunctionBody,
-  extractLOCs,
-  type LOC,
-} from "./extractSnippet.js";
-import type { NodeInfo } from "./GraphTypes.js";
+import type { LOC, NodeInfo } from "./GraphTypes.js";
+
+/** Maximum number of nodes before list is truncated */
+const MAX_NODES = 50;
+
+/** Threshold above which snippets are omitted entirely */
+const NO_SNIPPET_THRESHOLD = 35;
+
+/**
+ * Get the appropriate message for the output based on node count.
+ */
+const getAdaptiveMessage = (nodeCount: number): string | undefined => {
+  if (nodeCount > MAX_NODES) {
+    return `Note: Results truncated to ${MAX_NODES} nodes. Refine query with more specific symbol.`;
+  }
+  if (nodeCount > NO_SNIPPET_THRESHOLD) {
+    return `Note: Snippets omitted (${nodeCount} nodes). Use Read tool with offset/limit shown above.`;
+  }
+  return undefined;
+};
 
 /**
  * Result of formatting the Nodes section.
@@ -63,18 +71,20 @@ const renderLOCs = (locs: LOC[], callSites?: CallSiteRange[]): string[] => {
 };
 
 /**
- * Format the Nodes section of the output with adaptive snippets.
+ * Format the Nodes section of the output.
+ *
+ * This is a pure function - all I/O (file reading) must be done
+ * beforehand by populating node.locs via loadNodeSnippets().
  *
  * Rules:
  * - Excludes query input nodes (passed in excludeIds)
  * - Shows file, offset, limit for Read tool compatibility
- * - Snippet context scales with node count (see adaptiveSnippets.ts)
+ * - Renders snippets from node.locs if present
  * - Truncates node list if exceeds MAX_NODES
  * - Orders nodes by appearance in Graph section (if nodeOrder provided)
  *
- * @param nodes - All nodes to potentially include
- * @param displayNames - Map of nodeId → display name (for ordering/labeling)
- * @param projectRoot - Project root for reading source files
+ * @param nodes - All nodes (with locs pre-loaded if snippets desired)
+ * @param displayNames - Map of nodeId → display name
  * @param excludeIds - Node IDs to exclude (query inputs)
  * @param nodeOrder - Optional order of node IDs (from formatGraph traversal)
  * @returns Formatted Nodes section with optional message
@@ -82,7 +92,6 @@ const renderLOCs = (locs: LOC[], callSites?: CallSiteRange[]): string[] => {
 export const formatNodes = (
   nodes: NodeInfo[],
   displayNames: Map<string, string>,
-  projectRoot: string,
   excludeIds: Set<string>,
   nodeOrder?: string[],
 ): FormatNodesResult => {
@@ -112,9 +121,6 @@ export const formatNodes = (
     included = included.slice(0, MAX_NODES);
   }
 
-  // Compute context lines based on original count
-  const contextLines = computeContextLines(originalCount);
-
   const lines: string[] = [];
   const outputNodeOrder: string[] = [];
 
@@ -127,32 +133,10 @@ export const formatNodes = (
     lines.push(`  file: ${node.filePath}`);
     lines.push(`  offset: ${node.startLine}, limit: ${limit}`);
 
-    // Include snippets if contextLines is not null
-    if (contextLines !== null) {
-      const absolutePath = join(projectRoot, node.filePath);
-      const functionLines = node.endLine - node.startLine + 1;
-
-      // Use call sites only if function is large enough for context to be meaningful.
-      // For small functions where context would exceed function boundaries,
-      // just show the whole function body.
-      const useCallSites =
-        node.callSites &&
-        node.callSites.length > 0 &&
-        functionLines > contextLines * 2;
-
-      let locs: LOC[];
-
-      if (useCallSites && node.callSites) {
-        locs = extractLOCs(absolutePath, node.callSites, contextLines);
-      } else {
-        // Small function or no call sites - show function body
-        locs = extractFunctionBody(absolutePath, node.startLine, node.endLine);
-      }
-
-      if (locs.length > 0) {
-        lines.push("  snippet:");
-        lines.push(...renderLOCs(locs, node.callSites));
-      }
+    // Render snippet if locs were pre-loaded
+    if (node.locs && node.locs.length > 0) {
+      lines.push("  snippet:");
+      lines.push(...renderLOCs(node.locs, node.callSites));
     }
 
     lines.push(""); // Blank line between nodes

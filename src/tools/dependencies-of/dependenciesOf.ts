@@ -1,36 +1,14 @@
 import type Database from "better-sqlite3";
-import type { CallSiteRange } from "../../db/Types.js";
-import { buildDisplayNames, formatGraph } from "../shared/formatGraph.js";
-import { formatNodes } from "../shared/formatNodes.js";
-import type { NodeInfo } from "../shared/GraphTypes.js";
-
-/** Edge types to traverse */
-const EDGE_TYPES = ["CALLS", "REFERENCES", "EXTENDS", "IMPLEMENTS"];
-
-/** Maximum traversal depth */
-const MAX_DEPTH = 100;
-
-interface EdgeRowWithCallSites {
-  source: string;
-  target: string;
-  type: string;
-  call_sites: string | null;
-}
-
-interface NodeRow {
-  id: string;
-  name: string;
-  file_path: string;
-  start_line: number;
-  end_line: number;
-}
-
-interface GraphEdgeWithCallSites {
-  source: string;
-  target: string;
-  type: string;
-  callSites?: CallSiteRange[];
-}
+import { collectNodeIds } from "../shared/collectNodeIds.js";
+import { EDGE_TYPES, MAX_DEPTH } from "../shared/constants.js";
+import { formatToolOutput } from "../shared/formatToolOutput.js";
+import { loadNodeSnippets } from "../shared/loadNodeSnippets.js";
+import {
+  type EdgeRowWithCallSites,
+  type GraphEdgeWithCallSites,
+  parseEdgeRows,
+} from "../shared/parseEdgeRows.js";
+import { queryNodeInfos } from "../shared/queryNodeInfos.js";
 
 /**
  * Query all forward dependencies from a source node.
@@ -42,113 +20,39 @@ const queryDependencyEdges = (
 ): GraphEdgeWithCallSites[] => {
   const edgeTypesPlaceholder = EDGE_TYPES.map(() => "?").join(", ");
 
-  // Recursive CTE to find all reachable nodes
   const sql = `
-		WITH RECURSIVE deps(id, depth) AS (
-			SELECT target, 1 FROM edges
-			WHERE source = ? AND type IN (${edgeTypesPlaceholder})
-			UNION
-			SELECT e.target, d.depth + 1 FROM edges e
-			JOIN deps d ON e.source = d.id
-			WHERE e.type IN (${edgeTypesPlaceholder}) AND d.depth < ?
-		)
-		SELECT DISTINCT e.source, e.target, e.type, e.call_sites
-		FROM edges e
-		WHERE (e.source = ? OR e.source IN (SELECT id FROM deps))
-		  AND e.target IN (SELECT id FROM deps)
-		  AND e.type IN (${edgeTypesPlaceholder})
-	`;
+    WITH RECURSIVE deps(id, depth) AS (
+      SELECT target, 1 FROM edges
+      WHERE source = ? AND type IN (${edgeTypesPlaceholder})
+      UNION
+      SELECT e.target, d.depth + 1 FROM edges e
+      JOIN deps d ON e.source = d.id
+      WHERE e.type IN (${edgeTypesPlaceholder}) AND d.depth < ?
+    )
+    SELECT DISTINCT e.source, e.target, e.type, e.call_sites
+    FROM edges e
+    WHERE (e.source = ? OR e.source IN (SELECT id FROM deps))
+      AND e.target IN (SELECT id FROM deps)
+      AND e.type IN (${edgeTypesPlaceholder})
+  `;
 
   const params = [
     sourceId,
-    ...EDGE_TYPES, // First IN clause
-    ...EDGE_TYPES, // Second IN clause (in recursive part)
+    ...EDGE_TYPES,
+    ...EDGE_TYPES,
     MAX_DEPTH,
     sourceId,
-    ...EDGE_TYPES, // Third IN clause
+    ...EDGE_TYPES,
   ];
 
   const rows = db.prepare<unknown[], EdgeRowWithCallSites>(sql).all(...params);
-
-  return rows.map((row) => ({
-    source: row.source,
-    target: row.target,
-    type: row.type,
-    callSites: row.call_sites ? JSON.parse(row.call_sites) : undefined,
-  }));
-};
-
-/**
- * Query node information for a list of node IDs.
- */
-const queryNodeInfos = (
-  db: Database.Database,
-  nodeIds: string[],
-): NodeInfo[] => {
-  if (nodeIds.length === 0) return [];
-
-  const placeholders = nodeIds.map(() => "?").join(", ");
-  const sql = `
-		SELECT id, name, file_path, start_line, end_line
-		FROM nodes
-		WHERE id IN (${placeholders})
-	`;
-
-  const rows = db.prepare<unknown[], NodeRow>(sql).all(...nodeIds);
-
-  return rows.map((row) => ({
-    id: row.id,
-    name: row.name,
-    filePath: row.file_path,
-    startLine: row.start_line,
-    endLine: row.end_line,
-  }));
-};
-
-/**
- * Build a map of node ID → call sites from edges.
- * For dependencies, the call sites are in the source (caller) nodes.
- */
-const buildCallSitesMap = (
-  edges: GraphEdgeWithCallSites[],
-): Map<string, CallSiteRange[]> => {
-  const callSitesByNode = new Map<string, CallSiteRange[]>();
-
-  for (const edge of edges) {
-    if (edge.callSites && edge.callSites.length > 0) {
-      // Call sites belong to the SOURCE (caller)
-      const existing = callSitesByNode.get(edge.source) ?? [];
-      existing.push(...edge.callSites);
-      callSitesByNode.set(edge.source, existing);
-    }
-  }
-
-  return callSitesByNode;
-};
-
-/**
- * Enrich nodes with call site information.
- */
-const enrichNodesWithCallSites = (
-  nodes: NodeInfo[],
-  callSitesMap: Map<string, CallSiteRange[]>,
-): NodeInfo[] => {
-  return nodes.map((node) => ({
-    ...node,
-    callSites: callSitesMap.get(node.id),
-  }));
+  return parseEdgeRows(rows);
 };
 
 /**
  * Find all code that a symbol depends on (forward dependencies).
  *
  * "What does this symbol depend on?"
- *
- * @param db - Database connection
- * @param projectRoot - Project root for snippet extraction
- * @param filePath - File path of the symbol
- * @param symbol - Symbol name
- * @returns Formatted output (Graph + Nodes sections)
  */
 export function dependenciesOf(
   db: Database.Database,
@@ -156,10 +60,9 @@ export function dependenciesOf(
   filePath: string,
   symbol: string,
 ): string {
-  // 1. Construct node ID
   const nodeId = `${filePath}:${symbol}`;
 
-  // 2. Validate symbol exists
+  // Validate symbol exists
   const exists = db
     .prepare<[string], { found: 1 }>(
       "SELECT 1 as found FROM nodes WHERE id = ?",
@@ -170,48 +73,24 @@ export function dependenciesOf(
     return `Symbol '${symbol}' not found at ${filePath}`;
   }
 
-  // 3. Query forward dependencies with call sites
+  // Query edges
   const edges = queryDependencyEdges(db, nodeId);
 
-  // 4. Handle empty case
   if (edges.length === 0) {
     return "No dependencies found.";
   }
 
-  // 5. Collect all node IDs (excluding source)
-  const nodeIds = new Set<string>();
-  for (const edge of edges) {
-    nodeIds.add(edge.source);
-    nodeIds.add(edge.target);
-  }
-  nodeIds.delete(nodeId); // Exclude query input
+  // Query node information
+  const nodeIds = collectNodeIds(edges, nodeId);
+  const nodes = queryNodeInfos(db, nodeIds);
 
-  // 6. Query node information
-  const nodes = queryNodeInfos(db, [...nodeIds]);
+  // Load snippets (I/O boundary)
+  const nodesWithSnippets = loadNodeSnippets(nodes, projectRoot, nodes.length);
 
-  // 7. Build call sites map and enrich nodes
-  const callSitesMap = buildCallSitesMap(edges);
-  const enrichedNodes = enrichNodesWithCallSites(nodes, callSitesMap);
-
-  // 8. Build display names
-  const allNodeIds = [nodeId, ...nodeIds];
-  const displayNames = buildDisplayNames(allNodeIds);
-
-  // 9. Format output
-  const { text: graphSection, nodeOrder } = formatGraph(edges);
-  const nodesResult = formatNodes(
-    enrichedNodes,
-    displayNames,
-    projectRoot,
-    new Set([nodeId]),
-    nodeOrder,
-  );
-
-  // 10. Build final output with optional message
-  let output = `## Graph\n\n${graphSection}\n\n## Nodes\n\n${nodesResult.text}`;
-  if (nodesResult.message) {
-    output += `\n${nodesResult.message}`;
-  }
-
-  return output;
+  // Format output (pure)
+  return formatToolOutput({
+    edges,
+    nodes: nodesWithSnippets,
+    excludeNodeIds: new Set([nodeId]),
+  });
 }

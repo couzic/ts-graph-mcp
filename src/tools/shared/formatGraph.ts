@@ -1,3 +1,5 @@
+import { buildDisplayNames } from "./buildDisplayNames.js";
+import { extractSymbol } from "./extractSymbol.js";
 import type { GraphEdge } from "./GraphTypes.js";
 
 /** Result of formatGraph including traversal order */
@@ -5,54 +7,6 @@ export interface FormatGraphResult {
   text: string;
   nodeOrder: string[];
 }
-
-/**
- * Extract symbol name from node ID.
- * "src/utils.ts:formatDate" → "formatDate"
- * "src/models/User.ts:User.save" → "User.save"
- */
-export const extractSymbol = (nodeId: string): string => {
-  const colonIndex = nodeId.indexOf(":");
-  if (colonIndex === -1) return nodeId;
-  return nodeId.slice(colonIndex + 1);
-};
-
-/**
- * Build display name map, handling disambiguation when names collide.
- * Returns: Map<nodeId, displayName>
- *
- * When multiple nodes share the same name, they get #1, #2 suffixes.
- */
-export const buildDisplayNames = (nodeIds: string[]): Map<string, string> => {
-  const displayNames = new Map<string, string>();
-  const nameCount = new Map<string, string[]>(); // name → [nodeId, ...]
-
-  // First pass: count names
-  for (const nodeId of nodeIds) {
-    const name = extractSymbol(nodeId);
-    const existing = nameCount.get(name);
-    if (existing) {
-      existing.push(nodeId);
-    } else {
-      nameCount.set(name, [nodeId]);
-    }
-  }
-
-  // Second pass: assign display names
-  for (const [name, ids] of nameCount) {
-    if (ids.length === 1 && ids[0] !== undefined) {
-      // Unique name - use as-is
-      displayNames.set(ids[0], name);
-    } else {
-      // Ambiguous - add #N suffix
-      ids.forEach((id, index) => {
-        displayNames.set(id, `${name}#${index + 1}`);
-      });
-    }
-  }
-
-  return displayNames;
-};
 
 /**
  * Format edges into chain-compacted Graph section.
