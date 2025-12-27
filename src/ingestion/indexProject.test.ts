@@ -78,7 +78,7 @@ const createMockWriter = (): DbWriter & {
   };
 };
 
-describe.skip("Ingestion", () => {
+describe("Ingestion", () => {
   beforeEach(() => {
     if (existsSync(TEST_DIR)) {
       rmSync(TEST_DIR, { recursive: true });

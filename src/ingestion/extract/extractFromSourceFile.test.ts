@@ -5,7 +5,7 @@ import {
   extractFromSourceFile,
 } from "./extractFromSourceFile.js";
 
-describe.skip(extractFromSourceFile.name, () => {
+describe(extractFromSourceFile.name, () => {
   let project: Project;
 
   beforeEach(() => {

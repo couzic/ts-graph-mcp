@@ -4,7 +4,7 @@ import { generateNodeId } from "../../generateNodeId.js";
 import type { EdgeExtractionContext } from "./EdgeExtractionContext.js";
 import { extractCallEdges } from "./extractCallEdges.js";
 
-describe.skip(extractCallEdges.name, () => {
+describe(extractCallEdges.name, () => {
   const createProject = () => new Project({ useInMemoryFileSystem: true });
 
   const defaultContext: EdgeExtractionContext = {
@@ -31,7 +31,7 @@ export const calculate = (x: number, y: number): number => add(x, y);
       target: generateNodeId("test.ts", "add"),
       type: "CALLS",
       callCount: 1,
-      callSites: [3],
+      callSites: [{ start: 3, end: 3 }],
     });
   });
 
@@ -57,7 +57,11 @@ export const doWork = () => {
       target: generateNodeId("test.ts", "log"),
       type: "CALLS",
       callCount: 3,
-      callSites: [4, 5, 6],
+      callSites: [
+        { start: 4, end: 4 },
+        { start: 5, end: 5 },
+        { start: 6, end: 6 },
+      ],
     });
   });
 
@@ -86,7 +90,7 @@ export class User {
       target: generateNodeId("test.ts", "validate"),
       type: "CALLS",
       callCount: 1,
-      callSites: [8],
+      callSites: [{ start: 8, end: 8 }],
     });
   });
 
@@ -129,7 +133,7 @@ export const processEvent = (timestamp: Date): string => {
       target: generateNodeId("utils.ts", "formatDate"),
       type: "CALLS",
       callCount: 1,
-      callSites: [5],
+      callSites: [{ start: 5, end: 5 }],
     });
   });
 
@@ -156,7 +160,7 @@ export const caller = (): string => {
       target: generateNodeId("test.ts", "target"),
       type: "CALLS",
       callCount: 1,
-      callSites: [6],
+      callSites: [{ start: 6, end: 6 }],
     });
   });
 });

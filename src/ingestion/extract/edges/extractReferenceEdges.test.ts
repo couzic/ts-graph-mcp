@@ -4,7 +4,7 @@ import { generateNodeId } from "../../generateNodeId.js";
 import type { EdgeExtractionContext } from "./EdgeExtractionContext.js";
 import { extractReferenceEdges } from "./extractReferenceEdges.js";
 
-describe.skip(extractReferenceEdges.name, () => {
+describe(extractReferenceEdges.name, () => {
   const createProject = () => new Project({ useInMemoryFileSystem: true });
 
   const defaultContext: EdgeExtractionContext = {

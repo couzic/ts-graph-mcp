@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { normalizeTypeText } from "./normalizeTypeText.js";
 
-describe.skip(normalizeTypeText.name, () => {
+describe(normalizeTypeText.name, () => {
   describe("undefined handling", () => {
     it("returns undefined when input is undefined", () => {
       expect(normalizeTypeText(undefined)).toBeUndefined();

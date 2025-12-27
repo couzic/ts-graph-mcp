@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { formatAmbiguous, formatNotFound } from "./errorFormatters.js";
 import type { SymbolLocation } from "./resolveSymbol.js";
 
-describe.skip(formatNotFound.name, () => {
+describe(formatNotFound.name, () => {
   it("formats basic not found error with example syntax", () => {
     const result = formatNotFound("formatDate");
 
@@ -30,7 +30,7 @@ describe.skip(formatNotFound.name, () => {
   });
 });
 
-describe.skip(formatAmbiguous.name, () => {
+describe(formatAmbiguous.name, () => {
   const candidatesInDifferentFiles: SymbolLocation[] = [
     {
       name: "save",

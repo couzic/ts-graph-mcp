@@ -26,7 +26,7 @@ function createSymbolLocation(
   };
 }
 
-describe.skip(formatPaths.name, () => {
+describe(formatPaths.name, () => {
   it("formats empty paths array as not found", () => {
     const from = createSymbolLocation("src/a.ts:foo");
     const to = createSymbolLocation("src/b.ts:bar");
@@ -212,7 +212,7 @@ describe.skip(formatPaths.name, () => {
   });
 });
 
-describe.skip(formatNotFound.name, () => {
+describe(formatNotFound.name, () => {
   it("formats error with example syntax for from parameter", () => {
     const result = formatNotFound("from.symbol: formatDate");
 
@@ -243,7 +243,7 @@ describe.skip(formatNotFound.name, () => {
   });
 });
 
-describe.skip(formatAmbiguous.name, () => {
+describe(formatAmbiguous.name, () => {
   const candidates: SymbolLocation[] = [
     {
       name: "save",

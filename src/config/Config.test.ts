@@ -9,7 +9,7 @@ import {
 } from "./Config.schemas.js";
 import { defineConfig, normalizeConfig } from "./defineConfig.js";
 
-describe.skip("ConfigSchema", () => {
+describe("ConfigSchema", () => {
   describe("PackageConfigSchema", () => {
     it("validates valid package config", () => {
       const config = {

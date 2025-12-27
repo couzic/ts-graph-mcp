@@ -14,7 +14,7 @@ import {
 
 const TEST_DIR = "/tmp/ts-graph-rag-config-test";
 
-describe.skip("ConfigLoader", () => {
+describe("ConfigLoader", () => {
   beforeEach(() => {
     if (existsSync(TEST_DIR)) {
       rmSync(TEST_DIR, { recursive: true });

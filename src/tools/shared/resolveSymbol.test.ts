@@ -4,7 +4,7 @@ import { initializeSchema } from "../../db/sqlite/sqliteSchema.utils.js";
 import { resolveSymbol } from "./resolveSymbol.js";
 import type { SymbolQuery } from "./SymbolQuery.js";
 
-describe.skip(resolveSymbol.name, () => {
+describe(resolveSymbol.name, () => {
   let db: Database.Database;
 
   beforeEach(() => {

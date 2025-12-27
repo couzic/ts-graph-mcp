@@ -5,7 +5,7 @@ import {
   formatLocation,
 } from "./nodeFormatters.js";
 
-describe.skip(extractSymbol.name, () => {
+describe(extractSymbol.name, () => {
   it("extracts symbol from standard node ID", () => {
     expect(extractSymbol("src/db/Types.ts:BaseNode")).toBe("BaseNode");
   });
@@ -37,7 +37,7 @@ describe.skip(extractSymbol.name, () => {
   });
 });
 
-describe.skip(formatLines.name, () => {
+describe(formatLines.name, () => {
   it("formats same line as single number", () => {
     expect(formatLines(26, 26)).toBe("26");
   });
@@ -59,7 +59,7 @@ describe.skip(formatLines.name, () => {
   });
 });
 
-describe.skip(formatLocation.name, () => {
+describe(formatLocation.name, () => {
   it("returns offset and limit for single line", () => {
     const result = formatLocation({ startLine: 26, endLine: 26 });
     expect(result).toEqual({ offset: 26, limit: 1 });
