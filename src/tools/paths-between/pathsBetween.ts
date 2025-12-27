@@ -1,4 +1,5 @@
 import type Database from "better-sqlite3";
+import type { CallSiteRange, Edge } from "../../db/Types.js";
 import { queryPath } from "../find-paths/query.js";
 import { buildDisplayNames, formatGraph } from "../shared/formatGraph.js";
 import { formatNodes } from "../shared/formatNodes.js";
@@ -41,6 +42,37 @@ const queryNodeInfos = (
     filePath: row.file_path,
     startLine: row.start_line,
     endLine: row.end_line,
+  }));
+};
+
+/**
+ * Build a map of node ID → call sites from path edges.
+ * For paths, each edge's call sites belong to the source node.
+ */
+const buildCallSitesMap = (edges: Edge[]): Map<string, CallSiteRange[]> => {
+  const callSitesByNode = new Map<string, CallSiteRange[]>();
+
+  for (const edge of edges) {
+    if (edge.callSites && edge.callSites.length > 0) {
+      const existing = callSitesByNode.get(edge.source) ?? [];
+      existing.push(...edge.callSites);
+      callSitesByNode.set(edge.source, existing);
+    }
+  }
+
+  return callSitesByNode;
+};
+
+/**
+ * Enrich nodes with call site information.
+ */
+const enrichNodesWithCallSites = (
+  nodes: NodeInfo[],
+  callSitesMap: Map<string, CallSiteRange[]>,
+): NodeInfo[] => {
+  return nodes.map((node) => ({
+    ...node,
+    callSites: callSitesMap.get(node.id),
   }));
 };
 
@@ -113,8 +145,8 @@ export function pathsBetween(
     return "No path found.";
   }
 
-  // Convert path edges to GraphEdge format
-  const edges: GraphEdge[] = path.edges.map((e) => ({
+  // Convert path edges to GraphEdge format for formatGraph
+  const graphEdges: GraphEdge[] = path.edges.map((e) => ({
     source: e.source,
     target: e.target,
     type: e.type,
@@ -128,14 +160,18 @@ export function pathsBetween(
   // 9. Query node information for intermediates
   const nodes = queryNodeInfos(db, intermediateIds);
 
-  // 10. Build display names (include from/to for graph rendering)
+  // 10. Build call sites map and enrich nodes
+  const callSitesMap = buildCallSitesMap(path.edges);
+  const enrichedNodes = enrichNodesWithCallSites(nodes, callSitesMap);
+
+  // 11. Build display names (include from/to for graph rendering)
   const allNodeIds = path.nodes;
   const displayNames = buildDisplayNames(allNodeIds);
 
-  // 11. Format output
-  const { text: graphSection, nodeOrder } = formatGraph(edges);
-  const nodesSection = formatNodes(
-    nodes,
+  // 12. Format output
+  const { text: graphSection, nodeOrder } = formatGraph(graphEdges);
+  const nodesResult = formatNodes(
+    enrichedNodes,
     displayNames,
     projectRoot,
     new Set([fromId, toId]),
@@ -143,9 +179,15 @@ export function pathsBetween(
   );
 
   // Handle case where there are no intermediate nodes
-  if (nodesSection.trim() === "") {
+  if (nodesResult.text.trim() === "") {
     return `## Graph\n\n${graphSection}`;
   }
 
-  return `## Graph\n\n${graphSection}\n\n## Nodes\n\n${nodesSection}`;
+  // Build final output with optional message
+  let output = `## Graph\n\n${graphSection}\n\n## Nodes\n\n${nodesResult.text}`;
+  if (nodesResult.message) {
+    output += `\n${nodesResult.message}`;
+  }
+
+  return output;
 }

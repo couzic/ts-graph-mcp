@@ -7,7 +7,7 @@ import {
   SyntaxKind,
   Node as TsMorphNode,
 } from "ts-morph";
-import type { Edge } from "../../../db/Types.js";
+import type { CallSiteRange, Edge } from "../../../db/Types.js";
 import { generateNodeId } from "../../generateNodeId.js";
 import { buildImportMap } from "./buildImportMap.js";
 import type { EdgeExtractionContext } from "./EdgeExtractionContext.js";
@@ -213,8 +213,8 @@ const extractCallsFromCallable = (
   // Build alias map for local variables that reference known symbols
   const aliasMap = buildLocalAliasMap(callable, symbolMap);
 
-  // Collect call site line numbers for each target
-  const callSitesByTarget = new Map<string, number[]>();
+  // Collect call site ranges for each target
+  const callSitesByTarget = new Map<string, CallSiteRange[]>();
 
   for (const nodeToSearch of nodesToSearch) {
     // Get all call expressions (including the node itself if it's a call expression)
@@ -240,9 +240,12 @@ const extractCallsFromCallable = (
       if (symbolMap.has(resolvedName)) {
         const targetId = symbolMap.get(resolvedName);
         if (targetId) {
-          const lineNumber = callExpr.getStartLineNumber();
+          const range: CallSiteRange = {
+            start: callExpr.getStartLineNumber(),
+            end: callExpr.getEndLineNumber(),
+          };
           const sites = callSitesByTarget.get(targetId) ?? [];
-          sites.push(lineNumber);
+          sites.push(range);
           callSitesByTarget.set(targetId, sites);
         }
       }

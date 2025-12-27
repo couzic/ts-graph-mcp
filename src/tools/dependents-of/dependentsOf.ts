@@ -1,7 +1,8 @@
 import type Database from "better-sqlite3";
+import type { CallSiteRange } from "../../db/Types.js";
 import { buildDisplayNames, formatGraph } from "../shared/formatGraph.js";
 import { formatNodes } from "../shared/formatNodes.js";
-import type { GraphEdge, NodeInfo } from "../shared/GraphTypes.js";
+import type { NodeInfo } from "../shared/GraphTypes.js";
 
 /** Edge types to traverse */
 const EDGE_TYPES = ["CALLS", "REFERENCES", "EXTENDS", "IMPLEMENTS"];
@@ -9,10 +10,11 @@ const EDGE_TYPES = ["CALLS", "REFERENCES", "EXTENDS", "IMPLEMENTS"];
 /** Maximum traversal depth */
 const MAX_DEPTH = 100;
 
-interface EdgeRow {
+interface EdgeRowWithCallSites {
   source: string;
   target: string;
   type: string;
+  call_sites: string | null;
 }
 
 interface NodeRow {
@@ -23,14 +25,21 @@ interface NodeRow {
   end_line: number;
 }
 
+interface GraphEdgeWithCallSites {
+  source: string;
+  target: string;
+  type: string;
+  callSites?: CallSiteRange[];
+}
+
 /**
  * Query all reverse dependencies (callers/dependents) of a target node.
- * Returns all edges in the reachable subgraph.
+ * Returns all edges in the reachable subgraph with call site information.
  */
 const queryDependentEdges = (
   db: Database.Database,
   targetId: string,
-): GraphEdge[] => {
+): GraphEdgeWithCallSites[] => {
   const edgeTypesPlaceholder = EDGE_TYPES.map(() => "?").join(", ");
 
   // Recursive CTE to find all callers (reverse traversal)
@@ -43,7 +52,7 @@ const queryDependentEdges = (
 			JOIN callers c ON e.target = c.id
 			WHERE e.type IN (${edgeTypesPlaceholder}) AND c.depth < ?
 		)
-		SELECT DISTINCT e.source, e.target, e.type
+		SELECT DISTINCT e.source, e.target, e.type, e.call_sites
 		FROM edges e
 		WHERE e.source IN (SELECT id FROM callers)
 		  AND (e.target = ? OR e.target IN (SELECT id FROM callers))
@@ -59,12 +68,13 @@ const queryDependentEdges = (
     ...EDGE_TYPES, // Third IN clause
   ];
 
-  const rows = db.prepare<unknown[], EdgeRow>(sql).all(...params);
+  const rows = db.prepare<unknown[], EdgeRowWithCallSites>(sql).all(...params);
 
   return rows.map((row) => ({
     source: row.source,
     target: row.target,
     type: row.type,
+    callSites: row.call_sites ? JSON.parse(row.call_sites) : undefined,
   }));
 };
 
@@ -92,6 +102,40 @@ const queryNodeInfos = (
     filePath: row.file_path,
     startLine: row.start_line,
     endLine: row.end_line,
+  }));
+};
+
+/**
+ * Build a map of node ID → call sites from edges.
+ * For dependents, the call sites are in the source (caller) nodes.
+ */
+const buildCallSitesMap = (
+  edges: GraphEdgeWithCallSites[],
+): Map<string, CallSiteRange[]> => {
+  const callSitesByNode = new Map<string, CallSiteRange[]>();
+
+  for (const edge of edges) {
+    if (edge.callSites && edge.callSites.length > 0) {
+      // For dependents, call sites belong to the SOURCE (caller)
+      const existing = callSitesByNode.get(edge.source) ?? [];
+      existing.push(...edge.callSites);
+      callSitesByNode.set(edge.source, existing);
+    }
+  }
+
+  return callSitesByNode;
+};
+
+/**
+ * Enrich nodes with call site information.
+ */
+const enrichNodesWithCallSites = (
+  nodes: NodeInfo[],
+  callSitesMap: Map<string, CallSiteRange[]>,
+): NodeInfo[] => {
+  return nodes.map((node) => ({
+    ...node,
+    callSites: callSitesMap.get(node.id),
   }));
 };
 
@@ -126,7 +170,7 @@ export function dependentsOf(
     return `Symbol '${symbol}' not found at ${filePath}`;
   }
 
-  // 3. Query reverse dependencies
+  // 3. Query reverse dependencies with call sites
   const edges = queryDependentEdges(db, nodeId);
 
   // 4. Handle empty case
@@ -145,19 +189,29 @@ export function dependentsOf(
   // 6. Query node information
   const nodes = queryNodeInfos(db, [...nodeIds]);
 
-  // 7. Build display names
+  // 7. Build call sites map and enrich nodes
+  const callSitesMap = buildCallSitesMap(edges);
+  const enrichedNodes = enrichNodesWithCallSites(nodes, callSitesMap);
+
+  // 8. Build display names
   const allNodeIds = [nodeId, ...nodeIds];
   const displayNames = buildDisplayNames(allNodeIds);
 
-  // 8. Format output
+  // 9. Format output
   const { text: graphSection, nodeOrder } = formatGraph(edges);
-  const nodesSection = formatNodes(
-    nodes,
+  const nodesResult = formatNodes(
+    enrichedNodes,
     displayNames,
     projectRoot,
     new Set([nodeId]),
     nodeOrder,
   );
 
-  return `## Graph\n\n${graphSection}\n\n## Nodes\n\n${nodesSection}`;
+  // 10. Build final output with optional message
+  let output = `## Graph\n\n${graphSection}\n\n## Nodes\n\n${nodesResult.text}`;
+  if (nodesResult.message) {
+    output += `\n${nodesResult.message}`;
+  }
+
+  return output;
 }

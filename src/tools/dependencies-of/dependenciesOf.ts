@@ -1,7 +1,7 @@
 import type Database from "better-sqlite3";
 import { buildDisplayNames, formatGraph } from "../shared/formatGraph.js";
 import { formatNodes } from "../shared/formatNodes.js";
-import type { GraphEdge, NodeInfo } from "../shared/GraphTypes.js";
+import type { NodeInfo } from "../shared/GraphTypes.js";
 
 /** Edge types to traverse */
 const EDGE_TYPES = ["CALLS", "REFERENCES", "EXTENDS", "IMPLEMENTS"];
@@ -21,6 +21,12 @@ interface NodeRow {
   file_path: string;
   start_line: number;
   end_line: number;
+}
+
+interface GraphEdge {
+  source: string;
+  target: string;
+  type: string;
 }
 
 /**
@@ -126,7 +132,7 @@ export function dependenciesOf(
     return `Symbol '${symbol}' not found at ${filePath}`;
   }
 
-  // 3. Query forward dependencies
+  // 3. Query forward dependencies with call sites
   const edges = queryDependencyEdges(db, nodeId);
 
   // 4. Handle empty case
@@ -145,13 +151,17 @@ export function dependenciesOf(
   // 6. Query node information
   const nodes = queryNodeInfos(db, [...nodeIds]);
 
+  // Note: For dependencies, we show function bodies (not call site context)
+  // because call_sites are line numbers in the caller's file, not the dependency's file.
+  // The formatNodes fallback to extractFunctionBody handles this correctly.
+
   // 7. Build display names
   const allNodeIds = [nodeId, ...nodeIds];
   const displayNames = buildDisplayNames(allNodeIds);
 
   // 8. Format output
   const { text: graphSection, nodeOrder } = formatGraph(edges);
-  const nodesSection = formatNodes(
+  const nodesResult = formatNodes(
     nodes,
     displayNames,
     projectRoot,
@@ -159,5 +169,11 @@ export function dependenciesOf(
     nodeOrder,
   );
 
-  return `## Graph\n\n${graphSection}\n\n## Nodes\n\n${nodesSection}`;
+  // 10. Build final output with optional message
+  let output = `## Graph\n\n${graphSection}\n\n## Nodes\n\n${nodesResult.text}`;
+  if (nodesResult.message) {
+    output += `\n${nodesResult.message}`;
+  }
+
+  return output;
 }
