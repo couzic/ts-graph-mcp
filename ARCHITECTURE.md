@@ -17,7 +17,7 @@ The MCP server exposes tools for AI agents to traverse call graphs, find depende
 │                        MCP Server Layer                         │
 │              (startMcpServer.ts dispatches to tool handlers)    │
 ├─────────────────────────────────────────────────────────────────┤
-│                     Vertical Slice Tools                        │
+│                         MCP Tools                               │
 │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐             │
 │  │dependenciesOf│ │ dependentsOf │ │ pathsBetween │             │
 │  │  handler.ts  │ │  handler.ts  │ │  handler.ts  │             │
@@ -40,7 +40,7 @@ The MCP server exposes tools for AI agents to traverse call graphs, find depende
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-**Vertical slices**: Each MCP tool owns its complete stack (`src/tools/<tool>/`). See module CLAUDE.md files for details.
+Each tool has its own folder (`src/tools/<tool>/`) with shared formatting code in `src/tools/shared/`.
 
 ## Data Model
 

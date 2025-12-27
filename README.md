@@ -247,12 +247,12 @@ src/
 ├── db/          # Database layer (SQLite implementation)
 ├── ingestion/   # TypeScript AST parsing and graph extraction
 ├── mcp/         # MCP server entry point and protocol handling
-└── tools/       # MCP tool handlers (vertical slice architecture)
+└── tools/       # MCP tool handlers
 ```
 
 ### Architecture
 
-The project uses a vertical slice architecture where each MCP tool owns its complete stack (handler, query logic, formatting). See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed technical documentation.
+Each tool has its own folder with handler and query logic. Shared formatting code lives in `src/tools/shared/`. See [ARCHITECTURE.md](ARCHITECTURE.md) for details.
 
 ### Code Style
 

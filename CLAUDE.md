@@ -12,9 +12,9 @@ Code is fundamentally a graph — we store it as text for practical reasons, but
 
 **Simplicity is a feature.** Each tool should do one thing well. If a tool tries to do multiple things, split it. The code, the architecture, the tools — all should reflect simplicity.
 
-## Architecture
+## Structure
 
-**Vertical slices**: Each MCP tool owns its complete stack (`src/tools/<tool>/`). Tools are independent — easy to understand, modify, or remove without affecting others.
+Each tool has its own folder (`src/tools/<tool>/`) with shared formatting in `src/tools/shared/`.
 
 ## Documentation
 

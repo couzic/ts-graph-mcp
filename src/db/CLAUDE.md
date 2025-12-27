@@ -97,4 +97,4 @@ closeDatabase(db);
 
 ## Architecture Notes
 
-Since the migration to vertical slice architecture, read operations are no longer abstracted through a shared interface. Each MCP tool in `src/tools/*/` implements its own direct SQL queries in its `query.ts` file using recursive CTEs for graph traversal. Only write operations remain abstracted through the `DbWriter` interface.
+Read operations are not abstracted — each MCP tool in `src/tools/*/` implements its own direct SQL queries using recursive CTEs for graph traversal. Only write operations are abstracted through the `DbWriter` interface.

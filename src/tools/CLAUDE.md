@@ -32,13 +32,13 @@ step02:
 
 ## Tool Structure
 
-Each tool follows vertical slice architecture:
-
 ```
 src/tools/<tool-name>/
   handler.ts   - MCP tool definition and execute function
   <tool>.ts    - Core function implementation
 ```
+
+Shared formatting code lives in `src/tools/shared/`.
 
 ## MCP Tools Reference
 

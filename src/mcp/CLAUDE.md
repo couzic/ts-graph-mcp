@@ -4,9 +4,9 @@
 
 Exposes the TypeScript code graph as an MCP (Model Context Protocol) server that provides 3 tools for AI coding agents to query and explore code structure. This is the primary interface for the ts-graph-mcp project.
 
-## Architecture: Vertical Slices
+## Tool Structure
 
-Each tool is implemented as a self-contained vertical slice in `src/tools/<tool-name>/`:
+Each tool has its own folder in `src/tools/<tool-name>/`:
 
 ```
 src/tools/
@@ -16,7 +16,7 @@ src/tools/
 └── shared/                # formatGraph.ts, formatNodes.ts, extractSnippet.ts
 ```
 
-**Each slice contains:**
+**Each tool contains:**
 - `handler.ts` - MCP tool definition and execution entry point
 - `<tool>.ts` - Core function (e.g., `dependenciesOf.ts`)
 
