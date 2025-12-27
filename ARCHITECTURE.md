@@ -85,6 +85,10 @@ All tools follow the Read tool pattern: `file_path` first (required), then `symb
 
 See [`src/tools/CLAUDE.md`](src/tools/CLAUDE.md) for parameter details.
 
+### Design Philosophy
+
+**Lean definitions.** Tool definitions appear in every conversation (fixed token cost), so keep them as concise as possible yet providing all the crucial information and making sure the AI agent will call them when it's the efficient solution.
+
 ## LSP Overlap
 
 Claude Code has a built-in LSP tool. Use each for its strengths:

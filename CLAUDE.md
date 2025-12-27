@@ -20,12 +20,12 @@ Each tool has its own folder (`src/tools/<tool>/`) with shared formatting in `sr
 
 | Document | Purpose |
 |----------|---------|
-| `ARCHITECTURE.md` | How the system works |
+| `ARCHITECTURE.md` | How the system works (current state) |
 | `ISSUES.md` | Active bugs and tech debt |
-| `ROADMAP.md` | Upcoming work |
+| `ROADMAP.md` | **Future work only** — planned features not yet implemented |
 | Module `CLAUDE.md` | Must-know info for that module |
 
-Remove items from ISSUES.md/ROADMAP.md when done. Update ARCHITECTURE.md when adding features.
+Remove items from ISSUES.md/ROADMAP.md when done. Update ARCHITECTURE.md when adding features. Don't use ROADMAP.md to document completed work — push documentation down the tree: module `CLAUDE.md` > JSDoc > `ARCHITECTURE.md` (only for cross-cutting concerns).
 
 ## Code Style
 
