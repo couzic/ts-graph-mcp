@@ -236,6 +236,9 @@ export interface IndexResult {
   /** Number of files processed */
   filesProcessed: number;
 
+  /** Relative paths of files that were indexed */
+  filesIndexed: string[];
+
   /** Number of nodes added */
   nodesAdded: number;
 

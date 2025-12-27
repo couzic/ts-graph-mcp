@@ -61,12 +61,17 @@ export const createSqliteWriter = (db: Database.Database): DbWriter => {
     DELETE FROM nodes WHERE file_path = ?
   `);
 
-  // Delete edges where source or target belongs to the file
+  // Delete edges where source belongs to the file (outgoing edges only)
   // Node IDs: file node = "path", symbol nodes = "path:symbol"
+  // Note: We don't delete incoming edges (where target belongs to file) because:
+  // 1. Those edges are "owned" by the source file, not this file
+  // 2. When processing multiple files in a batch, deleting incoming edges would
+  //    remove edges that were just added by another file in the same batch
+  // 3. Dangling edges (pointing to non-existent targets) are harmless since
+  //    queries use JOINs which automatically filter them out
   const deleteEdgesByFileStmt = db.prepare(`
     DELETE FROM edges
     WHERE source = @filePath OR source LIKE @filePrefix
-       OR target = @filePath OR target LIKE @filePrefix
   `);
 
   // Transaction wrappers for batch operations

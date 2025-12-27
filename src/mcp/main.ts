@@ -6,6 +6,13 @@ import { loadConfigOrDetect } from "../config/configLoader.utils.js";
 import { createSqliteWriter } from "../db/sqlite/createSqliteWriter.js";
 import { openDatabase } from "../db/sqlite/sqliteConnection.utils.js";
 import { indexProject } from "../ingestion/indexProject.js";
+import {
+  loadManifest,
+  populateManifest,
+  saveManifest,
+} from "../ingestion/manifest.js";
+import { syncOnStartup } from "../ingestion/syncOnStartup.js";
+import { type WatchHandle, watchProject } from "../ingestion/watchProject.js";
 import { startMcpServer } from "./startMcpServer.js";
 
 /**
@@ -50,9 +57,11 @@ const isDatabaseInitialized = (dbPath: string): boolean => {
 
 /**
  * Main entry point for the MCP server.
- * Starts the server with database connection and optional indexing.
+ * Starts the server with database connection, file watching, and optional indexing.
  */
 export const main = async (): Promise<void> => {
+  let watchHandle: WatchHandle | null = null;
+
   try {
     // Parse command-line arguments
     const dbPath = parseArgs();
@@ -68,12 +77,12 @@ export const main = async (): Promise<void> => {
     // Open database connection (creates and initializes schema if new)
     const db = openDatabase({ path: dbPath });
 
-    // If database doesn't exist, try to index the project
+    // Load config (always needed for watcher)
+    const configResult = await loadConfigOrDetect(projectRoot);
+
+    // If database doesn't exist, do initial indexing
     if (!dbExists) {
       console.error("Database not found. Attempting to index project...");
-
-      // Try to find config or auto-detect from tsconfig.json
-      const configResult = await loadConfigOrDetect(projectRoot);
 
       if (configResult) {
         // Log how config was obtained
@@ -104,6 +113,11 @@ export const main = async (): Promise<void> => {
             console.error(`  - ${error.file}: ${error.message}`);
           }
         }
+
+        // Create initial manifest from indexed files
+        const manifest = loadManifest(dbPath);
+        populateManifest(manifest, result.filesIndexed, projectRoot);
+        saveManifest(dbPath, manifest);
       } else {
         console.error(
           "No config file or tsconfig.json found. Starting server with empty database.",
@@ -113,8 +127,72 @@ export const main = async (): Promise<void> => {
         );
       }
     } else {
-      console.error("Using existing database.");
+      // Database exists - sync with filesystem
+      console.error("Using existing database. Checking for file changes...");
+
+      if (configResult) {
+        const manifest = loadManifest(dbPath);
+        const syncResult = await syncOnStartup(
+          db,
+          configResult.config,
+          manifest,
+          {
+            projectRoot,
+            dbPath,
+          },
+        );
+
+        const totalChanges =
+          syncResult.staleCount +
+          syncResult.deletedCount +
+          syncResult.addedCount;
+        if (totalChanges > 0) {
+          console.error(
+            `Synced ${totalChanges} file changes (${syncResult.staleCount} modified, ${syncResult.addedCount} new, ${syncResult.deletedCount} deleted) in ${syncResult.durationMs}ms`,
+          );
+        } else {
+          console.error("Database is up to date.");
+        }
+
+        if (syncResult.errors && syncResult.errors.length > 0) {
+          console.error(
+            `Sync completed with ${syncResult.errors.length} errors:`,
+          );
+          for (const error of syncResult.errors) {
+            console.error(`  - ${error.file}: ${error.message}`);
+          }
+        }
+      }
     }
+
+    // Start file watcher if config is available
+    if (configResult) {
+      const manifest = loadManifest(dbPath);
+      const watchConfig = configResult.config.watch ?? {};
+
+      watchHandle = watchProject(db, configResult.config, manifest, {
+        projectRoot,
+        dbPath,
+        debounce: watchConfig.debounce,
+        usePolling: watchConfig.usePolling,
+        pollingInterval: watchConfig.pollingInterval,
+        silent: watchConfig.silent,
+      });
+
+      console.error("File watcher started.");
+    }
+
+    // Set up graceful shutdown
+    const shutdown = async () => {
+      console.error("\nShutting down...");
+      if (watchHandle) {
+        await watchHandle.close();
+      }
+      process.exit(0);
+    };
+
+    process.on("SIGINT", shutdown);
+    process.on("SIGTERM", shutdown);
 
     // Start MCP server
     console.error("Starting MCP server on stdio...");
@@ -124,6 +202,9 @@ export const main = async (): Promise<void> => {
     console.error(`Fatal error: ${message}`);
     if (error instanceof Error && error.stack) {
       console.error(error.stack);
+    }
+    if (watchHandle) {
+      await watchHandle.close();
     }
     process.exit(1);
   }

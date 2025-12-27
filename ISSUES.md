@@ -69,9 +69,28 @@ The REFERENCES edge extractor has basic coverage (13 unit tests, 16 e2e tests) b
 
 ---
 
-### Watcher Tests Missing
+### Watcher: Fresh Project Per File (Intentional)
 
-Watcher module lacks unit and system tests. Medium priority.
+**Impact:** Low (performance)
+
+**Current behavior:** `watchProject.ts` creates a fresh ts-morph `Project` for each file change (twice: once for tsconfig validation, once for extraction).
+
+**Why:** Cached Projects don't know about files added since cache creation. When files are added/modified concurrently, cross-file import resolution fails with stale caches.
+
+**Trade-off:** Correctness over performance. Single-file reindexing is typically fast enough (~100-500ms).
+
+**Future optimization:** If perf becomes an issue, consider batch-level caching (refresh cache at start of each debounced batch, not per-file).
+
+---
+
+### Watcher Unit Tests Missing
+
+Watcher module has E2E tests (`watchProject.e2e.test.ts`) but lacks unit tests for:
+- `createDebouncer()` — batching and flush behavior
+- `resolveFileContext()` — file-to-package mapping
+- `isValidTsconfigFile()` — tsconfig validation
+
+Low priority since E2E tests cover the main flows.
 
 ### Format Test Gaps
 

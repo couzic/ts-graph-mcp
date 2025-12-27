@@ -117,13 +117,16 @@ describe("ConfigSchema", () => {
   describe("WatchConfigSchema", () => {
     it("validates watch config with all options", () => {
       const config = {
-        include: ["**/*.ts", "**/*.tsx"],
-        exclude: ["**/node_modules/**"],
         debounce: 200,
+        usePolling: true,
+        pollingInterval: 500,
+        silent: true,
       };
       const result = WatchConfigSchema.parse(config);
-      expect(result.include).toEqual(["**/*.ts", "**/*.tsx"]);
       expect(result.debounce).toBe(200);
+      expect(result.usePolling).toBe(true);
+      expect(result.pollingInterval).toBe(500);
+      expect(result.silent).toBe(true);
     });
 
     it("validates empty watch config (all optional)", () => {

@@ -71,9 +71,10 @@ Creates an implicit "main" module containing all packages.
     password?: string
   },
   watch?: {
-    include?: string[],    // glob patterns
-    exclude?: string[],    // glob patterns
-    debounce?: number      // ms
+    debounce?: number,        // ms (default: 300)
+    usePolling?: boolean,     // for Docker/WSL2/NFS
+    pollingInterval?: number, // ms (default: 1000)
+    silent?: boolean          // suppress reindex logs
   }
 }
 ```

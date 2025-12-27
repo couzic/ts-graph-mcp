@@ -18,6 +18,9 @@ Thumbs.db
 *.log
 npm-debug.log*
 
+# ts-graph-mcp data directory (database + manifest)
+.ts-graph/
+
 # SQLite databases (generated during indexing)
 *.db
 *.db-journal
@@ -32,3 +35,6 @@ npm-debug.log*
 
 # Benchmark results (generated)
 benchmark/results/
+
+# Test temp directory
+.tmp/

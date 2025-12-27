@@ -42,16 +42,6 @@ After 3-4 queries, the agent's context contains the same code snippets multiple 
 - Should agents be able to opt-out? (e.g., `fresh: true` parameter)
 - Should the Graph section also dedupe, or only the Nodes section?
 
-### File Watcher
-**Impact: High | Effort: Medium**
-
-Auto-reindex files on save for real-time accuracy.
-
-- Watch for file changes using chokidar (already a dependency)
-- Debounce rapid changes
-- Incremental updates - only reparse changed files
-- 10x faster updates compared to full reindex
-
 ### CLI Tool
 **Impact: Medium | Effort: Low**
 

@@ -99,7 +99,27 @@ Claude Code has a built-in LSP tool. Use each for its strengths:
 | Point-to-point (definition, direct refs) | Transitive (callers of callers) |
 | Single function context | Path finding (A → B) |
 
+## File Watching
+
+The server automatically reindexes files on save:
+
+1. **Startup sync** — Compares manifest (mtime/size) with filesystem, reindexes stale/new files
+2. **Runtime watcher** — Chokidar watches for changes, debounces rapid saves (300ms default)
+3. **tsconfig validation** — Only files in tsconfig compilation are indexed (not just any `.ts` file)
+
+**Key files:**
+- `src/ingestion/watchProject.ts` — Chokidar watcher with debouncing
+- `src/ingestion/syncOnStartup.ts` — Manifest-based startup sync
+- `src/ingestion/manifest.ts` — Tracks indexed files (mtime/size)
+- `src/ingestion/indexFile.ts` — Shared extraction function
+
+**Config options** (`watch` in config):
+- `debounce` — Delay in ms (default: 300)
+- `usePolling` — Required for Docker/WSL2/NFS
+- `pollingInterval` — Polling interval in ms (default: 1000)
+- `silent` — Suppress reindex log messages
+
 ## Limitations
 
 1. **SQLite only** — Query logic uses direct SQL. DbWriter interface exists for writes only.
-2. **No file watching** — Server requires restart to pick up code changes.
+2. **No tsconfig watching** — Changes to tsconfig.json require server restart.

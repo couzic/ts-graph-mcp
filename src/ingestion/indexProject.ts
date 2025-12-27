@@ -3,23 +3,8 @@ import { Project } from "ts-morph";
 import type { ProjectConfig } from "../config/Config.schemas.js";
 import type { DbWriter } from "../db/DbWriter.js";
 import type { IndexResult } from "../db/Types.js";
-import { extractEdges } from "./extract/edges/extractEdges.js";
-import { extractNodes } from "./extract/nodes/extractNodes.js";
-import type { NodeExtractionContext as ExtractionContext } from "./extract/nodes/NodeExtractionContext.js";
-
-/**
- * Options for indexing a single file.
- */
-export interface IndexFileOptions {
-  /** Module name */
-  module: string;
-  /** Package name */
-  package: string;
-  /** Relative file path (used for node IDs) */
-  relativePath: string;
-  /** Existing ts-morph project (optional) */
-  project?: Project;
-}
+import type { NodeExtractionContext } from "./extract/nodes/NodeExtractionContext.js";
+import { indexFile } from "./indexFile.js";
 
 /**
  * Options for indexing an entire project.
@@ -52,6 +37,7 @@ export const indexProject = async (
 ): Promise<IndexResult> => {
   const startTime = Date.now();
   const errors: Array<{ file: string; message: string }> = [];
+  const filesIndexed: string[] = [];
   let filesProcessed = 0;
   let nodesAdded = 0;
   let edgesAdded = 0;
@@ -76,6 +62,7 @@ export const indexProject = async (
         filesProcessed += result.filesProcessed;
         nodesAdded += result.nodesAdded;
         edgesAdded += result.edgesAdded;
+        filesIndexed.push(...result.filesIndexed);
 
         if (result.errors) {
           errors.push(...result.errors);
@@ -91,6 +78,7 @@ export const indexProject = async (
 
   return {
     filesProcessed,
+    filesIndexed,
     nodesAdded,
     edgesAdded,
     durationMs: Date.now() - startTime,
@@ -103,6 +91,7 @@ export const indexProject = async (
  */
 interface PackageProcessResult {
   filesProcessed: number;
+  filesIndexed: string[];
   nodesAdded: number;
   edgesAdded: number;
   errors?: Array<{ file: string; message: string }>;
@@ -128,6 +117,7 @@ const processPackage = async (
   dbWriter: DbWriter,
 ): Promise<PackageProcessResult> => {
   const errors: Array<{ file: string; message: string }> = [];
+  const filesIndexed: string[] = [];
   let filesProcessed = 0;
   let nodesAdded = 0;
   let edgesAdded = 0;
@@ -158,32 +148,22 @@ const processPackage = async (
     );
   });
 
-  // Process each file: extract nodes → write → extract edges → write
+  // Process each file using shared indexFile()
   for (const sourceFile of sourceFiles) {
     const absolutePath = sourceFile.getFilePath();
     const relativePath = relative(projectRoot, absolutePath);
-    const context: ExtractionContext = {
+    const context: NodeExtractionContext = {
       filePath: relativePath,
       module: moduleName,
       package: packageName,
     };
 
     try {
-      // Extract and write nodes
-      const nodes = extractNodes(sourceFile, context);
-      if (nodes.length > 0) {
-        await dbWriter.addNodes(nodes);
-        nodesAdded += nodes.length;
-      }
-
-      // Extract and write edges
-      const edges = extractEdges(sourceFile, context);
-      if (edges.length > 0) {
-        await dbWriter.addEdges(edges);
-        edgesAdded += edges.length;
-      }
-
+      const result = await indexFile(sourceFile, context, dbWriter);
+      nodesAdded += result.nodesAdded;
+      edgesAdded += result.edgesAdded;
       filesProcessed++;
+      filesIndexed.push(relativePath);
     } catch (e) {
       errors.push({
         file: relativePath,
@@ -194,6 +174,7 @@ const processPackage = async (
 
   return {
     filesProcessed,
+    filesIndexed,
     nodesAdded,
     edgesAdded,
     errors: errors.length > 0 ? errors : undefined,

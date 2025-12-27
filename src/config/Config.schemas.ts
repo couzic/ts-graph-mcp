@@ -40,12 +40,14 @@ export const StorageConfigSchema = z.discriminatedUnion("type", [
 ]);
 
 export const WatchConfigSchema = z.object({
-  /** Patterns to include */
-  include: z.array(z.string()).optional(),
-  /** Patterns to exclude */
-  exclude: z.array(z.string()).optional(),
-  /** Debounce delay in ms */
+  /** Debounce delay in ms (default: 300) */
   debounce: z.number().int().nonnegative().optional(),
+  /** Use polling instead of native fs events (required for Docker/WSL2/NFS) */
+  usePolling: z.boolean().optional(),
+  /** Polling interval in ms when usePolling is true (default: 1000) */
+  pollingInterval: z.number().int().positive().optional(),
+  /** Suppress reindex log messages (default: false) */
+  silent: z.boolean().optional(),
 });
 
 /** Full format with explicit modules */
