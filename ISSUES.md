@@ -91,30 +91,3 @@ No E2E tests verify behavior when:
 Users currently can't tell if they're seeing the full picture or a partial view.
 
 **Fix approach:** Add E2E tests that create deep/circular graphs and verify output includes truncation indicators when applicable.
-
----
-
-### Gap Indicator Threshold Too Low
-
-**Impact:** Low (token efficiency)
-
-The gap indicator `... N lines omitted ...` should only appear when the gap is substantial (3+ lines). For gaps of 1-2 lines, showing the actual lines uses fewer tokens than the gap indicator itself.
-
-**Current behavior:**
-```
-    24: const x = prep();
-    ... 1 lines omitted ...
-    26: target();
-```
-
-**Expected behavior:**
-```
-    24: const x = prep();
-    25: const y = setup();
-    26: target();
-```
-
-**Fix approach:** In `renderLOCs()`, only show gap indicator when `gap >= 3`. For smaller gaps, include the actual lines.
-
-**Location:** `src/tools/shared/formatNodes.ts`
-

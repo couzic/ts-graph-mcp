@@ -1,6 +1,9 @@
 import type { CallSiteRange } from "../../db/Types.js";
 import type { LOC } from "./GraphTypes.js";
 
+/** Gaps of this size or smaller are filled in (showing actual lines) */
+const SMALL_GAP_THRESHOLD = 2;
+
 export interface ExtractSnippetInput {
   lines: string[];
   startLine: number;
@@ -49,6 +52,21 @@ const extractLOCsAroundCallSites = (
     const rangeEnd = Math.min(totalLines, site.end + contextLines);
     for (let line = rangeStart; line <= rangeEnd; line++) {
       keepSet.add(line);
+    }
+  }
+
+  // Fill small gaps (≤ SMALL_GAP_THRESHOLD lines) between kept ranges
+  const sortedLines = [...keepSet].sort((a, b) => a - b);
+  for (let i = 1; i < sortedLines.length; i++) {
+    // biome-ignore lint/style/noNonNullAssertion: Unit tested
+    const prevLine = sortedLines[i - 1]!;
+    // biome-ignore lint/style/noNonNullAssertion: Unit tested
+    const currLine = sortedLines[i]!;
+    const gap = currLine - prevLine - 1;
+    if (gap > 0 && gap <= SMALL_GAP_THRESHOLD) {
+      for (let line = prevLine + 1; line < currLine; line++) {
+        keepSet.add(line);
+      }
     }
   }
 

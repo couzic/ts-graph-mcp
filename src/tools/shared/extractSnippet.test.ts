@@ -100,4 +100,50 @@ describe(extractSnippet.name, () => {
 
     expect(locs[0]?.line).toBe(1); // Can't go below 1
   });
+
+  it("fills small gaps (1-2 lines) between call site ranges", () => {
+    // Lines with call sites at 4, 6, and 9 (gaps of 1 and 2 lines)
+    const lines = [
+      "function test() {", // 1
+      "  setup();", // 2
+      "  // comment", // 3
+      "  target();", // 4 - call site
+      "  // gap 1", // 5 - gap of 1 line
+      "  target();", // 6 - call site
+      "  // gap 2a", // 7 - gap of 2 lines
+      "  // gap 2b", // 8
+      "  target();", // 9 - call site
+      "  // gap 3a", // 10 - gap of 3 lines (should NOT be filled)
+      "  // gap 3b", // 11
+      "  // gap 3c", // 12
+      "  target();", // 13 - call site
+      "  cleanup();", // 14
+      "}", // 15
+    ];
+
+    const locs = extractSnippet({
+      lines,
+      startLine: 1,
+      endLine: 15,
+      callSites: [
+        { start: 4, end: 4 },
+        { start: 6, end: 6 },
+        { start: 9, end: 9 },
+        { start: 13, end: 13 },
+      ],
+      contextLines: 0,
+    });
+
+    const lineNumbers = locs.map((loc) => loc.line);
+
+    // Small gaps (1-2 lines) should be filled
+    expect(lineNumbers).toContain(5); // 1-line gap between 4 and 6
+    expect(lineNumbers).toContain(7); // 2-line gap between 6 and 9
+    expect(lineNumbers).toContain(8);
+
+    // Large gap (3 lines) should NOT be filled
+    expect(lineNumbers).not.toContain(10);
+    expect(lineNumbers).not.toContain(11);
+    expect(lineNumbers).not.toContain(12);
+  });
 });
