@@ -1,9 +1,9 @@
 import type Database from "better-sqlite3";
 import type { CallSiteRange, Edge } from "../../db/Types.js";
-import { queryPath } from "../find-paths/query.js";
 import { buildDisplayNames, formatGraph } from "../shared/formatGraph.js";
 import { formatNodes } from "../shared/formatNodes.js";
 import type { GraphEdge, NodeInfo } from "../shared/GraphTypes.js";
+import { queryPath } from "./query.js";
 
 export interface SymbolRef {
   file_path: string;

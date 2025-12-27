@@ -1,12 +1,12 @@
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { IMPLICIT_MODULE_NAME } from "../tools/shared/nodeFormatters.js";
 import {
   CONFIG_FILE_NAMES,
   createDefaultConfig,
   detectTsconfig,
   findConfigFile,
+  IMPLICIT_MODULE_NAME,
   loadConfig,
   loadConfigOrDetect,
   readPackageName,
