@@ -70,7 +70,7 @@ orchestrate:
     5:   items: string[],
     6:   callback: (value: string) => string,
     7: ): string[] {
-    8:   return transform(items, callback);
+  > 8:   return transform(items, callback);
     9: }
 
 transform:
@@ -82,7 +82,7 @@ transform:
     6:   callback: (value: string) => string,
     7: ): string[] {
     8:   const trimmed = items.map((item) => item.trim());
-    9:   return validate(trimmed, callback);
+  > 9:   return validate(trimmed, callback);
     10: }
 
 validate:

@@ -1,4 +1,5 @@
 import type Database from "better-sqlite3";
+import type { CallSiteRange } from "../../db/Types.js";
 import { buildDisplayNames, formatGraph } from "../shared/formatGraph.js";
 import { formatNodes } from "../shared/formatNodes.js";
 import type { NodeInfo } from "../shared/GraphTypes.js";
@@ -9,10 +10,11 @@ const EDGE_TYPES = ["CALLS", "REFERENCES", "EXTENDS", "IMPLEMENTS"];
 /** Maximum traversal depth */
 const MAX_DEPTH = 100;
 
-interface EdgeRow {
+interface EdgeRowWithCallSites {
   source: string;
   target: string;
   type: string;
+  call_sites: string | null;
 }
 
 interface NodeRow {
@@ -23,20 +25,21 @@ interface NodeRow {
   end_line: number;
 }
 
-interface GraphEdge {
+interface GraphEdgeWithCallSites {
   source: string;
   target: string;
   type: string;
+  callSites?: CallSiteRange[];
 }
 
 /**
  * Query all forward dependencies from a source node.
- * Returns all edges in the reachable subgraph.
+ * Returns all edges in the reachable subgraph with call site information.
  */
 const queryDependencyEdges = (
   db: Database.Database,
   sourceId: string,
-): GraphEdge[] => {
+): GraphEdgeWithCallSites[] => {
   const edgeTypesPlaceholder = EDGE_TYPES.map(() => "?").join(", ");
 
   // Recursive CTE to find all reachable nodes
@@ -49,7 +52,7 @@ const queryDependencyEdges = (
 			JOIN deps d ON e.source = d.id
 			WHERE e.type IN (${edgeTypesPlaceholder}) AND d.depth < ?
 		)
-		SELECT DISTINCT e.source, e.target, e.type
+		SELECT DISTINCT e.source, e.target, e.type, e.call_sites
 		FROM edges e
 		WHERE (e.source = ? OR e.source IN (SELECT id FROM deps))
 		  AND e.target IN (SELECT id FROM deps)
@@ -65,12 +68,13 @@ const queryDependencyEdges = (
     ...EDGE_TYPES, // Third IN clause
   ];
 
-  const rows = db.prepare<unknown[], EdgeRow>(sql).all(...params);
+  const rows = db.prepare<unknown[], EdgeRowWithCallSites>(sql).all(...params);
 
   return rows.map((row) => ({
     source: row.source,
     target: row.target,
     type: row.type,
+    callSites: row.call_sites ? JSON.parse(row.call_sites) : undefined,
   }));
 };
 
@@ -98,6 +102,40 @@ const queryNodeInfos = (
     filePath: row.file_path,
     startLine: row.start_line,
     endLine: row.end_line,
+  }));
+};
+
+/**
+ * Build a map of node ID → call sites from edges.
+ * For dependencies, the call sites are in the source (caller) nodes.
+ */
+const buildCallSitesMap = (
+  edges: GraphEdgeWithCallSites[],
+): Map<string, CallSiteRange[]> => {
+  const callSitesByNode = new Map<string, CallSiteRange[]>();
+
+  for (const edge of edges) {
+    if (edge.callSites && edge.callSites.length > 0) {
+      // Call sites belong to the SOURCE (caller)
+      const existing = callSitesByNode.get(edge.source) ?? [];
+      existing.push(...edge.callSites);
+      callSitesByNode.set(edge.source, existing);
+    }
+  }
+
+  return callSitesByNode;
+};
+
+/**
+ * Enrich nodes with call site information.
+ */
+const enrichNodesWithCallSites = (
+  nodes: NodeInfo[],
+  callSitesMap: Map<string, CallSiteRange[]>,
+): NodeInfo[] => {
+  return nodes.map((node) => ({
+    ...node,
+    callSites: callSitesMap.get(node.id),
   }));
 };
 
@@ -151,18 +189,18 @@ export function dependenciesOf(
   // 6. Query node information
   const nodes = queryNodeInfos(db, [...nodeIds]);
 
-  // Note: For dependencies, we show function bodies (not call site context)
-  // because call_sites are line numbers in the caller's file, not the dependency's file.
-  // The formatNodes fallback to extractFunctionBody handles this correctly.
+  // 7. Build call sites map and enrich nodes
+  const callSitesMap = buildCallSitesMap(edges);
+  const enrichedNodes = enrichNodesWithCallSites(nodes, callSitesMap);
 
-  // 7. Build display names
+  // 8. Build display names
   const allNodeIds = [nodeId, ...nodeIds];
   const displayNames = buildDisplayNames(allNodeIds);
 
-  // 8. Format output
+  // 9. Format output
   const { text: graphSection, nodeOrder } = formatGraph(edges);
   const nodesResult = formatNodes(
-    nodes,
+    enrichedNodes,
     displayNames,
     projectRoot,
     new Set([nodeId]),

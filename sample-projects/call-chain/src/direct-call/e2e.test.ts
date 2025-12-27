@@ -66,7 +66,7 @@ step02:
   offset: 3, limit: 3
   snippet:
     3: export function step02(): string {
-    4:   return \`\${step03()}-02\`;
+  > 4:   return \`\${step03()}-02\`;
     5: }
 
 step03:
@@ -74,7 +74,7 @@ step03:
   offset: 3, limit: 3
   snippet:
     3: export function step03(): string {
-    4:   return \`\${step04()}-03\`;
+  > 4:   return \`\${step04()}-03\`;
     5: }
 
 step04:
@@ -82,7 +82,7 @@ step04:
   offset: 3, limit: 3
   snippet:
     3: export function step04(): string {
-    4:   return \`\${step05()}-04\`;
+  > 4:   return \`\${step05()}-04\`;
     5: }
 
 step05:
@@ -127,7 +127,7 @@ entry:
   offset: 3, limit: 3
   snippet:
     3: export function entry(): string {
-    4:   return \`\${step02()}-01\`;
+  > 4:   return \`\${step02()}-01\`;
     5: }
 
 step02:
@@ -135,7 +135,7 @@ step02:
   offset: 3, limit: 3
   snippet:
     3: export function step02(): string {
-    4:   return \`\${step03()}-02\`;
+  > 4:   return \`\${step03()}-02\`;
     5: }
 
 step03:
@@ -143,7 +143,7 @@ step03:
   offset: 3, limit: 3
   snippet:
     3: export function step03(): string {
-    4:   return \`\${step04()}-03\`;
+  > 4:   return \`\${step04()}-03\`;
     5: }
 
 step04:
@@ -151,7 +151,7 @@ step04:
   offset: 3, limit: 3
   snippet:
     3: export function step04(): string {
-    4:   return \`\${step05()}-04\`;
+  > 4:   return \`\${step05()}-04\`;
     5: }
 `);
     });
@@ -188,7 +188,7 @@ step02:
   offset: 3, limit: 3
   snippet:
     3: export function step02(): string {
-    4:   return \`\${step03()}-02\`;
+  > 4:   return \`\${step03()}-02\`;
     5: }
 
 step03:
@@ -196,7 +196,7 @@ step03:
   offset: 3, limit: 3
   snippet:
     3: export function step03(): string {
-    4:   return \`\${step04()}-03\`;
+  > 4:   return \`\${step04()}-03\`;
     5: }
 
 step04:
@@ -204,7 +204,7 @@ step04:
   offset: 3, limit: 3
   snippet:
     3: export function step04(): string {
-    4:   return \`\${step05()}-04\`;
+  > 4:   return \`\${step05()}-04\`;
     5: }
 `);
     });
@@ -228,7 +228,7 @@ step04:
   offset: 3, limit: 3
   snippet:
     3: export function step04(): string {
-    4:   return \`\${step05()}-04\`;
+  > 4:   return \`\${step05()}-04\`;
     5: }
 `);
     });
@@ -254,7 +254,7 @@ step02:
   offset: 3, limit: 3
   snippet:
     3: export function step02(): string {
-    4:   return \`\${step03()}-02\`;
+  > 4:   return \`\${step03()}-02\`;
     5: }
 
 step03:
@@ -262,7 +262,7 @@ step03:
   offset: 3, limit: 3
   snippet:
     3: export function step03(): string {
-    4:   return \`\${step04()}-03\`;
+  > 4:   return \`\${step04()}-03\`;
     5: }
 
 step04:
@@ -270,7 +270,7 @@ step04:
   offset: 3, limit: 3
   snippet:
     3: export function step04(): string {
-    4:   return \`\${step05()}-04\`;
+  > 4:   return \`\${step05()}-04\`;
     5: }
 `);
     });

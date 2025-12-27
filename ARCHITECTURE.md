@@ -18,11 +18,11 @@ The MCP server exposes tools for AI agents to traverse call graphs, find depende
 │              (startMcpServer.ts dispatches to tool handlers)    │
 ├─────────────────────────────────────────────────────────────────┤
 │                     Vertical Slice Tools                        │
-│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐            │
-│  │dependenciesOf│ │ dependentsOf │ │ pathsBetween │            │
-│  │  handler.ts  │ │  handler.ts  │ │  handler.ts  │            │
-│  │  <tool>.ts   │ │  <tool>.ts   │ │  <tool>.ts   │            │
-│  └──────┬───────┘ └──────┬───────┘ └──────┬───────┘            │
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐             │
+│  │dependenciesOf│ │ dependentsOf │ │ pathsBetween │             │
+│  │  handler.ts  │ │  handler.ts  │ │  handler.ts  │             │
+│  │  <tool>.ts   │ │  <tool>.ts   │ │  <tool>.ts   │             │
+│  └──────┬───────┘ └──────┬───────┘ └──────┬───────┘             │
 │         │ direct SQL     │                │                     │
 └─────────┼────────────────┼────────────────┼─────────────────────┘
           ↓                ↓                ↓

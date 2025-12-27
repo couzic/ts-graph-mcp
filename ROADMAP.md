@@ -131,20 +131,11 @@ When a function contains multiple call sites, all must be preserved. The truncat
 
 ### Call Site Marker
 
-**Status: Pending**
+**Status: ✅ IMPLEMENTED**
 
-When showing snippets with context, mark the call site line with a `>` prefix so AI agents can instantly identify which line contains the call.
+When showing snippets with context, call site lines are marked with a `>` prefix so AI agents can instantly identify which line contains the call.
 
-**Current output:**
-```
-  snippet:
-    139:       if (locs.length > 0) {
-    140:         lines.push("  snippet:");
-    141:         lines.push(...renderLOCs(locs));
-    142:       }
-```
-
-**Proposed output:**
+**Example output:**
 ```
   snippet:
     139:       if (locs.length > 0) {
@@ -158,6 +149,8 @@ When showing snippets with context, mark the call site line with a `>` prefix so
 - Visual, easy to scan
 - No code modification
 - Ties directly to Graph section (agent knows `formatNodes --CALLS--> renderLOCs`, marker shows where)
+
+**Implementation:** `src/tools/shared/formatNodes.ts` - `renderLOCs()` accepts optional `callSites` parameter and marks lines that fall within call site ranges.
 
 ### Tool Coverage
 

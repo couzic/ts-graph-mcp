@@ -53,9 +53,13 @@ step02:
   offset: 3, limit: 3
   snippet:
     3: export function step02(): string {
-    4:   return step03() + "-02";
+  > 4:   return step03() + "-02";
     5: }
 ```
+
+**Output format notes:**
+- Lines prefixed with `>` are **call sites** — the exact line where the function call occurs
+- `offset` and `limit` are for the Read tool if you need more context
 
 ### `dependenciesOf(file_path, symbol)`
 Find all code that a symbol depends on (forward dependencies).

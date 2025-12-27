@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import type { CallSiteRange } from "../../db/Types.js";
 import {
   computeContextLines,
   getAdaptiveMessage,
@@ -24,12 +25,21 @@ export interface FormatNodesResult {
 }
 
 /**
- * Render LOC array with gap detection.
+ * Check if a line number falls within any call site range.
+ */
+const isCallSiteLine = (lineNum: number, callSites: CallSiteRange[]): boolean =>
+  callSites.some((site) => lineNum >= site.start && lineNum <= site.end);
+
+/**
+ * Render LOC array with gap detection and call site markers.
  *
  * When consecutive LOCs have non-adjacent line numbers,
  * inserts "... N lines omitted ..." between them.
+ *
+ * Lines that are call sites are prefixed with "> " to help
+ * AI agents identify the relevant line.
  */
-const renderLOCs = (locs: LOC[]): string[] => {
+const renderLOCs = (locs: LOC[], callSites?: CallSiteRange[]): string[] => {
   const lines: string[] = [];
   let prevLine = 0;
 
@@ -42,7 +52,10 @@ const renderLOCs = (locs: LOC[]): string[] => {
       }
     }
 
-    lines.push(`    ${loc.line}: ${loc.code}`);
+    // Use "> " prefix for call site lines, otherwise 4 spaces
+    const prefix =
+      callSites && isCallSiteLine(loc.line, callSites) ? "  > " : "    ";
+    lines.push(`${prefix}${loc.line}: ${loc.code}`);
     prevLine = loc.line;
   }
 
@@ -138,7 +151,7 @@ export const formatNodes = (
 
       if (locs.length > 0) {
         lines.push("  snippet:");
-        lines.push(...renderLOCs(locs));
+        lines.push(...renderLOCs(locs, node.callSites));
       }
     }
 
