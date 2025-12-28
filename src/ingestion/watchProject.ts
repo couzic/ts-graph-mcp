@@ -3,9 +3,9 @@ import { existsSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import type Database from "better-sqlite3";
 import { watch } from "chokidar";
-import { Project } from "ts-morph";
 import type { ProjectConfig } from "../config/Config.schemas.js";
 import { createSqliteWriter } from "../db/sqlite/createSqliteWriter.js";
+import { createProject } from "./createProject.js";
 import type { NodeExtractionContext } from "./extract/nodes/NodeExtractionContext.js";
 import { indexFile } from "./indexFile.js";
 import {
@@ -151,7 +151,7 @@ export const watchProject = (
     tsconfigPath: string,
     absolutePath: string,
   ): boolean => {
-    const project = new Project({ tsConfigFilePath: tsconfigPath });
+    const project = createProject({ tsConfigFilePath: tsconfigPath });
     const sourceFiles = project.getSourceFiles();
     return sourceFiles.some((sf) => {
       const path = sf.getFilePath();
@@ -179,8 +179,8 @@ export const watchProject = (
     // Remove old data
     await writer.removeFileNodes(context.relativePath);
 
-    // Create fresh Project for accurate import resolution
-    const project = new Project({ tsConfigFilePath: context.tsconfigPath });
+    // Create fresh Project for accurate import resolution (supports Yarn PnP)
+    const project = createProject({ tsConfigFilePath: context.tsconfigPath });
     const sourceFile = project.addSourceFileAtPath(absolutePath);
 
     const extractionContext: NodeExtractionContext = {

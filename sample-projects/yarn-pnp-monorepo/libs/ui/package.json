@@ -1,0 +1,10 @@
+{
+  "name": "@libs/ui",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/Button.ts",
+  "dependencies": {
+    "@libs/toolkit": "workspace:*"
+  }
+}

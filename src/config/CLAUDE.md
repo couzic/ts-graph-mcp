@@ -24,10 +24,17 @@ Configuration loading and validation for ts-graph-mcp projects. Uses Zod schemas
 
 ### configLoader.utils.ts
 
-- `findConfigFile(directory)` - Searches for config file in order: .ts, .js, .json
-- `loadConfig(configPath)` - Loads and validates config from specific file path
-- `loadConfigFromDirectory(directory)` - Auto-detects and loads config from directory
-- `CONFIG_FILE_NAMES` - Array of supported config filenames in precedence order
+**Pure functions (unit tested):**
+- `parseConfig(content)` - Parses and validates config JSON content
+- `createDefaultConfig(tsconfig, packageName)` - Creates default ProjectConfig
+- `CONFIG_FILE_NAME` - Supported config filename (`ts-graph-mcp.config.json`)
+
+**I/O functions (not unit tested):**
+- `findConfigFile(directory)` - Finds config file in directory
+- `loadConfig(configPath)` - Loads and validates config from file
+- `loadConfigFromDirectory(directory)` - Auto-detects and loads config
+- `readPackageName(directory)` - Reads package name from package.json
+- `detectTsconfig(directory)` - Checks if tsconfig.json exists
 
 ### getCacheDir.ts
 
@@ -96,39 +103,35 @@ Creates an implicit "main" module containing all packages.
 
 All config loading functions validate against Zod schemas and throw on invalid data. Never bypass validation.
 
-### Config File Precedence
+### Config File
 
-1. `ts-graph-mcp.config.ts` (preferred for type safety)
-2. `ts-graph-mcp.config.js`
-3. `ts-graph-mcp.config.json`
+Only JSON is supported: `ts-graph-mcp.config.json`
 
-### TypeScript/JavaScript Config Files
-
-TS/JS configs must export config as default export or named export. The loader uses dynamic import and looks for `module.default ?? module`.
+TypeScript/JavaScript config files are not supported because Node.js cannot dynamically import `.ts` files at runtime without a loader (tsx/ts-node), which would break when users run the compiled package via `npx ts-graph-mcp`.
 
 ### Usage Pattern
 
-```typescript
+```json
 // Flat format - for simple projects
-import { defineConfig } from 'ts-graph-mcp';
-
-export default defineConfig({
-  packages: [
-    { name: "core", tsconfig: "./tsconfig.json" }
+{
+  "packages": [
+    { "name": "core", "tsconfig": "./tsconfig.json" }
   ]
-});
+}
 
 // Full format - for monorepos
-export default defineConfig({
-  modules: [
-    { name: "api", packages: [{ name: "rest", tsconfig: "./packages/api/tsconfig.json" }] },
-    { name: "core", packages: [{ name: "domain", tsconfig: "./packages/core/tsconfig.json" }] }
+{
+  "modules": [
+    { "name": "api", "packages": [{ "name": "rest", "tsconfig": "./packages/api/tsconfig.json" }] },
+    { "name": "core", "packages": [{ "name": "domain", "tsconfig": "./packages/core/tsconfig.json" }] }
   ]
-});
+}
+```
 
+```typescript
 // In application code
 import { loadConfigFromDirectory } from '../config/configLoader.utils.js';
-const config = await loadConfigFromDirectory(process.cwd());
+const config = loadConfigFromDirectory(process.cwd());
 // config is always in full format (with modules)
 ```
 

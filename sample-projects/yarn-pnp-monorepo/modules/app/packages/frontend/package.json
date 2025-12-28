@@ -1,0 +1,11 @@
+{
+  "name": "@app/frontend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/App.ts",
+  "dependencies": {
+    "@app/shared": "workspace:*",
+    "@libs/ui": "workspace:*"
+  }
+}

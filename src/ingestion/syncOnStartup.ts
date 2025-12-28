@@ -1,8 +1,8 @@
 import { dirname, join, relative } from "node:path";
 import type Database from "better-sqlite3";
-import { Project } from "ts-morph";
 import type { ProjectConfig } from "../config/Config.schemas.js";
 import { createSqliteWriter } from "../db/sqlite/createSqliteWriter.js";
+import { createProject } from "./createProject.js";
 import type { NodeExtractionContext } from "./extract/nodes/NodeExtractionContext.js";
 import { indexFile } from "./indexFile.js";
 import {
@@ -52,8 +52,8 @@ const buildFileContextMap = (
       const absoluteTsConfigPath = join(projectRoot, pkg.tsconfig);
       const packageRoot = dirname(absoluteTsConfigPath);
 
-      // Create ts-morph project to discover files from tsconfig
-      const project = new Project({
+      // Create ts-morph project to discover files from tsconfig (supports Yarn PnP)
+      const project = createProject({
         tsConfigFilePath: absoluteTsConfigPath,
       });
 
@@ -145,7 +145,7 @@ export const syncOnStartup = async (
 
   // Process each tsconfig group
   for (const [tsconfigPath, files] of filesByTsconfig) {
-    const project = new Project({
+    const project = createProject({
       tsConfigFilePath: tsconfigPath,
     });
 

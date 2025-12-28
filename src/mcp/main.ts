@@ -1,5 +1,17 @@
 #!/usr/bin/env node
 
+// Early error handlers to catch module loading failures
+process.on("uncaughtException", (error) => {
+  console.error("[ts-graph-mcp] Uncaught exception:", error.message);
+  if (error.stack) console.error(error.stack);
+  process.exit(1);
+});
+process.on("unhandledRejection", (reason) => {
+  console.error("[ts-graph-mcp] Unhandled rejection:", reason);
+  process.exit(1);
+});
+
+import { realpathSync } from "node:fs";
 import { resolve } from "node:path";
 import { getCacheDir } from "../config/getCacheDir.js";
 import { startHttpServer } from "./httpServer.js";
@@ -145,7 +157,9 @@ export const main = async (): Promise<void> => {
 };
 
 // Run main if executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Use realpathSync to handle npm bin symlinks (process.argv[1] may be a symlink)
+const resolvedScript = process.argv[1] ? realpathSync(process.argv[1]) : "";
+if (import.meta.url === `file://${resolvedScript}`) {
   main().catch((error) => {
     console.error("[ts-graph-mcp] Unhandled error:", error);
     process.exit(1);

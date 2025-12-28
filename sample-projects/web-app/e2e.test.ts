@@ -1,6 +1,6 @@
 import type { Database } from "better-sqlite3";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import type { ProjectConfig } from "../../src/config/Config.schemas.js";
+import { loadConfig } from "../../src/config/configLoader.utils.js";
 import { createSqliteWriter } from "../../src/db/sqlite/createSqliteWriter.js";
 import {
   closeDatabase,
@@ -31,18 +31,7 @@ describe("web-app multi-package E2E tests", () => {
     initializeSchema(db);
 
     projectRoot = import.meta.dirname;
-    const config: ProjectConfig = {
-      modules: [
-        {
-          name: "main",
-          packages: [
-            { name: "shared", tsconfig: "./shared/tsconfig.json" },
-            { name: "frontend", tsconfig: "./frontend/tsconfig.json" },
-            { name: "backend", tsconfig: "./backend/tsconfig.json" },
-          ],
-        },
-      ],
-    };
+    const config = loadConfig(`${projectRoot}/ts-graph-mcp.config.json`);
     const writer = createSqliteWriter(db);
     await indexProject(config, writer, { projectRoot });
   });

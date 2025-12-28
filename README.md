@@ -6,7 +6,7 @@ A Model Context Protocol (MCP) server that extracts TypeScript code structure in
 
 ts-graph-mcp parses TypeScript source code using AST analysis and builds a graph database of your codebase structure. The graph captures code symbols (functions, classes, interfaces, types, variables) and their relationships (calls, imports, type usage, inheritance).
 
-AI agents can then query this graph through 6 specialized MCP tools to:
+AI agents can then query this graph through 3 specialized MCP tools to:
 
 - Traverse call graphs (who calls this? what does this call?)
 - Analyze code impact (what breaks if I change this?)
@@ -37,24 +37,45 @@ This package uses `better-sqlite3`, a native addon that requires compilation too
 
 ### Configuration
 
-Create a `ts-graph-mcp.config.ts` file in your project root:
+Create a `ts-graph-mcp.config.json` file in your project root.
 
-```typescript
-import { defineConfig } from 'ts-graph-mcp';
+**Single package** — skip config entirely if `tsconfig.json` exists (auto-detected):
 
-export default defineConfig({
-  modules: [
+```json
+{
+  "packages": [
+    { "name": "main", "tsconfig": "./tsconfig.json" }
+  ]
+}
+```
+
+**Multiple packages** — use the flat `packages` array:
+
+```json
+{
+  "packages": [
+    { "name": "shared", "tsconfig": "./shared/tsconfig.json" },
+    { "name": "frontend", "tsconfig": "./frontend/tsconfig.json" },
+    { "name": "backend", "tsconfig": "./backend/tsconfig.json" }
+  ]
+}
+```
+
+**Monorepo with modules** — group packages into logical modules:
+
+```json
+{
+  "modules": [
     {
-      name: "core",
-      packages: [
-        { name: "main", tsconfig: "./tsconfig.json" }
+      "name": "core",
+      "packages": [
+        { "name": "domain", "tsconfig": "./packages/domain/tsconfig.json" },
+        { "name": "utils", "tsconfig": "./packages/utils/tsconfig.json" }
       ]
     }
   ]
-});
+}
 ```
-
-Alternatively, use `ts-graph-mcp.config.js` or `ts-graph-mcp.config.json`.
 
 ### Running the Server
 
@@ -85,7 +106,16 @@ Or manually in `.mcp.json`:
 
 ## Configuration Reference
 
-### Required Fields
+Two formats are supported — use whichever fits your project structure.
+
+### Flat Format (packages only)
+
+**`packages`** - Array of package definitions (creates an implicit "main" module):
+
+- `name` (string): Package identifier
+- `tsconfig` (string): Path to tsconfig.json
+
+### Full Format (modules with packages)
 
 **`modules`** - Array of module definitions:
 
@@ -99,120 +129,153 @@ Or manually in `.mcp.json`:
 **`storage`** - Database configuration:
 
 - `type`: `"sqlite"` (default)
-- `path`: Database file path (default: `.ts-graph-mcp/graph.db`)
+- `path`: Database file path (default: `node_modules/.cache/ts-graph-mcp/graph.db`)
 
 **`watch`** - File watching configuration:
 
-- `include`: Glob patterns for files to watch
-- `exclude`: Glob patterns for files to ignore
-- `debounce`: Milliseconds to wait before re-indexing
+- `debounce`: Milliseconds to wait before re-indexing (default: 300)
+- `usePolling`: Use polling instead of native events (for Docker/WSL2/NFS)
+- `pollingInterval`: Polling interval in ms (default: 1000)
+- `silent`: Suppress reindex log messages
 
-### Full Example
+**`server`** - HTTP server configuration:
 
-```typescript
-import { defineConfig } from 'ts-graph-mcp';
+- `port`: Server port (default: auto-find available port)
+- `host`: Bind address (default: `127.0.0.1`)
 
-export default defineConfig({
-  modules: [
+### Examples
+
+**Flat format** — multiple packages, single implicit module:
+
+```json
+{
+  "packages": [
+    { "name": "shared", "tsconfig": "./shared/tsconfig.json" },
+    { "name": "frontend", "tsconfig": "./frontend/tsconfig.json" },
+    { "name": "backend", "tsconfig": "./backend/tsconfig.json" }
+  ],
+  "watch": {
+    "debounce": 300
+  }
+}
+```
+
+**Full format** — monorepo with multiple modules:
+
+```json
+{
+  "modules": [
     {
-      name: "core",
-      packages: [
-        { name: "domain", tsconfig: "./packages/domain/tsconfig.json" },
-        { name: "utils", tsconfig: "./packages/utils/tsconfig.json" }
+      "name": "core",
+      "packages": [
+        { "name": "domain", "tsconfig": "./packages/domain/tsconfig.json" },
+        { "name": "utils", "tsconfig": "./packages/utils/tsconfig.json" }
       ]
     },
     {
-      name: "api",
-      packages: [
-        { name: "server", tsconfig: "./apps/api/tsconfig.json" }
+      "name": "api",
+      "packages": [
+        { "name": "server", "tsconfig": "./apps/api/tsconfig.json" }
       ]
     }
   ],
-  storage: {
-    type: "sqlite",
-    path: ".ts-graph-mcp/graph.db"
-  },
-  watch: {
-    include: ["src/**/*.ts"],
-    exclude: ["**/*.test.ts", "**/*.spec.ts"],
-    debounce: 300
+  "storage": {
+    "type": "sqlite",
+    "path": "node_modules/.cache/ts-graph-mcp/graph.db"
   }
-});
+}
 ```
+
+### Yarn PnP Support
+
+ts-graph-mcp works with **Yarn 4 Plug'n'Play (PnP)** monorepos. When a `.pnp.cjs` file is detected, module resolution automatically uses Yarn's PnP API instead of filesystem lookups.
+
+**Requirements for PnP projects:**
+
+1. Use **base package imports** (not subpaths):
+   ```typescript
+   // ✅ Works
+   import { formatDate } from "@libs/utils";
+
+   // ❌ Requires exports field in package.json
+   import { formatDate } from "@libs/utils/date";
+   ```
+
+2. Declare all dependencies in `package.json` with `workspace:*`:
+   ```json
+   {
+     "dependencies": {
+       "@libs/utils": "workspace:*"
+     }
+   }
+   ```
+
+No tsconfig `paths` configuration needed — PnP handles cross-package resolution.
 
 ## MCP Tools
 
-The server exposes 6 tools for querying the code graph:
+The server exposes 3 tools for querying the code graph:
 
 | Tool | Purpose | Key Parameters |
 |------|---------|----------------|
-| `incomingCallsDeep` | Find all functions/methods that call the target (transitive) | `symbol`, `file?`, `module?`, `package?`, `maxDepth?` |
-| `outgoingCallsDeep` | Find all functions/methods that the source calls (transitive) | `symbol`, `file?`, `module?`, `package?`, `maxDepth?` |
-| `incomingPackageDeps` | Find reverse package dependencies | `package`, `module?`, `maxDepth?`, `outputTypes?` |
-| `outgoingPackageDeps` | Find package dependencies | `package`, `module?`, `maxDepth?`, `outputTypes?` |
-| `analyzeImpact` | Impact analysis - find all code affected by changes | `symbol`, `file?`, `module?`, `package?`, `maxDepth?` |
-| `findPaths` | Find shortest path between two symbols | `from: {symbol, ...}`, `to: {symbol, ...}`, `maxDepth?`, `maxPaths?` |
+| `dependenciesOf` | Find all code that a symbol depends on (forward dependencies) | `file_path`, `symbol` |
+| `dependentsOf` | Find all code that depends on a symbol (reverse dependencies) | `file_path`, `symbol` |
+| `pathsBetween` | Find how two symbols connect through the code graph | `from: {file_path, symbol}`, `to: {file_path, symbol}` |
 
 ### Symbol-Based Queries
 
-All tools use a **SymbolQuery pattern** for inputs:
+All tools require two parameters:
 
-- **Required**: `symbol` - Symbol name (e.g., `"formatDate"`, `"User.save"`)
-- **Optional filters**: `file`, `module`, `package` - Narrow scope when symbol name is ambiguous
-
-If multiple symbols match, the tool returns candidates with their location details, allowing you to refine your query with additional filters.
+- **`file_path`**: Path to the file containing the symbol (e.g., `"src/utils.ts"`)
+- **`symbol`**: Symbol name (e.g., `"formatDate"`, `"User.save"`)
 
 ### Example Outputs
 
 All outputs include `offset` and `limit` fields that can be passed directly to the Read tool.
 
-#### incomingCallsDeep
+#### dependentsOf
 
-Find all callers of `saveUser`:
+Find all code that depends on `saveUser`:
 
 ```bash
 # Input
-{ symbol: "saveUser" }
+{ file_path: "src/db/user.ts", symbol: "saveUser" }
 
 # Output
-target: saveUser (Function)
-file: src/db/user.ts
-offset: 15, limit: 8
-count: 2
+Graph:
+saveUser (src/db/user.ts)
+├── handleRequest (src/api/handler.ts)
+│   └── ...
+└── UserService.create (src/services/UserService.ts)
 
-src/api/handler.ts (1 callers):
-functions[1]:
-  handleRequest async (req:Request) → Promise<Response>
-    offset: 9, limit: 17
-    callCount: 1, depth: 1
-
-src/services/UserService.ts (1 callers):
-methods[1]:
-  UserService.create async (data:UserData) → Promise<User>
-    offset: 19, limit: 12
-    callCount: 2, depth: 1
+Nodes:
+saveUser (Function) src/db/user.ts
+  offset: 15, limit: 8
+handleRequest (Function) src/api/handler.ts
+  offset: 9, limit: 17
+UserService.create (Method) src/services/UserService.ts
+  offset: 19, limit: 12
 ```
 
-#### findPaths
+#### pathsBetween
 
 Find path from `handleRequest` to `saveData`:
 
 ```bash
 # Input
-{ from: { symbol: "handleRequest" }, to: { symbol: "saveData" } }
+{ from: { file_path: "src/api.ts", symbol: "handleRequest" }, to: { file_path: "src/db.ts", symbol: "saveData" } }
 
 # Output
-from: handleRequest (Function) in src/api.ts
-to: saveData (Function) in src/db.ts
-found: 1 path
-length: 3
+Paths[1]:
+handleRequest --CALLS--> process --CALLS--> saveData
 
-path[1]:
-  handleRequest (src/api.ts)
-    --CALLS-->
-  process (src/service.ts)
-    --CALLS-->
-  saveData (src/db.ts)
+Nodes:
+handleRequest (Function) src/api.ts
+  offset: 5, limit: 12
+process (Function) src/service.ts
+  offset: 10, limit: 8
+saveData (Function) src/db.ts
+  offset: 3, limit: 6
 ```
 
 ### Supported Node Types
@@ -221,7 +284,7 @@ Function, Class, Method, Interface, TypeAlias, Variable, File, Property
 
 ### Supported Edge Types
 
-CALLS, IMPORTS, CONTAINS, IMPLEMENTS, EXTENDS, USES_TYPE, READS_PROPERTY, WRITES_PROPERTY
+CALLS, IMPORTS, CONTAINS, IMPLEMENTS, EXTENDS, USES_TYPE, REFERENCES
 
 ## Development
 
@@ -242,8 +305,10 @@ npm run lint:fix     # Auto-fix linting issues
 Run benchmarks to test MCP tool performance:
 
 ```bash
-npm run benchmark:quick   # Quick benchmark run
-npm run benchmark         # Full benchmark suite
+npm run benchmark:call-chain   # Benchmark call-chain sample project
+npm run benchmark:layered-api  # Benchmark layered-api sample project
+npm run benchmark:monorepo     # Benchmark monorepo sample project
+npm run benchmark:all          # Run all benchmarks
 ```
 
 #### Claude CLI Configuration
@@ -257,7 +322,7 @@ For faster runs, set `CLAUDE_PATH` to your Claude installation:
 type claude  # e.g., "claude is aliased to '/home/user/.claude/local/claude'"
 
 # Run with explicit path (faster)
-CLAUDE_PATH=/home/user/.claude/local/claude npm run benchmark:quick
+CLAUDE_PATH=/home/user/.claude/local/claude npm run benchmark:call-chain
 ```
 
 Or add to your shell profile:

@@ -1,6 +1,6 @@
 {
 	"name": "ts-graph-mcp",
-	"version": "0.1.0",
+	"version": "0.1.4",
 	"description": "MCP server that extracts TypeScript code structure into a graph database, enabling advanced exploration for AI coding agents",
 	"type": "module",
 	"main": "dist/mcp/main.js",
@@ -8,6 +8,7 @@
 		"ts-graph-mcp": "dist/mcp/main.js"
 	},
 	"scripts": {
+		"prepublishOnly": "npm i && npm run check",
 		"check": "npm run test && npm run build && npm run lint:fix",
 		"build": "tsc && chmod +x dist/mcp/main.js",
 		"test": "vitest run",

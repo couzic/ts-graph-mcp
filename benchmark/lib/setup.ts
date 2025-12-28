@@ -66,13 +66,21 @@ export async function setupBenchmark(config: BenchmarkConfig): Promise<void> {
   const dbDir = join(config.projectRoot, ".ts-graph");
   await mkdir(dbDir, { recursive: true });
 
-  // Delete existing database to ensure fresh schema
+  // Delete existing database and WAL files to ensure fresh schema
   // This avoids schema mismatch errors when columns are added/removed
-  try {
-    await unlink(fullDbPath);
+  // SQLite WAL mode creates .db-wal and .db-shm files that must be deleted together
+  const filesToDelete = [fullDbPath, `${fullDbPath}-wal`, `${fullDbPath}-shm`];
+  let deletedAny = false;
+  for (const file of filesToDelete) {
+    try {
+      await unlink(file);
+      deletedAny = true;
+    } catch {
+      // File doesn't exist, that's fine
+    }
+  }
+  if (deletedAny) {
     console.log("Deleted existing database (ensuring fresh schema)");
-  } catch {
-    // File doesn't exist, that's fine
   }
 
   // Open database (will create if doesn't exist)

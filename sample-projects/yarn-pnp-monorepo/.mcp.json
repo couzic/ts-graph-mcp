@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "ts-graph": {
+      "command": "npx",
+      "args": ["-y", "ts-graph-mcp@0.1.4"]
+    }
+  }
+}

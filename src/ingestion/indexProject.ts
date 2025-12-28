@@ -1,8 +1,8 @@
 import { dirname, join, relative } from "node:path";
-import { Project } from "ts-morph";
 import type { ProjectConfig } from "../config/Config.schemas.js";
 import type { DbWriter } from "../db/DbWriter.js";
 import type { IndexResult } from "../db/Types.js";
+import { createProject } from "./createProject.js";
 import type { NodeExtractionContext } from "./extract/nodes/NodeExtractionContext.js";
 import { indexFile } from "./indexFile.js";
 
@@ -125,8 +125,8 @@ const processPackage = async (
   const absoluteTsConfigPath = join(projectRoot, tsconfigPath);
   const packageRoot = dirname(absoluteTsConfigPath);
 
-  // Create ts-morph project with tsconfig
-  const project = new Project({
+  // Create ts-morph project with tsconfig (supports Yarn PnP if detected)
+  const project = createProject({
     tsConfigFilePath: absoluteTsConfigPath,
   });
 

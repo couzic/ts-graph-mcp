@@ -1,0 +1,10 @@
+{
+  "name": "yarn-pnp-monorepo",
+  "private": true,
+  "packageManager": "yarn@4.6.0",
+  "workspaces": [
+    "libs/*",
+    "modules/app/packages/*",
+    "modules/analytics-api"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./libs/toolkit" },
+    { "path": "./libs/ui" },
+    { "path": "./modules/app/packages/shared" },
+    { "path": "./modules/app/packages/frontend" },
+    { "path": "./modules/app/packages/backend" },
+    { "path": "./modules/analytics-api" }
+  ]
+}

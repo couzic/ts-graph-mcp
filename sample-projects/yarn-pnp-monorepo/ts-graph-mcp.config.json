@@ -1,0 +1,25 @@
+{
+  "modules": [
+    {
+      "name": "libs",
+      "packages": [
+        { "name": "toolkit", "tsconfig": "./libs/toolkit/tsconfig.json" },
+        { "name": "ui", "tsconfig": "./libs/ui/tsconfig.json" }
+      ]
+    },
+    {
+      "name": "app",
+      "packages": [
+        { "name": "shared", "tsconfig": "./modules/app/packages/shared/tsconfig.json" },
+        { "name": "frontend", "tsconfig": "./modules/app/packages/frontend/tsconfig.json" },
+        { "name": "backend", "tsconfig": "./modules/app/packages/backend/tsconfig.json" }
+      ]
+    },
+    {
+      "name": "analytics-api",
+      "packages": [
+        { "name": "analytics-api", "tsconfig": "./modules/analytics-api/tsconfig.json" }
+      ]
+    }
+  ]
+}

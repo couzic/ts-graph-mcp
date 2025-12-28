@@ -62,7 +62,7 @@ export const initializeServerCore = async (
   const db = openDatabase({ path: dbPath });
 
   // Load config (always needed for watcher)
-  const configResult = await loadConfigOrDetect(projectRoot);
+  const configResult = loadConfigOrDetect(projectRoot);
   let config: ProjectConfig | null = null;
   let manifest: IndexManifest | null = null;
   let watchHandle: WatchHandle | null = null;
