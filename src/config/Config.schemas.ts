@@ -50,6 +50,13 @@ export const WatchConfigSchema = z.object({
   silent: z.boolean().optional(),
 });
 
+export const ServerConfigSchema = z.object({
+  /** HTTP server port (default: finds available port) */
+  port: z.number().int().positive().optional(),
+  /** Bind address (default: '127.0.0.1' for security) */
+  host: z.string().optional(),
+});
+
 /** Full format with explicit modules */
 const FullProjectConfigSchema = z.object({
   /** Modules in the project */
@@ -58,6 +65,8 @@ const FullProjectConfigSchema = z.object({
   storage: StorageConfigSchema.optional(),
   /** Watch mode configuration */
   watch: WatchConfigSchema.optional(),
+  /** HTTP server configuration */
+  server: ServerConfigSchema.optional(),
 });
 
 /** Flat format: packages without module nesting (creates implicit "main" module) */
@@ -68,6 +77,8 @@ const FlatProjectConfigSchema = z.object({
   storage: StorageConfigSchema.optional(),
   /** Watch mode configuration */
   watch: WatchConfigSchema.optional(),
+  /** HTTP server configuration */
+  server: ServerConfigSchema.optional(),
 });
 
 /** Input schema accepts either full or flat format */

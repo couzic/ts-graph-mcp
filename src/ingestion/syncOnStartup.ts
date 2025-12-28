@@ -98,7 +98,7 @@ export const syncOnStartup = async (
   manifest: IndexManifest,
   options: {
     projectRoot: string;
-    dbPath: string;
+    cacheDir: string;
   },
 ): Promise<SyncOnStartupResult> => {
   const startTime = Date.now();
@@ -183,7 +183,7 @@ export const syncOnStartup = async (
   }
 
   // Save updated manifest
-  saveManifest(options.dbPath, manifest);
+  saveManifest(options.cacheDir, manifest);
 
   return {
     staleCount: stale.length,

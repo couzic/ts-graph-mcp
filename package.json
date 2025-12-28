@@ -44,6 +44,7 @@
 	"devDependencies": {
 		"@biomejs/biome": "2.3.8",
 		"@types/better-sqlite3": "^7.0.0",
+		"@types/express": "^5.0.6",
 		"@types/node": "^22.0.0",
 		"typescript": "^5.0.0",
 		"vitest": "^2.0.0"

@@ -32,6 +32,38 @@
 
 ## Technical Debt
 
+### Race Condition in HTTP Server Spawn
+
+**Impact:** Low (edge case)
+
+**Problem:** When multiple Claude Code sessions start simultaneously for the same project, each stdio MCP wrapper checks for an existing HTTP server and spawns one if not found. A race window exists between the check and the spawn.
+
+**In `wrapperClient.ts:112-117`:**
+```typescript
+let server = await getRunningServer(cacheDir);
+
+if (!server) {
+  spawnApiServer(options);           // ← Both sessions reach here
+  server = await waitForApiServer(cacheDir);
+}
+```
+
+**Consequences:**
+1. Second spawn may fail with port conflict (if first server claimed the port)
+2. Orphan processes if spawn succeeds but server.json is overwritten
+3. `waitForApiServer` may connect to the "wrong" server (benign since they're identical)
+
+**Likelihood:** Low — requires exact timing. In practice, the first session starts the server before others launch.
+
+**Mitigation options:**
+1. File-based locking before spawn (add complexity)
+2. Retry logic in `waitForApiServer` if health check succeeds after spawn fails (simple)
+3. Accept as known limitation (current approach)
+
+**Current behavior:** Second session's spawn fails silently (detached process), but `waitForApiServer` succeeds by connecting to the first session's server. Net effect: works correctly, logs may be confusing.
+
+---
+
 ### 18. Magic Numbers for Traversal Depth Limits
 
 **Impact:** Low (maintainability)
@@ -95,6 +127,38 @@ Low priority since E2E tests cover the main flows.
 ### Format Test Gaps
 
 Format tests have good happy-path coverage but lack edge cases and negative tests. Low priority.
+
+---
+
+### Nodes Without Call Sites Show Full Snippet
+
+**Impact:** Medium (token efficiency)
+
+**Problem:** When a node has no call sites (leaf nodes in the dependency graph), `extractSnippet` falls through to `extractLineRange` which returns the entire function body regardless of size.
+
+**Example:** `dependenciesOf(startMcpServer)` with ~25 nodes returns `contextLines = 0`, but `extractLOCsAroundCallSites` (43 lines, no call sites) shows its full body instead of being truncated.
+
+**Root cause in `extractSnippet.ts:29-35`:**
+```typescript
+const useCallSites =
+  callSites && callSites.length > 0 && functionLines > contextLines * 2;
+
+if (useCallSites) {
+  return extractLOCsAroundCallSites(lines, callSites, contextLines);
+}
+return extractLineRange(lines, startLine, endLine);  // ← FULL FUNCTION
+```
+
+When `callSites` is empty, the adaptive context logic is bypassed entirely.
+
+**Fix approach:** Limit snippet for nodes without call sites:
+```typescript
+if (!callSites || callSites.length === 0) {
+  const maxLines = Math.max(contextLines, 5); // At least signature
+  const limitedEnd = Math.min(endLine, startLine + maxLines - 1);
+  return extractLineRange(lines, startLine, limitedEnd);
+}
+```
 
 ---
 

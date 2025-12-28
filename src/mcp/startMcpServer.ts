@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import type Database from "better-sqlite3";
 import { z } from "zod";
+import packageJson from "../../package.json" with { type: "json" };
 import { dependenciesOf } from "../tools/dependencies-of/dependenciesOf.js";
 import { dependentsOf } from "../tools/dependents-of/dependentsOf.js";
 import { pathsBetween } from "../tools/paths-between/pathsBetween.js";
@@ -22,8 +23,8 @@ export async function startMcpServer(
   projectRoot: string,
 ): Promise<void> {
   const server = new McpServer({
-    name: "ts-graph-mcp",
-    version: "0.1.0",
+    name: packageJson.name,
+    version: packageJson.version,
   });
 
   // Shared Zod schemas for tool parameters

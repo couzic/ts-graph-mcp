@@ -240,7 +240,7 @@ sample-project/
      "mcpServers": {
        "ts-graph-mcp": {
          "command": "node",
-         "args": ["../../dist/mcp/StartServer.js", "--db", ".ts-graph/graph.db"]
+         "args": ["../../dist/mcp/main.js", "--cache-dir", ".ts-graph"]
        }
      }
    }

@@ -21,8 +21,8 @@ import {
 export interface WatchOptions {
   /** Project root directory */
   projectRoot: string;
-  /** Path to the database file (for saving manifest) */
-  dbPath: string;
+  /** Cache directory (for saving manifest) */
+  cacheDir: string;
   /** Debounce delay in ms (default: 300) */
   debounce?: number;
   /** Use polling instead of native fs events */
@@ -134,7 +134,7 @@ export const watchProject = (
 ): WatchHandle => {
   const {
     projectRoot,
-    dbPath,
+    cacheDir,
     debounce: debounceMs = 300,
     usePolling = false,
     pollingInterval = 1000,
@@ -232,7 +232,7 @@ export const watchProject = (
       }
     }
     // Save manifest after processing batch
-    saveManifest(dbPath, manifest);
+    saveManifest(cacheDir, manifest);
   };
 
   // Handle file deletion
@@ -240,7 +240,7 @@ export const watchProject = (
     try {
       await writer.removeFileNodes(relativePath);
       removeManifestEntry(manifest, relativePath);
-      saveManifest(dbPath, manifest);
+      saveManifest(cacheDir, manifest);
     } catch (error) {
       console.error(
         `[ts-graph-mcp] Error removing ${relativePath}: ${

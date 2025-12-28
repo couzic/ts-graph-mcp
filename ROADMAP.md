@@ -84,6 +84,34 @@ Enable swapping SQLite for graph databases like Neo4j or Memgraph.
 3. Add Neo4j/Memgraph implementation
 4. Configuration switch for storage backend type
 
+### On-Demand Sync Mode (Lazy Reindexing)
+**Impact: Medium | Effort: Low**
+
+Alternative to file watching for environments with many existing watchers.
+
+**The Problem:**
+In typical dev environments, multiple tools watch the same files (IDE, build tools, test runners). Adding another watcher (chokidar) consumes inotify descriptors and memory. Some environments hit system limits.
+
+**Solution:**
+Instead of proactive watching, sync on tool invocation:
+
+```
+Tool call → Check manifest for stale files → Reindex changed files → Execute query
+```
+
+**Config:**
+```json
+{
+  "watch": { "mode": "on-demand", "syncTtlMs": 5000 }
+}
+```
+
+- `syncTtlMs` — Skip sync if last sync was within this window (prevents redundant syncs on rapid calls)
+- Reuses existing `syncOnStartup` logic (manifest mtime/size comparison)
+- Latency proportional to files changed, not project size
+
+**Future improvement:** Per-package sync — only sync the package containing the queried file for `dependenciesOf`/`dependentsOf`, sync all packages for `pathsBetween` (cross-package paths).
+
 ## Advanced Analysis
 
 ### Dead Code Detection

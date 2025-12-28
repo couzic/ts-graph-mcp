@@ -1,206 +1,144 @@
 #!/usr/bin/env node
 
-import { existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { loadConfigOrDetect } from "../config/configLoader.utils.js";
-import { getDefaultDbPath } from "../config/getCacheDir.js";
-import { createSqliteWriter } from "../db/sqlite/createSqliteWriter.js";
-import { openDatabase } from "../db/sqlite/sqliteConnection.utils.js";
-import { indexProject } from "../ingestion/indexProject.js";
-import {
-  loadManifest,
-  populateManifest,
-  saveManifest,
-} from "../ingestion/manifest.js";
-import { syncOnStartup } from "../ingestion/syncOnStartup.js";
-import { type WatchHandle, watchProject } from "../ingestion/watchProject.js";
-import { startMcpServer } from "./startMcpServer.js";
+import { getCacheDir } from "../config/getCacheDir.js";
+import { startHttpServer } from "./httpServer.js";
+import { initializeServerCore } from "./serverCore.js";
+import { runWrapperClient } from "./wrapperClient.js";
 
 /**
- * Parse command-line arguments for database path.
- *
- * @param projectRoot - Project root for default path resolution
- * @returns Database path (absolute or ':memory:')
+ * Parsed command-line arguments.
  */
-const parseArgs = (projectRoot: string): string => {
+interface ParsedArgs {
+  /** Cache directory (contains graph.db, manifest.json, server.json) */
+  cacheDir?: string;
+  /** HTTP server port */
+  port?: number;
+  /** HTTP server host */
+  host?: string;
+  /** Run as HTTP API server (spawned by stdio MCP server) */
+  apiServer?: boolean;
+}
+
+/**
+ * Parse command-line arguments.
+ */
+const parseArgs = (): ParsedArgs => {
   const args = process.argv.slice(2);
+  const result: ParsedArgs = {};
 
-  // Look for --db flag
-  const dbFlagIndex = args.indexOf("--db");
-  if (dbFlagIndex !== -1 && args[dbFlagIndex + 1]) {
-    const dbPath = args[dbFlagIndex + 1];
-    if (dbPath === undefined) {
-      throw new Error("--db flag requires a path argument");
+  let i = 0;
+  while (i < args.length) {
+    const arg = args[i];
+
+    if (arg === "--api-server") {
+      result.apiServer = true;
+    } else if (arg === "--cache-dir") {
+      const nextArg = args[i + 1];
+      if (nextArg) {
+        result.cacheDir = resolve(nextArg);
+        i++;
+      }
+    } else if (arg === "--port") {
+      const nextArg = args[i + 1];
+      if (nextArg) {
+        result.port = parseInt(nextArg, 10);
+        i++;
+      }
+    } else if (arg === "--host") {
+      const nextArg = args[i + 1];
+      if (nextArg) {
+        result.host = nextArg;
+        i++;
+      }
     }
-    return dbPath === ":memory:" ? dbPath : resolve(dbPath);
+
+    i++;
   }
 
-  // Use default: node_modules/.cache/ts-graph-mcp/graph.db (or .ts-graph/graph.db fallback)
-  return getDefaultDbPath(projectRoot);
+  return result;
 };
 
 /**
- * Check if the database exists and has been initialized.
- *
- * @param dbPath - Path to the database file
- * @returns True if the database exists and is initialized
+ * Run in HTTP API server mode (spawned by stdio MCP server).
+ * Starts the HTTP API server with database and file watcher.
  */
-const isDatabaseInitialized = (dbPath: string): boolean => {
-  if (dbPath === ":memory:") {
-    return false;
-  }
-  return existsSync(dbPath);
-};
+const runApiServer = async (
+  projectRoot: string,
+  cacheDir: string,
+  port?: number,
+  host?: string,
+): Promise<void> => {
+  // Initialize database, indexing, and file watcher
+  const { db, watchHandle } = await initializeServerCore({
+    projectRoot,
+    cacheDir,
+  });
 
-/**
- * Main entry point for the MCP server.
- * Starts the server with database connection, file watching, and optional indexing.
- */
-export const main = async (): Promise<void> => {
-  let watchHandle: WatchHandle | null = null;
-
-  try {
-    const projectRoot = process.cwd();
-    const dbPath = parseArgs(projectRoot);
-
-    console.error(`Starting ts-graph-mcp server...`);
-    console.error(`Database: ${dbPath}`);
-    console.error(`Project root: ${projectRoot}`);
-
-    // Check if database exists
-    const dbExists = isDatabaseInitialized(dbPath);
-
-    // Open database connection (creates and initializes schema if new)
-    const db = openDatabase({ path: dbPath });
-
-    // Load config (always needed for watcher)
-    const configResult = await loadConfigOrDetect(projectRoot);
-
-    // If database doesn't exist, do initial indexing
-    if (!dbExists) {
-      console.error("Database not found. Attempting to index project...");
-
-      if (configResult) {
-        // Log how config was obtained
-        if (configResult.source === "explicit") {
-          console.error(`Using config: ${configResult.configPath}`);
-        } else {
-          console.error(
-            "No config file found. Auto-detected tsconfig.json, using default configuration.",
-          );
-        }
-
-        // Index the project
-        const writer = createSqliteWriter(db);
-        const result = await indexProject(configResult.config, writer, {
-          projectRoot,
-          clearFirst: false,
-        });
-
-        console.error(
-          `Indexed ${result.filesProcessed} files (${result.nodesAdded} symbols, ${result.edgesAdded} connections) in ${result.durationMs}ms`,
-        );
-
-        if (result.errors && result.errors.length > 0) {
-          console.error(
-            `Indexing completed with ${result.errors.length} errors:`,
-          );
-          for (const error of result.errors) {
-            console.error(`  - ${error.file}: ${error.message}`);
-          }
-        }
-
-        // Create initial manifest from indexed files
-        const manifest = loadManifest(dbPath);
-        populateManifest(manifest, result.filesIndexed, projectRoot);
-        saveManifest(dbPath, manifest);
-      } else {
-        console.error(
-          "No config file or tsconfig.json found. Starting server with empty database.",
-        );
-        console.error(
-          "To index your project, either create a ts-graph-mcp.config.json file or ensure tsconfig.json exists.",
-        );
-      }
-    } else {
-      // Database exists - sync with filesystem
-      console.error("Using existing database. Checking for file changes...");
-
-      if (configResult) {
-        const manifest = loadManifest(dbPath);
-        const syncResult = await syncOnStartup(
-          db,
-          configResult.config,
-          manifest,
-          {
-            projectRoot,
-            dbPath,
-          },
-        );
-
-        const totalChanges =
-          syncResult.staleCount +
-          syncResult.deletedCount +
-          syncResult.addedCount;
-        if (totalChanges > 0) {
-          console.error(
-            `Synced ${totalChanges} file changes (${syncResult.staleCount} modified, ${syncResult.addedCount} new, ${syncResult.deletedCount} deleted) in ${syncResult.durationMs}ms`,
-          );
-        } else {
-          console.error("Database is up to date.");
-        }
-
-        if (syncResult.errors && syncResult.errors.length > 0) {
-          console.error(
-            `Sync completed with ${syncResult.errors.length} errors:`,
-          );
-          for (const error of syncResult.errors) {
-            console.error(`  - ${error.file}: ${error.message}`);
-          }
-        }
-      }
-    }
-
-    // Start file watcher if config is available
-    if (configResult) {
-      const manifest = loadManifest(dbPath);
-      const watchConfig = configResult.config.watch ?? {};
-
-      watchHandle = watchProject(db, configResult.config, manifest, {
-        projectRoot,
-        dbPath,
-        debounce: watchConfig.debounce,
-        usePolling: watchConfig.usePolling,
-        pollingInterval: watchConfig.pollingInterval,
-        silent: watchConfig.silent,
-      });
-
-      console.error("File watcher started.");
-    }
-
-    // Set up graceful shutdown
-    const shutdown = async () => {
-      console.error("\nShutting down...");
-      if (watchHandle) {
-        await watchHandle.close();
-      }
-      process.exit(0);
-    };
-
-    process.on("SIGINT", shutdown);
-    process.on("SIGTERM", shutdown);
-
-    // Start MCP server
-    console.error("Starting MCP server on stdio...");
-    await startMcpServer(db, projectRoot);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error(`Fatal error: ${message}`);
-    if (error instanceof Error && error.stack) {
-      console.error(error.stack);
-    }
+  // Set up graceful shutdown
+  const shutdown = async () => {
+    console.error("\n[ts-graph-mcp] Shutting down...");
     if (watchHandle) {
       await watchHandle.close();
+    }
+    process.exit(0);
+  };
+
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
+
+  // Start HTTP server
+  await startHttpServer({
+    db,
+    cacheDir,
+    projectRoot,
+    port,
+    host,
+  });
+
+  // Keep process running
+  console.error("[ts-graph-mcp] Server running. Press Ctrl+C to stop.");
+};
+
+/**
+ * Run in stdio MCP server mode (default).
+ * Spawns HTTP API server if needed, then handles MCP protocol on stdio.
+ */
+const runStdioMcpServer = async (
+  projectRoot: string,
+  cacheDir: string,
+  port?: number,
+  host?: string,
+): Promise<void> => {
+  await runWrapperClient({
+    projectRoot,
+    cacheDir,
+    port,
+    host,
+  });
+};
+
+/**
+ * Main entry point.
+ */
+export const main = async (): Promise<void> => {
+  try {
+    const projectRoot = process.cwd();
+    const args = parseArgs();
+    const cacheDir = args.cacheDir ?? getCacheDir(projectRoot);
+
+    if (args.apiServer) {
+      // HTTP API server mode (spawned by stdio MCP server)
+      await runApiServer(projectRoot, cacheDir, args.port, args.host);
+    } else {
+      // Stdio MCP server mode (default) - handles MCP protocol, calls HTTP API
+      await runStdioMcpServer(projectRoot, cacheDir, args.port, args.host);
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[ts-graph-mcp] Fatal error: ${message}`);
+    if (error instanceof Error && error.stack) {
+      console.error(error.stack);
     }
     process.exit(1);
   }
@@ -209,7 +147,7 @@ export const main = async (): Promise<void> => {
 // Run main if executed directly
 if (import.meta.url === `file://${process.argv[1]}`) {
   main().catch((error) => {
-    console.error("Unhandled error:", error);
+    console.error("[ts-graph-mcp] Unhandled error:", error);
     process.exit(1);
   });
 }

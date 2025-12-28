@@ -4,8 +4,8 @@
       "command": "node",
       "args": [
         "../../dist/mcp/main.js",
-        "--db",
-        ".ts-graph/graph.db"
+        "--cache-dir",
+        ".ts-graph"
       ]
     }
   }

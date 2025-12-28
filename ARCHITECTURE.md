@@ -42,6 +42,52 @@ The MCP server exposes tools for AI agents to traverse call graphs, find depende
 
 Each tool has its own folder (`src/tools/<tool>/`) with shared formatting code in `src/tools/shared/`.
 
+## Server Architecture
+
+The server uses a **wrapper + HTTP server** pattern to share resources across multiple Claude Code sessions:
+
+```
+Claude Code Session 1, 2, 3...
+        │ spawns (stdio)
+        ↓
+┌───────────────────────────────────┐
+│  Stdio MCP Server                 │
+│  (wrapperClient.ts)               │
+│  - Checks for running HTTP server │
+│  - Spawns server if not running   │
+│  - Calls HTTP API for queries     │
+└───────────────────────────────────┘
+        │ HTTP POST /api/*
+        ↓
+┌───────────────────────────────────┐
+│  HTTP API Server (httpServer.ts)  │
+│  ONE instance per project:        │
+│  - REST API (Express)             │
+│  - File watcher (chokidar)        │
+│  - SQLite database (one writer)   │
+└───────────────────────────────────┘
+```
+
+**Why this design?**
+
+Without the HTTP server, each Claude session would spawn its own MCP process with its own file watcher and database writer. With N sessions = N watchers = wasted resources and potential conflicts.
+
+The wrapper is transparent — users configure MCP the same way (`npx ts-graph-mcp`), but all sessions share one server.
+
+**Key files:**
+- `src/mcp/main.ts` — Entry point, dispatches to stdio MCP or API server mode
+- `src/mcp/wrapperClient.ts` — Stdio MCP server, auto-spawns API server
+- `src/mcp/httpServer.ts` — HTTP API server (simple REST, not MCP)
+- `src/mcp/serverMetadata.ts` — Server discovery via `server.json`
+- `src/mcp/serverCore.ts` — Shared initialization (DB, indexing, watcher)
+
+**CLI usage:**
+```bash
+ts-graph-mcp [--cache-dir path] [--port N] [--host H]
+```
+
+The stdio MCP server auto-spawns an HTTP API server if not already running, then makes HTTP calls for queries.
+
 ## Data Model
 
 See `src/db/Types.ts` for node and edge type definitions.

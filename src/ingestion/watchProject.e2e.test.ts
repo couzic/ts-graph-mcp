@@ -29,7 +29,8 @@ import { type WatchHandle, watchProject } from "./watchProject.js";
  */
 describe("watchProject E2E", () => {
   const TEST_DIR = join(dirname(__dirname), "../.tmp/watcher-test");
-  const DB_PATH = join(TEST_DIR, ".ts-graph/graph.db");
+  const CACHE_DIR = join(TEST_DIR, ".ts-graph");
+  const DB_PATH = join(CACHE_DIR, "graph.db");
   let db: Database;
   let watchHandle: WatchHandle;
   let manifest: IndexManifest;
@@ -94,13 +95,13 @@ export function entry(): string { return helper(); }
 
     // Create initial manifest
     manifest = { version: 1, files: {} };
-    saveManifest(DB_PATH, manifest);
+    saveManifest(CACHE_DIR, manifest);
 
     // Start watcher with short debounce for fast tests
     // Use polling for reliable event detection in tests
     watchHandle = watchProject(db, config, manifest, {
       projectRoot: TEST_DIR,
-      dbPath: DB_PATH,
+      cacheDir: CACHE_DIR,
       debounce: 50,
       usePolling: true,
       pollingInterval: 100,

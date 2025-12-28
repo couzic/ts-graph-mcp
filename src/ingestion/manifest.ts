@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 
 /**
  * File metadata stored in the manifest.
@@ -35,18 +35,17 @@ export interface SyncResult {
 }
 
 /**
- * Get the manifest file path for a given database path.
+ * Get the manifest file path for a given cache directory.
  */
-export const getManifestPath = (dbPath: string): string => {
-  const dbDir = dirname(dbPath);
-  return join(dbDir, "manifest.json");
+export const getManifestPath = (cacheDir: string): string => {
+  return join(cacheDir, "manifest.json");
 };
 
 /**
  * Load manifest from disk. Returns empty manifest if file doesn't exist.
  */
-export const loadManifest = (dbPath: string): IndexManifest => {
-  const manifestPath = getManifestPath(dbPath);
+export const loadManifest = (cacheDir: string): IndexManifest => {
+  const manifestPath = getManifestPath(cacheDir);
 
   if (!existsSync(manifestPath)) {
     return { version: 1, files: {} };
@@ -76,8 +75,11 @@ export const loadManifest = (dbPath: string): IndexManifest => {
 /**
  * Save manifest to disk.
  */
-export const saveManifest = (dbPath: string, manifest: IndexManifest): void => {
-  const manifestPath = getManifestPath(dbPath);
+export const saveManifest = (
+  cacheDir: string,
+  manifest: IndexManifest,
+): void => {
+  const manifestPath = getManifestPath(cacheDir);
 
   try {
     writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));

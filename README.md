@@ -27,6 +27,14 @@ npm install ts-graph-mcp
 
 Requires Node.js >= 18.0.0
 
+#### Windows Users
+
+This package uses `better-sqlite3`, a native addon that requires compilation tools. If you see errors like `"No prebuilt binaries found"` or `"Could not find any Visual Studio installation"`:
+
+1. Install [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) with the "Desktop development with C++" workload
+2. Install Python (3.x)
+3. Use an LTS version of Node.js (prebuilt binaries are only published for LTS releases)
+
 ### Configuration
 
 Create a `ts-graph-mcp.config.ts` file in your project root:
