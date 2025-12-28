@@ -64,6 +64,25 @@ npx ts-graph-mcp
 
 The server runs via stdio transport (standard MCP protocol). On first run, it automatically indexes your project if the database doesn't exist.
 
+### Claude Code Setup
+
+```bash
+claude mcp add ts-graph -- npx -y ts-graph-mcp
+```
+
+Or manually in `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "ts-graph": {
+      "command": "npx",
+      "args": ["-y", "ts-graph-mcp"]
+    }
+  }
+}
+```
+
 ## Configuration Reference
 
 ### Required Fields
