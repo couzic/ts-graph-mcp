@@ -29,6 +29,17 @@ Configuration loading and validation for ts-graph-mcp projects. Uses Zod schemas
 - `loadConfigFromDirectory(directory)` - Auto-detects and loads config from directory
 - `CONFIG_FILE_NAMES` - Array of supported config filenames in precedence order
 
+### getCacheDir.ts
+
+- `getCacheDir(projectRoot)` - Returns cache directory path (creates if needed)
+- `getDefaultDbPath(projectRoot)` - Returns default database path
+
+**Cache location strategy:**
+1. **Primary**: `node_modules/.cache/ts-graph-mcp/` (de facto standard, already gitignored)
+2. **Fallback**: `.ts-graph/` in project root (for non-npm projects)
+
+Uses `find-cache-dir` package which searches upward from `projectRoot` for `package.json`.
+
 ## Config File Structure
 
 **Two formats are supported:**
@@ -62,7 +73,7 @@ Creates an implicit "main" module containing all packages.
   ],
   storage?: {
     type: "sqlite",
-    path: ".ts-graph-mcp/graph.db"  // optional, defaults to this
+    path: "..."  // optional, defaults to node_modules/.cache/ts-graph-mcp/graph.db
   } | {
     type: "memgraph",
     host: "localhost",  // optional
@@ -124,4 +135,4 @@ const config = await loadConfigFromDirectory(process.cwd());
 ## Module Dependencies
 
 - Used by: `src/ingestion/indexProject.ts` (for indexProject), `src/mcp/main.ts` (for server initialization)
-- Depends on: zod (runtime validation), node:fs, node:path
+- Depends on: zod (runtime validation), find-cache-dir (cache location), node:fs, node:path

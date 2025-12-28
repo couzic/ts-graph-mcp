@@ -3,6 +3,7 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { loadConfigOrDetect } from "../config/configLoader.utils.js";
+import { getDefaultDbPath } from "../config/getCacheDir.js";
 import { createSqliteWriter } from "../db/sqlite/createSqliteWriter.js";
 import { openDatabase } from "../db/sqlite/sqliteConnection.utils.js";
 import { indexProject } from "../ingestion/indexProject.js";
@@ -16,16 +17,12 @@ import { type WatchHandle, watchProject } from "../ingestion/watchProject.js";
 import { startMcpServer } from "./startMcpServer.js";
 
 /**
- * Default database path relative to project root.
- */
-const DEFAULT_DB_PATH = ".ts-graph/graph.db";
-
-/**
  * Parse command-line arguments for database path.
  *
+ * @param projectRoot - Project root for default path resolution
  * @returns Database path (absolute or ':memory:')
  */
-const parseArgs = (): string => {
+const parseArgs = (projectRoot: string): string => {
   const args = process.argv.slice(2);
 
   // Look for --db flag
@@ -38,8 +35,8 @@ const parseArgs = (): string => {
     return dbPath === ":memory:" ? dbPath : resolve(dbPath);
   }
 
-  // Use default database path
-  return resolve(DEFAULT_DB_PATH);
+  // Use default: node_modules/.cache/ts-graph-mcp/graph.db (or .ts-graph/graph.db fallback)
+  return getDefaultDbPath(projectRoot);
 };
 
 /**
@@ -63,9 +60,8 @@ export const main = async (): Promise<void> => {
   let watchHandle: WatchHandle | null = null;
 
   try {
-    // Parse command-line arguments
-    const dbPath = parseArgs();
     const projectRoot = process.cwd();
+    const dbPath = parseArgs(projectRoot);
 
     console.error(`Starting ts-graph-mcp server...`);
     console.error(`Database: ${dbPath}`);
