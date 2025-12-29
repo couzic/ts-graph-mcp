@@ -39,16 +39,35 @@ export const StorageConfigSchema = z.discriminatedUnion("type", [
   MemgraphStorageSchema,
 ]);
 
-export const WatchConfigSchema = z.object({
-  /** Debounce delay in ms (default: 300) */
-  debounce: z.number().int().nonnegative().optional(),
-  /** Use polling instead of native fs events (required for Docker/WSL2/NFS) */
-  usePolling: z.boolean().optional(),
-  /** Polling interval in ms when usePolling is true (default: 1000) */
-  pollingInterval: z.number().int().positive().optional(),
-  /** Suppress reindex log messages (default: false) */
-  silent: z.boolean().optional(),
-});
+export const WatchConfigSchema = z
+  .object({
+    // Polling (for WSL2/Docker/NFS)
+    /** Use polling instead of native fs events (required for Docker/WSL2/NFS) */
+    polling: z.boolean().optional(),
+    /** Polling interval in ms when polling is true (default: 1000) */
+    pollingInterval: z.number().int().positive().optional(),
+
+    // Debouncing (for fs.watch mode only)
+    /** Enable debouncing of file events (default: true). Mutually exclusive with polling. */
+    debounce: z.boolean().optional(),
+    /** Debounce delay in ms (default: 300). Only applies when debounce is true. */
+    debounceInterval: z.number().int().nonnegative().optional(),
+
+    // Exclusions (can be read from tsconfig.json watchOptions as fallback)
+    /** Directories to exclude from watching (globs supported) */
+    excludeDirectories: z.array(z.string()).optional(),
+    /** Files to exclude from watching (globs supported) */
+    excludeFiles: z.array(z.string()).optional(),
+
+    // Misc
+    /** Suppress reindex log messages (default: false) */
+    silent: z.boolean().optional(),
+  })
+  .refine((config) => !(config.polling === true && config.debounce === true), {
+    message:
+      "polling and debounce are mutually exclusive. Polling mode has built-in batching; debounce is for fs.watch mode only.",
+    path: ["debounce"],
+  });
 
 export const ServerConfigSchema = z.object({
   /** HTTP server port (default: finds available port) */
@@ -94,3 +113,4 @@ export const ProjectConfigSchema = FullProjectConfigSchema;
 
 export type ProjectConfig = z.infer<typeof ProjectConfigSchema>;
 export type ProjectConfigInput = z.infer<typeof ProjectConfigInputSchema>;
+export type WatchConfig = z.infer<typeof WatchConfigSchema>;

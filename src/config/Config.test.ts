@@ -115,17 +115,35 @@ describe("ConfigSchema", () => {
   });
 
   describe("WatchConfigSchema", () => {
-    it("validates watch config with all options", () => {
+    it("validates polling config with all options", () => {
       const config = {
-        debounce: 200,
-        usePolling: true,
+        polling: true,
         pollingInterval: 500,
+        excludeDirectories: ["dist", "node_modules"],
+        excludeFiles: ["*.generated.ts"],
         silent: true,
       };
       const result = WatchConfigSchema.parse(config);
-      expect(result.debounce).toBe(200);
-      expect(result.usePolling).toBe(true);
+      expect(result.polling).toBe(true);
       expect(result.pollingInterval).toBe(500);
+      expect(result.excludeDirectories).toEqual(["dist", "node_modules"]);
+      expect(result.excludeFiles).toEqual(["*.generated.ts"]);
+      expect(result.silent).toBe(true);
+    });
+
+    it("validates debounce config with all options", () => {
+      const config = {
+        debounce: true,
+        debounceInterval: 200,
+        excludeDirectories: ["dist"],
+        excludeFiles: ["*.generated.ts"],
+        silent: true,
+      };
+      const result = WatchConfigSchema.parse(config);
+      expect(result.debounce).toBe(true);
+      expect(result.debounceInterval).toBe(200);
+      expect(result.excludeDirectories).toEqual(["dist"]);
+      expect(result.excludeFiles).toEqual(["*.generated.ts"]);
       expect(result.silent).toBe(true);
     });
 
@@ -136,6 +154,12 @@ describe("ConfigSchema", () => {
 
     it("rejects negative debounce", () => {
       expect(() => WatchConfigSchema.parse({ debounce: -100 })).toThrow();
+    });
+
+    it("rejects polling with debounce enabled (mutually exclusive)", () => {
+      expect(() =>
+        WatchConfigSchema.parse({ polling: true, debounce: true }),
+      ).toThrow(/mutually exclusive|cannot.*both/i);
     });
   });
 
@@ -183,15 +207,16 @@ describe("ConfigSchema", () => {
           path: ".ts-graph-mcp/graph.db",
         },
         watch: {
-          include: ["**/*.ts", "**/*.tsx"],
-          exclude: ["**/node_modules/**", "**/dist/**"],
-          debounce: 100,
+          excludeDirectories: ["node_modules", "dist"],
+          debounce: true,
+          debounceInterval: 100,
         },
       };
       const result = ProjectConfigSchema.parse(config);
       expect(result.modules).toHaveLength(2);
       expect(result.storage?.type).toBe("sqlite");
-      expect(result.watch?.debounce).toBe(100);
+      expect(result.watch?.debounce).toBe(true);
+      expect(result.watch?.debounceInterval).toBe(100);
     });
 
     it("rejects empty modules array", () => {
@@ -238,7 +263,7 @@ describe("ConfigSchema", () => {
       const flatConfig = {
         packages: [{ name: "core", tsconfig: "./tsconfig.json" }],
         storage: { type: "sqlite" as const, path: "./data/graph.db" },
-        watch: { debounce: 200 },
+        watch: { debounce: true, debounceInterval: 200 },
       };
       const result = defineConfig(flatConfig);
       expect(result.storage).toEqual(flatConfig.storage);
@@ -308,11 +333,11 @@ describe("ConfigSchema", () => {
       const flatConfig = {
         packages: [{ name: "core", tsconfig: "./tsconfig.json" }],
         storage: { type: "sqlite" as const },
-        watch: { debounce: 100 },
+        watch: { debounce: true, debounceInterval: 100 },
       };
       const result = normalizeConfig(flatConfig);
       expect(result.storage).toEqual({ type: "sqlite" });
-      expect(result.watch).toEqual({ debounce: 100 });
+      expect(result.watch).toEqual({ debounce: true, debounceInterval: 100 });
     });
   });
 });

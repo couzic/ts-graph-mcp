@@ -160,10 +160,15 @@ The server automatically reindexes files on save:
 - `src/ingestion/indexFile.ts` — Shared extraction function
 
 **Config options** (`watch` in config):
-- `debounce` — Delay in ms (default: 300)
-- `usePolling` — Required for Docker/WSL2/NFS
+- `polling` — Use polling instead of fs events (for Docker/WSL2/NFS)
 - `pollingInterval` — Polling interval in ms (default: 1000)
+- `debounce` — Enable debouncing (default: true, mutually exclusive with polling)
+- `debounceInterval` — Debounce delay in ms (default: 300)
+- `excludeDirectories` — Directories to exclude from watching
+- `excludeFiles` — Files to exclude from watching
 - `silent` — Suppress reindex log messages
+
+**tsconfig.json fallback:** Watch options are read from `tsconfig.json` `watchOptions` as defaults. Explicit config always wins.
 
 ## Limitations
 

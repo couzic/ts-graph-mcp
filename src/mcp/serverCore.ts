@@ -1,8 +1,12 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type Database from "better-sqlite3";
 import type { ProjectConfig } from "../config/Config.schemas.js";
 import { loadConfigOrDetect } from "../config/configLoader.utils.js";
+import {
+  mergeWatchConfigs,
+  parseTsconfigWatchOptions,
+} from "../config/readTsconfigWatchOptions.js";
 import { createSqliteWriter } from "../db/sqlite/createSqliteWriter.js";
 import { openDatabase } from "../db/sqlite/sqliteConnection.utils.js";
 import { indexProject } from "../ingestion/indexProject.js";
@@ -147,15 +151,22 @@ export const initializeServerCore = async (
 
     // Start file watcher
     manifest = manifest || loadManifest(cacheDir);
-    const watchConfig = configResult.config.watch ?? {};
+
+    // Read tsconfig watchOptions as fallback (explicit config wins)
+    const tsconfigPath = join(projectRoot, "tsconfig.json");
+    const tsconfigWatchOptions = existsSync(tsconfigPath)
+      ? parseTsconfigWatchOptions(readFileSync(tsconfigPath, "utf-8"))
+      : {};
+
+    const mergedWatchConfig = mergeWatchConfigs(
+      configResult.config.watch,
+      tsconfigWatchOptions,
+    );
 
     watchHandle = watchProject(db, configResult.config, manifest, {
       projectRoot,
       cacheDir,
-      debounce: watchConfig.debounce,
-      usePolling: watchConfig.usePolling,
-      pollingInterval: watchConfig.pollingInterval,
-      silent: watchConfig.silent,
+      ...mergedWatchConfig,
     });
 
     console.error("[ts-graph-mcp] File watcher started.");

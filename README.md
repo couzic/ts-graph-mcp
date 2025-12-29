@@ -134,7 +134,7 @@ Two formats are supported — use whichever fits your project structure.
 **`watch`** - File watching configuration:
 
 - `debounce`: Milliseconds to wait before re-indexing (default: 300)
-- `usePolling`: Use polling instead of native events (for Docker/WSL2/NFS)
+- `polling`: Use polling instead of native events (for Docker/WSL2/NFS)
 - `pollingInterval`: Polling interval in ms (default: 1000)
 - `silent`: Suppress reindex log messages
 

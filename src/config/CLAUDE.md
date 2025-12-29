@@ -90,7 +90,7 @@ Creates an implicit "main" module containing all packages.
   },
   watch?: {
     debounce?: number,        // ms (default: 300)
-    usePolling?: boolean,     // for Docker/WSL2/NFS
+    polling?: boolean,     // for Docker/WSL2/NFS
     pollingInterval?: number, // ms (default: 1000)
     silent?: boolean          // suppress reindex logs
   }

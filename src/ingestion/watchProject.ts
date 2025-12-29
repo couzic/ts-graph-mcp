@@ -3,8 +3,10 @@ import { existsSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import type Database from "better-sqlite3";
 import { watch } from "chokidar";
+import { Subject, type Subscription } from "rxjs";
 import type { ProjectConfig } from "../config/Config.schemas.js";
 import { createSqliteWriter } from "../db/sqlite/createSqliteWriter.js";
+import { bufferDebounce } from "./bufferDebounce.js";
 import { createProject } from "./createProject.js";
 import type { NodeExtractionContext } from "./extract/nodes/NodeExtractionContext.js";
 import { indexFile } from "./indexFile.js";
@@ -23,14 +25,32 @@ export interface WatchOptions {
   projectRoot: string;
   /** Cache directory (for saving manifest) */
   cacheDir: string;
-  /** Debounce delay in ms (default: 300) */
-  debounce?: number;
+
+  // Polling (for WSL2/Docker/NFS)
   /** Use polling instead of native fs events */
-  usePolling?: boolean;
-  /** Polling interval in ms when usePolling is true (default: 1000) */
+  polling?: boolean;
+  /** Polling interval in ms when polling is true (default: 1000) */
   pollingInterval?: number;
+
+  // Debouncing (for fs.watch mode only — ignored when polling is true)
+  /** Enable debouncing of file events (default: true). Only applies when polling is false. */
+  debounce?: boolean;
+  /** Debounce delay in ms (default: 300). Only applies when debounce is true. */
+  debounceInterval?: number;
+
+  // Exclusions
+  /** Directories to exclude from watching (globs supported) */
+  excludeDirectories?: string[];
+  /** Files to exclude from watching (globs supported) */
+  excludeFiles?: string[];
+
+  // Misc
   /** Suppress reindex log messages (default: false) */
   silent?: boolean;
+
+  // Callbacks
+  /** Called after each batch of files is reindexed. Useful for testing. */
+  onReindex?: (files: string[]) => void;
 }
 
 /**
@@ -81,43 +101,6 @@ const resolveFileContext = (
 };
 
 /**
- * Create a debouncer that batches file changes.
- */
-const createDebouncer = (
-  delayMs: number,
-  handler: (files: Set<string>) => void,
-): { add(path: string): void; flush(): void } => {
-  let pending = new Set<string>();
-  let timeoutId: NodeJS.Timeout | null = null;
-
-  return {
-    add(path: string): void {
-      pending.add(path);
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-      timeoutId = setTimeout(() => {
-        const batch = pending;
-        pending = new Set();
-        timeoutId = null;
-        handler(batch);
-      }, delayMs);
-    },
-    flush(): void {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-        timeoutId = null;
-      }
-      if (pending.size > 0) {
-        const batch = pending;
-        pending = new Set();
-        handler(batch);
-      }
-    },
-  };
-};
-
-/**
  * Watch project files for changes and reindex automatically.
  *
  * Uses tsconfig as the source of truth for which files to index.
@@ -135,10 +118,14 @@ export const watchProject = (
   const {
     projectRoot,
     cacheDir,
-    debounce: debounceMs = 300,
-    usePolling = false,
+    polling = false,
     pollingInterval = 1000,
+    debounce: shouldDebounce = true,
+    debounceInterval = 300,
+    excludeDirectories = [],
+    excludeFiles = [],
     silent = false,
+    onReindex,
   } = options;
 
   const writer = createSqliteWriter(db);
@@ -195,8 +182,10 @@ export const watchProject = (
     return result;
   };
 
-  // Process a batch of changed files
-  const processBatch = async (files: Set<string>): Promise<void> => {
+  // Process a batch of changed files (accepts array from RxJS)
+  const processBatch = async (files: string[]): Promise<void> => {
+    const reindexedFiles: string[] = [];
+
     for (const absolutePath of files) {
       // Skip if file was deleted between event and processing
       if (!existsSync(absolutePath)) {
@@ -216,6 +205,9 @@ export const watchProject = (
 
         // Only update manifest and log if file was actually indexed
         if (nodesAdded > 0 || edgesAdded > 0) {
+          if (onReindex) {
+            reindexedFiles.push(context.relativePath);
+          }
           updateManifestEntry(manifest, context.relativePath, absolutePath);
           if (!silent) {
             console.error(
@@ -233,6 +225,11 @@ export const watchProject = (
     }
     // Save manifest after processing batch
     saveManifest(cacheDir, manifest);
+
+    // Notify callback if any files were reindexed
+    if (onReindex && reindexedFiles.length > 0) {
+      onReindex(reindexedFiles);
+    }
   };
 
   // Handle file deletion
@@ -250,34 +247,63 @@ export const watchProject = (
     }
   };
 
-  const debouncer = createDebouncer(debounceMs, (files) => {
-    processBatch(files).catch((error) => {
-      console.error(
-        `[ts-graph-mcp] Batch processing error: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-      );
-    });
-  });
+  // RxJS Subject for file change events (used only in fs.watch + debounce mode)
+  const fileChanges$ = new Subject<string>();
+  let subscription: Subscription | null = null;
 
-  // Filter function for chokidar v5: watch only .ts/.tsx files
-  const shouldIgnore = (path: string, stats?: Stats): boolean => {
-    // Always traverse directories, but skip node_modules
-    if (!stats?.isFile()) {
-      return path.includes("node_modules");
+  // Set up RxJS debouncing pipeline (only if not polling and debounce is enabled)
+  // When polling is true, polling inherently batches changes per poll cycle — no debouncing needed.
+  if (!polling && shouldDebounce) {
+    subscription = fileChanges$
+      .pipe(bufferDebounce(debounceInterval))
+      .subscribe((paths) => {
+        processBatch(paths).catch((error) => {
+          console.error(
+            `[ts-graph-mcp] Batch processing error: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          );
+        });
+      });
+  }
+
+  // Build chokidar ignored patterns from excludeDirectories and excludeFiles
+  const buildIgnoredPatterns = (): (
+    | string
+    | ((path: string, stats?: Stats) => boolean)
+  )[] => {
+    const patterns: (string | ((path: string, stats?: Stats) => boolean))[] =
+      [];
+
+    // Add exclusion globs
+    for (const dir of excludeDirectories) {
+      patterns.push(`**/${dir}/**`);
     }
-    // Ignore .d.ts files and non-TypeScript files
-    if (path.endsWith(".d.ts")) return true;
-    return !path.endsWith(".ts") && !path.endsWith(".tsx");
+    for (const file of excludeFiles) {
+      patterns.push(file);
+    }
+
+    // Add the base filter function
+    patterns.push((path: string, stats?: Stats): boolean => {
+      // Always traverse directories, but skip node_modules
+      if (!stats?.isFile()) {
+        return path.includes("node_modules");
+      }
+      // Ignore .d.ts files and non-TypeScript files
+      if (path.endsWith(".d.ts")) return true;
+      return !path.endsWith(".ts") && !path.endsWith(".tsx");
+    });
+
+    return patterns;
   };
 
-  // Initialize chokidar
+  // Initialize chokidar with exclusion patterns
   const watcher = watch(projectRoot, {
-    ignored: shouldIgnore,
+    ignored: buildIgnoredPatterns(),
     ignoreInitial: true, // Don't process existing files
     persistent: true,
-    usePolling,
-    interval: usePolling ? pollingInterval : undefined,
+    usePolling: polling, // chokidar uses usePolling, we expose as polling
+    interval: polling ? pollingInterval : undefined,
   });
 
   // Create ready promise
@@ -285,13 +311,26 @@ export const watchProject = (
     watcher.once("ready", () => resolve());
   });
 
+  // Handle file add/change events
+  const handleFileChange = (absolutePath: string): void => {
+    if (!polling && shouldDebounce) {
+      // Debounce mode: emit to RxJS Subject for batching
+      fileChanges$.next(absolutePath);
+    } else {
+      // Polling mode or no debounce: process immediately (polling batches inherently)
+      processBatch([absolutePath]).catch((error) => {
+        console.error(
+          `[ts-graph-mcp] Processing error: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      });
+    }
+  };
+
   watcher
-    .on("add", (path) => {
-      debouncer.add(path);
-    })
-    .on("change", (path) => {
-      debouncer.add(path);
-    })
+    .on("add", handleFileChange)
+    .on("change", handleFileChange)
     .on("unlink", (absolutePath) => {
       // Deletions are processed immediately (not debounced)
       const relativePath = relative(projectRoot, absolutePath);
@@ -304,7 +343,9 @@ export const watchProject = (
 
   return {
     async close(): Promise<void> {
-      debouncer.flush();
+      // Complete the Subject to flush any pending debounced events
+      fileChanges$.complete();
+      subscription?.unsubscribe();
       await watcher.close();
     },
     ready: readyPromise,

@@ -90,9 +90,22 @@ export default defineConfig({
 
   // Optional: file watching configuration
   watch: {
-    include: ["src/**/*.ts", "lib/**/*.ts"],
-    exclude: ["**/*.test.ts", "**/*.spec.ts"],
-    debounce: 500  // ms
+    // Choose ONE mode: polling OR debounce (mutually exclusive)
+
+    // Debounce mode (default, for native fs.watch)
+    debounce: true,
+    debounceInterval: 300,  // ms
+
+    // Polling mode (for WSL2/Docker/NFS where fs.watch doesn't work)
+    // polling: true,
+    // pollingInterval: 1000,  // ms
+
+    // Exclusions
+    excludeDirectories: ["dist", "build"],
+    excludeFiles: ["*.generated.ts"],
+
+    // Misc
+    silent: false
   }
 });
 ```
@@ -127,6 +140,10 @@ If you prefer JSON:
 | `storage.type` | "sqlite" | No | Storage backend (only sqlite supported currently) |
 | `storage.path` | string | No | Database file path (default: `.ts-graph-mcp/graph.db`) |
 | `watch` | object | No | File watching configuration |
-| `watch.include` | string[] | No | Glob patterns to include |
-| `watch.exclude` | string[] | No | Glob patterns to exclude |
-| `watch.debounce` | number | No | Debounce delay in milliseconds |
+| `watch.polling` | boolean | No | Use polling instead of fs.watch (for WSL2/Docker/NFS) |
+| `watch.pollingInterval` | number | No | Polling interval in ms (default: 1000) |
+| `watch.debounce` | boolean | No | Enable debouncing (default: true). **Mutually exclusive with polling.** |
+| `watch.debounceInterval` | number | No | Debounce delay in ms (default: 300) |
+| `watch.excludeDirectories` | string[] | No | Directories to exclude (globs supported) |
+| `watch.excludeFiles` | string[] | No | Files to exclude (globs supported) |
+| `watch.silent` | boolean | No | Suppress reindex log messages |

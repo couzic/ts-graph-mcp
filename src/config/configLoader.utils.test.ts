@@ -39,13 +39,14 @@ describe("configLoader.utils", () => {
           },
         ],
         storage: { type: "sqlite", path: "./data/graph.db" },
-        watch: { debounce: 150 },
+        watch: { debounce: true, debounceInterval: 150 },
       };
 
       const result = parseConfig(JSON.stringify(config));
 
       expect(result.storage?.type).toBe("sqlite");
-      expect(result.watch?.debounce).toBe(150);
+      expect(result.watch?.debounce).toBe(true);
+      expect(result.watch?.debounceInterval).toBe(150);
     });
 
     it("throws on invalid JSON", () => {

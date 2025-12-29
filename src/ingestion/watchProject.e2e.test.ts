@@ -1,11 +1,12 @@
 import {
-  existsSync,
   mkdirSync,
+  mkdtempSync,
   rmSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join } from "node:path";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { Database } from "better-sqlite3";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { ProjectConfig } from "../config/Config.schemas.js";
@@ -19,32 +20,70 @@ import { dependenciesOf } from "../tools/dependencies-of/dependenciesOf.js";
 import { dependentsOf } from "../tools/dependents-of/dependentsOf.js";
 import { indexProject } from "./indexProject.js";
 import { type IndexManifest, saveManifest } from "./manifest.js";
-import { type WatchHandle, watchProject } from "./watchProject.js";
+import {
+  type WatchHandle,
+  type WatchOptions,
+  watchProject,
+} from "./watchProject.js";
+
+const pollingInterval = 100;
+const debounceInterval = 100;
+const processingTime = 500;
+/**
+ * Watch mode configurations to test.
+ *
+ * Both modes should produce identical behavior from the user's perspective:
+ * - File changes are detected
+ * - Database is updated
+ * - Rapid changes are batched (polling: inherently, debounce: via RxJS)
+ */
+const watchModes: Array<{
+  name: string;
+  config: Partial<WatchOptions>;
+  waitTime: number; // Time to wait for changes to be processed
+}> = [
+  {
+    name: "polling",
+    config: { polling: true, pollingInterval },
+    waitTime: pollingInterval + processingTime + 500,
+  },
+  {
+    name: "fs.watch + debounce",
+    config: { debounce: true, debounceInterval },
+    waitTime: debounceInterval + processingTime,
+  },
+];
 
 /**
  * E2E tests for file watcher functionality.
  *
  * Tests the complete flow: index → watch → modify file → query tools → verify updates.
- * Uses .tmp/ directory inside project (cleared on test start).
+ * Uses unique temp directory per test run to avoid interference.
+ *
+ * Runs the same tests against both watch modes:
+ * - Polling mode: chokidar scans filesystem at intervals
+ * - fs.watch + debounce: OS events batched via RxJS
  */
-describe("watchProject E2E", () => {
-  const TEST_DIR = join(dirname(__dirname), "../.tmp/watcher-test");
+describe.each(watchModes)("watchProject E2E ($name mode)", ({
+  config,
+  waitTime,
+}) => {
+  // mkdtempSync creates a unique temp directory with random suffix to avoid test interference
+  const TEST_DIR = mkdtempSync(join(tmpdir(), "watcher-test-"));
   const CACHE_DIR = join(TEST_DIR, ".ts-graph");
   const DB_PATH = join(CACHE_DIR, "graph.db");
   let db: Database;
   let watchHandle: WatchHandle;
   let manifest: IndexManifest;
+  let reindexCalls: string[][] = []; // Track onReindex callback invocations
 
   const sleep = (ms: number) =>
     new Promise((resolve) => setTimeout(resolve, ms));
 
   beforeAll(async () => {
-    // Clear and recreate test directory
-    if (existsSync(TEST_DIR)) {
-      rmSync(TEST_DIR, { recursive: true });
-    }
+    // Create subdirectories in the unique temp directory
     mkdirSync(join(TEST_DIR, "src"), { recursive: true });
-    mkdirSync(join(TEST_DIR, ".ts-graph"), { recursive: true });
+    mkdirSync(CACHE_DIR, { recursive: true });
 
     // Create tsconfig.json
     writeFileSync(
@@ -81,7 +120,7 @@ export function entry(): string { return helper(); }
     db = openDatabase({ path: DB_PATH });
     initializeSchema(db);
 
-    const config: ProjectConfig = {
+    const projectConfig: ProjectConfig = {
       modules: [
         {
           name: "test",
@@ -91,31 +130,31 @@ export function entry(): string { return helper(); }
     };
 
     const writer = createSqliteWriter(db);
-    await indexProject(config, writer, { projectRoot: TEST_DIR });
+    await indexProject(projectConfig, writer, { projectRoot: TEST_DIR });
 
     // Create initial manifest
     manifest = { version: 1, files: {} };
     saveManifest(CACHE_DIR, manifest);
 
-    // Start watcher with short debounce for fast tests
-    // Use polling for reliable event detection in tests
-    watchHandle = watchProject(db, config, manifest, {
+    // Start watcher with the mode-specific configuration
+    watchHandle = watchProject(db, projectConfig, manifest, {
       projectRoot: TEST_DIR,
       cacheDir: CACHE_DIR,
-      debounce: 50,
-      usePolling: true,
-      pollingInterval: 100,
       silent: true,
+      onReindex: (files) => reindexCalls.push(files),
+      ...config,
     });
 
-    // Wait for watcher to be ready before running tests
+    // Wait for watcher to be ready
     await watchHandle.ready;
+    await sleep(processingTime); // Give chokidar time to fully initialize
   });
 
   afterAll(async () => {
     await watchHandle.close();
     closeDatabase(db);
-    // Leave .tmp/ for inspection, cleared on next run
+    // Clean up temp directory
+    rmSync(TEST_DIR, { recursive: true, force: true });
   });
 
   it("reflects initial state: entry calls helper", () => {
@@ -140,11 +179,10 @@ export function entry(): string { return newHelper(); }
 `,
     );
 
-    // Wait for watcher to process (polling interval + debounce + processing time)
-    await sleep(500);
+    await sleep(waitTime);
 
     const output = dependenciesOf(db, TEST_DIR, "src/entry.ts", "entry");
-    expect(output).toContain("newHelper");
+    expect(output).toContain("entry --CALLS--> newHelper");
     expect(output).not.toContain("--CALLS--> helper");
   });
 
@@ -162,7 +200,7 @@ export function newHelper(): string { return deepHelper(); }
 `,
     );
 
-    await sleep(500);
+    await sleep(waitTime);
 
     // Now entry → newHelper → deepHelper
     const output = dependenciesOf(db, TEST_DIR, "src/entry.ts", "entry");
@@ -175,7 +213,7 @@ export function newHelper(): string { return deepHelper(); }
     // Delete the old helper.ts (no longer used)
     unlinkSync(join(TEST_DIR, "src/helper.ts"));
 
-    await sleep(300);
+    await sleep(waitTime * 2); // This one is particularly flaky
 
     // Old helper symbol should not be found (removed from database)
     const output = dependentsOf(db, TEST_DIR, "src/helper.ts", "helper");
@@ -183,7 +221,10 @@ export function newHelper(): string { return deepHelper(); }
     expect(output).toContain("not found");
   });
 
-  it("handles rapid successive changes", async () => {
+  it("batches rapid successive changes into single reindex", async () => {
+    // Clear tracking from previous tests
+    reindexCalls = [];
+
     // Simulate rapid saves (like auto-save or format-on-save)
     writeFileSync(
       join(TEST_DIR, "src/rapid.ts"),
@@ -201,15 +242,15 @@ export function newHelper(): string { return deepHelper(); }
 `,
     );
 
-    await sleep(500);
+    await sleep(waitTime);
 
-    // File should be indexed (debouncer coalesces the rapid changes)
-    const output = dependentsOf(db, TEST_DIR, "src/rapid.ts", "rapid");
-    // Just verify it exists (no callers, so "No dependents found")
-    expect(output).toBe("No dependents found.");
+    // Verify batching: onReindex should be called once with rapid.ts
+    // (3 rapid writes → 1 batch → 1 reindex call)
+    expect(reindexCalls).toHaveLength(1);
+    expect(reindexCalls[0]).toContain("src/rapid.ts");
 
-    // But we can verify it's indexed by checking dependencies
-    const depsOutput = dependenciesOf(db, TEST_DIR, "src/rapid.ts", "rapid");
-    expect(depsOutput).toBe("No dependencies found.");
+    // Also verify the file is correctly indexed
+    const output = dependenciesOf(db, TEST_DIR, "src/rapid.ts", "rapid");
+    expect(output).toBe("No dependencies found.");
   });
 });
