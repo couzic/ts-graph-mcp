@@ -24,25 +24,24 @@ import { initializeSchema } from "../../src/db/sqlite/sqliteSchema.utils.js";
 import { indexProject } from "../../src/ingestion/indexProject.js";
 import type { BenchmarkConfig } from "./types.js";
 
-const DEFAULT_DB_PATH = ".ts-graph/graph.db";
-const PROJECT_CONFIG_EXTENSIONS = [".ts", ".js"] as const;
+const dbDirName = ".ts-graph-mcp";
+
+const DEFAULT_DB_PATH = `${dbDirName}/graph.db`;
 
 /**
- * Try to load the project's ts-graph-mcp.config.(ts|js) if it exists.
+ * Try to load the project's ts-graph-mcp.config.json if it exists.
  * Returns undefined if not found.
  */
 async function tryLoadProjectConfig(
-  projectRoot: string,
+  projectRoot: string
 ): Promise<ProjectConfig | undefined> {
-  for (const ext of PROJECT_CONFIG_EXTENSIONS) {
-    const configPath = join(projectRoot, `ts-graph-mcp.config${ext}`);
-    try {
-      await access(configPath);
-      const module = await import(configPath);
-      return module.default as ProjectConfig;
-    } catch {
-      // Try next extension
-    }
+  const configPath = join(projectRoot, "ts-graph-mcp.config.json");
+  try {
+    await access(configPath);
+    const module = await import(configPath);
+    return module.default as ProjectConfig;
+  } catch {
+    // Try next extension
   }
   return undefined;
 }
@@ -63,7 +62,7 @@ export async function setupBenchmark(config: BenchmarkConfig): Promise<void> {
   console.log("");
 
   // Create directory if needed
-  const dbDir = join(config.projectRoot, ".ts-graph");
+  const dbDir = join(config.projectRoot, dbDirName);
   await mkdir(dbDir, { recursive: true });
 
   // Delete existing database and WAL files to ensure fresh schema
@@ -101,7 +100,7 @@ export async function setupBenchmark(config: BenchmarkConfig): Promise<void> {
 
   if (loadedConfig) {
     console.log(
-      `Loaded project config: ${loadedConfig.packages.length} packages`,
+      `Loaded project config: ${loadedConfig.packages.length} packages`
     );
   } else {
     console.log("Using flat config (single package)");
@@ -179,7 +178,7 @@ async function main() {
     console.error("");
     console.error("Example:");
     console.error(
-      "  npx tsx benchmark/lib/setup.ts sample-projects/call-chain",
+      "  npx tsx benchmark/lib/setup.ts sample-projects/call-chain"
     );
     process.exit(1);
   }
@@ -195,7 +194,7 @@ async function main() {
     console.error(`ERROR: Could not load ${promptsPath}`);
     console.error("");
     console.error(
-      "Make sure the test project has benchmark/prompts.ts that exports:",
+      "Make sure the test project has benchmark/prompts.ts that exports:"
     );
     console.error("  export const config: BenchmarkConfig = { ... }");
     console.error("");

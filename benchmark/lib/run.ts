@@ -35,7 +35,7 @@ import type {
 
 const DEFAULT_RUNS = 1;
 const DEFAULT_CONCURRENCY = 6;
-const DEFAULT_DB_PATH = ".ts-graph/graph.db";
+const DEFAULT_DB_PATH = ".ts-graph-mcp/graph.db";
 const DEFAULT_MIN_RUNS = 5;
 
 interface RunnerOptions {
