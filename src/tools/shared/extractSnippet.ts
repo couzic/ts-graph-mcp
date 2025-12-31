@@ -8,7 +8,7 @@ export interface ExtractSnippetInput {
   lines: string[];
   startLine: number;
   endLine: number;
-  callSites?: CallSiteRange[];
+  callSites: CallSiteRange[];
   contextLines: number;
 }
 
@@ -16,8 +16,9 @@ export interface ExtractSnippetInput {
  * Extract a code snippet from source lines.
  *
  * Strategy:
- * - Small functions or no call sites: return entire function body
+ * - No call sites: limit to contextLines
  * - Large functions with call sites: return context around call sites
+ * - Small functions with call sites: return entire function body
  *
  * @returns Array of LOC with 1-indexed line numbers
  */
@@ -25,9 +26,14 @@ export const extractSnippet = (input: ExtractSnippetInput): LOC[] => {
   const { lines, startLine, endLine, callSites, contextLines } = input;
   const functionLines = endLine - startLine + 1;
 
+  // No call sites: limit to contextLines
+  if (callSites.length === 0) {
+    const limitedEnd = Math.min(endLine, startLine + contextLines - 1);
+    return extractLineRange(lines, startLine, limitedEnd);
+  }
+
   // Use call sites only if function is large enough for context to be meaningful
-  const useCallSites =
-    callSites && callSites.length > 0 && functionLines > contextLines * 2;
+  const useCallSites = functionLines > contextLines * 2;
 
   if (useCallSites) {
     return extractLOCsAroundCallSites(lines, callSites, contextLines);

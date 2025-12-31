@@ -23,7 +23,7 @@ export const loadNodeSnippets = (
       lines,
       startLine: node.startLine,
       endLine: node.endLine,
-      callSites: node.callSites,
+      callSites: node.callSites ?? [],
       contextLines,
     });
 

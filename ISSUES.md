@@ -130,38 +130,6 @@ Format tests have good happy-path coverage but lack edge cases and negative test
 
 ---
 
-### Nodes Without Call Sites Show Full Snippet
-
-**Impact:** Medium (token efficiency)
-
-**Problem:** When a node has no call sites (leaf nodes in the dependency graph), `extractSnippet` falls through to `extractLineRange` which returns the entire function body regardless of size.
-
-**Example:** `dependenciesOf(startMcpServer)` with ~25 nodes returns `contextLines = 0`, but `extractLOCsAroundCallSites` (43 lines, no call sites) shows its full body instead of being truncated.
-
-**Root cause in `extractSnippet.ts:29-35`:**
-```typescript
-const useCallSites =
-  callSites && callSites.length > 0 && functionLines > contextLines * 2;
-
-if (useCallSites) {
-  return extractLOCsAroundCallSites(lines, callSites, contextLines);
-}
-return extractLineRange(lines, startLine, endLine);  // ← FULL FUNCTION
-```
-
-When `callSites` is empty, the adaptive context logic is bypassed entirely.
-
-**Fix approach:** Limit snippet for nodes without call sites:
-```typescript
-if (!callSites || callSites.length === 0) {
-  const maxLines = Math.max(contextLines, 5); // At least signature
-  const limitedEnd = Math.min(endLine, startLine + maxLines - 1);
-  return extractLineRange(lines, startLine, limitedEnd);
-}
-```
-
----
-
 ### Missing E2E Tests for Traversal Edge Cases
 
 **Impact:** Medium (observability)
