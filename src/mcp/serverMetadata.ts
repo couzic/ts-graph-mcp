@@ -1,7 +1,15 @@
-import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  existsSync,
+  openSync,
+  readFileSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 
 const SERVER_METADATA_FILE = "server.json";
+const SPAWN_LOCK_FILE = "spawn.lock";
 
 /**
  * Metadata about a running HTTP server instance.
@@ -122,9 +130,66 @@ export const getRunningServer = async (
       return metadata;
     }
   } catch {
-    // Server not responding - might be starting up or crashed
-    // Don't remove metadata yet, let caller decide
+    // Server not responding but process is running - trust the PID check
+    // This prevents spawning duplicate servers when the existing one is slow (e.g., indexing)
+    return metadata;
   }
 
   return null;
+};
+
+/**
+ * Try to acquire exclusive lock for spawning a server.
+ * Returns true if lock acquired, false if another process holds it.
+ *
+ * @example
+ * if (acquireSpawnLock(cacheDir)) {
+ *   try {
+ *     // spawn server
+ *   } finally {
+ *     releaseSpawnLock(cacheDir);
+ *   }
+ * }
+ */
+export const acquireSpawnLock = (cacheDir: string): boolean => {
+  const lockPath = join(cacheDir, SPAWN_LOCK_FILE);
+
+  // Check for stale lock (process no longer running)
+  if (existsSync(lockPath)) {
+    try {
+      const content = readFileSync(lockPath, "utf-8");
+      const pid = Number.parseInt(content, 10);
+      if (!Number.isNaN(pid) && !isProcessRunning(pid)) {
+        // Stale lock - remove it
+        unlinkSync(lockPath);
+      }
+    } catch {
+      // Ignore read errors, try to acquire anyway
+    }
+  }
+
+  // Try to create lock file exclusively (O_EXCL fails if file exists)
+  try {
+    const fd = openSync(lockPath, "wx");
+    writeFileSync(fd, String(process.pid), "utf-8");
+    closeSync(fd);
+    return true;
+  } catch {
+    // Lock already held by another process
+    return false;
+  }
+};
+
+/**
+ * Release the spawn lock.
+ */
+export const releaseSpawnLock = (cacheDir: string): void => {
+  const lockPath = join(cacheDir, SPAWN_LOCK_FILE);
+  if (existsSync(lockPath)) {
+    try {
+      unlinkSync(lockPath);
+    } catch {
+      // Ignore errors (file may have been removed already)
+    }
+  }
 };

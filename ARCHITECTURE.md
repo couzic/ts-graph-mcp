@@ -85,6 +85,12 @@ The stdio MCP server auto-spawns an HTTP API server if not already running, then
 
 **Async startup:** The HTTP server starts immediately, before indexing completes. This prevents MCP connection timeouts on large projects. Tools return "Database is still indexing" until ready.
 
+**Race condition prevention:** Multiple Claude sessions may start simultaneously. To prevent duplicate servers:
+
+1. **PID-based detection** — `getRunningServer()` checks if the process in `server.json` is still alive via `process.kill(pid, 0)`. If alive, trusts it even if health check times out (server may be busy indexing).
+
+2. **Spawn lock** — Before spawning, wrapper acquires exclusive lock (`spawn.lock` with `O_EXCL`). If lock held by another process, waits for that process to finish spawning. Lock includes PID for stale lock detection.
+
 ## Data Model
 
 See `src/db/Types.ts` for node and edge type definitions.

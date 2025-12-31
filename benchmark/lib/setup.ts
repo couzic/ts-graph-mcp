@@ -33,7 +33,7 @@ const DEFAULT_DB_PATH = `${dbDirName}/graph.db`;
  * Returns undefined if not found.
  */
 async function tryLoadProjectConfig(
-  projectRoot: string
+  projectRoot: string,
 ): Promise<ProjectConfig | undefined> {
   const configPath = join(projectRoot, "ts-graph-mcp.config.json");
   try {
@@ -100,7 +100,7 @@ export async function setupBenchmark(config: BenchmarkConfig): Promise<void> {
 
   if (loadedConfig) {
     console.log(
-      `Loaded project config: ${loadedConfig.packages.length} packages`
+      `Loaded project config: ${loadedConfig.packages.length} packages`,
     );
   } else {
     console.log("Using flat config (single package)");
@@ -178,7 +178,7 @@ async function main() {
     console.error("");
     console.error("Example:");
     console.error(
-      "  npx tsx benchmark/lib/setup.ts sample-projects/call-chain"
+      "  npx tsx benchmark/lib/setup.ts sample-projects/call-chain",
     );
     process.exit(1);
   }
@@ -194,7 +194,7 @@ async function main() {
     console.error(`ERROR: Could not load ${promptsPath}`);
     console.error("");
     console.error(
-      "Make sure the test project has benchmark/prompts.ts that exports:"
+      "Make sure the test project has benchmark/prompts.ts that exports:",
     );
     console.error("  export const config: BenchmarkConfig = { ... }");
     console.error("");

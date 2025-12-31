@@ -3,7 +3,12 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import packageJson from "../../package.json" with { type: "json" };
-import { getRunningServer, type ServerMetadata } from "./serverMetadata.js";
+import {
+  acquireSpawnLock,
+  getRunningServer,
+  releaseSpawnLock,
+  type ServerMetadata,
+} from "./serverMetadata.js";
 import {
   dependenciesOfDescription,
   dependentsOfDescription,
@@ -113,12 +118,34 @@ export const runWrapperClient = async (
   let server = await getRunningServer(cacheDir);
 
   if (!server) {
-    console.error("[ts-graph-mcp] Starting HTTP API server...");
-    spawnApiServer(options);
-    server = await waitForApiServer(cacheDir);
-    console.error(
-      `[ts-graph-mcp] API server started on ${server.host}:${server.port}`,
-    );
+    // Use lock to prevent concurrent spawns
+    if (acquireSpawnLock(cacheDir)) {
+      try {
+        // Double-check after acquiring lock (another process may have spawned)
+        server = await getRunningServer(cacheDir);
+        if (!server) {
+          console.error("[ts-graph-mcp] Starting HTTP API server...");
+          spawnApiServer(options);
+          server = await waitForApiServer(cacheDir);
+          console.error(
+            `[ts-graph-mcp] API server started on ${server.host}:${server.port}`,
+          );
+        } else {
+          console.error(
+            `[ts-graph-mcp] Using existing API server on ${server.host}:${server.port}`,
+          );
+        }
+      } finally {
+        releaseSpawnLock(cacheDir);
+      }
+    } else {
+      // Another process is spawning, wait for it
+      console.error("[ts-graph-mcp] Waiting for API server to start...");
+      server = await waitForApiServer(cacheDir);
+      console.error(
+        `[ts-graph-mcp] API server ready on ${server.host}:${server.port}`,
+      );
+    }
   } else {
     console.error(
       `[ts-graph-mcp] Using existing API server on ${server.host}:${server.port}`,
