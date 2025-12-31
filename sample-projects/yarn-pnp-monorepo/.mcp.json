@@ -1,8 +1,8 @@
 {
   "mcpServers": {
-    "ts-graph": {
-      "command": "npx",
-      "args": ["-y", "ts-graph-mcp@0.2.1"]
+    "ts-graph-mcp": {
+      "command": "node",
+      "args": ["../../dist/mcp/main.js"]
     }
   }
 }

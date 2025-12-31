@@ -19,7 +19,7 @@ Thumbs.db
 npm-debug.log*
 
 # ts-graph-mcp data directory (database + manifest)
-.ts-graph/
+.ts-graph-mcp/
 
 # SQLite databases (generated during indexing)
 *.db

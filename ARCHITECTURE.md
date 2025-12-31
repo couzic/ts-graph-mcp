@@ -81,12 +81,9 @@ The wrapper is transparent — users configure MCP the same way (`npx ts-graph-m
 - `src/mcp/serverMetadata.ts` — Server discovery via `server.json`
 - `src/mcp/serverCore.ts` — Shared initialization (DB, indexing, watcher)
 
-**CLI usage:**
-```bash
-ts-graph-mcp [--cache-dir path] [--port N] [--host H]
-```
-
 The stdio MCP server auto-spawns an HTTP API server if not already running, then makes HTTP calls for queries.
+
+**Async startup:** The HTTP server starts immediately, before indexing completes. This prevents MCP connection timeouts on large projects. Tools return "Database is still indexing" until ready.
 
 ## Data Model
 
@@ -159,16 +156,7 @@ The server automatically reindexes files on save:
 - `src/ingestion/manifest.ts` — Tracks indexed files (mtime/size)
 - `src/ingestion/indexFile.ts` — Shared extraction function
 
-**Config options** (`watch` in config):
-- `polling` — Use polling instead of fs events (for Docker/WSL2/NFS)
-- `pollingInterval` — Polling interval in ms (default: 1000)
-- `debounce` — Enable debouncing (default: true, mutually exclusive with polling)
-- `debounceInterval` — Debounce delay in ms (default: 300)
-- `excludeDirectories` — Directories to exclude from watching
-- `excludeFiles` — Files to exclude from watching
-- `silent` — Suppress reindex log messages
-
-**tsconfig.json fallback:** Watch options are read from `tsconfig.json` `watchOptions` as defaults. Explicit config always wins.
+Watch options can be read from `tsconfig.json` `watchOptions` as defaults. See README for configuration reference.
 
 ## Limitations
 

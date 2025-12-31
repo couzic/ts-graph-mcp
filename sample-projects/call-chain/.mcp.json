@@ -2,11 +2,7 @@
   "mcpServers": {
     "ts-graph-mcp": {
       "command": "node",
-      "args": [
-        "../../dist/mcp/main.js",
-        "--cache-dir",
-        ".ts-graph"
-      ]
+      "args": ["../../dist/mcp/main.js"]
     }
   }
 }

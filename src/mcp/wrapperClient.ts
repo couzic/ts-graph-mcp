@@ -117,7 +117,7 @@ export const runWrapperClient = async (
     spawnApiServer(options);
     server = await waitForApiServer(cacheDir);
     console.error(
-      `[ts-graph-mcp] API server ready on ${server.host}:${server.port}`,
+      `[ts-graph-mcp] API server started on ${server.host}:${server.port}`,
     );
   } else {
     console.error(

@@ -2,8 +2,7 @@
   "mcpServers": {
     "ts-graph-mcp": {
       "command": "node",
-      "args": ["dist/mcp/main.js"],
-      "env": {}
+      "args": ["dist/mcp/main.js"]
     }
   }
 }

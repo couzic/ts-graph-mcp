@@ -112,6 +112,48 @@ Tool call → Check manifest for stale files → Reindex changed files → Execu
 
 **Future improvement:** Per-package sync — only sync the package containing the queried file for `dependenciesOf`/`dependentsOf`, sync all packages for `pathsBetween` (cross-package paths).
 
+### Package Name Validation
+**Impact: Low | Effort: Low**
+
+Warn when config package names don't match `package.json` names.
+
+**The Problem:**
+The `name` field in config is independent from `package.json`:
+
+```json
+// ts-graph-mcp.config.json
+{ "name": "toolkit", "tsconfig": "./libs/toolkit/tsconfig.json" }
+
+// libs/toolkit/package.json
+{ "name": "@libs/toolkit" }
+```
+
+Config names are metadata (stored in the `package` column of nodes), not used for resolution. But mismatches can confuse users when filtering by package name.
+
+**Solution:**
+At server startup, validate each package:
+1. Find `package.json` next to the tsconfig
+2. Compare config `name` with `package.json` `name`
+3. Log warning if they differ
+
+```
+Warning: Package "toolkit" has different name in package.json: "@libs/toolkit"
+```
+
+**Non-blocking:** Warnings only, indexing proceeds normally.
+
+### CLI Flag Tests
+**Impact: Low | Effort: Low**
+
+Add tests for the CLI flags introduced in the async startup refactoring:
+- `--index` — Run indexing only (no server)
+- `--clean` — Delete cache and reindex from scratch
+- `--reindex` — Shorthand for `--index --clean`
+
+**Current state:** No tests. Flags are implemented in `src/mcp/main.ts`.
+
+**Test approach:** Integration tests that spawn the CLI and verify behavior (e.g., cache deleted on `--clean`, no server started on `--index`).
+
 ## Advanced Analysis
 
 ### Dead Code Detection

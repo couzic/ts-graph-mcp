@@ -11,11 +11,16 @@ process.on("unhandledRejection", (reason) => {
   process.exit(1);
 });
 
-import { realpathSync } from "node:fs";
+import { realpathSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 import { getCacheDir } from "../config/getCacheDir.js";
-import { startHttpServer } from "./httpServer.js";
-import { initializeServerCore } from "./serverCore.js";
+import { runFullIndex } from "../ingestion/runFullIndex.js";
+import { type ServerState, startHttpServer } from "./httpServer.js";
+import {
+  initializeServerCoreQuick,
+  runIndexingAndWatch,
+} from "./serverCore.js";
+import { writeServerMetadata } from "./serverMetadata.js";
 import { runWrapperClient } from "./wrapperClient.js";
 
 /**
@@ -30,6 +35,10 @@ interface ParsedArgs {
   host?: string;
   /** Run as HTTP API server (spawned by stdio MCP server) */
   apiServer?: boolean;
+  /** Run indexing only (no server) */
+  indexOnly?: boolean;
+  /** Delete cache before starting (forces full reindex) */
+  clean?: boolean;
 }
 
 /**
@@ -45,6 +54,14 @@ const parseArgs = (): ParsedArgs => {
 
     if (arg === "--api-server") {
       result.apiServer = true;
+    } else if (arg === "--index") {
+      result.indexOnly = true;
+    } else if (arg === "--clean") {
+      result.clean = true;
+    } else if (arg === "--reindex") {
+      // --reindex is shorthand for --index --clean
+      result.indexOnly = true;
+      result.clean = true;
     } else if (arg === "--cache-dir") {
       const nextArg = args[i + 1];
       if (nextArg) {
@@ -72,8 +89,29 @@ const parseArgs = (): ParsedArgs => {
 };
 
 /**
+ * Delete the cache directory to force a full reindex.
+ */
+const cleanCacheDir = (cacheDir: string): void => {
+  console.error(`[ts-graph-mcp] Cleaning cache directory: ${cacheDir}`);
+  rmSync(cacheDir, { recursive: true, force: true });
+};
+
+/**
+ * Run indexing only, without starting any server.
+ * Useful for pre-warming the cache or debugging indexing issues.
+ */
+const runIndexOnly = async (
+  projectRoot: string,
+  cacheDir: string,
+): Promise<void> => {
+  console.error("[ts-graph-mcp] Running indexing only (no server)...");
+  await runFullIndex({ projectRoot, cacheDir });
+  console.error("[ts-graph-mcp] Indexing complete.");
+};
+
+/**
  * Run in HTTP API server mode (spawned by stdio MCP server).
- * Starts the HTTP API server with database and file watcher.
+ * Starts the HTTP API server immediately, then indexes in background.
  */
 const runApiServer = async (
   projectRoot: string,
@@ -81,34 +119,69 @@ const runApiServer = async (
   port?: number,
   host?: string,
 ): Promise<void> => {
-  // Initialize database, indexing, and file watcher
-  const { db, watchHandle } = await initializeServerCore({
+  // Quick init - just open DB and load config (instant)
+  const { db, configResult, dbExists } = initializeServerCoreQuick({
     projectRoot,
     cacheDir,
   });
 
+  // Mutable state for server readiness
+  const state: ServerState = { ready: false };
+
+  // Track watch handle for shutdown
+  let watchHandleRef: { close: () => Promise<void> } | null = null;
+
   // Set up graceful shutdown
   const shutdown = async () => {
     console.error("\n[ts-graph-mcp] Shutting down...");
-    if (watchHandle) {
-      await watchHandle.close();
+    if (watchHandleRef) {
+      await watchHandleRef.close();
     }
+    db.close();
     process.exit(0);
   };
 
   process.on("SIGINT", shutdown);
   process.on("SIGTERM", shutdown);
 
-  // Start HTTP server
-  await startHttpServer({
+  // Start HTTP server immediately (before indexing)
+  const { metadata } = await startHttpServer({
     db,
     cacheDir,
     projectRoot,
+    state,
     port,
     host,
   });
 
-  // Keep process running
+  // If no config found, we're done (empty database)
+  if (!configResult) {
+    state.ready = true;
+    writeServerMetadata(cacheDir, { ...metadata, ready: true });
+    console.error("[ts-graph-mcp] Server running. Press Ctrl+C to stop.");
+    return;
+  }
+
+  // Run indexing in background
+  runIndexingAndWatch({
+    projectRoot,
+    cacheDir,
+    db,
+    configResult,
+    dbExists,
+    onComplete: () => {
+      state.ready = true;
+      writeServerMetadata(cacheDir, { ...metadata, ready: true });
+      console.error("[ts-graph-mcp] Server ready.");
+    },
+  })
+    .then(({ watchHandle }) => {
+      watchHandleRef = watchHandle;
+    })
+    .catch((error) => {
+      console.error("[ts-graph-mcp] Indexing failed:", error);
+    });
+
   console.error("[ts-graph-mcp] Server running. Press Ctrl+C to stop.");
 };
 
@@ -139,7 +212,15 @@ export const main = async (): Promise<void> => {
     const args = parseArgs();
     const cacheDir = args.cacheDir ?? getCacheDir(projectRoot);
 
-    if (args.apiServer) {
+    // Clean cache directory if requested (before any other operation)
+    if (args.clean) {
+      cleanCacheDir(cacheDir);
+    }
+
+    if (args.indexOnly) {
+      // Index only mode - run indexing and exit
+      await runIndexOnly(projectRoot, cacheDir);
+    } else if (args.apiServer) {
       // HTTP API server mode (spawned by stdio MCP server)
       await runApiServer(projectRoot, cacheDir, args.port, args.host);
     } else {

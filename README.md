@@ -85,6 +85,15 @@ npx ts-graph-mcp
 
 The server runs via stdio transport (standard MCP protocol). On first run, it automatically indexes your project if the database doesn't exist.
 
+**CLI options:**
+
+```bash
+ts-graph-mcp [--cache-dir path] [--port N] [--host H]
+ts-graph-mcp --index     # Pre-index without starting server
+ts-graph-mcp --clean     # Delete cache and reindex from scratch
+ts-graph-mcp --reindex   # Shorthand for --index --clean
+```
+
 ### Claude Code Setup
 
 ```bash
@@ -129,13 +138,18 @@ Two formats are supported — use whichever fits your project structure.
 **`storage`** - Database configuration:
 
 - `type`: `"sqlite"` (default)
-- `path`: Database file path (default: `node_modules/.cache/ts-graph-mcp/graph.db`)
+- `path`: Database file path (default: `.ts-graph-mcp/graph.db`)
+
+**Note:** Add `.ts-graph-mcp/` to your `.gitignore` file.
 
 **`watch`** - File watching configuration:
 
-- `debounce`: Milliseconds to wait before re-indexing (default: 300)
-- `polling`: Use polling instead of native events (for Docker/WSL2/NFS)
+- `debounce`: Enable debouncing (default: true, mutually exclusive with `polling`)
+- `debounceInterval`: Debounce delay in ms (default: 300)
+- `polling`: Use polling instead of native fs events (for Docker/WSL2/NFS)
 - `pollingInterval`: Polling interval in ms (default: 1000)
+- `excludeDirectories`: Directories to exclude from watching
+- `excludeFiles`: Files to exclude from watching
 - `silent`: Suppress reindex log messages
 
 **`server`** - HTTP server configuration:
@@ -181,7 +195,7 @@ Two formats are supported — use whichever fits your project structure.
   ],
   "storage": {
     "type": "sqlite",
-    "path": "node_modules/.cache/ts-graph-mcp/graph.db"
+    "path": ".ts-graph-mcp/graph.db"
   }
 }
 ```
@@ -342,16 +356,9 @@ src/
 └── tools/       # MCP tool handlers
 ```
 
-### Architecture
+## Contributing
 
-Each tool has its own folder with handler and query logic. Shared formatting code lives in `src/tools/shared/`. See [ARCHITECTURE.md](ARCHITECTURE.md) for details.
-
-### Code Style
-
-- Functional programming (no classes)
-- Named exports only (no default exports)
-- File naming matches primary export casing
-- Tests colocated with implementation
+See [ARCHITECTURE.md](ARCHITECTURE.md) for technical internals and [CLAUDE.md](CLAUDE.md) for code style guidelines.
 
 ## License
 

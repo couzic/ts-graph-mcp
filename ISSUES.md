@@ -142,3 +142,84 @@ No E2E tests verify behavior when:
 Users currently can't tell if they're seeing the full picture or a partial view.
 
 **Fix approach:** Add E2E tests that create deep/circular graphs and verify output includes truncation indicators when applicable.
+
+---
+
+### Race Condition on watchHandleRef During Shutdown
+
+**Impact:** Low (edge case)
+
+**Problem:** In `main.ts` `runApiServer`, if shutdown (SIGINT/SIGTERM) is triggered while `runIndexingAndWatch` is still running (before its `.then()` executes), `watchHandleRef` will be null and the watcher won't be closed.
+
+**In `main.ts:126-177`:**
+```typescript
+let watchHandleRef: { close: () => Promise<void> } | null = null;
+
+const shutdown = async () => {
+  if (watchHandleRef) {        // ← null if indexing still running
+    await watchHandleRef.close();
+  }
+  // ...
+};
+
+runIndexingAndWatch({ ... })
+  .then(({ watchHandle }) => {
+    watchHandleRef = watchHandle;  // ← set after indexing completes
+  })
+```
+
+**Likelihood:** Low — requires shutdown during initial indexing. Watcher starts only after indexing completes.
+
+**Consequence:** On early shutdown, watcher handle leaks (but process exits anyway, so benign).
+
+**Fix approach:** Track the promise itself and await it during shutdown, or use a more robust state machine.
+
+---
+
+### Indexing Failure Leaves Server in Permanent 503 State
+
+**Impact:** Medium (recovery)
+
+**Problem:** In `main.ts` `runApiServer`, if indexing fails, the error is logged but `state.ready` never becomes true. The server returns 503 forever with no recovery path.
+
+**In `main.ts:159-177`:**
+```typescript
+runIndexingAndWatch({ ... })
+  .then(({ watchHandle }) => {
+    watchHandleRef = watchHandle;
+  })
+  .catch((error) => {
+    console.error("[ts-graph-mcp] Indexing failed:", error);
+    // state.ready remains false forever
+  });
+```
+
+**Consequences:**
+1. All tool calls return 503 indefinitely
+2. No way to retry indexing without restarting server
+3. User may not notice if error log is missed
+
+**Fix options:**
+1. Mark as ready anyway (allow queries on partial/empty data)
+2. Add retry mechanism with backoff
+3. Add `/api/reindex` endpoint for manual retry
+4. Exit process on indexing failure (force restart)
+
+---
+
+### Code Duplication Between runFullIndex and serverCore
+
+**Impact:** Low (maintainability)
+
+**Problem:** `src/ingestion/runFullIndex.ts` and `src/mcp/serverCore.ts` have nearly identical indexing/sync logic:
+- Database opening
+- Config loading
+- Initial indexing vs sync decision
+- Manifest handling
+- Error logging
+
+**Files:**
+- `src/ingestion/runFullIndex.ts` — standalone indexing (for `--index` CLI flag)
+- `src/mcp/serverCore.ts` — server startup indexing (`runIndexingAndWatch`)
+
+**Fix approach:** Extract shared indexing logic into a common function that both can call.

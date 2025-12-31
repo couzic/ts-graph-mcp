@@ -11,6 +11,14 @@ import {
 } from "./serverMetadata.js";
 
 /**
+ * Mutable server state that can be updated after server starts.
+ */
+export interface ServerState {
+  /** Whether indexing is complete and server is ready for queries */
+  ready: boolean;
+}
+
+/**
  * Options for the HTTP API server.
  */
 export interface HttpServerOptions {
@@ -20,6 +28,8 @@ export interface HttpServerOptions {
   cacheDir: string;
   /** Project root for resolving file paths */
   projectRoot: string;
+  /** Server state (can be mutated to update ready status) */
+  state: ServerState;
   /** Port to listen on (0 for dynamic) */
   port?: number;
   /** Host to bind to */
@@ -39,18 +49,33 @@ export interface HttpServerOptions {
 export const startHttpServer = async (
   options: HttpServerOptions,
 ): Promise<{ server: Server; metadata: ServerMetadata }> => {
-  const { db, cacheDir, projectRoot, port = 0, host = "127.0.0.1" } = options;
+  const {
+    db,
+    cacheDir,
+    projectRoot,
+    state,
+    port = 0,
+    host = "127.0.0.1",
+  } = options;
 
   const app: Express = express();
   app.use(express.json());
 
-  // Health check endpoint
+  // Health check endpoint - returns ready status
   app.get("/health", (_req: Request, res: Response) => {
-    res.json({ status: "ok" });
+    res.json({ status: "ok", ready: state.ready });
   });
+
+  // Message returned when server is still indexing
+  const indexingMessage =
+    "Database is still indexing. Please wait a moment and try again.";
 
   // API endpoints for graph queries
   app.post("/api/dependenciesOf", (req: Request, res: Response) => {
+    if (!state.ready) {
+      res.status(503).json({ error: indexingMessage, indexing: true });
+      return;
+    }
     try {
       const { file_path, symbol } = req.body;
       if (!file_path || !symbol) {
@@ -66,6 +91,10 @@ export const startHttpServer = async (
   });
 
   app.post("/api/dependentsOf", (req: Request, res: Response) => {
+    if (!state.ready) {
+      res.status(503).json({ error: indexingMessage, indexing: true });
+      return;
+    }
     try {
       const { file_path, symbol } = req.body;
       if (!file_path || !symbol) {
@@ -81,6 +110,10 @@ export const startHttpServer = async (
   });
 
   app.post("/api/pathsBetween", (req: Request, res: Response) => {
+    if (!state.ready) {
+      res.status(503).json({ error: indexingMessage, indexing: true });
+      return;
+    }
     try {
       const { from, to } = req.body;
       if (!from?.file_path || !from?.symbol || !to?.file_path || !to?.symbol) {
@@ -113,6 +146,7 @@ export const startHttpServer = async (
         host,
         startedAt: new Date().toISOString(),
         projectRoot,
+        ready: state.ready,
       };
 
       // Write metadata to disk for discovery

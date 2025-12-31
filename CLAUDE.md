@@ -1,6 +1,7 @@
 # Project Guidelines
 
 @ARCHITECTURE.md
+@README.md
 
 ## Philosophy
 
@@ -18,12 +19,13 @@ Each tool has its own folder (`src/tools/<tool>/`) with shared formatting in `sr
 
 ## Documentation
 
-| Document | Purpose |
-|----------|---------|
-| `ARCHITECTURE.md` | How the system works (current state) |
-| `ISSUES.md` | Active bugs and tech debt |
-| `ROADMAP.md` | **Future work only** — planned features not yet implemented |
-| Module `CLAUDE.md` | Must-know info for that module |
+| Document | Purpose | Audience |
+|----------|---------|----------|
+| `README.md` | Practical usage: installation, configuration, examples | **Users** |
+| `ARCHITECTURE.md` | Technical internals: data model, design decisions, code flow | **Contributors** |
+| `ISSUES.md` | Active bugs and tech debt | Contributors |
+| `ROADMAP.md` | **Future work only** — planned features not yet implemented | Contributors |
+| Module `CLAUDE.md` | Must-know info for that module | Contributors |
 
 Remove items from ISSUES.md/ROADMAP.md when done. Update ARCHITECTURE.md when adding features. Don't use ROADMAP.md to document completed work — push documentation down the tree: module `CLAUDE.md` > JSDoc > `ARCHITECTURE.md` (only for cross-cutting concerns).
 

@@ -17,6 +17,8 @@ export interface ServerMetadata {
   startedAt: string;
   /** Project root this server is indexing */
   projectRoot: string;
+  /** Whether the server has finished indexing and is ready to serve queries */
+  ready: boolean;
 }
 
 /**
