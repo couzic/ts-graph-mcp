@@ -12,7 +12,6 @@ describe(extractVariableNodes.name, () => {
 
   const createContext = (filePath = "src/test.ts"): NodeExtractionContext => ({
     filePath,
-    module: "core",
     package: "myapp",
   });
 
@@ -30,7 +29,6 @@ describe(extractVariableNodes.name, () => {
       id: "src/test.ts:API_KEY",
       type: "Variable",
       name: "API_KEY",
-      module: "core",
       package: "myapp",
       filePath: "src/test.ts",
       exported: true,

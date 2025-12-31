@@ -1,0 +1,7 @@
+{
+  "packages": [{ "name": "ts-graph-mcp", "tsconfig": "tsconfig.json" }],
+  "watch": {
+    "polling": true,
+    "pollingInterval": 3000
+  }
+}

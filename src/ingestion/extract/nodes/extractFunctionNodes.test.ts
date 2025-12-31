@@ -12,7 +12,6 @@ describe(extractFunctionNodes.name, () => {
 
   const createContext = (filePath = "src/test.ts"): NodeExtractionContext => ({
     filePath,
-    module: "core",
     package: "myapp",
   });
 
@@ -32,7 +31,6 @@ describe(extractFunctionNodes.name, () => {
       id: "src/test.ts:formatDate",
       type: "Function",
       name: "formatDate",
-      module: "core",
       package: "myapp",
       filePath: "src/test.ts",
       startLine: 1,

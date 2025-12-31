@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   CONFIG_FILE_NAME,
   createDefaultConfig,
-  IMPLICIT_MODULE_NAME,
   parseConfig,
 } from "./configLoader.utils.js";
 
@@ -14,30 +13,20 @@ describe("configLoader.utils", () => {
   });
 
   describe(parseConfig.name, () => {
-    it("parses valid full-format config", () => {
+    it("parses valid config", () => {
       const config = {
-        modules: [
-          {
-            name: "core",
-            packages: [{ name: "main", tsconfig: "./tsconfig.json" }],
-          },
-        ],
+        packages: [{ name: "main", tsconfig: "./tsconfig.json" }],
       };
 
       const result = parseConfig(JSON.stringify(config));
 
-      expect(result.modules).toHaveLength(1);
-      expect(result.modules[0]?.name).toBe("core");
+      expect(result.packages).toHaveLength(1);
+      expect(result.packages[0]?.name).toBe("main");
     });
 
     it("parses config with storage and watch settings", () => {
       const config = {
-        modules: [
-          {
-            name: "api",
-            packages: [{ name: "rest", tsconfig: "./tsconfig.json" }],
-          },
-        ],
+        packages: [{ name: "rest", tsconfig: "./tsconfig.json" }],
         storage: { type: "sqlite", path: "./data/graph.db" },
         watch: { debounce: true, debounceInterval: 150 },
       };
@@ -53,8 +42,8 @@ describe("configLoader.utils", () => {
       expect(() => parseConfig("{ invalid }")).toThrow("Invalid JSON");
     });
 
-    it("throws on invalid config structure (empty modules)", () => {
-      expect(() => parseConfig(JSON.stringify({ modules: [] }))).toThrow();
+    it("throws on invalid config structure (empty packages)", () => {
+      expect(() => parseConfig(JSON.stringify({ packages: [] }))).toThrow();
     });
 
     it("throws on missing required fields", () => {
@@ -63,14 +52,12 @@ describe("configLoader.utils", () => {
   });
 
   describe(createDefaultConfig.name, () => {
-    it("creates config with implicit module name", () => {
+    it("creates config with package name", () => {
       const result = createDefaultConfig("./tsconfig.json", "my-project");
 
-      expect(result.modules).toHaveLength(1);
-      expect(result.modules[0]?.name).toBe(IMPLICIT_MODULE_NAME);
-      expect(result.modules[0]?.packages).toHaveLength(1);
-      expect(result.modules[0]?.packages[0]?.name).toBe("my-project");
-      expect(result.modules[0]?.packages[0]?.tsconfig).toBe("./tsconfig.json");
+      expect(result.packages).toHaveLength(1);
+      expect(result.packages[0]?.name).toBe("my-project");
+      expect(result.packages[0]?.tsconfig).toBe("./tsconfig.json");
     });
   });
 });

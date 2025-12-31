@@ -9,7 +9,6 @@ describe(extractTypeUsageEdges.name, () => {
 
   const defaultContext: EdgeExtractionContext = {
     filePath: "test.ts",
-    module: "test-module",
     package: "test-package",
   };
 
@@ -162,7 +161,6 @@ export const greet = (user: User): void => {
 
     const serviceContext: EdgeExtractionContext = {
       filePath: "service.ts",
-      module: "test-module",
       package: "test-package",
     };
 

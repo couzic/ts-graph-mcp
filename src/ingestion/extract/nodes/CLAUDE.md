@@ -41,7 +41,6 @@ All extractors receive `NodeExtractionContext`:
 ```typescript
 interface NodeExtractionContext {
   filePath: string;   // Relative path from project root
-  module: string;     // Module name from config
   package: string;    // Package name from config
 }
 ```

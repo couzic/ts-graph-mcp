@@ -13,7 +13,6 @@ describe(extractNodes.name, () => {
 
   const createContext = (filePath = "src/test.ts"): NodeExtractionContext => ({
     filePath,
-    module: "core",
     package: "myapp",
   });
 

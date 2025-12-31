@@ -12,7 +12,6 @@ export interface NodeRow {
   id: string;
   type: string;
   name: string;
-  module: string;
   package: string;
   file_path: string;
   start_line: number;

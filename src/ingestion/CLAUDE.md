@@ -6,7 +6,7 @@ Parses TypeScript source code using ts-morph AST and extracts nodes (symbols) an
 
 ### Public API (`indexProject.ts`)
 
-- `indexProject` - Index entire project based on config (processes all modules/packages)
+- `indexProject` - Index entire project based on config (processes all packages)
 
 ### Extraction (`extract/`)
 
@@ -49,7 +49,6 @@ Every extraction requires `ExtractionContext`:
 ```typescript
 {
   filePath: string,  // Relative path from project root
-  module: string,    // Module name from config
   package: string    // Package name from config
 }
 ```

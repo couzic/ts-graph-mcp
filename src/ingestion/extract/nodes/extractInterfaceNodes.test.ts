@@ -12,7 +12,6 @@ describe(extractInterfaceNodes.name, () => {
 
   const createContext = (filePath = "src/test.ts"): NodeExtractionContext => ({
     filePath,
-    module: "core",
     package: "myapp",
   });
 
@@ -32,7 +31,6 @@ describe(extractInterfaceNodes.name, () => {
       id: "src/test.ts:User",
       type: "Interface",
       name: "User",
-      module: "core",
       package: "myapp",
       filePath: "src/test.ts",
       exported: true,

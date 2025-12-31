@@ -26,7 +26,6 @@ export const extractTypeAliasNodes = (
       id: generateNodeId(context.filePath, name),
       type: "TypeAlias",
       name,
-      module: context.module,
       package: context.package,
       filePath: context.filePath,
       startLine,

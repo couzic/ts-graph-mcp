@@ -7,20 +7,17 @@ Configuration loading and validation for ts-graph-mcp projects. Uses Zod schemas
 ### Config.schemas.ts
 
 **Zod Schemas:**
-- `ProjectConfigInputSchema` - Input schema accepting both full and flat formats
-- `ProjectConfigSchema` - Output schema (always full format with modules)
-- `ModuleConfigSchema` - Schema for a module (contains one or more packages)
+- `ProjectConfigSchema` - Schema for project configuration
 - `PackageConfigSchema` - Schema for a package (name + tsconfig path)
 - `StorageConfigSchema` - Discriminated union for storage backends (sqlite | memgraph)
 - `WatchConfigSchema` - Schema for file watch configuration
 
 **Type Exports:**
-- `ProjectConfig` - TypeScript type for full format (output)
-- `ProjectConfigInput` - TypeScript type for input (full or flat format)
+- `ProjectConfig` - TypeScript type for project configuration
+- `PackageConfig` - TypeScript type for package configuration
 
 **Utilities:**
-- `defineConfig(config)` - Type-safe helper accepting both formats, always returns full format
-- `normalizeConfig(input)` - Converts flat format to full format (creates implicit "main" module)
+- `defineConfig(config)` - Type-safe helper with validation
 
 ### configLoader.utils.ts
 
@@ -45,34 +42,11 @@ Configuration loading and validation for ts-graph-mcp projects. Uses Zod schemas
 
 ## Config File Structure
 
-**Two formats are supported:**
-
-### Flat Format (simpler, for non-monorepo projects)
-
 ```typescript
 {
   packages: [
     { name: "core", tsconfig: "./tsconfig.json" },
     { name: "utils", tsconfig: "./packages/utils/tsconfig.json" }
-  ],
-  storage?: { ... },
-  watch?: { ... }
-}
-```
-
-Creates an implicit "main" module containing all packages.
-
-### Full Format (for monorepos with multiple modules)
-
-```typescript
-{
-  modules: [
-    {
-      name: "core",
-      packages: [
-        { name: "main", tsconfig: "./tsconfig.json" }
-      ]
-    }
   ],
   storage?: {
     type: "sqlite",
@@ -108,18 +82,10 @@ TypeScript/JavaScript config files are not supported because Node.js cannot dyna
 ### Usage Pattern
 
 ```json
-// Flat format - for simple projects
 {
   "packages": [
-    { "name": "core", "tsconfig": "./tsconfig.json" }
-  ]
-}
-
-// Full format - for monorepos
-{
-  "modules": [
-    { "name": "api", "packages": [{ "name": "rest", "tsconfig": "./packages/api/tsconfig.json" }] },
-    { "name": "core", "packages": [{ "name": "domain", "tsconfig": "./packages/core/tsconfig.json" }] }
+    { "name": "core", "tsconfig": "./tsconfig.json" },
+    { "name": "api", "tsconfig": "./packages/api/tsconfig.json" }
   ]
 }
 ```
@@ -128,7 +94,6 @@ TypeScript/JavaScript config files are not supported because Node.js cannot dyna
 // In application code
 import { loadConfigFromDirectory } from '../config/configLoader.utils.js';
 const config = loadConfigFromDirectory(process.cwd());
-// config is always in full format (with modules)
 ```
 
 ## Module Dependencies

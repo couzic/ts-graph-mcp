@@ -9,7 +9,6 @@ describe(extractInheritanceEdges.name, () => {
 
   const defaultContext: EdgeExtractionContext = {
     filePath: "test.ts",
-    module: "test-module",
     package: "test-package",
   };
 
@@ -171,7 +170,6 @@ export class Dog extends Animal {
 
       const context: EdgeExtractionContext = {
         filePath: "derived.ts",
-        module: "test-module",
         package: "test-package",
       };
 
@@ -210,7 +208,6 @@ export class User implements Serializable {
 
       const context: EdgeExtractionContext = {
         filePath: "user.ts",
-        module: "test-module",
         package: "test-package",
       };
 
@@ -247,7 +244,6 @@ export interface User extends Entity {
 
       const context: EdgeExtractionContext = {
         filePath: "user-types.ts",
-        module: "test-module",
         package: "test-package",
       };
 
@@ -289,7 +285,6 @@ export class Entity implements Named, Timestamped {
 
       const context: EdgeExtractionContext = {
         filePath: "models.ts",
-        module: "test-module",
         package: "test-package",
       };
 

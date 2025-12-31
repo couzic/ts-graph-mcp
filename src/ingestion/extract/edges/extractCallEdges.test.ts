@@ -9,7 +9,6 @@ describe(extractCallEdges.name, () => {
 
   const defaultContext: EdgeExtractionContext = {
     filePath: "test.ts",
-    module: "test-module",
     package: "test-package",
   };
 
@@ -123,7 +122,6 @@ export const processEvent = (timestamp: Date): string => {
     // Cross-file calls work via buildImportMap (ts-morph import resolution)
     const edges = extractCallEdges(handlerFile, {
       filePath: "handler.ts",
-      module: "test-module",
       package: "test-package",
     });
 

@@ -11,7 +11,6 @@ const extractNodeProperties = (node: Node): Record<string, unknown> => {
     id: _id,
     type: _type,
     name: _name,
-    module: _module,
     package: _package,
     filePath: _filePath,
     startLine: _startLine,
@@ -31,12 +30,11 @@ const extractNodeProperties = (node: Node): Record<string, unknown> => {
 export const createSqliteWriter = (db: Database.Database): DbWriter => {
   // Prepared statements for upsert operations
   const upsertNodeStmt = db.prepare(`
-    INSERT INTO nodes (id, type, name, module, package, file_path, start_line, end_line, exported, properties)
-    VALUES (@id, @type, @name, @module, @package, @filePath, @startLine, @endLine, @exported, @properties)
+    INSERT INTO nodes (id, type, name, package, file_path, start_line, end_line, exported, properties)
+    VALUES (@id, @type, @name, @package, @filePath, @startLine, @endLine, @exported, @properties)
     ON CONFLICT(id) DO UPDATE SET
       type = excluded.type,
       name = excluded.name,
-      module = excluded.module,
       package = excluded.package,
       file_path = excluded.file_path,
       start_line = excluded.start_line,
@@ -82,7 +80,6 @@ export const createSqliteWriter = (db: Database.Database): DbWriter => {
         id: node.id,
         type: node.type,
         name: node.name,
-        module: node.module,
         package: node.package,
         filePath: node.filePath,
         startLine: node.startLine,

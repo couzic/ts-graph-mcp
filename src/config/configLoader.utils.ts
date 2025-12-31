@@ -1,15 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
-import {
-  type ProjectConfig,
-  ProjectConfigInputSchema,
-} from "./Config.schemas.js";
-import { normalizeConfig } from "./defineConfig.js";
-
-/**
- * The implicit module name used when config doesn't specify one.
- */
-export const IMPLICIT_MODULE_NAME = "___DEFAULT___" as const;
+import { type ProjectConfig, ProjectConfigSchema } from "./Config.schemas.js";
 
 /**
  * Read package name from package.json in the given directory.
@@ -44,19 +35,14 @@ export const detectTsconfig = (directory: string): string | null => {
  * Create a default ProjectConfig with sensible defaults.
  *
  * @param tsconfigPath - Relative path to tsconfig.json
- * @param packageName - Package name (from package.json or IMPLICIT_PACKAGE_NAME)
+ * @param packageName - Package name (from package.json or directory name)
  * @returns Default ProjectConfig
  */
 export const createDefaultConfig = (
   tsconfigPath: string,
   packageName: string,
 ): ProjectConfig => ({
-  modules: [
-    {
-      name: IMPLICIT_MODULE_NAME,
-      packages: [{ name: packageName, tsconfig: tsconfigPath }],
-    },
-  ],
+  packages: [{ name: packageName, tsconfig: tsconfigPath }],
 });
 
 /**
@@ -84,7 +70,7 @@ export const findConfigFile = (directory: string): string | null => {
  * Pure function - unit tested.
  *
  * @param content - Raw JSON string from config file
- * @returns Validated and normalized project config
+ * @returns Validated project config
  * @throws Error if JSON is invalid or config structure is invalid
  */
 export const parseConfig = (content: string): ProjectConfig => {
@@ -95,10 +81,7 @@ export const parseConfig = (content: string): ProjectConfig => {
     throw new Error("Invalid JSON");
   }
 
-  // Validate with Zod schema (accepts both full and flat formats)
-  const parsed = ProjectConfigInputSchema.parse(rawConfig);
-  // Normalize flat format to full format
-  return normalizeConfig(parsed);
+  return ProjectConfigSchema.parse(rawConfig);
 };
 
 /**

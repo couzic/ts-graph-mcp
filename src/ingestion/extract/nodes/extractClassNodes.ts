@@ -35,7 +35,6 @@ export const extractClassNodes = (
       id: generateNodeId(context.filePath, name),
       type: "Class",
       name,
-      module: context.module,
       package: context.package,
       filePath: context.filePath,
       startLine,

@@ -33,7 +33,6 @@ All extractors receive `EdgeExtractionContext`:
 ```typescript
 interface EdgeExtractionContext {
   filePath: string;   // Relative path from project root
-  module: string;     // Module name from config
   package: string;    // Package name from config
 }
 ```

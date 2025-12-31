@@ -12,7 +12,6 @@ describe(extractTypeAliasNodes.name, () => {
 
   const createContext = (filePath = "src/test.ts"): NodeExtractionContext => ({
     filePath,
-    module: "core",
     package: "myapp",
   });
 
@@ -30,7 +29,6 @@ describe(extractTypeAliasNodes.name, () => {
       id: "src/test.ts:UserId",
       type: "TypeAlias",
       name: "UserId",
-      module: "core",
       package: "myapp",
       filePath: "src/test.ts",
       exported: true,

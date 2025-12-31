@@ -33,7 +33,6 @@ export const extractFunctionNodes = (
       id: generateNodeId(context.filePath, name),
       type: "Function",
       name,
-      module: context.module,
       package: context.package,
       filePath: context.filePath,
       startLine,

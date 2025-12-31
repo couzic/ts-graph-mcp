@@ -19,7 +19,6 @@ export const extractFileNode = (
     id: generateNodeId(context.filePath),
     type: "File",
     name: fileName,
-    module: context.module,
     package: context.package,
     filePath: context.filePath,
     startLine,

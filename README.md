@@ -13,7 +13,7 @@ AI agents can then query this graph through 3 specialized MCP tools to:
 - Find paths between symbols
 - Extract neighborhood subgraphs with visual diagrams
 
-All tools use a **symbol-based query pattern** - reference code elements by name with optional filters (`file`, `module`, `package`) for disambiguation. Tool outputs are machine-readable and include `offset` and `limit` fields that integrate directly with the Read tool without computation.
+All tools use a **symbol-based query pattern** — specify `file_path` and `symbol` to reference code elements. Tool outputs are machine-readable and include `offset` and `limit` fields that integrate directly with the Read tool without computation.
 
 Responses use a hierarchical text format optimized for LLM consumption, achieving approximately 60-70% token reduction compared to JSON.
 
@@ -49,7 +49,7 @@ Create a `ts-graph-mcp.config.json` file in your project root.
 }
 ```
 
-**Multiple packages** — use the flat `packages` array:
+**Multiple packages** — use the `packages` array:
 
 ```json
 {
@@ -57,22 +57,6 @@ Create a `ts-graph-mcp.config.json` file in your project root.
     { "name": "shared", "tsconfig": "./shared/tsconfig.json" },
     { "name": "frontend", "tsconfig": "./frontend/tsconfig.json" },
     { "name": "backend", "tsconfig": "./backend/tsconfig.json" }
-  ]
-}
-```
-
-**Monorepo with modules** — group packages into logical modules:
-
-```json
-{
-  "modules": [
-    {
-      "name": "core",
-      "packages": [
-        { "name": "domain", "tsconfig": "./packages/domain/tsconfig.json" },
-        { "name": "utils", "tsconfig": "./packages/utils/tsconfig.json" }
-      ]
-    }
   ]
 }
 ```
@@ -115,23 +99,12 @@ Or manually in `.mcp.json`:
 
 ## Configuration Reference
 
-Two formats are supported — use whichever fits your project structure.
+### Required Fields
 
-### Flat Format (packages only)
-
-**`packages`** - Array of package definitions (creates an implicit "main" module):
+**`packages`** - Array of package definitions:
 
 - `name` (string): Package identifier
 - `tsconfig` (string): Path to tsconfig.json
-
-### Full Format (modules with packages)
-
-**`modules`** - Array of module definitions:
-
-- `name` (string): Module identifier
-- `packages` (array): Package configurations
-  - `name` (string): Package identifier
-  - `tsconfig` (string): Path to tsconfig.json
 
 ### Optional Fields
 
@@ -157,9 +130,9 @@ Two formats are supported — use whichever fits your project structure.
 - `port`: Server port (default: auto-find available port)
 - `host`: Bind address (default: `127.0.0.1`)
 
-### Examples
+### Example
 
-**Flat format** — multiple packages, single implicit module:
+**Monorepo** — multiple packages with watch settings:
 
 ```json
 {
@@ -170,32 +143,6 @@ Two formats are supported — use whichever fits your project structure.
   ],
   "watch": {
     "debounce": 300
-  }
-}
-```
-
-**Full format** — monorepo with multiple modules:
-
-```json
-{
-  "modules": [
-    {
-      "name": "core",
-      "packages": [
-        { "name": "domain", "tsconfig": "./packages/domain/tsconfig.json" },
-        { "name": "utils", "tsconfig": "./packages/utils/tsconfig.json" }
-      ]
-    },
-    {
-      "name": "api",
-      "packages": [
-        { "name": "server", "tsconfig": "./apps/api/tsconfig.json" }
-      ]
-    }
-  ],
-  "storage": {
-    "type": "sqlite",
-    "path": ".ts-graph-mcp/graph.db"
   }
 }
 ```

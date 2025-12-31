@@ -158,7 +158,7 @@ step02:
 **Benchmark coverage:**
 - `call-chain` — all 3 tools (forward deps, reverse deps, path finding)
 - `layered-api` — path finding, deep call traversal
-- `monorepo` — cross-module analysis
+- `monorepo` — cross-package analysis
 
 ## Benchmarking
 
@@ -238,9 +238,9 @@ sample-project/
    ```json
    {
      "mcpServers": {
-       "ts-graph-mcp": {
+       "ts-graph": {
          "command": "node",
-         "args": ["../../dist/mcp/main.js", "--cache-dir", ".ts-graph"]
+         "args": ["../../dist/mcp/main.js"]
        }
      }
    }
@@ -295,7 +295,7 @@ sample-project/
 - WITH MCP: `pathsBetween` shows the exact path through layers instantly
 
 **monorepo example:**
-- WITHOUT MCP: Claude must navigate 6 packages across 3 modules to trace dependencies
+- WITHOUT MCP: Claude must navigate 6 packages to trace dependencies
 - WITH MCP: `dependentsOf` instantly finds all callers, `dependenciesOf` shows all dependencies
 
 ## Tool Output Design

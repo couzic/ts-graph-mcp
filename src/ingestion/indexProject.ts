@@ -48,31 +48,28 @@ export const indexProject = async (
   }
 
   // Process each package, streaming nodes and edges to DB
-  for (const module of config.modules) {
-    for (const pkg of module.packages) {
-      try {
-        const result = await processPackage(
-          module.name,
-          pkg.name,
-          pkg.tsconfig,
-          options.projectRoot,
-          dbWriter,
-        );
+  for (const pkg of config.packages) {
+    try {
+      const result = await processPackage(
+        pkg.name,
+        pkg.tsconfig,
+        options.projectRoot,
+        dbWriter,
+      );
 
-        filesProcessed += result.filesProcessed;
-        nodesAdded += result.nodesAdded;
-        edgesAdded += result.edgesAdded;
-        filesIndexed.push(...result.filesIndexed);
+      filesProcessed += result.filesProcessed;
+      nodesAdded += result.nodesAdded;
+      edgesAdded += result.edgesAdded;
+      filesIndexed.push(...result.filesIndexed);
 
-        if (result.errors) {
-          errors.push(...result.errors);
-        }
-      } catch (e) {
-        errors.push({
-          file: pkg.tsconfig,
-          message: `Failed to process package: ${(e as Error).message}`,
-        });
+      if (result.errors) {
+        errors.push(...result.errors);
       }
+    } catch (e) {
+      errors.push({
+        file: pkg.tsconfig,
+        message: `Failed to process package: ${(e as Error).message}`,
+      });
     }
   }
 
@@ -110,7 +107,6 @@ interface PackageProcessResult {
  * Each file's import map contains ~100 entries max vs millions if we held all nodes.
  */
 const processPackage = async (
-  moduleName: string,
   packageName: string,
   tsconfigPath: string,
   projectRoot: string,
@@ -135,7 +131,7 @@ const processPackage = async (
   // - Skip node_modules and .d.ts files
   //
   // This prevents files from other packages (pulled in via imports) from
-  // being extracted with wrong module/package metadata. Each package
+  // being extracted with wrong package metadata. Each package
   // should only extract its own files.
   const sourceFiles = project.getSourceFiles().filter((sf) => {
     const absolutePath = sf.getFilePath();
@@ -154,7 +150,6 @@ const processPackage = async (
     const relativePath = relative(projectRoot, absolutePath);
     const context: NodeExtractionContext = {
       filePath: relativePath,
-      module: moduleName,
       package: packageName,
     };
 

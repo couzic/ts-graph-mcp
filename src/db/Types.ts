@@ -38,9 +38,6 @@ export interface BaseNode {
   /** Symbol name (e.g., "formatDate", "User") */
   name: string;
 
-  /** Module name from config */
-  module: string;
-
   /** Package name from config */
   package: string;
 
@@ -175,9 +172,6 @@ export interface SearchFilters {
   /** Filter by node type(s) */
   type?: NodeType | NodeType[];
 
-  /** Filter by module name(s) */
-  module?: string | string[];
-
   /** Filter by package name(s) */
   package?: string | string[];
 
@@ -194,9 +188,6 @@ export interface SearchFilters {
 export interface TraversalOptions {
   /** Maximum traversal depth */
   maxDepth?: number;
-
-  /** Filter by module name(s) */
-  moduleFilter?: string[];
 
   /** Filter by edge type(s) */
   edgeTypes?: EdgeType[];

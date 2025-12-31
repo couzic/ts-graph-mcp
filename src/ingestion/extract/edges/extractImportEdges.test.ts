@@ -9,7 +9,6 @@ describe(extractImportEdges.name, () => {
 
   const defaultContext: EdgeExtractionContext = {
     filePath: "test.ts",
-    module: "test-module",
     package: "test-package",
   };
 
@@ -66,7 +65,6 @@ import { utils } from '../utils.js';
 
     const context: EdgeExtractionContext = {
       filePath: "src/components/Button.ts",
-      module: "test-module",
       package: "test-package",
     };
 

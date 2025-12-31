@@ -21,12 +21,7 @@ describe("small gaps E2E - gap indicator threshold", () => {
 
     projectRoot = join(import.meta.dirname, "../..");
     const config: ProjectConfig = {
-      modules: [
-        {
-          name: "test",
-          packages: [{ name: "main", tsconfig: "tsconfig.json" }],
-        },
-      ],
+      packages: [{ name: "main", tsconfig: "tsconfig.json" }],
     };
     const writer = createSqliteWriter(db);
     await indexProject(config, writer, { projectRoot });

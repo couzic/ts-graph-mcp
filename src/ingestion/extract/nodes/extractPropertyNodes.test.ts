@@ -27,7 +27,6 @@ describe(extractPropertyNodes.name, () => {
 
   const createContext = (filePath = "src/test.ts"): NodeExtractionContext => ({
     filePath,
-    module: "core",
     package: "myapp",
   });
 
@@ -48,7 +47,6 @@ describe(extractPropertyNodes.name, () => {
       id: "src/test.ts:User.email",
       type: "Property",
       name: "email",
-      module: "core",
       package: "myapp",
       filePath: "src/test.ts",
       exported: false,

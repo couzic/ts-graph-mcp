@@ -121,12 +121,7 @@ export function entry(): string { return helper(); }
     initializeSchema(db);
 
     const projectConfig: ProjectConfig = {
-      modules: [
-        {
-          name: "test",
-          packages: [{ name: "main", tsconfig: "tsconfig.json" }],
-        },
-      ],
+      packages: [{ name: "main", tsconfig: "tsconfig.json" }],
     };
 
     const writer = createSqliteWriter(db);

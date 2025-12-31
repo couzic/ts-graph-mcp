@@ -18,7 +18,6 @@ CREATE TABLE IF NOT EXISTS nodes (
   id TEXT PRIMARY KEY,
   type TEXT NOT NULL,
   name TEXT NOT NULL,
-  module TEXT NOT NULL,
   package TEXT NOT NULL,
   file_path TEXT NOT NULL,
   start_line INTEGER NOT NULL,
@@ -46,7 +45,6 @@ const INDEXES = [
   "CREATE INDEX IF NOT EXISTS idx_nodes_file_path ON nodes(file_path)",
   "CREATE INDEX IF NOT EXISTS idx_nodes_type ON nodes(type)",
   "CREATE INDEX IF NOT EXISTS idx_nodes_name ON nodes(name)",
-  "CREATE INDEX IF NOT EXISTS idx_nodes_module ON nodes(module)",
   "CREATE INDEX IF NOT EXISTS idx_nodes_package ON nodes(package)",
   "CREATE INDEX IF NOT EXISTS idx_nodes_exported ON nodes(exported)",
 

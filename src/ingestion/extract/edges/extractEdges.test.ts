@@ -8,7 +8,6 @@ describe(extractEdges.name, () => {
 
   const defaultContext: EdgeExtractionContext = {
     filePath: "test.ts",
-    module: "test-module",
     package: "test-package",
   };
 

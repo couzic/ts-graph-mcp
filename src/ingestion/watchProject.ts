@@ -67,14 +67,13 @@ export interface WatchHandle {
  * File context for extraction.
  */
 interface FileContext {
-  module: string;
   package: string;
   relativePath: string;
   tsconfigPath: string;
 }
 
 /**
- * Resolve a file path to its module/package context.
+ * Resolve a file path to its package context.
  * Returns null if the file doesn't belong to any configured package.
  */
 const resolveFileContext = (
@@ -82,19 +81,16 @@ const resolveFileContext = (
   config: ProjectConfig,
   projectRoot: string,
 ): FileContext | null => {
-  for (const module of config.modules) {
-    for (const pkg of module.packages) {
-      const absoluteTsConfigPath = join(projectRoot, pkg.tsconfig);
-      const packageRoot = dirname(absoluteTsConfigPath);
+  for (const pkg of config.packages) {
+    const absoluteTsConfigPath = join(projectRoot, pkg.tsconfig);
+    const packageRoot = dirname(absoluteTsConfigPath);
 
-      if (absolutePath.startsWith(packageRoot)) {
-        return {
-          module: module.name,
-          package: pkg.name,
-          relativePath: relative(projectRoot, absolutePath),
-          tsconfigPath: absoluteTsConfigPath,
-        };
-      }
+    if (absolutePath.startsWith(packageRoot)) {
+      return {
+        package: pkg.name,
+        relativePath: relative(projectRoot, absolutePath),
+        tsconfigPath: absoluteTsConfigPath,
+      };
     }
   }
   return null;
@@ -172,7 +168,6 @@ export const watchProject = (
 
     const extractionContext: NodeExtractionContext = {
       filePath: context.relativePath,
-      module: context.module,
       package: context.package,
     };
 

@@ -24,7 +24,6 @@ export function greet(name: string): string {
 
     const context: ExtractionContext = {
       filePath: "src/utils.ts",
-      module: "core",
       package: "utils",
     };
 
@@ -60,7 +59,6 @@ export class User {
 
     const context: ExtractionContext = {
       filePath: "src/User.ts",
-      module: "core",
       package: "domain",
     };
 
@@ -91,7 +89,6 @@ export function main(): void {
 
     const context: ExtractionContext = {
       filePath: "src/app.ts",
-      module: "core",
       package: "app",
     };
 
@@ -126,7 +123,6 @@ export class Dog extends Animal implements Living {
 
     const context: ExtractionContext = {
       filePath: "src/Animal.ts",
-      module: "core",
       package: "domain",
     };
 
@@ -155,7 +151,6 @@ export function getUser(id: number): User {
 
     const context: ExtractionContext = {
       filePath: "src/service.ts",
-      module: "core",
       package: "service",
     };
 
@@ -181,7 +176,6 @@ export const x = 1;
 
     const context: ExtractionContext = {
       filePath: "src/stats.ts",
-      module: "core",
       package: "stats",
     };
 
@@ -230,7 +224,6 @@ export const DEFAULT_ID: ServiceId = 'default';
 
     const context: ExtractionContext = {
       filePath: "src/complex.ts",
-      module: "core",
       package: "services",
     };
 

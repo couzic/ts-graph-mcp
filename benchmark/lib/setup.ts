@@ -87,34 +87,24 @@ export async function setupBenchmark(config: BenchmarkConfig): Promise<void> {
   const db = openDatabase({ path: fullDbPath });
   initializeSchema(db);
 
-  // Try to load the project's actual config file first (for multi-module/package projects)
+  // Try to load the project's actual config file first (for multi-package projects)
   // Fall back to creating a flat config from benchmark config
   const loadedConfig = await tryLoadProjectConfig(config.projectRoot);
   const projectConfig: ProjectConfig = loadedConfig ?? {
-    modules: [
+    packages: [
       {
-        name: config.moduleName ?? config.projectName,
-        packages: [
-          {
-            name: config.packageName ?? "main",
-            tsconfig: config.tsconfig,
-          },
-        ],
+        name: config.packageName ?? "main",
+        tsconfig: config.tsconfig,
       },
     ],
   };
 
   if (loadedConfig) {
-    const moduleCount = loadedConfig.modules.length;
-    const packageCount = loadedConfig.modules.reduce(
-      (sum, m) => sum + m.packages.length,
-      0,
-    );
     console.log(
-      `Loaded project config: ${moduleCount} modules, ${packageCount} packages`,
+      `Loaded project config: ${loadedConfig.packages.length} packages`,
     );
   } else {
-    console.log("Using flat config (single module/package)");
+    console.log("Using flat config (single package)");
   }
 
   // Index the project

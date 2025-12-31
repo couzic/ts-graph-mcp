@@ -9,7 +9,6 @@ describe(extractReferenceEdges.name, () => {
 
   const defaultContext: EdgeExtractionContext = {
     filePath: "test.ts",
-    module: "test-module",
     package: "test-package",
   };
 
@@ -320,7 +319,6 @@ export const process = (dates: Date[]) => dates.map(formatDate);
 
       const edges = extractReferenceEdges(mainFile, {
         filePath: "main.ts",
-        module: "test-module",
         package: "test-package",
       });
 

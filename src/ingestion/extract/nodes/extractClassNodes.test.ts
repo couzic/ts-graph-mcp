@@ -12,7 +12,6 @@ describe(extractClassNodes.name, () => {
 
   const createContext = (filePath = "src/test.ts"): NodeExtractionContext => ({
     filePath,
-    module: "core",
     package: "myapp",
   });
 
@@ -32,7 +31,6 @@ describe(extractClassNodes.name, () => {
       id: "src/test.ts:User",
       type: "Class",
       name: "User",
-      module: "core",
       package: "myapp",
       filePath: "src/test.ts",
       exported: true,

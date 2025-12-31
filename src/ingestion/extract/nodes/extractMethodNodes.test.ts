@@ -19,7 +19,6 @@ describe(extractMethodNodes.name, () => {
 
   const createContext = (filePath = "src/test.ts"): NodeExtractionContext => ({
     filePath,
-    module: "core",
     package: "myapp",
   });
 
@@ -42,7 +41,6 @@ describe(extractMethodNodes.name, () => {
       id: "src/test.ts:User.validate",
       type: "Method",
       name: "validate",
-      module: "core",
       package: "myapp",
       filePath: "src/test.ts",
       exported: false,

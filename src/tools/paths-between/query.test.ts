@@ -13,7 +13,6 @@ const fn = (name: string, file = "src/test.ts"): FunctionNode => ({
   id: `${file}:${name}`,
   type: "Function",
   name,
-  module: "test",
   package: "main",
   filePath: file,
   startLine: 1,

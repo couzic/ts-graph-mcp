@@ -124,14 +124,9 @@ describe("Ingestion", () => {
       );
 
       const config: ProjectConfig = {
-        modules: [
-          {
-            name: "app",
-            packages: [
-              { name: "core", tsconfig: "./packages/core/tsconfig.json" },
-              { name: "utils", tsconfig: "./packages/utils/tsconfig.json" },
-            ],
-          },
+        packages: [
+          { name: "core", tsconfig: "./packages/core/tsconfig.json" },
+          { name: "utils", tsconfig: "./packages/utils/tsconfig.json" },
         ],
       };
 
@@ -161,13 +156,8 @@ describe("Ingestion", () => {
       writeFileSync(join(pkgDir, "valid.ts"), "export const x = 1;");
 
       const config: ProjectConfig = {
-        modules: [
-          {
-            name: "test",
-            packages: [
-              { name: "broken", tsconfig: "./packages/broken/tsconfig.json" },
-            ],
-          },
+        packages: [
+          { name: "broken", tsconfig: "./packages/broken/tsconfig.json" },
         ],
       };
 
@@ -194,14 +184,7 @@ describe("Ingestion", () => {
       writeFileSync(join(pkgDir, "app.ts"), "export const app = true;");
 
       const config: ProjectConfig = {
-        modules: [
-          {
-            name: "test",
-            packages: [
-              { name: "main", tsconfig: "./packages/main/tsconfig.json" },
-            ],
-          },
-        ],
+        packages: [{ name: "main", tsconfig: "./packages/main/tsconfig.json" }],
       };
 
       const writer = createMockWriter();
@@ -256,15 +239,10 @@ export function helper(): void {
       );
 
       const config: ProjectConfig = {
-        modules: [
+        packages: [
           {
-            name: "test",
-            packages: [
-              {
-                name: "crossfile",
-                tsconfig: "./packages/crossfile/tsconfig.json",
-              },
-            ],
+            name: "crossfile",
+            tsconfig: "./packages/crossfile/tsconfig.json",
           },
         ],
       };
@@ -329,15 +307,10 @@ export function getPath(): string {
       );
 
       const config: ProjectConfig = {
-        modules: [
+        packages: [
           {
-            name: "test",
-            packages: [
-              {
-                name: "external",
-                tsconfig: "./packages/external/tsconfig.json",
-              },
-            ],
+            name: "external",
+            tsconfig: "./packages/external/tsconfig.json",
           },
         ],
       };
@@ -418,15 +391,10 @@ export function formatDate(date: Date): string {
       );
 
       const config: ProjectConfig = {
-        modules: [
-          {
-            name: "app",
-            packages: [
-              // core is processed first, but it depends on utils
-              { name: "core", tsconfig: "./packages/core/tsconfig.json" },
-              { name: "utils", tsconfig: "./packages/utils/tsconfig.json" },
-            ],
-          },
+        packages: [
+          // core is processed first, but it depends on utils
+          { name: "core", tsconfig: "./packages/core/tsconfig.json" },
+          { name: "utils", tsconfig: "./packages/utils/tsconfig.json" },
         ],
       };
 

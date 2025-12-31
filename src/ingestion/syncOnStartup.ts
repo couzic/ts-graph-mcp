@@ -32,13 +32,12 @@ export interface SyncOnStartupResult {
  * File context for extraction.
  */
 interface FileContext {
-  module: string;
   package: string;
   tsconfigPath: string;
 }
 
 /**
- * Build a map of relative file paths to their module/package context.
+ * Build a map of relative file paths to their package context.
  * Uses ts-morph to discover files from tsconfig, same as indexProject.
  */
 const buildFileContextMap = (
@@ -47,37 +46,34 @@ const buildFileContextMap = (
 ): Map<string, FileContext> => {
   const contextMap = new Map<string, FileContext>();
 
-  for (const module of config.modules) {
-    for (const pkg of module.packages) {
-      const absoluteTsConfigPath = join(projectRoot, pkg.tsconfig);
-      const packageRoot = dirname(absoluteTsConfigPath);
+  for (const pkg of config.packages) {
+    const absoluteTsConfigPath = join(projectRoot, pkg.tsconfig);
+    const packageRoot = dirname(absoluteTsConfigPath);
 
-      // Create ts-morph project to discover files from tsconfig (supports Yarn PnP)
-      const project = createProject({
-        tsConfigFilePath: absoluteTsConfigPath,
-      });
+    // Create ts-morph project to discover files from tsconfig (supports Yarn PnP)
+    const project = createProject({
+      tsConfigFilePath: absoluteTsConfigPath,
+    });
 
-      // Filter source files like indexProject does
-      const sourceFiles = project.getSourceFiles().filter((sf) => {
-        const absolutePath = sf.getFilePath();
-        if (!absolutePath.startsWith(packageRoot)) {
-          return false;
-        }
-        return (
-          !absolutePath.includes("node_modules") &&
-          !absolutePath.endsWith(".d.ts")
-        );
-      });
-
-      for (const sourceFile of sourceFiles) {
-        const absolutePath = sourceFile.getFilePath();
-        const relativePath = relative(projectRoot, absolutePath);
-        contextMap.set(relativePath, {
-          module: module.name,
-          package: pkg.name,
-          tsconfigPath: absoluteTsConfigPath,
-        });
+    // Filter source files like indexProject does
+    const sourceFiles = project.getSourceFiles().filter((sf) => {
+      const absolutePath = sf.getFilePath();
+      if (!absolutePath.startsWith(packageRoot)) {
+        return false;
       }
+      return (
+        !absolutePath.includes("node_modules") &&
+        !absolutePath.endsWith(".d.ts")
+      );
+    });
+
+    for (const sourceFile of sourceFiles) {
+      const absolutePath = sourceFile.getFilePath();
+      const relativePath = relative(projectRoot, absolutePath);
+      contextMap.set(relativePath, {
+        package: pkg.name,
+        tsconfigPath: absoluteTsConfigPath,
+      });
     }
   }
 
@@ -164,7 +160,6 @@ export const syncOnStartup = async (
 
         const extractionContext: NodeExtractionContext = {
           filePath: relativePath,
-          module: context.module,
           package: context.package,
         };
 

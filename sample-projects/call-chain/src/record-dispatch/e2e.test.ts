@@ -34,12 +34,7 @@ describe("record-dispatch E2E tests", () => {
 
     projectRoot = join(import.meta.dirname, "../..");
     const config: ProjectConfig = {
-      modules: [
-        {
-          name: "test",
-          packages: [{ name: "main", tsconfig: "tsconfig.json" }],
-        },
-      ],
+      packages: [{ name: "main", tsconfig: "tsconfig.json" }],
     };
     const writer = createSqliteWriter(db);
     await indexProject(config, writer, { projectRoot });

@@ -43,7 +43,6 @@ export const extractMethodNodes = (
       id: generateNodeId(context.filePath, className, name),
       type: "Method",
       name,
-      module: context.module,
       package: context.package,
       filePath: context.filePath,
       startLine,

@@ -34,7 +34,6 @@ export const extractVariableNodes = (
         id: generateNodeId(context.filePath, name),
         type: "Variable",
         name,
-        module: context.module,
         package: context.package,
         filePath: context.filePath,
         startLine,

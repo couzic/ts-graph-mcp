@@ -31,7 +31,6 @@ export const extractInterfaceNodes = (
       id: generateNodeId(context.filePath, name),
       type: "Interface",
       name,
-      module: context.module,
       package: context.package,
       filePath: context.filePath,
       startLine,

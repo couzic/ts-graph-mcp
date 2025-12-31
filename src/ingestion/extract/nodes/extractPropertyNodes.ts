@@ -29,7 +29,6 @@ export const extractPropertyNodes = (
       id: generateNodeId(context.filePath, parentName, name),
       type: "Property",
       name,
-      module: context.module,
       package: context.package,
       filePath: context.filePath,
       startLine,
