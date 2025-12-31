@@ -1,4 +1,4 @@
-import { dirname, join, relative } from "node:path";
+import { dirname, relative, resolve } from "node:path";
 import type { ProjectConfig } from "../config/Config.schemas.js";
 import type { DbWriter } from "../db/DbWriter.js";
 import type { IndexResult } from "../db/Types.js";
@@ -122,7 +122,7 @@ const processPackage = async (
   let nodesAdded = 0;
   let edgesAdded = 0;
 
-  const absoluteTsConfigPath = join(projectRoot, tsconfigPath);
+  const absoluteTsConfigPath = resolve(projectRoot, tsconfigPath);
   const packageRoot = dirname(absoluteTsConfigPath);
 
   // Create ts-morph project with tsconfig (supports Yarn PnP if detected)

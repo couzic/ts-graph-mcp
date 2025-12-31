@@ -2,6 +2,9 @@
   "name": "@libs/toolkit",
   "version": "1.0.0",
   "private": true,
-  "type": "module",
-  "main": "./src/helpers.ts"
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  }
 }

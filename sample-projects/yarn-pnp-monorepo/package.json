@@ -1,10 +1,16 @@
 {
   "name": "yarn-pnp-monorepo",
   "private": true,
-  "packageManager": "yarn@4.6.0",
   "workspaces": [
     "libs/*",
     "modules/app/packages/*",
     "modules/analytics-api"
-  ]
+  ],
+  "scripts": {
+    "build": "tsc --build"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0"
+  },
+  "packageManager": "yarn@4.6.0"
 }

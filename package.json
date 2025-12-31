@@ -1,60 +1,60 @@
 {
-	"name": "ts-graph-mcp",
-	"version": "0.1.4",
-	"description": "MCP server that extracts TypeScript code structure into a graph database, enabling advanced exploration for AI coding agents",
-	"type": "module",
-	"main": "dist/mcp/main.js",
-	"bin": {
-		"ts-graph-mcp": "dist/mcp/main.js"
-	},
-	"scripts": {
-		"prepublishOnly": "npm i && npm run check",
-		"check": "npm run test && npm run build && npm run lint:fix",
-		"build": "tsc && chmod +x dist/mcp/main.js",
-		"test": "vitest run",
-		"test:watch": "vitest",
-		"dev": "tsc --watch",
-		"lint": "biome check .",
-		"lint:fix": "biome check --write .",
-		"format": "biome format --write .",
-		"benchmark:call-chain": "npm run build && npx tsx benchmark/lib/setup.ts sample-projects/call-chain && npx tsx benchmark/lib/run.ts sample-projects/call-chain",
-		"benchmark:layered-api": "npm run build && npx tsx benchmark/lib/setup.ts sample-projects/layered-api && npx tsx benchmark/lib/run.ts sample-projects/layered-api",
-		"benchmark:monorepo": "npm run build && npx tsx benchmark/lib/setup.ts sample-projects/monorepo && npx tsx benchmark/lib/run.ts sample-projects/monorepo",
-		"benchmark:all": "npm run benchmark:call-chain && npm run benchmark:layered-api && npm run benchmark:mixed-types && npm run benchmark:monorepo"
-	},
-	"keywords": [
-		"typescript",
-		"code-graph",
-		"mcp",
-		"static-analysis"
-	],
-	"license": "MIT",
-	"files": [
-		"dist",
-		"!dist/**/*.test.*"
-	],
-	"engines": {
-		"node": ">=18.0.0"
-	},
-	"dependencies": {
-		"@modelcontextprotocol/sdk": "^1.0.0",
-		"@toon-format/toon": "^2.1.0",
-		"better-sqlite3": "^11.0.0",
-		"chokidar": "^5.0.0",
-		"find-cache-dir": "^5.0.0",
-		"rxjs": "^7.0.0",
-		"ts-morph": "^24.0.0",
-		"zod": "^3.0.0"
-	},
-	"devDependencies": {
-		"@biomejs/biome": "2.3.8",
-		"@types/better-sqlite3": "^7.0.0",
-		"@types/express": "^5.0.6",
-		"@types/node": "^22.0.0",
-		"typescript": "^5.0.0",
-		"vitest": "^2.0.0"
-	},
-	"optionalDependencies": {
-		"neo4j-driver": "^5.0.0"
-	}
+  "name": "ts-graph-mcp",
+  "version": "0.2.1",
+  "description": "MCP server that extracts TypeScript code structure into a graph database, enabling advanced exploration for AI coding agents",
+  "type": "module",
+  "main": "dist/mcp/main.js",
+  "bin": {
+    "ts-graph-mcp": "dist/mcp/main.js"
+  },
+  "scripts": {
+    "prepublishOnly": "npm i && npm run check",
+    "check": "npm run test && npm run build && npm run lint:fix",
+    "build": "tsc && chmod +x dist/mcp/main.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "dev": "tsc --watch",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "benchmark:call-chain": "npm run build && npx tsx benchmark/lib/setup.ts sample-projects/call-chain && npx tsx benchmark/lib/run.ts sample-projects/call-chain",
+    "benchmark:layered-api": "npm run build && npx tsx benchmark/lib/setup.ts sample-projects/layered-api && npx tsx benchmark/lib/run.ts sample-projects/layered-api",
+    "benchmark:monorepo": "npm run build && npx tsx benchmark/lib/setup.ts sample-projects/monorepo && npx tsx benchmark/lib/run.ts sample-projects/monorepo",
+    "benchmark:all": "npm run benchmark:call-chain && npm run benchmark:layered-api && npm run benchmark:mixed-types && npm run benchmark:monorepo"
+  },
+  "keywords": [
+    "typescript",
+    "code-graph",
+    "mcp",
+    "static-analysis"
+  ],
+  "license": "MIT",
+  "files": [
+    "dist",
+    "!dist/**/*.test.*"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@toon-format/toon": "^2.1.0",
+    "better-sqlite3": "^11.0.0",
+    "chokidar": "^5.0.0",
+    "find-cache-dir": "^5.0.0",
+    "rxjs": "^7.0.0",
+    "ts-morph": "^24.0.0",
+    "zod": "^3.0.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.3.8",
+    "@types/better-sqlite3": "^7.0.0",
+    "@types/express": "^5.0.6",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^2.0.0"
+  },
+  "optionalDependencies": {
+    "neo4j-driver": "^5.0.0"
+  }
 }

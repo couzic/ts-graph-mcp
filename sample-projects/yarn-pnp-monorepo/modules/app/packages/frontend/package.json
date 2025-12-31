@@ -2,8 +2,11 @@
   "name": "@app/frontend",
   "version": "1.0.0",
   "private": true,
-  "type": "module",
-  "main": "./src/App.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
   "dependencies": {
     "@app/shared": "workspace:*",
     "@libs/ui": "workspace:*"

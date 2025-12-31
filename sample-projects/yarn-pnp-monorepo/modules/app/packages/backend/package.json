@@ -2,9 +2,13 @@
   "name": "@app/backend",
   "version": "1.0.0",
   "private": true,
-  "type": "module",
-  "main": "./src/api.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
   "dependencies": {
-    "@app/shared": "workspace:*"
+    "@app/shared": "workspace:*",
+    "@libs/toolkit": "workspace:*"
   }
 }

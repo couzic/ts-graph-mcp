@@ -78,6 +78,31 @@ Cross-file edges (CALLS, USES_TYPE) use `buildImportMap.ts` for import resolutio
 - Constructs target node IDs directly: `targetPath:symbolName`
 - No global nodes array needed - enables memory-efficient streaming ingestion
 
+### Re-export Chain Resolution
+
+Barrel files (`index.ts`) re-export symbols from other files. `buildImportMap.ts` follows these chains to find actual definitions:
+
+```typescript
+// libs/toolkit/src/index.ts
+export * from "./helpers";  // re-exports clamp
+
+// libs/toolkit/src/helpers.ts
+export function clamp() { ... }  // actual definition
+```
+
+`followAliasChain()` (in `followAliasChain.ts`) iteratively calls `getAliasedSymbol()` until reaching the actual definition.
+
+### Namespace Import Resolution
+
+`extractCallEdges.ts` handles namespace imports like `MathUtils.multiply()`:
+
+```typescript
+import { MathUtils } from "@libs/toolkit";  // namespace re-export
+MathUtils.multiply(a, b);  // resolves to actual definition
+```
+
+`resolveCallTarget()` uses ts-morph's type system to resolve through the namespace to the actual function definition, filtering out built-in types (declarations outside project root or in `node_modules/`).
+
 ## Test Coverage
 
 Each extractor has colocated tests:

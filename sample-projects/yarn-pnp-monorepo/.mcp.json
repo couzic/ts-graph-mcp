@@ -2,7 +2,7 @@
   "mcpServers": {
     "ts-graph": {
       "command": "npx",
-      "args": ["-y", "ts-graph-mcp@0.1.4"]
+      "args": ["-y", "ts-graph-mcp@0.2.1"]
     }
   }
 }

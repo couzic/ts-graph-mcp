@@ -46,6 +46,67 @@ describe("yarn-pnp-monorepo E2E tests", () => {
     closeDatabase(db);
   });
 
+  describe("namespace imports", () => {
+    it("resolves Namespace.Symbol to actual definition (not barrel file)", () => {
+      // calculateArea uses MathUtils.multiply where MathUtils is a namespace re-export
+      // The edge should point to libs/toolkit/src/math/operations.ts:multiply
+      // NOT to libs/toolkit/src/index.ts:MathUtils or a synthetic string
+      const output = dependenciesOf(
+        db,
+        projectRoot,
+        "modules/app/packages/backend/src/api.ts",
+        "calculateArea",
+      );
+
+      expect(output).toBe(
+        `
+## Graph
+
+calculateArea --CALLS--> multiply
+calculateArea --REFERENCES--> MathUtils
+
+## Nodes
+
+multiply:
+  file: libs/toolkit/src/math/operations.ts
+  offset: 1, limit: 3
+  snippet:
+    1: export function multiply(a: number, b: number): number {
+    2:   return a * b;
+    3: }
+`.trimStart(),
+      );
+    });
+
+    it("finds dependents through namespace import", () => {
+      // Should find calculateArea as a caller of multiply
+      const output = dependentsOf(
+        db,
+        projectRoot,
+        "libs/toolkit/src/math/operations.ts",
+        "multiply",
+      );
+
+      expect(output).toBe(
+        `
+## Graph
+
+calculateArea --CALLS--> multiply
+
+## Nodes
+
+calculateArea:
+  file: modules/app/packages/backend/src/api.ts
+  offset: 16, limit: 3
+  snippet:
+    16: export function calculateArea(width: number, height: number): number {
+  > 17:   return MathUtils.multiply(width, height);
+    18: }
+`.trimStart(),
+      );
+    });
+  });
+
   describe(dependenciesOf.name, () => {
     it("finds cross-module call chain from frontend through ui to toolkit", () => {
       const output = dependenciesOf(
@@ -205,15 +266,15 @@ renderDashboard:
 
 handleConfigUpdate:
   file: modules/app/packages/backend/src/api.ts
-  offset: 3, limit: 7
+  offset: 4, limit: 7
   snippet:
-    3: export function handleConfigUpdate(input: unknown): Config {
-    4:   const config = input as Config;
-    5:   return {
-    6:     ...config,
-  > 7:     threshold: validateThreshold(config.threshold),
-    8:   };
-    9: }
+    4: export function handleConfigUpdate(input: unknown): Config {
+    5:   const config = input as Config;
+    6:   return {
+    7:     ...config,
+  > 8:     threshold: validateThreshold(config.threshold),
+    9:   };
+    10: }
 `.trimStart(),
       );
     });

@@ -11,12 +11,140 @@ import type { CallSiteRange, Edge } from "../../../db/Types.js";
 import { generateNodeId } from "../../generateNodeId.js";
 import { buildImportMap } from "./buildImportMap.js";
 import type { EdgeExtractionContext } from "./EdgeExtractionContext.js";
+import { followAliasChain } from "./followAliasChain.js";
 
 /**
  * A map from symbol names to their node IDs.
  * Combines local symbols and imported symbols.
  */
 type SymbolMap = Map<string, string>;
+
+/**
+ * Result of resolving a call target.
+ */
+interface ResolvedCallTarget {
+  /** The target node ID (e.g., "libs/toolkit/src/math/operations.ts:multiply") */
+  targetId: string;
+  /** The symbol name for display (e.g., "multiply") */
+  symbolName: string;
+}
+
+/**
+ * Resolve a call expression target to its actual definition.
+ *
+ * Handles:
+ * - Simple calls: `foo()` → looks up `foo` in symbolMap
+ * - Property access on namespaces: `MathUtils.multiply()` → resolves through namespace
+ * - Method calls on objects: `obj.method()` → looks up `obj` in symbolMap
+ *
+ * @param callExpr - The call expression to resolve
+ * @param symbolMap - Map of known symbols
+ * @param aliasMap - Map of local variable aliases
+ * @param projectRoot - Project root for computing relative paths
+ * @returns The resolved target, or undefined if not resolvable
+ */
+const resolveCallTarget = (
+  callExpr: CallExpression,
+  symbolMap: SymbolMap,
+  aliasMap: Map<string, string>,
+  projectRoot: string,
+): ResolvedCallTarget | undefined => {
+  const expression = callExpr.getExpression();
+
+  // Case 1: PropertyAccessExpression (e.g., MathUtils.multiply(), obj.method())
+  if (TsMorphNode.isPropertyAccessExpression(expression)) {
+    // Try to resolve through the type system (handles namespace imports)
+    const symbol = expression.getSymbol();
+    if (symbol) {
+      const actualSymbol = followAliasChain(symbol);
+      const declarations = actualSymbol.getDeclarations();
+      const declaration = declarations[0];
+
+      if (declaration) {
+        const declarationFile = declaration.getSourceFile();
+        const absolutePath = declarationFile.getFilePath().replace(/\\/g, "/");
+
+        // Skip built-in types (declarations outside project root or in node_modules)
+        // This filters out Math.min, Array.map, String.prototype methods, etc.
+        const isBuiltIn =
+          !projectRoot ||
+          !absolutePath.startsWith(projectRoot) ||
+          absolutePath.includes("/node_modules/");
+
+        if (isBuiltIn) {
+          // Not in our project - fallback to symbolMap lookup
+          const baseText = expression.getExpression().getText();
+          const baseName = baseText.split(".")[0] ?? baseText;
+          const resolvedName = aliasMap.get(baseName) ?? baseName;
+          const targetId = symbolMap.get(resolvedName);
+
+          if (targetId) {
+            return { targetId, symbolName: resolvedName };
+          }
+          return undefined;
+        }
+
+        // Convert to relative path
+        const relativePath = absolutePath.slice(projectRoot.length);
+
+        const symbolName = actualSymbol.getName();
+        const targetId = `${relativePath}:${symbolName}`;
+
+        return { targetId, symbolName };
+      }
+    }
+
+    // Fallback: use the base object from symbolMap (original behavior)
+    const baseText = expression.getExpression().getText();
+    const baseName = baseText.split(".")[0] ?? baseText;
+    const resolvedName = aliasMap.get(baseName) ?? baseName;
+    const targetId = symbolMap.get(resolvedName);
+
+    if (targetId) {
+      return { targetId, symbolName: resolvedName };
+    }
+
+    return undefined;
+  }
+
+  // Case 2: Simple Identifier (e.g., foo())
+  if (TsMorphNode.isIdentifier(expression)) {
+    const calleeName = expression.getText();
+    const resolvedName = aliasMap.get(calleeName) ?? calleeName;
+    const targetId = symbolMap.get(resolvedName);
+
+    if (targetId) {
+      return { targetId, symbolName: resolvedName };
+    }
+
+    return undefined;
+  }
+
+  // Case 3: Other expressions - try to extract first identifier
+  const text = expression.getText();
+  const calleeName = text.split(".")[0] ?? text;
+  const resolvedName = aliasMap.get(calleeName) ?? calleeName;
+  const targetId = symbolMap.get(resolvedName);
+
+  if (targetId) {
+    return { targetId, symbolName: resolvedName };
+  }
+
+  return undefined;
+};
+
+/**
+ * Derive the project root from an absolute path and its known relative path.
+ */
+const deriveProjectRoot = (
+  absolutePath: string,
+  relativePath: string,
+): string => {
+  if (absolutePath.endsWith(relativePath)) {
+    return absolutePath.slice(0, absolutePath.length - relativePath.length);
+  }
+  return "";
+};
 
 /**
  * Extract CALLS edges between functions and methods.
@@ -30,6 +158,10 @@ export const extractCallEdges = (
   context: EdgeExtractionContext,
 ): Edge[] => {
   const edges: Edge[] = [];
+
+  // Derive project root for resolving absolute paths
+  const absolutePath = sourceFile.getFilePath().replace(/\\/g, "/");
+  const projectRoot = deriveProjectRoot(absolutePath, context.filePath);
 
   // Build combined symbol map from local definitions + imports
   const symbolMap = buildCombinedSymbolMap(sourceFile, context.filePath);
@@ -45,7 +177,7 @@ export const extractCallEdges = (
     if (!funcName) continue;
 
     const callerId = generateNodeId(context.filePath, funcName);
-    extractCallsFromCallable(func, callerId, symbolMap, edges);
+    extractCallsFromCallable(func, callerId, symbolMap, edges, projectRoot);
   }
 
   // Extract calls from arrow functions assigned to variables
@@ -55,7 +187,13 @@ export const extractCallEdges = (
 
     if (initializer && TsMorphNode.isArrowFunction(initializer)) {
       const callerId = generateNodeId(context.filePath, varName);
-      extractCallsFromCallable(initializer, callerId, symbolMap, edges);
+      extractCallsFromCallable(
+        initializer,
+        callerId,
+        symbolMap,
+        edges,
+        projectRoot,
+      );
     }
   }
 
@@ -68,7 +206,7 @@ export const extractCallEdges = (
     for (const method of methods) {
       const methodName = method.getName();
       const callerId = generateNodeId(context.filePath, className, methodName);
-      extractCallsFromCallable(method, callerId, symbolMap, edges);
+      extractCallsFromCallable(method, callerId, symbolMap, edges, projectRoot);
     }
   }
 
@@ -192,6 +330,7 @@ const extractCallsFromCallable = (
   callerId: string,
   symbolMap: SymbolMap,
   edges: Edge[],
+  projectRoot: string,
 ): void => {
   // For arrow functions, we need to get either the body block or the expression
   const nodesToSearch: TsMorphNode[] = [];
@@ -229,25 +368,22 @@ const extractCallsFromCallable = (
     );
 
     for (const callExpr of callExpressions) {
-      const expression = callExpr.getExpression();
-      const calleeName = expression.getText().split(".")[0]; // Handle foo.bar() -> foo
+      // Use the new resolver that handles namespace property access
+      const resolved = resolveCallTarget(
+        callExpr,
+        symbolMap,
+        aliasMap,
+        projectRoot,
+      );
 
-      if (!calleeName) continue;
-
-      // Resolve alias if this is a local variable pointing to a known symbol
-      const resolvedName = aliasMap.get(calleeName) ?? calleeName;
-
-      if (symbolMap.has(resolvedName)) {
-        const targetId = symbolMap.get(resolvedName);
-        if (targetId) {
-          const range: CallSiteRange = {
-            start: callExpr.getStartLineNumber(),
-            end: callExpr.getEndLineNumber(),
-          };
-          const sites = callSitesByTarget.get(targetId) ?? [];
-          sites.push(range);
-          callSitesByTarget.set(targetId, sites);
-        }
+      if (resolved) {
+        const range: CallSiteRange = {
+          start: callExpr.getStartLineNumber(),
+          end: callExpr.getEndLineNumber(),
+        };
+        const sites = callSitesByTarget.get(resolved.targetId) ?? [];
+        sites.push(range);
+        callSitesByTarget.set(resolved.targetId, sites);
       }
     }
   }

@@ -1,4 +1,5 @@
-import type { SourceFile } from "ts-morph";
+import type { ImportSpecifier, SourceFile } from "ts-morph";
+import { followAliasChain } from "./followAliasChain.js";
 
 /**
  * A map from local symbol names to their target node IDs.
@@ -69,7 +70,13 @@ export const buildImportMap = (
       if (moduleSpecifier.startsWith(".") || moduleSpecifier.startsWith("/")) {
         const targetPath = resolveRelativeImport(filePath, moduleSpecifier);
         if (targetPath) {
-          addImportsToMap(map, importDecl, targetPath, includeTypeImports);
+          addImportsToMap(
+            map,
+            importDecl,
+            targetPath,
+            includeTypeImports,
+            projectRoot,
+          );
         }
       }
       continue;
@@ -83,10 +90,60 @@ export const buildImportMap = (
       ? targetAbsolutePath.slice(projectRoot.length)
       : targetAbsolutePath;
 
-    addImportsToMap(map, importDecl, targetPath, includeTypeImports);
+    addImportsToMap(
+      map,
+      importDecl,
+      targetPath,
+      includeTypeImports,
+      projectRoot,
+    );
   }
 
   return map;
+};
+
+/**
+ * Resolve the actual definition location for a named import.
+ * Follows re-export chains (e.g., `export * from './helpers'`) to find
+ * where the symbol is actually defined, not just where it's re-exported.
+ *
+ * @param namedImport - The named import specifier
+ * @param projectRoot - The project root for computing relative paths
+ * @param fallbackPath - The import target path (used if resolution fails)
+ * @returns The actual definition path, or fallbackPath if resolution fails
+ */
+const resolveActualDefinition = (
+  namedImport: ImportSpecifier,
+  projectRoot: string,
+  fallbackPath: string,
+): string => {
+  const nameNode = namedImport.getNameNode();
+  const symbol = nameNode.getSymbol();
+  if (!symbol) {
+    return fallbackPath;
+  }
+
+  // Follow alias chains to get the actual symbol
+  // This handles: export { foo } from './other' and export * from './other'
+  const actualSymbol = followAliasChain(symbol);
+
+  // Get the declarations of the actual symbol
+  const declarations = actualSymbol.getDeclarations();
+  const declaration = declarations[0];
+  if (!declaration) {
+    return fallbackPath;
+  }
+
+  // Get the source file of the first declaration
+  const declarationFile = declaration.getSourceFile();
+  const absolutePath = declarationFile.getFilePath().replace(/\\/g, "/");
+
+  // Convert to relative path
+  if (absolutePath.startsWith(projectRoot)) {
+    return absolutePath.slice(projectRoot.length);
+  }
+  // Declaration outside project root - use fallback (the import target path)
+  return fallbackPath;
 };
 
 /**
@@ -97,6 +154,7 @@ const addImportsToMap = (
   importDecl: ReturnType<SourceFile["getImportDeclarations"]>[number],
   targetPath: string,
   includeTypeImports: boolean,
+  projectRoot: string,
 ): void => {
   // Process named imports: import { formatDate, parseDate as pd } from './utils'
   const namedImports = importDecl.getNamedImports();
@@ -113,8 +171,15 @@ const addImportsToMap = (
     const aliasNode = namedImport.getAliasNode();
     const localName = aliasNode ? aliasNode.getText() : originalName;
 
-    // Construct target node ID directly: targetPath:symbolName
-    const targetId = `${targetPath}:${originalName}`;
+    // Resolve actual definition location (follows re-exports)
+    const actualPath = resolveActualDefinition(
+      namedImport,
+      projectRoot,
+      targetPath,
+    );
+
+    // Construct target node ID: actualPath:symbolName
+    const targetId = `${actualPath}:${originalName}`;
     map.set(localName, targetId);
   }
 
