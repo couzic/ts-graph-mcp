@@ -142,6 +142,49 @@ Warning: Package "toolkit" has different name in package.json: "@libs/toolkit"
 
 **Non-blocking:** Warnings only, indexing proceeds normally.
 
+### Decorator Support (DECORATES Edge Type)
+**Impact: Medium | Effort: Medium**
+
+Extract decorator relationships into the graph.
+
+**The Problem:**
+TypeScript decorators establish relationships between decorator functions and decorated targets (classes, methods, properties, parameters). Currently, decorator calls are not captured in the graph.
+
+```typescript
+@Injectable()
+export class UserService {
+  @Log()
+  save(): void {}
+}
+```
+
+**Open Questions:**
+
+1. **Edge direction:** `Injectable --DECORATES--> UserService` feels natural ("Injectable decorates UserService")
+
+2. **Decorator types:** Four distinct targets exist:
+   - Class decorators (`@Injectable()`)
+   - Method decorators (`@Log()`)
+   - Property decorators (`@Inject()`)
+   - Parameter decorators (`@Param()`)
+
+   Do we need separate edge types or one `DECORATES` with metadata?
+
+3. **Decorator factories vs plain decorators:**
+   - Factory: `@Injectable()` — function call that returns decorator
+   - Plain: `@Component` — direct decorator reference
+
+   How to represent both? Factories are CALLS + DECORATES?
+
+4. **Target identification:** For method/property/parameter decorators, the target is a member, not the class. Edge target should be `UserService.save`, not `UserService`.
+
+5. **Metadata:** Should we track decorator arguments? Position (first decorator vs second)?
+
+**Implementation approach (once questions resolved):**
+- New edge type `DECORATES` in `Types.ts`
+- New extractor `extractDecoratesEdges.ts`
+- Wire up in `extractEdges.ts`
+
 ### CLI Flag Tests
 **Impact: Low | Effort: Low**
 

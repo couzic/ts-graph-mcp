@@ -223,3 +223,33 @@ runIndexingAndWatch({ ... })
 - `src/mcp/serverCore.ts` — server startup indexing (`runIndexingAndWatch`)
 
 **Fix approach:** Extract shared indexing logic into a common function that both can call.
+
+---
+
+### Cross-Package Path Alias Resolution
+
+**Impact:** Medium (edge case)
+
+**Problem:** When a barrel file uses path aliases that are defined in its package's tsconfig (not the consumer's tsconfig), resolution fails if we use the consumer's ts-morph Project context.
+
+**Example:**
+```
+frontend/App.ts imports { LoadingWrapper } from "@libs/ui"
+  → resolves to libs/ui/src/index.ts (barrel file)
+  → barrel has: export { default as LoadingWrapper } from "@/components/LoadingWrapper/LoadingWrapper"
+  → @/components/* is defined in libs/ui/tsconfig.json, NOT frontend's tsconfig
+  → Resolution fails because we're in frontend's Project context
+```
+
+**Solution implemented:**
+- `ProjectRegistry` maps file paths to their owning ts-morph Project
+- `buildImportMap.ts` detects when `followAliasChain()` returns "unknown" (resolution failed)
+- Falls back to `resolveExportInBarrel()` using the barrel file's correct Project context
+
+**Files:**
+- `src/ingestion/ProjectRegistry.ts` — Maps files to Projects
+- `src/ingestion/extract/edges/buildImportMap.ts` — Cross-package resolution logic
+
+**Test coverage:**
+- `sample-projects/path-aliases/` — Tests transparent re-exports with path aliases
+- `sample-projects/yarn-pnp-monorepo/` — Tests cross-package path alias in barrel re-exports

@@ -202,6 +202,7 @@ formatValue:
 ## Graph
 
 renderDashboard --CALLS--> renderButton --CALLS--> formatValue
+renderLoading --CALLS--> LoadingWrapper --CALLS--> formatValue
 trackMetric --CALLS--> formatValue
 
 ## Nodes
@@ -222,6 +223,22 @@ renderButton:
     3: export function renderButton(label: string, value: number): string {
   > 4:   return \`<button>\${label}: \${formatValue(value)}</button>\`;
     5: }
+
+renderLoading:
+  file: modules/app/packages/frontend/src/App.ts
+  offset: 9, limit: 3
+  snippet:
+    9: export function renderLoading(value: number): string {
+  > 10:   return LoadingWrapper(value);
+    11: }
+
+LoadingWrapper:
+  file: libs/ui/src/components/LoadingWrapper/LoadingWrapper.ts
+  offset: 3, limit: 3
+  snippet:
+    3: const LoadingWrapper = (value: number): string => {
+  > 4:   return \`<div class="loading">\${formatValue(value)}</div>\`;
+    5: };
 
 trackMetric:
   file: modules/analytics-api/src/tracker.ts
@@ -276,6 +293,63 @@ handleConfigUpdate:
     9:   };
     10: }
 `.trimStart(),
+      );
+    });
+  });
+
+  describe("path alias in barrel re-exports (reproduces pocmonorepo bug)", () => {
+    // BUG: When a barrel file uses path aliases in re-exports, cross-package
+    // dependency tracing fails. This matches the wagyz-ui issue in pocmonorepo.
+    //
+    // Setup:
+    //   libs/ui/tsconfig.json: paths: { "@/components/*": ["src/components/*"] }
+    //   libs/ui/src/index.ts: export { default as LoadingWrapper } from "@/components/LoadingWrapper/LoadingWrapper"
+    //   frontend/App.ts: import { LoadingWrapper } from "@libs/ui"; LoadingWrapper(value);
+    //
+    // What happens:
+    //   1. When indexing frontend, import "@libs/ui" resolves to libs/ui/src/index.ts
+    //   2. The barrel re-export uses @/components/* path alias
+    //   3. Path alias resolution FAILS because we're in frontend's context, not ui's
+    //   4. Edge points to non-existent node: "libs/ui/src/index.ts:LoadingWrapper"
+    //   5. But the actual node is: "libs/ui/src/components/LoadingWrapper/LoadingWrapper.ts:LoadingWrapper"
+    //
+    // Compare with renderButton (WORKS):
+    //   libs/ui/src/index.ts: export * from "./Button"  ← relative path, no alias
+    //   Edge correctly points to: "libs/ui/src/Button.ts:renderButton"
+
+    it("finds dependents of symbol exported via path alias in barrel", () => {
+      // LoadingWrapper is called by renderLoading in frontend/App.ts
+      // This should work like renderButton, but fails due to path alias in barrel
+      const output = dependentsOf(
+        db,
+        projectRoot,
+        "libs/ui/src/components/LoadingWrapper/LoadingWrapper.ts",
+        "LoadingWrapper",
+      );
+
+      // BUG: Returns "No dependents found" because edge targets wrong node ID
+      // Edge target: "libs/ui/src/index.ts:LoadingWrapper" (doesn't exist)
+      // Should be:   "libs/ui/src/components/LoadingWrapper/LoadingWrapper.ts:LoadingWrapper"
+      expect(output).toContain("renderLoading");
+      expect(output).toContain("modules/app/packages/frontend/src/App.ts");
+    });
+
+    it("finds dependencies through path alias barrel re-export", () => {
+      // renderLoading calls LoadingWrapper from @libs/ui
+      // Should trace to the actual definition in components/LoadingWrapper/LoadingWrapper.ts
+      const output = dependenciesOf(
+        db,
+        projectRoot,
+        "modules/app/packages/frontend/src/App.ts",
+        "renderLoading",
+      );
+
+      // BUG: Edge exists but target node doesn't, so no node details shown
+      // Graph shows: renderLoading --CALLS--> LoadingWrapper
+      // But Nodes section is empty because target node ID is wrong
+      expect(output).toContain("LoadingWrapper");
+      expect(output).toContain(
+        "libs/ui/src/components/LoadingWrapper/LoadingWrapper.ts",
       );
     });
   });

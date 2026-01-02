@@ -24,7 +24,7 @@ export const extractInheritanceEdges = (
   const edges: Edge[] = [];
 
   // Build combined symbol map from local definitions + imports
-  const symbolMap = buildCombinedSymbolMap(sourceFile, context.filePath);
+  const symbolMap = buildCombinedSymbolMap(sourceFile, context);
 
   // Process classes
   const classes = sourceFile.getClasses();
@@ -90,17 +90,18 @@ export const extractInheritanceEdges = (
  */
 const buildCombinedSymbolMap = (
   sourceFile: SourceFile,
-  filePath: string,
+  context: EdgeExtractionContext,
 ): SymbolMap => {
   const map: SymbolMap = new Map();
 
   // 1. Add local symbols (defined in this file)
-  addLocalSymbols(map, sourceFile, filePath);
+  addLocalSymbols(map, sourceFile, context.filePath);
 
   // 2. Add imported symbols (from import declarations)
   // MUST include type-only imports since EXTENDS/IMPLEMENTS reference types
-  const importMap = buildImportMap(sourceFile, filePath, {
+  const importMap = buildImportMap(sourceFile, context.filePath, {
     includeTypeImports: true,
+    projectRegistry: context.projectRegistry,
   });
   for (const [name, targetId] of importMap) {
     map.set(name, targetId);

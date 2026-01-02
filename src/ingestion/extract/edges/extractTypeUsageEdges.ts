@@ -33,7 +33,7 @@ export const extractTypeUsageEdges = (
   const edges: Edge[] = [];
 
   // Build combined type map from local definitions + imports (including type-only)
-  const typeMap = buildCombinedTypeMap(sourceFile, context.filePath);
+  const typeMap = buildCombinedTypeMap(sourceFile, context);
 
   // Extract type usage from functions
   extractTypeUsageFromFunctions(sourceFile, context, typeMap, edges);
@@ -53,16 +53,17 @@ export const extractTypeUsageEdges = (
  */
 const buildCombinedTypeMap = (
   sourceFile: SourceFile,
-  filePath: string,
+  context: EdgeExtractionContext,
 ): TypeMap => {
   const map: TypeMap = new Map();
 
   // 1. Add local types (defined in this file)
-  addLocalTypes(map, sourceFile, filePath);
+  addLocalTypes(map, sourceFile, context.filePath);
 
   // 2. Add imported types (including type-only imports)
-  const importMap = buildImportMap(sourceFile, filePath, {
+  const importMap = buildImportMap(sourceFile, context.filePath, {
     includeTypeImports: true,
+    projectRegistry: context.projectRegistry,
   });
   for (const [name, targetId] of importMap) {
     map.set(name, targetId);

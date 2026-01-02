@@ -41,7 +41,7 @@ export const extractReferenceEdges = (
   context: EdgeExtractionContext,
 ): Edge[] => {
   const edges: Edge[] = [];
-  const symbolMap = buildCombinedSymbolMap(sourceFile, context.filePath);
+  const symbolMap = buildCombinedSymbolMap(sourceFile, context);
 
   // Process top-level variable declarations (for object/array literals storing functions)
   extractFromVariableDeclarations(sourceFile, context, symbolMap, edges);
@@ -57,15 +57,17 @@ export const extractReferenceEdges = (
  */
 const buildCombinedSymbolMap = (
   sourceFile: SourceFile,
-  filePath: string,
+  context: EdgeExtractionContext,
 ): SymbolMap => {
   const map: SymbolMap = new Map();
 
   // Add local symbols
-  addLocalSymbols(map, sourceFile, filePath);
+  addLocalSymbols(map, sourceFile, context.filePath);
 
   // Add imported symbols
-  const importMap = buildImportMap(sourceFile, filePath);
+  const importMap = buildImportMap(sourceFile, context.filePath, {
+    projectRegistry: context.projectRegistry,
+  });
   for (const [name, targetId] of importMap) {
     map.set(name, targetId);
   }

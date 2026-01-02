@@ -1,8 +1,8 @@
 import type { SourceFile } from "ts-morph";
 import type { DbWriter } from "../db/DbWriter.js";
+import type { EdgeExtractionContext } from "./extract/edges/EdgeExtractionContext.js";
 import { extractEdges } from "./extract/edges/extractEdges.js";
 import { extractNodes } from "./extract/nodes/extractNodes.js";
-import type { NodeExtractionContext } from "./extract/nodes/NodeExtractionContext.js";
 
 /**
  * Result of indexing a single file.
@@ -26,13 +26,13 @@ export interface IndexFileResult {
  * writer.removeFileNodes() before calling this if reindexing.
  *
  * @param sourceFile - ts-morph SourceFile (already loaded into a Project)
- * @param context - Extraction context (filePath, module, package)
+ * @param context - Extraction context (filePath, package, projectRegistry)
  * @param writer - Database writer instance
  * @returns Count of nodes and edges added
  */
 export const indexFile = async (
   sourceFile: SourceFile,
-  context: NodeExtractionContext,
+  context: EdgeExtractionContext,
   writer: DbWriter,
 ): Promise<IndexFileResult> => {
   let nodesAdded = 0;

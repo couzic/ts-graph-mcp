@@ -2,6 +2,22 @@
 
 Extracts relationship edges from TypeScript source files using ts-morph AST analysis.
 
+## Design Principle: Transparent Re-exports
+
+**Re-exports are completely invisible in the graph.** Edges point directly to actual definitions.
+
+```typescript
+// X.ts imports from barrel file
+import { formatValue } from './index';  // barrel re-exports from helper.ts
+formatValue();
+```
+
+Graph shows: `X.ts --CALLS--> src/utils/helper.ts:formatValue`
+
+**NOT:** `X.ts --CALLS--> src/index.ts:...` (barrel file is invisible)
+
+This is achieved by `buildImportMap.ts` + `followAliasChain()` which resolve through re-export chains at indexing time.
+
 ## Public API
 
 Only `extractEdges` is exported from the module:

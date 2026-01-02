@@ -1,4 +1,7 @@
-import type { ImportSpecifier, SourceFile } from "ts-morph";
+import { type ImportSpecifier, Node, type SourceFile } from "ts-morph";
+import { deriveProjectRoot } from "../../deriveProjectRoot.js";
+import { normalizePath } from "../../normalizePath.js";
+import type { ProjectRegistry } from "../../ProjectRegistry.js";
 import { followAliasChain } from "./followAliasChain.js";
 
 /**
@@ -26,6 +29,11 @@ export interface BuildImportMapOptions {
    * Set to true when building a map for USES_TYPE edge resolution.
    */
   includeTypeImports?: boolean;
+  /**
+   * Registry for cross-package resolution.
+   * Used when barrel files use path aliases that need a different tsconfig context.
+   */
+  projectRegistry?: ProjectRegistry;
 }
 
 /**
@@ -50,7 +58,7 @@ export const buildImportMap = (
   const includeTypeImports = options?.includeTypeImports ?? false;
 
   // Derive project root from source file path
-  const absolutePath = sourceFile.getFilePath().replace(/\\/g, "/");
+  const absolutePath = normalizePath(sourceFile.getFilePath());
   const projectRoot = deriveProjectRoot(absolutePath, filePath);
 
   const imports = sourceFile.getImportDeclarations();
@@ -76,6 +84,7 @@ export const buildImportMap = (
             targetPath,
             includeTypeImports,
             projectRoot,
+            options?.projectRegistry,
           );
         }
       }
@@ -83,9 +92,7 @@ export const buildImportMap = (
     }
 
     // Get target file's relative path
-    const targetAbsolutePath = resolvedSourceFile
-      .getFilePath()
-      .replace(/\\/g, "/");
+    const targetAbsolutePath = normalizePath(resolvedSourceFile.getFilePath());
     const targetPath = targetAbsolutePath.startsWith(projectRoot)
       ? targetAbsolutePath.slice(projectRoot.length)
       : targetAbsolutePath;
@@ -96,10 +103,71 @@ export const buildImportMap = (
       targetPath,
       includeTypeImports,
       projectRoot,
+      options?.projectRegistry,
     );
   }
 
   return map;
+};
+
+interface ResolvedDefinition {
+  path: string;
+  symbolName: string;
+}
+
+/**
+ * Extract the actual name from a declaration node.
+ * For default exports of named classes/functions, returns the class/function name.
+ * Returns null if no name can be extracted.
+ */
+const getDeclarationName = (declaration: Node): string | null => {
+  if (Node.isClassDeclaration(declaration)) {
+    return declaration.getName() ?? null;
+  }
+  if (Node.isFunctionDeclaration(declaration)) {
+    return declaration.getName() ?? null;
+  }
+  return null;
+};
+
+/**
+ * Resolve a symbol to its definition location within the project.
+ * Follows alias chains and returns the relative path if within project root.
+ *
+ * @example
+ * const result = resolveSymbolDefinition(symbol, "/home/user/project/");
+ * // Returns: { path: "src/utils.ts", symbolName: "formatDate" } or null
+ */
+const resolveSymbolDefinition = (
+  symbol: ReturnType<typeof followAliasChain>,
+  projectRoot: string,
+): ResolvedDefinition | null => {
+  const actualSymbol = followAliasChain(symbol);
+  const declaration = actualSymbol.getDeclarations()[0];
+  if (!declaration) {
+    return null;
+  }
+
+  const absolutePath = normalizePath(declaration.getSourceFile().getFilePath());
+
+  if (!absolutePath.startsWith(projectRoot)) {
+    return null;
+  }
+
+  // For default exports, try to get the actual name from the declaration
+  // (e.g., `export default class User {}` → "User")
+  let symbolName = actualSymbol.getName();
+  if (symbolName === "default") {
+    const declarationName = getDeclarationName(declaration);
+    if (declarationName) {
+      symbolName = declarationName;
+    }
+  }
+
+  return {
+    path: absolutePath.slice(projectRoot.length),
+    symbolName,
+  };
 };
 
 /**
@@ -107,20 +175,28 @@ export const buildImportMap = (
  * Follows re-export chains (e.g., `export * from './helpers'`) to find
  * where the symbol is actually defined, not just where it's re-exported.
  *
+ * Handles cross-package path aliases by using the projectRegistry to
+ * re-resolve with the correct tsconfig context when needed.
+ *
  * @param namedImport - The named import specifier
  * @param projectRoot - The project root for computing relative paths
  * @param fallbackPath - The import target path (used if resolution fails)
- * @returns The actual definition path, or fallbackPath if resolution fails
+ * @param fallbackSymbolName - The symbol name (used if resolution fails)
+ * @param projectRegistry - Registry for cross-package resolution
+ * @returns The actual definition path and symbol name
  */
 const resolveActualDefinition = (
   namedImport: ImportSpecifier,
   projectRoot: string,
   fallbackPath: string,
-): string => {
+  fallbackSymbolName: string,
+  projectRegistry?: ProjectRegistry,
+): ResolvedDefinition => {
+  const fallback = { path: fallbackPath, symbolName: fallbackSymbolName };
   const nameNode = namedImport.getNameNode();
   const symbol = nameNode.getSymbol();
   if (!symbol) {
-    return fallbackPath;
+    return fallback;
   }
 
   // Follow alias chains to get the actual symbol
@@ -130,20 +206,165 @@ const resolveActualDefinition = (
   // Get the declarations of the actual symbol
   const declarations = actualSymbol.getDeclarations();
   const declaration = declarations[0];
+
+  // Check if followAliasChain failed to resolve (returns "unknown" symbol with no declarations)
+  // This happens when the barrel file uses a path alias that couldn't be resolved
+  // because we're in a different package's tsconfig context.
+  const resolutionFailed = !declaration || actualSymbol.getName() === "unknown";
+
+  if (resolutionFailed && projectRegistry) {
+    // Try cross-package resolution
+    // Get the barrel file from the import declaration
+    const importDecl = namedImport.getImportDeclaration();
+    const barrelFile = importDecl.getModuleSpecifierSourceFile();
+
+    if (barrelFile) {
+      const barrelAbsolutePath = normalizePath(barrelFile.getFilePath());
+      const importedName = namedImport.getName(); // The name we're importing (e.g., "LoadingWrapper")
+
+      // Get the Project for the barrel file's package
+      const barrelProject =
+        projectRegistry.getProjectForFile(barrelAbsolutePath);
+      if (barrelProject) {
+        // Get the barrel file from the correct Project (with correct tsconfig context)
+        const barrelInCorrectContext =
+          barrelProject.getSourceFile(barrelAbsolutePath);
+        if (barrelInCorrectContext) {
+          // Find the export for this symbol in the correctly-contexted barrel file
+          const result = resolveExportInBarrel(
+            barrelInCorrectContext,
+            importedName,
+            projectRoot,
+          );
+          if (result) {
+            return result;
+          }
+        }
+      }
+    }
+
+    return fallback;
+  }
+
   if (!declaration) {
-    return fallbackPath;
+    return fallback;
   }
 
   // Get the source file of the first declaration
   const declarationFile = declaration.getSourceFile();
-  const absolutePath = declarationFile.getFilePath().replace(/\\/g, "/");
+  const absolutePath = normalizePath(declarationFile.getFilePath());
 
   // Convert to relative path
   if (absolutePath.startsWith(projectRoot)) {
-    return absolutePath.slice(projectRoot.length);
+    // Get the actual symbol name
+    // For namespace re-exports (export * as Name), getName() may return the file path
+    // In that case, fall back to the imported name
+    const resolvedName = actualSymbol.getName();
+    const symbolName = resolvedName.includes("/")
+      ? fallbackSymbolName
+      : resolvedName;
+
+    return {
+      path: absolutePath.slice(projectRoot.length),
+      symbolName,
+    };
   }
   // Declaration outside project root - use fallback (the import target path)
-  return fallbackPath;
+  return fallback;
+};
+
+/**
+ * Find an exported symbol by name and resolve its definition.
+ *
+ * @example
+ * findExportedSymbol(sourceFile, "formatDate", "/project/") // { path: "src/utils.ts", symbolName: "formatDate" }
+ */
+const findExportedSymbol = (
+  sourceFile: SourceFile,
+  symbolName: string,
+  projectRoot: string,
+): ResolvedDefinition | null => {
+  for (const expSymbol of sourceFile.getExportSymbols()) {
+    if (expSymbol.getName() === symbolName) {
+      return resolveSymbolDefinition(expSymbol, projectRoot);
+    }
+  }
+  return null;
+};
+
+/**
+ * Resolve an export in a barrel file to its actual definition location.
+ * Used when cross-package path alias resolution is needed.
+ */
+const resolveExportInBarrel = (
+  barrelFile: ReturnType<typeof Node.prototype.getSourceFile>,
+  exportedName: string,
+  projectRoot: string,
+): ResolvedDefinition | null => {
+  // Check export declarations (re-exports)
+  for (const exportDecl of barrelFile.getExportDeclarations()) {
+    const namedExports = exportDecl.getNamedExports();
+
+    // Handle star exports: export * from './file'
+    if (namedExports.length === 0 && exportDecl.hasModuleSpecifier()) {
+      const resolvedFile = exportDecl.getModuleSpecifierSourceFile();
+      if (resolvedFile) {
+        const resolved = findExportedSymbol(
+          resolvedFile,
+          exportedName,
+          projectRoot,
+        );
+        if (resolved) {
+          return resolved;
+        }
+      }
+      continue;
+    }
+
+    // Handle named exports: export { foo } from './file'
+    for (const namedExport of namedExports) {
+      // Check if this export matches our name
+      // For "export { default as LoadingWrapper }", getAliasNode() returns "LoadingWrapper"
+      const aliasNode = namedExport.getAliasNode();
+      const exportName = aliasNode
+        ? aliasNode.getText()
+        : namedExport.getName();
+
+      if (exportName === exportedName) {
+        // Found the export - now resolve the module specifier
+        const resolvedFile = exportDecl.getModuleSpecifierSourceFile();
+        if (resolvedFile) {
+          // Check if this is a "default as X" pattern
+          const originalName = namedExport.getName(); // The name before alias
+          if (originalName === "default") {
+            // Find the default export in the resolved file
+            const defaultSymbol = resolvedFile.getDefaultExportSymbol();
+            if (defaultSymbol) {
+              const resolved = resolveSymbolDefinition(
+                defaultSymbol,
+                projectRoot,
+              );
+              if (resolved) {
+                return resolved;
+              }
+            }
+          } else {
+            // Named export - find the actual symbol in the resolved file
+            const resolved = findExportedSymbol(
+              resolvedFile,
+              originalName,
+              projectRoot,
+            );
+            if (resolved) {
+              return resolved;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return null;
 };
 
 /**
@@ -155,6 +376,7 @@ const addImportsToMap = (
   targetPath: string,
   includeTypeImports: boolean,
   projectRoot: string,
+  projectRegistry?: ProjectRegistry,
 ): void => {
   // Process named imports: import { formatDate, parseDate as pd } from './utils'
   const namedImports = importDecl.getNamedImports();
@@ -172,14 +394,16 @@ const addImportsToMap = (
     const localName = aliasNode ? aliasNode.getText() : originalName;
 
     // Resolve actual definition location (follows re-exports)
-    const actualPath = resolveActualDefinition(
+    const resolved = resolveActualDefinition(
       namedImport,
       projectRoot,
       targetPath,
+      originalName,
+      projectRegistry,
     );
 
     // Construct target node ID: actualPath:symbolName
-    const targetId = `${actualPath}:${originalName}`;
+    const targetId = `${resolved.path}:${resolved.symbolName}`;
     map.set(localName, targetId);
   }
 
@@ -187,8 +411,19 @@ const addImportsToMap = (
   const defaultImport = importDecl.getDefaultImport();
   if (defaultImport) {
     const localName = defaultImport.getText();
-    // For default exports, we use 'default' as the symbol name
-    // This is a simplification - default exports may have different names
+
+    // Try to resolve through re-export chains to find actual definition
+    const symbol = defaultImport.getSymbol();
+    if (symbol) {
+      const resolved = resolveSymbolDefinition(symbol, projectRoot);
+      if (resolved) {
+        const targetId = `${resolved.path}:${resolved.symbolName}`;
+        map.set(localName, targetId);
+        return;
+      }
+    }
+
+    // Fallback: use targetPath:default
     const targetId = `${targetPath}:default`;
     map.set(localName, targetId);
   }
@@ -196,22 +431,6 @@ const addImportsToMap = (
   // Note: Namespace imports (import * as utils from './utils') are not
   // directly added since they're accessed as utils.foo() which requires
   // different resolution logic
-};
-
-/**
- * Derive the project root from an absolute path and its known relative path.
- * Example: absolute="/home/user/project/src/file.ts", relative="src/file.ts"
- *          => projectRoot="/home/user/project/"
- */
-const deriveProjectRoot = (
-  absolutePath: string,
-  relativePath: string,
-): string => {
-  if (absolutePath.endsWith(relativePath)) {
-    return absolutePath.slice(0, absolutePath.length - relativePath.length);
-  }
-  // Fallback: if paths don't match, return empty (will use absolute paths)
-  return "";
 };
 
 /**

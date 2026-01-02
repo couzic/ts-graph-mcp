@@ -3,8 +3,12 @@ import type { ProjectConfig } from "../config/Config.schemas.js";
 import type { DbWriter } from "../db/DbWriter.js";
 import type { IndexResult } from "../db/Types.js";
 import { createProject } from "./createProject.js";
-import type { NodeExtractionContext } from "./extract/nodes/NodeExtractionContext.js";
+import type { EdgeExtractionContext } from "./extract/edges/EdgeExtractionContext.js";
 import { indexFile } from "./indexFile.js";
+import {
+  createProjectRegistry,
+  type ProjectRegistry,
+} from "./ProjectRegistry.js";
 
 /**
  * Options for indexing an entire project.
@@ -47,6 +51,9 @@ export const indexProject = async (
     await dbWriter.clearAll();
   }
 
+  // Create project registry for cross-package resolution
+  const projectRegistry = createProjectRegistry(config, options.projectRoot);
+
   // Process each package, streaming nodes and edges to DB
   for (const pkg of config.packages) {
     try {
@@ -55,6 +62,7 @@ export const indexProject = async (
         pkg.tsconfig,
         options.projectRoot,
         dbWriter,
+        projectRegistry,
       );
 
       filesProcessed += result.filesProcessed;
@@ -111,6 +119,7 @@ const processPackage = async (
   tsconfigPath: string,
   projectRoot: string,
   dbWriter: DbWriter,
+  projectRegistry: ProjectRegistry,
 ): Promise<PackageProcessResult> => {
   const errors: Array<{ file: string; message: string }> = [];
   const filesIndexed: string[] = [];
@@ -148,9 +157,10 @@ const processPackage = async (
   for (const sourceFile of sourceFiles) {
     const absolutePath = sourceFile.getFilePath();
     const relativePath = relative(projectRoot, absolutePath);
-    const context: NodeExtractionContext = {
+    const context: EdgeExtractionContext = {
       filePath: relativePath,
       package: packageName,
+      projectRegistry,
     };
 
     try {

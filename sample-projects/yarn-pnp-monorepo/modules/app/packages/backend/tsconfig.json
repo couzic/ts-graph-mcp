@@ -8,12 +8,8 @@
     "skipLibCheck": true,
     "declaration": true,
     "declarationMap": true,
-    "composite": true,
     "outDir": "./dist",
     "rootDir": "./src"
   },
-  "include": ["src/**/*"],
-  "references": [
-    { "path": "../shared" }
-  ]
+  "include": ["src/**/*"]
 }

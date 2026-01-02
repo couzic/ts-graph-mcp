@@ -1,6 +1,7 @@
 import type { SourceFile } from "ts-morph";
 import type { Edge } from "../../../db/Types.js";
 import { generateNodeId } from "../../generateNodeId.js";
+import { normalizePath } from "../../normalizePath.js";
 import type { EdgeExtractionContext } from "./EdgeExtractionContext.js";
 
 /**
@@ -14,7 +15,7 @@ export const extractImportEdges = (
   const sourceId = generateNodeId(context.filePath);
 
   // Derive the project root from the source file paths
-  const sourceAbsolutePath = sourceFile.getFilePath().replace(/\\/g, "/");
+  const sourceAbsolutePath = normalizePath(sourceFile.getFilePath());
   const projectRoot = deriveProjectRoot(sourceAbsolutePath, context.filePath);
 
   const imports = sourceFile.getImportDeclarations();
@@ -29,9 +30,9 @@ export const extractImportEdges = (
 
     if (resolvedSourceFile) {
       // ts-morph resolved the import - get the relative path
-      const targetAbsolutePath = resolvedSourceFile
-        .getFilePath()
-        .replace(/\\/g, "/");
+      const targetAbsolutePath = normalizePath(
+        resolvedSourceFile.getFilePath(),
+      );
       targetPath = targetAbsolutePath.startsWith(projectRoot)
         ? targetAbsolutePath.slice(projectRoot.length)
         : targetAbsolutePath;

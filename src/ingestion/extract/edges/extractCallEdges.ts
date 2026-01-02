@@ -1,14 +1,19 @@
 import {
   type ArrowFunction,
   type CallExpression,
+  type ConstructorDeclaration,
   type FunctionDeclaration,
+  type GetAccessorDeclaration,
   type MethodDeclaration,
+  type SetAccessorDeclaration,
   type SourceFile,
   SyntaxKind,
   Node as TsMorphNode,
 } from "ts-morph";
 import type { CallSiteRange, Edge } from "../../../db/Types.js";
+import { deriveProjectRoot } from "../../deriveProjectRoot.js";
 import { generateNodeId } from "../../generateNodeId.js";
+import { normalizePath } from "../../normalizePath.js";
 import { buildImportMap } from "./buildImportMap.js";
 import type { EdgeExtractionContext } from "./EdgeExtractionContext.js";
 import { followAliasChain } from "./followAliasChain.js";
@@ -62,7 +67,7 @@ const resolveCallTarget = (
 
       if (declaration) {
         const declarationFile = declaration.getSourceFile();
-        const absolutePath = declarationFile.getFilePath().replace(/\\/g, "/");
+        const absolutePath = normalizePath(declarationFile.getFilePath());
 
         // Skip built-in types (declarations outside project root or in node_modules)
         // This filters out Math.min, Array.map, String.prototype methods, etc.
@@ -88,7 +93,30 @@ const resolveCallTarget = (
         const relativePath = absolutePath.slice(projectRoot.length);
 
         const symbolName = actualSymbol.getName();
-        const targetId = `${relativePath}:${symbolName}`;
+
+        // Check if this is a class member - if so, include the class name
+        // Handles methods, arrow function properties, and getters/setters
+        let targetId: string;
+        if (
+          TsMorphNode.isMethodDeclaration(declaration) ||
+          TsMorphNode.isPropertyDeclaration(declaration) ||
+          TsMorphNode.isGetAccessorDeclaration(declaration) ||
+          TsMorphNode.isSetAccessorDeclaration(declaration)
+        ) {
+          const classDecl = declaration.getParent();
+          if (TsMorphNode.isClassDeclaration(classDecl)) {
+            const className = classDecl.getName();
+            if (className) {
+              targetId = `${relativePath}:${className}.${symbolName}`;
+            } else {
+              targetId = `${relativePath}:${symbolName}`;
+            }
+          } else {
+            targetId = `${relativePath}:${symbolName}`;
+          }
+        } else {
+          targetId = `${relativePath}:${symbolName}`;
+        }
 
         return { targetId, symbolName };
       }
@@ -134,19 +162,6 @@ const resolveCallTarget = (
 };
 
 /**
- * Derive the project root from an absolute path and its known relative path.
- */
-const deriveProjectRoot = (
-  absolutePath: string,
-  relativePath: string,
-): string => {
-  if (absolutePath.endsWith(relativePath)) {
-    return absolutePath.slice(0, absolutePath.length - relativePath.length);
-  }
-  return "";
-};
-
-/**
  * Extract CALLS edges between functions and methods.
  *
  * Uses a simplified approach that doesn't require a global nodes array:
@@ -160,11 +175,11 @@ export const extractCallEdges = (
   const edges: Edge[] = [];
 
   // Derive project root for resolving absolute paths
-  const absolutePath = sourceFile.getFilePath().replace(/\\/g, "/");
+  const absolutePath = normalizePath(sourceFile.getFilePath());
   const projectRoot = deriveProjectRoot(absolutePath, context.filePath);
 
   // Build combined symbol map from local definitions + imports
-  const symbolMap = buildCombinedSymbolMap(sourceFile, context.filePath);
+  const symbolMap = buildCombinedSymbolMap(sourceFile, context);
 
   // Find all functions and methods
   const functions = sourceFile.getFunctions();
@@ -197,7 +212,7 @@ export const extractCallEdges = (
     }
   }
 
-  // Extract calls from methods
+  // Extract calls from methods and constructors
   for (const classDecl of classes) {
     const className = classDecl.getName();
     if (!className) continue;
@@ -207,6 +222,95 @@ export const extractCallEdges = (
       const methodName = method.getName();
       const callerId = generateNodeId(context.filePath, className, methodName);
       extractCallsFromCallable(method, callerId, symbolMap, edges, projectRoot);
+    }
+
+    // Extract calls from constructors
+    const constructors = classDecl.getConstructors();
+    for (const ctor of constructors) {
+      const callerId = generateNodeId(
+        context.filePath,
+        className,
+        "constructor",
+      );
+      extractCallsFromCallable(ctor, callerId, symbolMap, edges, projectRoot);
+    }
+
+    // Extract calls from getters
+    for (const getter of classDecl.getGetAccessors()) {
+      const getterName = getter.getName();
+      const callerId = `${context.filePath}:${className}.${getterName}:get`;
+      extractCallsFromCallable(getter, callerId, symbolMap, edges, projectRoot);
+    }
+
+    // Extract calls from setters
+    for (const setter of classDecl.getSetAccessors()) {
+      const setterName = setter.getName();
+      const callerId = `${context.filePath}:${className}.${setterName}:set`;
+      extractCallsFromCallable(setter, callerId, symbolMap, edges, projectRoot);
+    }
+
+    // Extract calls from class properties (arrow functions and initializers)
+    for (const property of classDecl.getProperties()) {
+      const propName = property.getName();
+      const initializer = property.getInitializer();
+      if (!initializer) {
+        continue;
+      }
+
+      const callerId = generateNodeId(context.filePath, className, propName);
+
+      if (TsMorphNode.isArrowFunction(initializer)) {
+        // Arrow function property: extract calls from the arrow function body
+        extractCallsFromCallable(
+          initializer,
+          callerId,
+          symbolMap,
+          edges,
+          projectRoot,
+        );
+      } else {
+        // Non-arrow initializer: extract calls directly from the initializer expression
+        extractCallsFromNode(
+          initializer,
+          callerId,
+          symbolMap,
+          edges,
+          projectRoot,
+        );
+      }
+    }
+
+    // Extract calls from static initializer blocks
+    for (const staticBlock of classDecl.getStaticBlocks()) {
+      const callerId = `${context.filePath}:${className}.static`;
+      extractCallsFromNode(
+        staticBlock,
+        callerId,
+        symbolMap,
+        edges,
+        projectRoot,
+      );
+    }
+  }
+
+  // Extract calls from class expressions assigned to variables
+  for (const variable of variables) {
+    const varName = variable.getName();
+    const initializer = variable.getInitializer();
+
+    if (initializer && TsMorphNode.isClassExpression(initializer)) {
+      // Class expression - extract calls from its methods
+      for (const method of initializer.getMethods()) {
+        const methodName = method.getName();
+        const callerId = generateNodeId(context.filePath, varName, methodName);
+        extractCallsFromCallable(
+          method,
+          callerId,
+          symbolMap,
+          edges,
+          projectRoot,
+        );
+      }
     }
   }
 
@@ -219,15 +323,17 @@ export const extractCallEdges = (
  */
 const buildCombinedSymbolMap = (
   sourceFile: SourceFile,
-  filePath: string,
+  context: EdgeExtractionContext,
 ): SymbolMap => {
   const map: SymbolMap = new Map();
 
   // 1. Add local symbols (defined in this file)
-  addLocalSymbols(map, sourceFile, filePath);
+  addLocalSymbols(map, sourceFile, context.filePath);
 
   // 2. Add imported symbols (from import declarations)
-  const importMap = buildImportMap(sourceFile, filePath);
+  const importMap = buildImportMap(sourceFile, context.filePath, {
+    projectRegistry: context.projectRegistry,
+  });
   for (const [name, targetId] of importMap) {
     map.set(name, targetId);
   }
@@ -291,7 +397,13 @@ const addLocalSymbols = (
  * E.g., `const fn = target` creates alias: fn -> target
  */
 const buildLocalAliasMap = (
-  callable: FunctionDeclaration | ArrowFunction | MethodDeclaration,
+  callable:
+    | FunctionDeclaration
+    | ArrowFunction
+    | MethodDeclaration
+    | ConstructorDeclaration
+    | GetAccessorDeclaration
+    | SetAccessorDeclaration,
   symbolMap: SymbolMap,
 ): Map<string, string> => {
   const aliasMap = new Map<string, string>();
@@ -323,31 +435,92 @@ const buildLocalAliasMap = (
 };
 
 /**
- * Extract call expressions from a callable (function, arrow function, or method).
+ * Extract call expressions from any AST node (property initializers, static blocks, etc.).
  */
-const extractCallsFromCallable = (
-  callable: FunctionDeclaration | ArrowFunction | MethodDeclaration,
+const extractCallsFromNode = (
+  node: TsMorphNode,
   callerId: string,
   symbolMap: SymbolMap,
   edges: Edge[],
   projectRoot: string,
 ): void => {
-  // For arrow functions, we need to get either the body block or the expression
-  const nodesToSearch: TsMorphNode[] = [];
+  const aliasMap = new Map<string, string>();
+  const callSitesByTarget = new Map<string, CallSiteRange[]>();
 
-  if (TsMorphNode.isArrowFunction(callable)) {
-    const body = callable.getBody();
-    if (body) {
-      nodesToSearch.push(body);
-    }
-  } else {
-    const body = callable.getBody();
-    if (body) {
-      nodesToSearch.push(body);
+  const callExpressions = node.getDescendantsOfKind(SyntaxKind.CallExpression);
+
+  // Also check if the node itself is a call expression
+  if (TsMorphNode.isCallExpression(node)) {
+    callExpressions.unshift(node);
+  }
+
+  for (const callExpr of callExpressions) {
+    const resolved = resolveCallTarget(
+      callExpr,
+      symbolMap,
+      aliasMap,
+      projectRoot,
+    );
+
+    if (resolved) {
+      const range: CallSiteRange = {
+        start: callExpr.getStartLineNumber(),
+        end: callExpr.getEndLineNumber(),
+      };
+      const sites = callSitesByTarget.get(resolved.targetId) ?? [];
+      sites.push(range);
+      callSitesByTarget.set(resolved.targetId, sites);
     }
   }
 
-  if (nodesToSearch.length === 0) return;
+  for (const [targetId, sites] of callSitesByTarget) {
+    edges.push({
+      source: callerId,
+      target: targetId,
+      type: "CALLS",
+      callCount: sites.length,
+      callSites: sites,
+    });
+  }
+};
+
+/**
+ * Extract call expressions from a callable (function, arrow function, method, or constructor).
+ */
+const extractCallsFromCallable = (
+  callable:
+    | FunctionDeclaration
+    | ArrowFunction
+    | MethodDeclaration
+    | ConstructorDeclaration
+    | GetAccessorDeclaration
+    | SetAccessorDeclaration,
+  callerId: string,
+  symbolMap: SymbolMap,
+  edges: Edge[],
+  projectRoot: string,
+): void => {
+  // Nodes to search for call expressions
+  const nodesToSearch: TsMorphNode[] = [];
+
+  // Add function/method body
+  const body = callable.getBody();
+  if (body) {
+    nodesToSearch.push(body);
+  }
+
+  // Add parameter default values (e.g., function foo(x = getDefault()) {...})
+  const parameters = callable.getParameters();
+  for (const param of parameters) {
+    const initializer = param.getInitializer();
+    if (initializer) {
+      nodesToSearch.push(initializer);
+    }
+  }
+
+  if (nodesToSearch.length === 0) {
+    return;
+  }
 
   // Build alias map for local variables that reference known symbols
   const aliasMap = buildLocalAliasMap(callable, symbolMap);

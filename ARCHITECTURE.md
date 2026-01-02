@@ -97,6 +97,28 @@ See `src/db/Types.ts` for node and edge type definitions.
 
 **Node ID format**: `{filePath}:{symbolPath}` — e.g., `src/utils.ts:formatDate`, `src/models/User.ts:User.save`
 
+### Transparent Re-exports
+
+**Re-exports are completely invisible in the graph.** No nodes, no edges, nothing.
+
+When file X imports from a barrel file and calls a function:
+```typescript
+// X.ts
+import { formatValue } from './index';  // barrel re-exports from helper.ts
+formatValue();
+```
+
+The graph shows: `X.ts --CALLS--> src/utils/helper.ts:formatValue`
+
+**NOT:** `X.ts --CALLS--> src/index.ts:...` (barrel file is invisible)
+
+This is achieved at **indexing time**:
+- `buildImportMap.ts` follows re-export chains using `followAliasChain()`
+- Edges point directly to actual definitions
+- Barrel files with only re-exports have no symbol nodes (just File node)
+
+No query-time resolution needed. The graph only contains actual code definitions.
+
 ## Data Flow
 
 ### Indexing Pipeline

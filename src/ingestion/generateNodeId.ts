@@ -1,3 +1,5 @@
+import { normalizePath } from "./normalizePath.js";
+
 /**
  * Generate a unique node ID from file path and symbol path.
  *
@@ -17,8 +19,7 @@ export const generateNodeId = (
   filePath: string,
   ...symbolParts: string[]
 ): string => {
-  // Normalize Windows paths to forward slashes
-  const normalizedPath = filePath.replace(/\\/g, "/");
+  const normalizedPath = normalizePath(filePath);
 
   if (symbolParts.length === 0) {
     return normalizedPath;
