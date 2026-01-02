@@ -20,7 +20,7 @@ import {
   initializeServerCoreQuick,
   runIndexingAndWatch,
 } from "./serverCore.js";
-import { writeServerMetadata } from "./serverMetadata.js";
+import { stopHttpServer, writeServerMetadata } from "./serverMetadata.js";
 import { runWrapperClient } from "./wrapperClient.js";
 
 /**
@@ -214,6 +214,7 @@ export const main = async (): Promise<void> => {
 
     // Clean cache directory if requested (before any other operation)
     if (args.clean) {
+      await stopHttpServer(cacheDir);
       cleanCacheDir(cacheDir);
     }
 

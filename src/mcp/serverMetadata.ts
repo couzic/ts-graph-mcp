@@ -193,3 +193,40 @@ export const releaseSpawnLock = (cacheDir: string): void => {
     }
   }
 };
+
+/**
+ * Stop a running HTTP server gracefully.
+ * Tries HTTP /stop endpoint first, falls back to SIGTERM.
+ */
+export const stopHttpServer = async (cacheDir: string): Promise<void> => {
+  const metadata = readServerMetadata(cacheDir);
+  if (!metadata || !isProcessRunning(metadata.pid)) {
+    return;
+  }
+
+  console.error(
+    `[ts-graph-mcp] Stopping running server (PID ${metadata.pid})...`,
+  );
+
+  // Try graceful HTTP shutdown first
+  try {
+    await fetch(`http://${metadata.host}:${metadata.port}/stop`, {
+      method: "POST",
+      signal: AbortSignal.timeout(2000),
+    });
+  } catch {
+    // Endpoint failed, fall back to SIGTERM
+    console.error("[ts-graph-mcp] HTTP stop failed, sending SIGTERM...");
+    process.kill(metadata.pid, "SIGTERM");
+  }
+
+  // Wait for process to exit
+  const timeout = Date.now() + 5000;
+  while (isProcessRunning(metadata.pid) && Date.now() < timeout) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+
+  if (isProcessRunning(metadata.pid)) {
+    console.error("[ts-graph-mcp] Warning: Server did not stop within timeout");
+  }
+};

@@ -66,6 +66,16 @@ export const startHttpServer = async (
     res.json({ status: "ok", ready: state.ready });
   });
 
+  // Stop endpoint - gracefully shuts down the server
+  app.post("/stop", (_req: Request, res: Response) => {
+    console.error("[ts-graph-mcp] Received stop request, shutting down...");
+    res.json({ status: "stopping" });
+    // Delay exit to allow response to be sent
+    setImmediate(() => {
+      process.exit(0);
+    });
+  });
+
   // Message returned when server is still indexing
   const indexingMessage =
     "Database is still indexing. Please wait a moment and try again.";
