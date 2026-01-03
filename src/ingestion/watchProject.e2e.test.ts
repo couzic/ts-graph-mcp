@@ -212,8 +212,8 @@ export function newHelper(): string { return deepHelper(); }
 
     // Old helper symbol should not be found (removed from database)
     const output = dependentsOf(db, TEST_DIR, "src/helper.ts", "helper");
-    // The tool reports "Symbol not found" because the node was deleted
-    expect(output).toContain("not found");
+    // The tool reports "not indexed" because the file was removed from DB
+    expect(output).toContain("is not indexed");
   });
 
   it("batches rapid successive changes into single reindex", async () => {

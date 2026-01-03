@@ -12,6 +12,7 @@ import {
   parseEdgeRows,
 } from "../shared/parseEdgeRows.js";
 import { queryNodeInfos } from "../shared/queryNodeInfos.js";
+import { symbolNotFound } from "../shared/symbolNotFound.js";
 
 /**
  * Query all reverse dependencies (callers/dependents) of a target node.
@@ -73,7 +74,7 @@ export function dependentsOf(
     .get(nodeId);
 
   if (!exists) {
-    return `Symbol '${symbol}' not found at ${filePath}`;
+    return symbolNotFound(db, filePath, symbol);
   }
 
   // Query edges

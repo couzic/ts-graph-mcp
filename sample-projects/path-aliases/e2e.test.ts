@@ -90,7 +90,12 @@ describe("path-aliases E2E tests", () => {
         "formatValue",
       );
 
-      expect(output).toBe("Symbol 'formatValue' not found at src/index.ts");
+      expect(output).toContain(
+        "Symbol 'formatValue' not found at src/index.ts",
+      );
+      // Rich error message also shows where the symbol was found
+      expect(output).toContain("Found 'formatValue' in:");
+      expect(output).toContain("src/utils/helper.ts");
     });
   });
 });

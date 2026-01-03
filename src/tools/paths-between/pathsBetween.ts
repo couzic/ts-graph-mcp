@@ -6,6 +6,7 @@ import {
 } from "../shared/formatToolOutput.js";
 import { loadNodeSnippets } from "../shared/loadNodeSnippets.js";
 import { queryNodeInfos } from "../shared/queryNodeInfos.js";
+import { symbolNotFound } from "../shared/symbolNotFound.js";
 import { queryPath } from "./query.js";
 
 export interface SymbolRef {
@@ -43,7 +44,7 @@ export function pathsBetween(
     .get(fromId);
 
   if (!fromExists) {
-    return `Symbol '${from.symbol}' not found at ${from.file_path}`;
+    return symbolNotFound(db, from.file_path, from.symbol);
   }
 
   const toExists = db
@@ -53,7 +54,7 @@ export function pathsBetween(
     .get(toId);
 
   if (!toExists) {
-    return `Symbol '${to.symbol}' not found at ${to.file_path}`;
+    return symbolNotFound(db, to.file_path, to.symbol);
   }
 
   // Try forward path (from → to)

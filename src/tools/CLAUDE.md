@@ -82,6 +82,18 @@ Find how two symbols connect through the code graph.
 - Same symbol: `Invalid query: source and target are the same symbol.`
 - No connection: `No path found.`
 
+## Symbol Lookup Errors
+
+All tools provide rich error messages when a symbol is not found:
+
+| Case | Message |
+|------|---------|
+| File not indexed | `File 'X' is not indexed.` + locations if symbol exists elsewhere |
+| Symbol not in file | `Symbol 'X' not found at Y.` + available symbols in file (sorted by similarity) |
+| Wrong file | `Symbol 'X' not found at Y.` + files where symbol exists (sorted by similarity) |
+
+Implementation: `src/tools/shared/symbolNotFound.ts`
+
 ## Output Format
 
 ### Graph Section

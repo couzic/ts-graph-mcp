@@ -226,6 +226,27 @@ runIndexingAndWatch({ ... })
 
 ---
 
+### Case-Insensitive Symbol Lookup Uses Full Table Scan
+
+**Impact:** Low (performance)
+
+**Problem:** `findSymbolElsewhere()` in `src/tools/shared/symbolNotFound.ts` uses `LOWER()` on both sides of the comparison:
+
+```sql
+SELECT file_path, type FROM nodes WHERE LOWER(name) = LOWER(?) AND file_path != ? LIMIT 5
+```
+
+This prevents SQLite from using any index on `name`, causing a full table scan.
+
+**Current mitigation:** `LIMIT 5` caps the result set, making the scan acceptable for typical codebases.
+
+**Future options:**
+1. Add a `name_lower` column with index (adds storage/write overhead)
+2. Use SQLite's `COLLATE NOCASE` on the column definition
+3. Accept as-is since it only runs on error paths
+
+---
+
 ### Cross-Package Path Alias Resolution
 
 **Impact:** Medium (edge case)
