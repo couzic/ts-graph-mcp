@@ -1,19 +1,25 @@
 import { spawn } from "node:child_process";
+import { existsSync, unlinkSync } from "node:fs";
+import { join } from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import Database from "better-sqlite3";
 import { z } from "zod";
 import packageJson from "../../package.json" with { type: "json" };
 import {
   acquireSpawnLock,
   getRunningServer,
   releaseSpawnLock,
+  removeServerMetadata,
   type ServerMetadata,
+  stopHttpServer,
 } from "./serverMetadata.js";
 import {
   dependenciesOfDescription,
   dependentsOfDescription,
   pathsBetweenDescription,
 } from "./toolDescriptions.js";
+import { DB_SCHEMA_VERSION, HTTP_API_VERSION } from "./versions.js";
 
 /**
  * Options for the wrapper client.
@@ -104,6 +110,96 @@ const callApi = async <T>(
 };
 
 /**
+ * Check DB schema version via direct SQLite read.
+ * Returns true if server needs restart (DB was deleted).
+ */
+const checkDbVersion = async (
+  cacheDir: string,
+  server: ServerMetadata | null,
+): Promise<boolean> => {
+  const dbPath = join(cacheDir, "graph.db");
+
+  if (!existsSync(dbPath)) {
+    return false; // No DB yet, server will create it
+  }
+
+  // Open DB read-only just to check version
+  const db = new Database(dbPath, { readonly: true });
+  const dbVersion = db.pragma("user_version", { simple: true }) as number;
+  db.close();
+
+  if (DB_SCHEMA_VERSION < dbVersion) {
+    console.error(
+      `[ts-graph-mcp] DB schema (${dbVersion}) is newer than wrapper (${DB_SCHEMA_VERSION}). Please update ts-graph-mcp.`,
+    );
+    process.exit(1);
+  }
+
+  if (DB_SCHEMA_VERSION > dbVersion) {
+    console.error(
+      `[ts-graph-mcp] DB schema (${dbVersion}) is older than wrapper (${DB_SCHEMA_VERSION}). Reindexing...`,
+    );
+
+    // Stop server if running (it has the DB open)
+    if (server) {
+      await stopHttpServer(cacheDir);
+      removeServerMetadata(cacheDir);
+    }
+
+    unlinkSync(dbPath);
+    const manifestPath = join(cacheDir, "manifest.json");
+    if (existsSync(manifestPath)) {
+      unlinkSync(manifestPath);
+    }
+
+    return true; // Server needs restart
+  }
+
+  return false;
+};
+
+/**
+ * Check API version via HTTP endpoint.
+ * Returns potentially new server metadata if server was restarted.
+ */
+const checkApiVersion = async (
+  server: ServerMetadata,
+  cacheDir: string,
+  options: WrapperClientOptions,
+): Promise<ServerMetadata> => {
+  const versionUrl = `http://${server.host}:${server.port}/version`;
+  let versionResponse: Response;
+  try {
+    versionResponse = await fetch(versionUrl);
+  } catch {
+    console.error("[ts-graph-mcp] Server unavailable. Please restart.");
+    process.exit(1);
+  }
+  const { apiVersion } = (await versionResponse.json()) as {
+    apiVersion: number;
+  };
+
+  if (HTTP_API_VERSION < apiVersion) {
+    console.error(
+      `[ts-graph-mcp] Server API (${apiVersion}) is newer than wrapper (${HTTP_API_VERSION}). Please update ts-graph-mcp.`,
+    );
+    process.exit(1);
+  }
+
+  if (HTTP_API_VERSION > apiVersion) {
+    console.error(
+      `[ts-graph-mcp] Server API (${apiVersion}) is older than wrapper (${HTTP_API_VERSION}). Restarting server...`,
+    );
+    await stopHttpServer(cacheDir);
+    removeServerMetadata(cacheDir);
+    spawnApiServer(options);
+    return await waitForApiServer(cacheDir);
+  }
+
+  return server;
+};
+
+/**
  * Run the stdio MCP server that proxies to the HTTP API.
  *
  * This is the real MCP server that Claude Code talks to. It registers
@@ -113,6 +209,9 @@ export const runWrapperClient = async (
   options: WrapperClientOptions,
 ): Promise<void> => {
   const { cacheDir } = options;
+
+  // Check DB version before spawning/connecting to server
+  await checkDbVersion(cacheDir, null);
 
   // Check for existing API server, spawn if needed
   let server = await getRunningServer(cacheDir);
@@ -152,6 +251,9 @@ export const runWrapperClient = async (
     );
   }
 
+  // Check API version at startup
+  server = await checkApiVersion(server, cacheDir, options);
+
   // Create MCP server
   const mcpServer = new McpServer({
     name: packageJson.name,
@@ -168,8 +270,31 @@ export const runWrapperClient = async (
       .describe("Symbol name (e.g., 'formatDate', 'User.save')"),
   };
 
-  // Capture server metadata for API calls
-  const apiServer = server;
+  // Capture server metadata for API calls (mutable - may be updated if server restarts)
+  let apiServer = server;
+
+  /**
+   * Check versions and make API call.
+   * Checks both DB and API versions before each tool call.
+   */
+  const checkVersionsAndCall = async <T>(
+    endpoint: string,
+    body: unknown,
+  ): Promise<T> => {
+    // Check DB version first (might delete DB and require server restart)
+    const dbNeedsRestart = await checkDbVersion(cacheDir, apiServer);
+
+    if (dbNeedsRestart) {
+      // DB was deleted, need to respawn server
+      spawnApiServer(options);
+      apiServer = await waitForApiServer(cacheDir);
+    } else {
+      // Check API version
+      apiServer = await checkApiVersion(apiServer, cacheDir, options);
+    }
+
+    return callApi<T>(apiServer, endpoint, body);
+  };
 
   // Register dependenciesOf tool
   mcpServer.registerTool(
@@ -180,8 +305,7 @@ export const runWrapperClient = async (
     },
     async ({ file_path, symbol }) => {
       try {
-        const data = await callApi<{ result: string }>(
-          apiServer,
+        const data = await checkVersionsAndCall<{ result: string }>(
           "/api/dependenciesOf",
           { file_path, symbol },
         );
@@ -205,8 +329,7 @@ export const runWrapperClient = async (
     },
     async ({ file_path, symbol }) => {
       try {
-        const data = await callApi<{ result: string }>(
-          apiServer,
+        const data = await checkVersionsAndCall<{ result: string }>(
           "/api/dependentsOf",
           { file_path, symbol },
         );
@@ -247,8 +370,7 @@ export const runWrapperClient = async (
     },
     async ({ from, to }) => {
       try {
-        const data = await callApi<{ result: string }>(
-          apiServer,
+        const data = await checkVersionsAndCall<{ result: string }>(
           "/api/pathsBetween",
           { from, to },
         );

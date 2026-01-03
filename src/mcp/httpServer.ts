@@ -9,6 +9,7 @@ import {
   type ServerMetadata,
   writeServerMetadata,
 } from "./serverMetadata.js";
+import { HTTP_API_VERSION } from "./versions.js";
 
 /**
  * Mutable server state that can be updated after server starts.
@@ -74,6 +75,11 @@ export const startHttpServer = async (
     setImmediate(() => {
       process.exit(0);
     });
+  });
+
+  // Version endpoint - returns API version for compatibility checks
+  app.get("/version", (_req: Request, res: Response) => {
+    res.json({ apiVersion: HTTP_API_VERSION });
   });
 
   // Message returned when server is still indexing

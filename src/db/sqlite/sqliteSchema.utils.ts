@@ -1,4 +1,5 @@
 import type Database from "better-sqlite3";
+import { setDbSchemaVersion } from "../../mcp/versions.js";
 
 /**
  * SQLite schema for the code graph.
@@ -61,6 +62,9 @@ const INDEXES = [
  * @param db - better-sqlite3 database instance
  */
 export const initializeSchema = (db: Database.Database): void => {
+  // Set schema version first
+  setDbSchemaVersion(db);
+
   // Create tables
   db.exec(NODES_TABLE);
   db.exec(EDGES_TABLE);
