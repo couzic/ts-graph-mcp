@@ -9,7 +9,12 @@
     "declaration": true,
     "declarationMap": true,
     "outDir": "./dist",
-    "rootDir": "./src"
+    "rootDir": "./src",
+    "baseUrl": ".",
+    "paths": {
+      "@/strings/*": ["src/strings/*"],
+      "@/*": ["src/*"]
+    }
   },
   "include": ["src/**/*"]
 }

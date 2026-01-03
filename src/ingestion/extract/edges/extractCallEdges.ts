@@ -14,6 +14,7 @@ import type { CallSiteRange, Edge } from "../../../db/Types.js";
 import { deriveProjectRoot } from "../../deriveProjectRoot.js";
 import { generateNodeId } from "../../generateNodeId.js";
 import { normalizePath } from "../../normalizePath.js";
+import type { ProjectRegistry } from "../../ProjectRegistry.js";
 import { buildImportMap } from "./buildImportMap.js";
 import type { EdgeExtractionContext } from "./EdgeExtractionContext.js";
 import { followAliasChain } from "./followAliasChain.js";
@@ -35,6 +36,112 @@ interface ResolvedCallTarget {
 }
 
 /**
+ * Resolve a namespace property access call using cross-package resolution.
+ *
+ * When the namespace is defined via path alias (e.g., `export * as MathUtils from "@/math"`),
+ * the symbol resolution in the caller's tsconfig context fails. This function uses
+ * projectRegistry to re-resolve in the correct package's context.
+ *
+ * @example
+ * // In toolkit/index.ts: export * as MathUtils from "@/math"
+ * // In backend/api.ts: import { MathUtils } from "@libs/toolkit"; MathUtils.multiply()
+ * // The backend tsconfig doesn't know @/math, so we use toolkit's context to resolve
+ */
+const resolveNamespaceCallCrossPackage = (
+  expression: ReturnType<CallExpression["getExpression"]>,
+  symbolMap: SymbolMap,
+  projectRoot: string,
+  projectRegistry?: ProjectRegistry,
+): ResolvedCallTarget | undefined => {
+  if (!projectRegistry || !TsMorphNode.isPropertyAccessExpression(expression)) {
+    return undefined;
+  }
+
+  // Get the base object and property name
+  const baseExpr = expression.getExpression();
+  const propertyName = expression.getName();
+
+  // Get the base object name (e.g., "MathUtils" from "MathUtils.multiply")
+  const baseName = TsMorphNode.isIdentifier(baseExpr)
+    ? baseExpr.getText()
+    : null;
+  if (!baseName) {
+    return undefined;
+  }
+
+  // Look up the namespace in the symbolMap to find the barrel file
+  const namespaceId = symbolMap.get(baseName);
+  if (!namespaceId) {
+    return undefined;
+  }
+
+  // The namespaceId points to the barrel file where the namespace is defined
+  // e.g., "libs/toolkit/src/index.ts:MathUtils"
+  const colonIndex = namespaceId.lastIndexOf(":");
+  if (colonIndex === -1) {
+    return undefined;
+  }
+
+  const barrelRelativePath = namespaceId.substring(0, colonIndex);
+  const barrelAbsolutePath = projectRoot + barrelRelativePath;
+
+  // Extract the original namespace name from the symbolMap value
+  // e.g., "libs/toolkit/src/index.ts:MathUtils" -> "MathUtils"
+  // This is needed when the import is aliased: import { MathUtils as M }
+  const originalNamespaceName = namespaceId.substring(colonIndex + 1);
+
+  // Get the correct Project context for the barrel file
+  const barrelProject = projectRegistry.getProjectForFile(barrelAbsolutePath);
+  if (!barrelProject) {
+    return undefined;
+  }
+
+  // Get the barrel file in the correct context
+  const barrelFile = barrelProject.getSourceFile(barrelAbsolutePath);
+  if (!barrelFile) {
+    return undefined;
+  }
+
+  // Find the namespace export and resolve the property within it
+  for (const exportDecl of barrelFile.getExportDeclarations()) {
+    const namespaceExport = exportDecl.getNamespaceExport();
+    if (
+      namespaceExport &&
+      namespaceExport.getName() === originalNamespaceName
+    ) {
+      // Found the namespace export (e.g., export * as MathUtils from "@/math")
+      // Now resolve the module specifier to find where the property is defined
+      const resolvedModule = exportDecl.getModuleSpecifierSourceFile();
+      if (resolvedModule) {
+        // Look for the exported symbol in the resolved module
+        for (const expSymbol of resolvedModule.getExportSymbols()) {
+          if (expSymbol.getName() === propertyName) {
+            // Found the symbol - follow alias chain to get actual definition
+            const actualSymbol = followAliasChain(expSymbol);
+            const declarations = actualSymbol.getDeclarations();
+            const declaration = declarations[0];
+
+            if (declaration) {
+              const declarationFile = declaration.getSourceFile();
+              const absolutePath = normalizePath(declarationFile.getFilePath());
+
+              if (absolutePath.startsWith(projectRoot)) {
+                const relativePath = absolutePath.slice(projectRoot.length);
+                const symbolName = actualSymbol.getName();
+                const targetId = `${relativePath}:${symbolName}`;
+                return { targetId, symbolName };
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return undefined;
+};
+
+/**
  * Resolve a call expression target to its actual definition.
  *
  * Handles:
@@ -46,6 +153,7 @@ interface ResolvedCallTarget {
  * @param symbolMap - Map of known symbols
  * @param aliasMap - Map of local variable aliases
  * @param projectRoot - Project root for computing relative paths
+ * @param projectRegistry - Optional registry for cross-package namespace resolution
  * @returns The resolved target, or undefined if not resolvable
  */
 const resolveCallTarget = (
@@ -53,6 +161,7 @@ const resolveCallTarget = (
   symbolMap: SymbolMap,
   aliasMap: Map<string, string>,
   projectRoot: string,
+  projectRegistry?: ProjectRegistry,
 ): ResolvedCallTarget | undefined => {
   const expression = callExpr.getExpression();
 
@@ -120,6 +229,19 @@ const resolveCallTarget = (
 
         return { targetId, symbolName };
       }
+    }
+
+    // Symbol resolution failed - try cross-package namespace resolution
+    // This handles: import { MathUtils } from "@libs/toolkit"; MathUtils.multiply()
+    // where the namespace is defined via path alias: export * as MathUtils from "@/math"
+    const crossPackageResult = resolveNamespaceCallCrossPackage(
+      expression,
+      symbolMap,
+      projectRoot,
+      projectRegistry,
+    );
+    if (crossPackageResult) {
+      return crossPackageResult;
     }
 
     // Fallback: use the base object from symbolMap (original behavior)
@@ -192,7 +314,14 @@ export const extractCallEdges = (
     if (!funcName) continue;
 
     const callerId = generateNodeId(context.filePath, funcName);
-    extractCallsFromCallable(func, callerId, symbolMap, edges, projectRoot);
+    extractCallsFromCallable(
+      func,
+      callerId,
+      symbolMap,
+      edges,
+      projectRoot,
+      context.projectRegistry,
+    );
   }
 
   // Extract calls from arrow functions assigned to variables
@@ -208,6 +337,7 @@ export const extractCallEdges = (
         symbolMap,
         edges,
         projectRoot,
+        context.projectRegistry,
       );
     }
   }
@@ -221,7 +351,14 @@ export const extractCallEdges = (
     for (const method of methods) {
       const methodName = method.getName();
       const callerId = generateNodeId(context.filePath, className, methodName);
-      extractCallsFromCallable(method, callerId, symbolMap, edges, projectRoot);
+      extractCallsFromCallable(
+        method,
+        callerId,
+        symbolMap,
+        edges,
+        projectRoot,
+        context.projectRegistry,
+      );
     }
 
     // Extract calls from constructors
@@ -232,21 +369,42 @@ export const extractCallEdges = (
         className,
         "constructor",
       );
-      extractCallsFromCallable(ctor, callerId, symbolMap, edges, projectRoot);
+      extractCallsFromCallable(
+        ctor,
+        callerId,
+        symbolMap,
+        edges,
+        projectRoot,
+        context.projectRegistry,
+      );
     }
 
     // Extract calls from getters
     for (const getter of classDecl.getGetAccessors()) {
       const getterName = getter.getName();
       const callerId = `${context.filePath}:${className}.${getterName}:get`;
-      extractCallsFromCallable(getter, callerId, symbolMap, edges, projectRoot);
+      extractCallsFromCallable(
+        getter,
+        callerId,
+        symbolMap,
+        edges,
+        projectRoot,
+        context.projectRegistry,
+      );
     }
 
     // Extract calls from setters
     for (const setter of classDecl.getSetAccessors()) {
       const setterName = setter.getName();
       const callerId = `${context.filePath}:${className}.${setterName}:set`;
-      extractCallsFromCallable(setter, callerId, symbolMap, edges, projectRoot);
+      extractCallsFromCallable(
+        setter,
+        callerId,
+        symbolMap,
+        edges,
+        projectRoot,
+        context.projectRegistry,
+      );
     }
 
     // Extract calls from class properties (arrow functions and initializers)
@@ -267,6 +425,7 @@ export const extractCallEdges = (
           symbolMap,
           edges,
           projectRoot,
+          context.projectRegistry,
         );
       } else {
         // Non-arrow initializer: extract calls directly from the initializer expression
@@ -276,6 +435,7 @@ export const extractCallEdges = (
           symbolMap,
           edges,
           projectRoot,
+          context.projectRegistry,
         );
       }
     }
@@ -289,6 +449,7 @@ export const extractCallEdges = (
         symbolMap,
         edges,
         projectRoot,
+        context.projectRegistry,
       );
     }
   }
@@ -309,6 +470,7 @@ export const extractCallEdges = (
           symbolMap,
           edges,
           projectRoot,
+          context.projectRegistry,
         );
       }
     }
@@ -443,6 +605,7 @@ const extractCallsFromNode = (
   symbolMap: SymbolMap,
   edges: Edge[],
   projectRoot: string,
+  projectRegistry?: ProjectRegistry,
 ): void => {
   const aliasMap = new Map<string, string>();
   const callSitesByTarget = new Map<string, CallSiteRange[]>();
@@ -460,6 +623,7 @@ const extractCallsFromNode = (
       symbolMap,
       aliasMap,
       projectRoot,
+      projectRegistry,
     );
 
     if (resolved) {
@@ -499,6 +663,7 @@ const extractCallsFromCallable = (
   symbolMap: SymbolMap,
   edges: Edge[],
   projectRoot: string,
+  projectRegistry?: ProjectRegistry,
 ): void => {
   // Nodes to search for call expressions
   const nodesToSearch: TsMorphNode[] = [];
@@ -547,6 +712,7 @@ const extractCallsFromCallable = (
         symbolMap,
         aliasMap,
         projectRoot,
+        projectRegistry,
       );
 
       if (resolved) {

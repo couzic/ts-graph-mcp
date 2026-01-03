@@ -979,4 +979,188 @@ export function process(value: string = getDefault()): string {
       type: "CALLS",
     });
   });
+
+  it("resolves namespace property call to actual function (Namespace.method())", () => {
+    const project = createProject();
+
+    // Actual function definition
+    project.createSourceFile(
+      "math/operations.ts",
+      `export function multiply(a: number, b: number): number { return a * b; }`,
+    );
+
+    // Barrel with namespace export
+    project.createSourceFile("math/index.ts", `export * from './operations';`);
+
+    project.createSourceFile(
+      "index.ts",
+      `export * as MathUtils from './math';`,
+    );
+
+    // Consumer using namespace import
+    const consumer = project.createSourceFile(
+      "consumer.ts",
+      `
+import { MathUtils } from './index';
+export function calculate(a: number, b: number) {
+  return MathUtils.multiply(a, b);
+}
+      `,
+    );
+
+    const edges = extractCallEdges(consumer, {
+      filePath: "consumer.ts",
+      package: "test",
+    });
+
+    expect(edges).toHaveLength(1);
+    // Should resolve to actual function, not namespace
+    expect(edges[0]?.target).toBe("math/operations.ts:multiply");
+  });
+
+  describe("cross-package namespace resolution with path aliases", () => {
+    it("resolves Namespace.method() when barrel uses path alias requiring cross-package resolution", () => {
+      // Scenario: Package A has path alias @/* -> src/*
+      // Package A's barrel: export * as MathUtils from "@/math/operations"
+      // Package B imports from Package A and calls MathUtils.multiply()
+      // Package B's tsconfig doesn't know about @/* path alias
+      // Type system resolution fails -> need cross-package resolution via ProjectRegistry
+
+      // Package A project WITH path alias
+      const packageAProject = new Project({
+        useInMemoryFileSystem: true,
+        compilerOptions: {
+          baseUrl: "/libs/packageA",
+          paths: {
+            "@/*": ["src/*"],
+          },
+        },
+      });
+
+      // Actual function definition in Package A
+      packageAProject.createSourceFile(
+        "/libs/packageA/src/math/operations.ts",
+        `export function multiply(a: number, b: number): number { return a * b; }`,
+      );
+
+      // Barrel file in Package A using path alias
+      packageAProject.createSourceFile(
+        "/libs/packageA/src/index.ts",
+        `export * as MathUtils from "@/math/operations";`,
+      );
+
+      // Package B project WITHOUT path alias
+      const packageBProject = new Project({
+        useInMemoryFileSystem: true,
+        compilerOptions: {},
+      });
+
+      // Copy barrel file to Package B's view (simulates import resolution)
+      // In real scenario, ts-morph resolves "@libs/packageA" to this file
+      // The barrel still contains the @/* path alias which Package B can't resolve
+      packageBProject.createSourceFile(
+        "/libs/packageA/src/index.ts",
+        `export * as MathUtils from "@/math/operations";`,
+      );
+
+      // Consumer in Package B
+      const consumer = packageBProject.createSourceFile(
+        "/app/src/consumer.ts",
+        `
+import { MathUtils } from "../../libs/packageA/src/index";
+export function calculate(a: number, b: number) {
+  return MathUtils.multiply(a, b);
+}
+        `,
+      );
+
+      // Create a ProjectRegistry that returns Package A's project for barrel file
+      const projectRegistry = {
+        getProjectForFile: (absolutePath: string) => {
+          if (absolutePath.startsWith("/libs/packageA/")) {
+            return packageAProject;
+          }
+          return undefined;
+        },
+      };
+
+      const edges = extractCallEdges(consumer, {
+        filePath: "app/src/consumer.ts",
+        package: "packageB",
+        projectRegistry,
+      });
+
+      expect(edges).toHaveLength(1);
+      // Should resolve through cross-package resolution to actual function
+      expect(edges[0]?.target).toBe(
+        "libs/packageA/src/math/operations.ts:multiply",
+      );
+    });
+
+    it("resolves aliased namespace with cross-package path alias (import { X as Y })", () => {
+      // Same as above, but with aliased import: import { MathUtils as M }
+      // This triggers the bug where namespaceExport.getName() !== baseName
+
+      const packageAProject = new Project({
+        useInMemoryFileSystem: true,
+        compilerOptions: {
+          baseUrl: "/libs/packageA",
+          paths: {
+            "@/*": ["src/*"],
+          },
+        },
+      });
+
+      packageAProject.createSourceFile(
+        "/libs/packageA/src/math/operations.ts",
+        `export function multiply(a: number, b: number): number { return a * b; }`,
+      );
+
+      packageAProject.createSourceFile(
+        "/libs/packageA/src/index.ts",
+        `export * as MathUtils from "@/math/operations";`,
+      );
+
+      const packageBProject = new Project({
+        useInMemoryFileSystem: true,
+        compilerOptions: {},
+      });
+
+      packageBProject.createSourceFile(
+        "/libs/packageA/src/index.ts",
+        `export * as MathUtils from "@/math/operations";`,
+      );
+
+      // Consumer uses ALIASED import
+      const consumer = packageBProject.createSourceFile(
+        "/app/src/consumer.ts",
+        `
+import { MathUtils as M } from "../../libs/packageA/src/index";
+export function calculate(a: number, b: number) {
+  return M.multiply(a, b);
+}
+        `,
+      );
+
+      const projectRegistry = {
+        getProjectForFile: (absolutePath: string) => {
+          if (absolutePath.startsWith("/libs/packageA/")) {
+            return packageAProject;
+          }
+          return undefined;
+        },
+      };
+
+      const edges = extractCallEdges(consumer, {
+        filePath: "app/src/consumer.ts",
+        package: "packageB",
+        projectRegistry,
+      });
+
+      expect(edges).toHaveLength(1);
+      expect(edges[0]?.target).toBe(
+        "libs/packageA/src/math/operations.ts:multiply",
+      );
+    });
+  });
 });

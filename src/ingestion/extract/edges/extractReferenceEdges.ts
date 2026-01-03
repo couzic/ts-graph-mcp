@@ -378,15 +378,38 @@ const determineReferenceContext = (
 
   // Element access on a variable: userFormatters[type]
   // The identifier being accessed (not the index) is a reference
+  // But skip if the element access is itself a call with a STRING LITERAL key
+  // (e.g., MathUtils["multiply"]()) because that's semantically equivalent to obj.method()
+  // Dynamic keys like formatters[type]() should still create REFERENCES edges
   if (TsMorphNode.isElementAccessExpression(parent)) {
     if (parent.getExpression() === identifier) {
+      const grandparent = parent.getParent();
+      const argumentExpr = parent.getArgumentExpression();
+      const isStringLiteralKey =
+        argumentExpr && TsMorphNode.isStringLiteral(argumentExpr);
+      if (
+        isStringLiteralKey &&
+        TsMorphNode.isCallExpression(grandparent) &&
+        grandparent.getExpression() === parent
+      ) {
+        return null;
+      }
       return "access";
     }
   }
 
   // Property access base: obj.method - obj is being accessed
+  // But skip if the property access is itself a call (e.g., MathUtils.multiply())
+  // because that's a method call, not a reference to the namespace
   if (TsMorphNode.isPropertyAccessExpression(parent)) {
     if (parent.getExpression() === identifier) {
+      const grandparent = parent.getParent();
+      if (
+        TsMorphNode.isCallExpression(grandparent) &&
+        grandparent.getExpression() === parent
+      ) {
+        return null;
+      }
       return "access";
     }
   }

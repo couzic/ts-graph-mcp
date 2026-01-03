@@ -247,9 +247,31 @@ This prevents SQLite from using any index on `name`, causing a full table scan.
 
 ---
 
+### Namespace Call Resolution Iterates All Exports
+
+**Impact:** Low (performance)
+
+**Problem:** `resolveNamespaceCallCrossPackage()` in `extractCallEdges.ts` iterates through all export declarations in the barrel file for each namespace property call (e.g., `MathUtils.multiply()`).
+
+**In `extractCallEdges.ts:90-130`:**
+```typescript
+for (const exportDecl of barrelFile.getExportDeclarations()) {
+  const namespaceExport = exportDecl.getNamespaceExport();
+  if (namespaceExport && namespaceExport.getName() === baseName) {
+    // resolve...
+  }
+}
+```
+
+**Likelihood:** Low — most barrel files have few namespace exports. Only affects files with many `export * as X from` statements.
+
+**Future optimization:** If perf becomes an issue, cache namespace-to-export-declaration mappings per barrel file during indexing.
+
+---
+
 ### Cross-Package Path Alias Resolution
 
-**Impact:** Medium (edge case)
+**Impact:** Medium (edge case) — **RESOLVED**
 
 **Problem:** When a barrel file uses path aliases that are defined in its package's tsconfig (not the consumer's tsconfig), resolution fails if we use the consumer's ts-morph Project context.
 

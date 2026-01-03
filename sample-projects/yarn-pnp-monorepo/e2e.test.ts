@@ -63,7 +63,6 @@ describe("yarn-pnp-monorepo E2E tests", () => {
 ## Graph
 
 calculateArea --CALLS--> multiply
-calculateArea --REFERENCES--> MathUtils
 
 ## Nodes
 
@@ -102,6 +101,70 @@ calculateArea:
     16: export function calculateArea(width: number, height: number): number {
   > 17:   return MathUtils.multiply(width, height);
     18: }
+`.trimStart(),
+      );
+    });
+  });
+
+  describe("namespace imports with path alias in barrel", () => {
+    // Tests the case where barrel file uses path alias:
+    //   export * as StringUtils from "@/strings"
+    // This is different from MathUtils which uses relative path:
+    //   export * as MathUtils from "./math"
+
+    it("resolves Namespace.Symbol through path alias to actual definition", () => {
+      // formatLabel uses StringUtils.capitalize where StringUtils is re-exported
+      // via path alias "@/strings" in the barrel file
+      const output = dependenciesOf(
+        db,
+        projectRoot,
+        "modules/app/packages/backend/src/api.ts",
+        "formatLabel",
+      );
+
+      expect(output).toBe(
+        `
+## Graph
+
+formatLabel --CALLS--> capitalize
+
+## Nodes
+
+capitalize:
+  file: libs/toolkit/src/strings/operations.ts
+  offset: 1, limit: 3
+  snippet:
+    1: export function capitalize(str: string): string {
+    2:   return str.charAt(0).toUpperCase() + str.slice(1);
+    3: }
+`.trimStart(),
+      );
+    });
+
+    it("finds dependents through namespace import with path alias", () => {
+      // Should find formatLabel as a caller of capitalize
+      const output = dependentsOf(
+        db,
+        projectRoot,
+        "libs/toolkit/src/strings/operations.ts",
+        "capitalize",
+      );
+
+      expect(output).toBe(
+        `
+## Graph
+
+formatLabel --CALLS--> capitalize
+
+## Nodes
+
+formatLabel:
+  file: modules/app/packages/backend/src/api.ts
+  offset: 24, limit: 3
+  snippet:
+    24: export function formatLabel(label: string): string {
+  > 25:   return StringUtils.capitalize(label);
+    26: }
 `.trimStart(),
       );
     });

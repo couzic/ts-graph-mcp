@@ -296,6 +296,52 @@ export const myFunc = () => 42;
       // Arrow function definitions are not references
       expect(edges).toHaveLength(0);
     });
+
+    it("does NOT extract REFERENCES for namespace in method call (obj.method())", () => {
+      const project = createProject();
+      const sourceFile = project.createSourceFile(
+        "test.ts",
+        `
+const MathUtils = { multiply: (a: number, b: number) => a * b };
+export function calculateArea(w: number, h: number) {
+  return MathUtils.multiply(w, h);
+}
+        `,
+      );
+
+      const edges = extractReferenceEdges(sourceFile, defaultContext);
+
+      // MathUtils is used to call a method, not referenced - should not appear
+      const hasMathUtilsRef = edges.some(
+        (e) =>
+          e.target === generateNodeId("test.ts", "MathUtils") &&
+          e.source === generateNodeId("test.ts", "calculateArea"),
+      );
+      expect(hasMathUtilsRef).toBe(false);
+    });
+
+    it("does NOT extract REFERENCES for namespace in bracket notation call (obj['method']())", () => {
+      const project = createProject();
+      const sourceFile = project.createSourceFile(
+        "test.ts",
+        `
+const MathUtils = { multiply: (a: number, b: number) => a * b };
+export function calculateArea(w: number, h: number) {
+  return MathUtils["multiply"](w, h);
+}
+        `,
+      );
+
+      const edges = extractReferenceEdges(sourceFile, defaultContext);
+
+      // MathUtils is used to call a method via bracket notation, not referenced
+      const hasMathUtilsRef = edges.some(
+        (e) =>
+          e.target === generateNodeId("test.ts", "MathUtils") &&
+          e.source === generateNodeId("test.ts", "calculateArea"),
+      );
+      expect(hasMathUtilsRef).toBe(false);
+    });
   });
 
   describe("cross-file references", () => {

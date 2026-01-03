@@ -1,5 +1,5 @@
 import { type Config, validateThreshold } from "@app/shared";
-import { MathUtils } from "@libs/toolkit";
+import { MathUtils, StringUtils } from "@libs/toolkit";
 
 export function handleConfigUpdate(input: unknown): Config {
   const config = input as Config;
@@ -15,4 +15,12 @@ export function handleConfigUpdate(input: unknown): Config {
  */
 export function calculateArea(width: number, height: number): number {
   return MathUtils.multiply(width, height);
+}
+
+/**
+ * Uses namespace import with path alias: StringUtils.capitalize
+ * The barrel file exports StringUtils from "@/strings" (path alias).
+ */
+export function formatLabel(label: string): string {
+  return StringUtils.capitalize(label);
 }
