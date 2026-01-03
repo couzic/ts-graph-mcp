@@ -99,4 +99,26 @@ export function createUser(name: string): User {
     expect(nodes).toHaveLength(1);
     expect(nodes[0]?.type).toBe("File");
   });
+
+  describe("default exports", () => {
+    it("extracts default-exported variable as exported node", () => {
+      const sourceFile = project.createSourceFile(
+        "src/Component.tsx",
+        `
+const LoadingSpinner = () => {
+  return <div>Loading</div>;
+};
+export default LoadingSpinner;
+`,
+      );
+      const context = createContext("src/Component.tsx");
+
+      const nodes = extractNodes(sourceFile, context);
+      const spinner = nodes.find((n) => n.name === "LoadingSpinner");
+
+      expect(spinner).toBeDefined();
+      expect(spinner?.type).toBe("Variable");
+      expect(spinner?.exported).toBe(true);
+    });
+  });
 });

@@ -17,13 +17,13 @@ interface SymbolElsewhere {
  * Distinguishes between different failure modes and provides actionable guidance.
  *
  * Error cases:
- * 1. File not indexed → "File 'X' is not indexed. Indexed packages: ..."
- * 2. Symbol not in file → "Symbol 'X' not found. Available: ..."
- * 3. Symbol in wrong file → also shows where the symbol was found
+ * 1. File not indexed → "File 'X' is not indexed."
+ * 2. Symbol not in file → "Symbol 'X' not found. Available: ..." (up to 5 symbols, sorted by similarity)
+ * 3. Symbol exists elsewhere → shows where the symbol was found
  *
  * @example
  * symbolNotFound(db, 'src/utils.ts', 'formatDate')
- * // "Symbol 'formatDate' not found at src/utils.ts\n\nFound in:\n  - src/date/format.ts (Function)"
+ * // "Symbol 'formatDate' not found at src/utils.ts\n\nFound in:\n  - src/date/format.ts"
  */
 export const symbolNotFound = (
   db: Database.Database,

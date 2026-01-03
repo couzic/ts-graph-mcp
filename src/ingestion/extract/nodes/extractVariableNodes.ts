@@ -14,6 +14,13 @@ export const extractVariableNodes = (
   const variableStatements = sourceFile.getVariableStatements();
   const variables: VariableNode[] = [];
 
+  // Get default export to check if any variable is default-exported
+  // e.g., `const Foo = ...; export default Foo;`
+  const defaultExport = sourceFile.getExportAssignment(
+    (a) => !a.isExportEquals(),
+  );
+  const defaultExportedName = defaultExport?.getExpression().getText();
+
   for (const statement of variableStatements) {
     const declarations = statement.getDeclarations();
     const declarationKind = statement.getDeclarationKind();
@@ -24,7 +31,9 @@ export const extractVariableNodes = (
       const name = decl.getName();
       const startLine = decl.getStartLineNumber();
       const endLine = decl.getEndLineNumber();
-      const exported = statement.isExported();
+      const isDirectlyExported = statement.isExported();
+      const isDefaultExported = name === defaultExportedName;
+      const exported = isDirectlyExported || isDefaultExported;
 
       // Extract type annotation
       const typeNode = decl.getTypeNode();
