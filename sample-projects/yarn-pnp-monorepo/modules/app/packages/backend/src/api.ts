@@ -1,4 +1,6 @@
 import { type Config, validateThreshold } from "@app/shared";
+import { formatError } from "@libs/error-utils";
+import { toUpperCase } from "@libs/text-utils";
 import { MathUtils, StringUtils } from "@libs/toolkit";
 
 export function handleConfigUpdate(input: unknown): Config {
@@ -23,4 +25,15 @@ export function calculateArea(width: number, height: number): number {
  */
 export function formatLabel(label: string): string {
   return StringUtils.capitalize(label);
+}
+
+/**
+ * Tests cross-package edge resolution.
+ * toUpperCase comes from text-utils (types: null, export * from)
+ * formatError comes from error-utils (types: dist/index.d.ts, export { x } from)
+ */
+export function processInput(input: string): string {
+  const upper = toUpperCase(input);
+  const error = formatError(new Error("test"));
+  return `${upper} - ${error}`;
 }

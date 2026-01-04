@@ -1,118 +1,67 @@
-import { existsSync } from "node:fs";
-import { createRequire } from "node:module";
-import { basename, dirname, join } from "node:path";
+import { dirname, isAbsolute, resolve } from "node:path";
 import { Project, ts } from "ts-morph";
+import { buildWorkspaceMap } from "./buildWorkspaceMap.js";
 
 /**
  * Options for creating a ts-morph Project.
  */
 export interface CreateProjectOptions {
   tsConfigFilePath: string;
+  /**
+   * Root directory of the workspace (where root package.json with workspaces field lives).
+   * If not provided, auto-detected by walking up from tsconfig location.
+   */
+  workspaceRoot?: string;
+  /**
+   * Set of npm package names that are configured in ts-graph-mcp.config.json.
+   * When a configured package is imported but not in the workspace map,
+   * an error is logged once per package.
+   */
+  configuredPackageNames?: Set<string>;
 }
 
 /**
- * Yarn PnP API interface (subset we use).
- * @see https://yarnpkg.com/advanced/pnpapi
- */
-interface PnpApi {
-  resolveRequest: (
-    request: string,
-    issuer: string | null,
-    opts?: { considerBuiltins?: boolean; extensions?: string[] },
-  ) => string | null;
-}
-
-/**
- * Try to map a dist/ path to its corresponding src/ path.
- * Returns the source path if found, otherwise returns the original path.
+ * Create a ts-morph Project with workspace-aware module resolution.
+ *
+ * When a workspace root is detected (package.json with "workspaces" field),
+ * module resolution will check workspace packages before falling back to
+ * standard TypeScript resolution. This allows cross-package imports to
+ * resolve directly to source files without requiring compiled artifacts.
  *
  * @example
- * mapDistToSrc('/pkg/dist/index.js') → '/pkg/src/index.ts' (if exists)
- * mapDistToSrc('/pkg/dist/foo/bar.js') → '/pkg/src/foo/bar.ts' (if exists)
- */
-const mapDistToSrc = (distPath: string): string => {
-  // Only handle paths containing /dist/
-  const distIndex = distPath.indexOf("/dist/");
-  if (distIndex === -1) {
-    return distPath;
-  }
-
-  const packageRoot = distPath.substring(0, distIndex);
-  const relativePath = distPath.substring(distIndex + "/dist/".length);
-
-  // Remove .js/.mjs/.cjs extension and try .ts/.tsx
-  const withoutExt = relativePath.replace(/\.(js|mjs|cjs)$/, "");
-  const tsExtensions = [".ts", ".tsx"];
-
-  for (const ext of tsExtensions) {
-    const srcPath = join(packageRoot, "src", withoutExt + ext);
-    if (existsSync(srcPath)) {
-      return srcPath;
-    }
-  }
-
-  // Try index.ts if the path was just "index.js"
-  if (basename(withoutExt) === "index") {
-    const parentDir = dirname(withoutExt);
-    for (const ext of tsExtensions) {
-      const srcPath = join(packageRoot, "src", parentDir, `index${ext}`);
-      if (existsSync(srcPath)) {
-        return srcPath;
-      }
-    }
-  }
-
-  return distPath;
-};
-
-/**
- * Find the Yarn PnP API for a given project path.
- * Returns null if not in a PnP environment.
- */
-const findPnpApi = (projectPath: string): PnpApi | null => {
-  // Look for .pnp.cjs in the project directory and its ancestors
-  let currentDir = projectPath;
-  while (currentDir !== dirname(currentDir)) {
-    const pnpPath = join(currentDir, ".pnp.cjs");
-    if (existsSync(pnpPath)) {
-      try {
-        // Load the PnP API from the project's .pnp.cjs
-        const require = createRequire(pnpPath);
-        const pnpApi = require(pnpPath) as PnpApi;
-        if (typeof pnpApi.resolveRequest === "function") {
-          return pnpApi;
-        }
-      } catch {
-        // Failed to load PnP API, fall through
-      }
-    }
-    currentDir = dirname(currentDir);
-  }
-  return null;
-};
-
-/**
- * Create a ts-morph Project with optional Yarn PnP resolution support.
+ * // Single package (no workspace)
+ * const project = createProject({ tsConfigFilePath: './tsconfig.json' });
  *
- * If the project is in a Yarn PnP environment (has .pnp.cjs), module resolution
- * will use Yarn's PnP API. Otherwise, standard TypeScript resolution is used.
- *
- * @param options - Project creation options
- * @returns ts-morph Project instance
+ * @example
+ * // Monorepo with explicit workspace root
+ * const project = createProject({
+ *   tsConfigFilePath: './packages/app/tsconfig.json',
+ *   workspaceRoot: '/path/to/monorepo'
+ * });
  */
 export const createProject = (options: CreateProjectOptions): Project => {
-  const { tsConfigFilePath } = options;
-  const projectDir = dirname(tsConfigFilePath);
-  const pnpApi = findPnpApi(projectDir);
+  const { tsConfigFilePath, workspaceRoot, configuredPackageNames } = options;
 
-  if (!pnpApi) {
-    // Standard resolution (no PnP)
-    return new Project({ tsConfigFilePath });
+  const absoluteTsConfigPath = isAbsolute(tsConfigFilePath)
+    ? tsConfigFilePath
+    : resolve(tsConfigFilePath);
+  const projectDir = dirname(absoluteTsConfigPath);
+
+  // Determine workspace root: explicit, or fall back to project dir
+  const effectiveWorkspaceRoot = workspaceRoot ?? projectDir;
+  const workspaceMap = buildWorkspaceMap(effectiveWorkspaceRoot);
+
+  // Track packages we've already warned about (log once per package)
+  const warnedPackages = new Set<string>();
+
+  // If no workspace packages found, use standard resolution
+  if (workspaceMap.size === 0) {
+    return new Project({ tsConfigFilePath: absoluteTsConfigPath });
   }
 
-  // PnP resolution: use custom resolutionHost
+  // Workspace resolution: use custom resolutionHost
   return new Project({
-    tsConfigFilePath,
+    tsConfigFilePath: absoluteTsConfigPath,
     resolutionHost: (moduleResolutionHost, getCompilerOptions) => ({
       resolveModuleNames: (
         moduleNames: string[],
@@ -121,44 +70,27 @@ export const createProject = (options: CreateProjectOptions): Project => {
         const compilerOptions = getCompilerOptions();
 
         return moduleNames.map((moduleName) => {
-          // Try PnP resolution first
-          try {
-            const resolved = pnpApi.resolveRequest(moduleName, containingFile, {
-              extensions: [".ts", ".tsx", ".d.ts", ".js", ".jsx"],
-            });
-            if (resolved) {
-              // Skip files inside .yarn (zip archives, virtual packages)
-              if (resolved.includes(".yarn/")) {
-                return undefined;
-              }
-              // Skip non-code files (scss, css, images, etc.)
-              const codeExtensions = [
-                ".ts",
-                ".tsx",
-                ".d.ts",
-                ".js",
-                ".jsx",
-                ".mjs",
-                ".cjs",
-              ];
-              const isCodeFile = codeExtensions.some((ext) =>
-                resolved.endsWith(ext),
-              );
-              if (!isCodeFile) {
-                return undefined;
-              }
-              // Map dist/ paths to src/ paths for workspace packages
-              const mappedPath = mapDistToSrc(resolved);
-              return {
-                resolvedFileName: mappedPath,
-                isExternalLibraryImport: false,
-              };
-            }
-          } catch {
-            // PnP resolution failed, fall through to standard resolution
+          // Check workspace map first (e.g., "@libs/toolkit" -> "/path/to/libs/toolkit/src/index.ts")
+          const sourceEntry = workspaceMap.get(moduleName);
+          if (sourceEntry) {
+            return {
+              resolvedFileName: sourceEntry,
+              isExternalLibraryImport: false,
+            };
           }
 
-          // Fall back to TypeScript's standard resolution
+          // Log error if this is a configured package we couldn't resolve
+          if (
+            configuredPackageNames?.has(moduleName) &&
+            !warnedPackages.has(moduleName)
+          ) {
+            warnedPackages.add(moduleName);
+            console.error(
+              `[ts-graph-mcp] Cannot resolve workspace package "${moduleName}": source entry not found. Cross-package edges will be missing.`,
+            );
+          }
+
+          // Fall back to standard TypeScript resolution
           const result = ts.resolveModuleName(
             moduleName,
             containingFile,

@@ -1,10 +1,24 @@
 {
   "packages": [
     { "name": "toolkit", "tsconfig": "./libs/toolkit/tsconfig.json" },
-    { "name": "ui", "tsconfig": "./libs/ui/tsconfig.json" },
-    { "name": "shared", "tsconfig": "./modules/app/packages/shared/tsconfig.json" },
-    { "name": "frontend", "tsconfig": "./modules/app/packages/frontend/tsconfig.json" },
-    { "name": "backend", "tsconfig": "./modules/app/packages/backend/tsconfig.json" },
-    { "name": "analytics-api", "tsconfig": "./modules/analytics-api/tsconfig.json" }
+    { "name": "@libs/ui", "tsconfig": "./libs/ui/tsconfig.json" },
+    { "name": "text-utils", "tsconfig": "./libs/text-utils/tsconfig.json" },
+    { "name": "error-utils", "tsconfig": "./libs/error-utils/tsconfig.json" },
+    {
+      "name": "shared",
+      "tsconfig": "./modules/app/packages/shared/tsconfig.json"
+    },
+    {
+      "name": "frontend",
+      "tsconfig": "./modules/app/packages/frontend/tsconfig.json"
+    },
+    {
+      "name": "backend",
+      "tsconfig": "./modules/app/packages/backend/tsconfig.json"
+    },
+    {
+      "name": "analytics-api",
+      "tsconfig": "./modules/analytics-api/tsconfig.json"
+    }
   ]
 }

@@ -6,6 +6,6 @@ export function renderDashboard(config: Config): string {
   return renderButton("Threshold", threshold);
 }
 
-export function renderLoading(value: number): string {
-  return LoadingWrapper(value);
+export function renderLoading(value: number) {
+  return <LoadingWrapper>{value}</LoadingWrapper>;
 }

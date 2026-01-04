@@ -27,8 +27,8 @@ export const calculate = (x: number, y: number): number => add(x, y);
     expect(edges).toHaveLength(1);
     expect(edges[0]).toEqual({
       source: generateNodeId("test.ts", "calculate"),
-      target: generateNodeId("test.ts", "add"),
       type: "CALLS",
+      target: generateNodeId("test.ts", "add"),
       callCount: 1,
       callSites: [{ start: 3, end: 3 }],
     });
@@ -53,8 +53,8 @@ export const doWork = () => {
     expect(edges).toHaveLength(1);
     expect(edges[0]).toEqual({
       source: generateNodeId("test.ts", "doWork"),
-      target: generateNodeId("test.ts", "log"),
       type: "CALLS",
+      target: generateNodeId("test.ts", "log"),
       callCount: 3,
       callSites: [
         { start: 4, end: 4 },
@@ -86,8 +86,8 @@ export class User {
     expect(edges).toHaveLength(1);
     expect(edges[0]).toEqual({
       source: generateNodeId("test.ts", "User", "isValid"),
-      target: generateNodeId("test.ts", "validate"),
       type: "CALLS",
+      target: generateNodeId("test.ts", "validate"),
       callCount: 1,
       callSites: [{ start: 8, end: 8 }],
     });
@@ -128,8 +128,8 @@ export const processEvent = (timestamp: Date): string => {
     expect(edges).toHaveLength(1);
     expect(edges[0]).toEqual({
       source: generateNodeId("handler.ts", "processEvent"),
-      target: generateNodeId("utils.ts", "formatDate"),
       type: "CALLS",
+      target: generateNodeId("utils.ts", "formatDate"),
       callCount: 1,
       callSites: [{ start: 5, end: 5 }],
     });
@@ -155,8 +155,8 @@ export const caller = (): string => {
     expect(edges).toHaveLength(1);
     expect(edges[0]).toEqual({
       source: generateNodeId("test.ts", "caller"),
-      target: generateNodeId("test.ts", "target"),
       type: "CALLS",
+      target: generateNodeId("test.ts", "target"),
       callCount: 1,
       callSites: [{ start: 6, end: 6 }],
     });
@@ -256,8 +256,8 @@ export function handleRequest() {
     expect(edges).toHaveLength(1);
     expect(edges[0]).toEqual({
       source: generateNodeId("test.ts", "handleRequest"),
-      target: generateNodeId("test.ts", "UserService", "save"),
       type: "CALLS",
+      target: generateNodeId("test.ts", "UserService", "save"),
       callCount: 1,
       callSites: [{ start: 10, end: 10 }],
     });
@@ -299,8 +299,8 @@ export function handleRequest() {
     expect(edges).toHaveLength(1);
     expect(edges[0]).toEqual({
       source: generateNodeId("src/handler.ts", "handleRequest"),
-      target: generateNodeId("src/UserService.ts", "UserService", "save"),
       type: "CALLS",
+      target: generateNodeId("src/UserService.ts", "UserService", "save"),
       callCount: 1,
       callSites: [{ start: 6, end: 6 }],
     });
@@ -330,8 +330,8 @@ export class UserService {
     expect(edges).toHaveLength(1);
     expect(edges[0]).toEqual({
       source: generateNodeId("test.ts", "UserService", "save"),
-      target: generateNodeId("test.ts", "UserService", "validate"),
       type: "CALLS",
+      target: generateNodeId("test.ts", "UserService", "validate"),
       callCount: 1,
       callSites: [{ start: 8, end: 8 }],
     });
@@ -378,8 +378,8 @@ export class UserService {
     expect(edges).toHaveLength(1);
     expect(edges[0]).toEqual({
       source: generateNodeId("src/UserService.ts", "UserService", "save"),
-      target: generateNodeId("src/Validator.ts", "Validator", "check"),
       type: "CALLS",
+      target: generateNodeId("src/Validator.ts", "Validator", "check"),
       callCount: 1,
       callSites: [{ start: 8, end: 8 }],
     });
@@ -407,8 +407,8 @@ export function handleRequest() {
     expect(edges).toHaveLength(1);
     expect(edges[0]).toEqual({
       source: generateNodeId("test.ts", "handleRequest"),
-      target: generateNodeId("test.ts", "UserService", "create"),
       type: "CALLS",
+      target: generateNodeId("test.ts", "UserService", "create"),
       callCount: 1,
       callSites: [{ start: 9, end: 9 }],
     });
@@ -447,8 +447,8 @@ export function handleRequest() {
     expect(edges).toHaveLength(1);
     expect(edges[0]).toEqual({
       source: generateNodeId("src/handler.ts", "handleRequest"),
-      target: generateNodeId("src/UserService.ts", "UserService", "create"),
       type: "CALLS",
+      target: generateNodeId("src/UserService.ts", "UserService", "create"),
       callCount: 1,
       callSites: [{ start: 5, end: 5 }],
     });
@@ -757,8 +757,8 @@ export class UserService {
     expect(edges).toHaveLength(1);
     expect(edges[0]).toMatchObject({
       source: "test.ts:UserService.constructor",
-      target: "test.ts:initialize",
       type: "CALLS",
+      target: "test.ts:initialize",
     });
   });
 
@@ -815,8 +815,8 @@ export class Config {
     expect(edges).toHaveLength(1);
     expect(edges[0]).toMatchObject({
       source: "test.ts:Config.value:get",
-      target: "test.ts:validate",
       type: "CALLS",
+      target: "test.ts:validate",
     });
   });
 
@@ -844,8 +844,8 @@ export class Config {
     expect(edges).toHaveLength(1);
     expect(edges[0]).toMatchObject({
       source: "test.ts:Config.value:set",
-      target: "test.ts:validate",
       type: "CALLS",
+      target: "test.ts:validate",
     });
   });
 
@@ -871,8 +871,8 @@ export class Handler {
     expect(edges).toHaveLength(1);
     expect(edges[0]).toMatchObject({
       source: "test.ts:Handler.handleClick",
-      target: "test.ts:log",
       type: "CALLS",
+      target: "test.ts:log",
     });
   });
 
@@ -896,8 +896,8 @@ export class Service {
     expect(edges).toHaveLength(1);
     expect(edges[0]).toMatchObject({
       source: "test.ts:Service.logger",
-      target: "test.ts:getLogger",
       type: "CALLS",
+      target: "test.ts:getLogger",
     });
   });
 
@@ -923,8 +923,8 @@ export class Config {
     expect(edges).toHaveLength(1);
     expect(edges[0]).toMatchObject({
       source: "test.ts:Config.static",
-      target: "test.ts:initialize",
       type: "CALLS",
+      target: "test.ts:initialize",
     });
   });
 
@@ -950,8 +950,8 @@ export const MyClass = class {
     expect(edges).toHaveLength(1);
     expect(edges[0]).toMatchObject({
       source: "test.ts:MyClass.method",
-      target: "test.ts:helper",
       type: "CALLS",
+      target: "test.ts:helper",
     });
   });
 
@@ -975,8 +975,8 @@ export function process(value: string = getDefault()): string {
     expect(edges).toHaveLength(1);
     expect(edges[0]).toMatchObject({
       source: "test.ts:process",
-      target: "test.ts:getDefault",
       type: "CALLS",
+      target: "test.ts:getDefault",
     });
   });
 
@@ -1161,6 +1161,102 @@ export function calculate(a: number, b: number) {
       expect(edges[0]?.target).toBe(
         "libs/packageA/src/math/operations.ts:multiply",
       );
+    });
+  });
+
+  describe("JSX element usage", () => {
+    const createJsxProject = () =>
+      new Project({
+        useInMemoryFileSystem: true,
+        compilerOptions: {
+          jsx: 2, // React
+        },
+      });
+
+    it("extracts INCLUDES edge for JSX element usage", () => {
+      const project = createJsxProject();
+      const sourceFile = project.createSourceFile(
+        "test.tsx",
+        `
+const LoadingWrapper = (props: { children: number }) => {
+  return \`<div>\${props.children}</div>\`;
+};
+
+export function renderLoading(value: number) {
+  return <LoadingWrapper>{value}</LoadingWrapper>;
+}
+        `,
+      );
+
+      const edges = extractCallEdges(sourceFile, {
+        filePath: "test.tsx",
+        package: "test-package",
+      });
+
+      expect(edges).toHaveLength(1);
+      expect(edges[0]).toMatchObject({
+        source: "test.tsx:renderLoading",
+        type: "INCLUDES",
+        target: "test.tsx:LoadingWrapper",
+      });
+    });
+
+    it("extracts INCLUDES edge for self-closing JSX element", () => {
+      const project = createJsxProject();
+      const sourceFile = project.createSourceFile(
+        "test.tsx",
+        `
+const Icon = () => "<svg/>";
+
+export function Button() {
+  return <Icon />;
+}
+        `,
+      );
+
+      const edges = extractCallEdges(sourceFile, {
+        filePath: "test.tsx",
+        package: "test-package",
+      });
+
+      expect(edges).toHaveLength(1);
+      expect(edges[0]).toMatchObject({
+        source: "test.tsx:Button",
+        type: "INCLUDES",
+        target: "test.tsx:Icon",
+      });
+    });
+
+    it("extracts INCLUDES edge for imported JSX component", () => {
+      const project = createJsxProject();
+
+      project.createSourceFile(
+        "components/Loading.tsx",
+        `export const Loading = () => "<div>Loading...</div>";`,
+      );
+
+      const sourceFile = project.createSourceFile(
+        "test.tsx",
+        `
+import { Loading } from "./components/Loading";
+
+export function Page() {
+  return <Loading />;
+}
+        `,
+      );
+
+      const edges = extractCallEdges(sourceFile, {
+        filePath: "test.tsx",
+        package: "test-package",
+      });
+
+      expect(edges).toHaveLength(1);
+      expect(edges[0]).toMatchObject({
+        source: "test.tsx:Page",
+        type: "INCLUDES",
+        target: "components/Loading.tsx:Loading",
+      });
     });
   });
 });

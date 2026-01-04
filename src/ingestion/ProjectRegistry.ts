@@ -2,6 +2,7 @@ import { dirname, resolve } from "node:path";
 import type { Project } from "ts-morph";
 import type { ProjectConfig } from "../config/Config.schemas.js";
 import { createProject } from "./createProject.js";
+import { extractConfiguredPackageNames } from "./extractConfiguredPackageNames.js";
 import { normalizePath } from "./normalizePath.js";
 import { toPathPrefix } from "./toPathPrefix.js";
 
@@ -47,6 +48,10 @@ export const createProjectRegistry = (
   projectRoot: string,
 ): ProjectRegistry => {
   const entries: PackageEntry[] = [];
+  const configuredPackageNames = extractConfiguredPackageNames(
+    config,
+    projectRoot,
+  );
 
   for (const pkg of config.packages) {
     const absoluteTsConfigPath = resolve(projectRoot, pkg.tsconfig);
@@ -54,6 +59,8 @@ export const createProjectRegistry = (
 
     const project = createProject({
       tsConfigFilePath: absoluteTsConfigPath,
+      workspaceRoot: projectRoot,
+      configuredPackageNames,
     });
 
     entries.push({

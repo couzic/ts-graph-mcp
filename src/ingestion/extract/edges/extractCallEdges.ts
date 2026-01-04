@@ -4,6 +4,8 @@ import {
   type ConstructorDeclaration,
   type FunctionDeclaration,
   type GetAccessorDeclaration,
+  type JsxOpeningElement,
+  type JsxSelfClosingElement,
   type MethodDeclaration,
   type SetAccessorDeclaration,
   type SourceFile,
@@ -278,6 +280,64 @@ const resolveCallTarget = (
 
   if (targetId) {
     return { targetId, symbolName: resolvedName };
+  }
+
+  return undefined;
+};
+
+/**
+ * Resolve a JSX element tag to its component definition.
+ *
+ * Handles:
+ * - Simple JSX: `<MyComponent />` → looks up `MyComponent` in symbolMap
+ * - Skips intrinsic elements: `<div>`, `<span>` (lowercase first letter)
+ *
+ * @param jsxElement - The JSX opening or self-closing element
+ * @param symbolMap - Map of known symbols
+ * @param projectRoot - Project root for computing relative paths
+ * @returns The resolved target, or undefined if not resolvable
+ */
+const resolveJsxTarget = (
+  jsxElement: JsxOpeningElement | JsxSelfClosingElement,
+  symbolMap: SymbolMap,
+  projectRoot: string,
+): ResolvedCallTarget | undefined => {
+  const tagNameNode = jsxElement.getTagNameNode();
+  const tagName = tagNameNode.getText();
+
+  // Skip intrinsic elements (lowercase first letter means HTML element)
+  if (tagName[0] === tagName[0]?.toLowerCase()) {
+    return undefined;
+  }
+
+  // Try to resolve through the type system first
+  const symbol = tagNameNode.getSymbol();
+  if (symbol) {
+    const actualSymbol = followAliasChain(symbol);
+    const declarations = actualSymbol.getDeclarations();
+    const declaration = declarations[0];
+
+    if (declaration) {
+      const declarationFile = declaration.getSourceFile();
+      const absolutePath = normalizePath(declarationFile.getFilePath());
+
+      // Skip external modules (but fall through to symbolMap lookup)
+      if (
+        absolutePath.startsWith(projectRoot) &&
+        !absolutePath.includes("/node_modules/")
+      ) {
+        const relativePath = absolutePath.slice(projectRoot.length);
+        const symbolName = actualSymbol.getName();
+        const targetId = `${relativePath}:${symbolName}`;
+        return { targetId, symbolName };
+      }
+    }
+  }
+
+  // Fallback: look up in symbolMap (handles cross-package imports via import map)
+  const targetId = symbolMap.get(tagName);
+  if (targetId) {
+    return { targetId, symbolName: tagName };
   }
 
   return undefined;
@@ -690,8 +750,10 @@ const extractCallsFromCallable = (
   // Build alias map for local variables that reference known symbols
   const aliasMap = buildLocalAliasMap(callable, symbolMap);
 
-  // Collect call site ranges for each target
+  // Collect call site ranges for each target (CALLS edges)
   const callSitesByTarget = new Map<string, CallSiteRange[]>();
+  // Collect JSX usage sites for each target (INCLUDES edges)
+  const jsxSitesByTarget = new Map<string, CallSiteRange[]>();
 
   for (const nodeToSearch of nodesToSearch) {
     // Get all call expressions (including the node itself if it's a call expression)
@@ -725,14 +787,45 @@ const extractCallsFromCallable = (
         callSitesByTarget.set(resolved.targetId, sites);
       }
     }
+
+    // Get all JSX elements (opening and self-closing)
+    const jsxElements: (JsxOpeningElement | JsxSelfClosingElement)[] = [
+      ...nodeToSearch.getDescendantsOfKind(SyntaxKind.JsxOpeningElement),
+      ...nodeToSearch.getDescendantsOfKind(SyntaxKind.JsxSelfClosingElement),
+    ];
+
+    for (const jsxElement of jsxElements) {
+      const resolved = resolveJsxTarget(jsxElement, symbolMap, projectRoot);
+
+      if (resolved) {
+        const range: CallSiteRange = {
+          start: jsxElement.getStartLineNumber(),
+          end: jsxElement.getEndLineNumber(),
+        };
+        const sites = jsxSitesByTarget.get(resolved.targetId) ?? [];
+        sites.push(range);
+        jsxSitesByTarget.set(resolved.targetId, sites);
+      }
+    }
   }
 
-  // Create edges with call sites
+  // Create CALLS edges
   for (const [targetId, sites] of callSitesByTarget) {
     edges.push({
       source: callerId,
       target: targetId,
       type: "CALLS",
+      callCount: sites.length,
+      callSites: sites,
+    });
+  }
+
+  // Create INCLUDES edges for JSX
+  for (const [targetId, sites] of jsxSitesByTarget) {
+    edges.push({
+      source: callerId,
+      target: targetId,
+      type: "INCLUDES",
       callCount: sites.length,
       callSites: sites,
     });

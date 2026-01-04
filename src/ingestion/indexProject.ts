@@ -4,6 +4,7 @@ import type { DbWriter } from "../db/DbWriter.js";
 import type { IndexResult } from "../db/Types.js";
 import { createProject } from "./createProject.js";
 import type { EdgeExtractionContext } from "./extract/edges/EdgeExtractionContext.js";
+import { extractConfiguredPackageNames } from "./extractConfiguredPackageNames.js";
 import { indexFile } from "./indexFile.js";
 import {
   createProjectRegistry,
@@ -53,6 +54,10 @@ export const indexProject = async (
 
   // Create project registry for cross-package resolution
   const projectRegistry = createProjectRegistry(config, options.projectRoot);
+  const configuredPackageNames = extractConfiguredPackageNames(
+    config,
+    options.projectRoot,
+  );
 
   // Process each package, streaming nodes and edges to DB
   for (const pkg of config.packages) {
@@ -63,6 +68,7 @@ export const indexProject = async (
         options.projectRoot,
         dbWriter,
         projectRegistry,
+        configuredPackageNames,
       );
 
       filesProcessed += result.filesProcessed;
@@ -120,6 +126,7 @@ const processPackage = async (
   projectRoot: string,
   dbWriter: DbWriter,
   projectRegistry: ProjectRegistry,
+  configuredPackageNames: Set<string>,
 ): Promise<PackageProcessResult> => {
   const errors: Array<{ file: string; message: string }> = [];
   const filesIndexed: string[] = [];
@@ -130,9 +137,11 @@ const processPackage = async (
   const absoluteTsConfigPath = resolve(projectRoot, tsconfigPath);
   const packageRoot = dirname(absoluteTsConfigPath);
 
-  // Create ts-morph project with tsconfig (supports Yarn PnP if detected)
+  // Create ts-morph project with tsconfig (workspace-aware resolution)
   const project = createProject({
     tsConfigFilePath: absoluteTsConfigPath,
+    workspaceRoot: projectRoot,
+    configuredPackageNames,
   });
 
   // Filter source files:

@@ -9,6 +9,7 @@ import { createSqliteWriter } from "../db/sqlite/createSqliteWriter.js";
 import { bufferDebounce } from "./bufferDebounce.js";
 import { createProject } from "./createProject.js";
 import type { NodeExtractionContext } from "./extract/nodes/NodeExtractionContext.js";
+import { extractConfiguredPackageNames } from "./extractConfiguredPackageNames.js";
 import { indexFile } from "./indexFile.js";
 import {
   type IndexManifest,
@@ -125,6 +126,10 @@ export const watchProject = (
   } = options;
 
   const writer = createSqliteWriter(db);
+  const configuredPackageNames = extractConfiguredPackageNames(
+    config,
+    projectRoot,
+  );
 
   /**
    * Check if a file is part of the tsconfig compilation.
@@ -134,7 +139,11 @@ export const watchProject = (
     tsconfigPath: string,
     absolutePath: string,
   ): boolean => {
-    const project = createProject({ tsConfigFilePath: tsconfigPath });
+    const project = createProject({
+      tsConfigFilePath: tsconfigPath,
+      workspaceRoot: projectRoot,
+      configuredPackageNames,
+    });
     const sourceFiles = project.getSourceFiles();
     return sourceFiles.some((sf) => {
       const path = sf.getFilePath();
@@ -162,8 +171,12 @@ export const watchProject = (
     // Remove old data
     await writer.removeFileNodes(context.relativePath);
 
-    // Create fresh Project for accurate import resolution (supports Yarn PnP)
-    const project = createProject({ tsConfigFilePath: context.tsconfigPath });
+    // Create fresh Project for accurate import resolution (workspace-aware)
+    const project = createProject({
+      tsConfigFilePath: context.tsconfigPath,
+      workspaceRoot: projectRoot,
+      configuredPackageNames,
+    });
     const sourceFile = project.addSourceFileAtPath(absolutePath);
 
     const extractionContext: NodeExtractionContext = {

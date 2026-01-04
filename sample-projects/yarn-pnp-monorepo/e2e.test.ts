@@ -96,11 +96,11 @@ calculateArea --CALLS--> multiply
 
 calculateArea:
   file: modules/app/packages/backend/src/api.ts
-  offset: 16, limit: 3
+  offset: 18, limit: 3
   snippet:
-    16: export function calculateArea(width: number, height: number): number {
-  > 17:   return MathUtils.multiply(width, height);
-    18: }
+    18: export function calculateArea(width: number, height: number): number {
+  > 19:   return MathUtils.multiply(width, height);
+    20: }
 `.trimStart(),
       );
     });
@@ -160,11 +160,11 @@ formatLabel --CALLS--> capitalize
 
 formatLabel:
   file: modules/app/packages/backend/src/api.ts
-  offset: 24, limit: 3
+  offset: 26, limit: 3
   snippet:
-    24: export function formatLabel(label: string): string {
-  > 25:   return StringUtils.capitalize(label);
-    26: }
+    26: export function formatLabel(label: string): string {
+  > 27:   return StringUtils.capitalize(label);
+    28: }
 `.trimStart(),
       );
     });
@@ -175,7 +175,7 @@ formatLabel:
       const output = dependenciesOf(
         db,
         projectRoot,
-        "modules/app/packages/frontend/src/App.ts",
+        "modules/app/packages/frontend/src/App.tsx",
         "renderDashboard",
       );
 
@@ -265,13 +265,13 @@ formatValue:
 ## Graph
 
 renderDashboard --CALLS--> renderButton --CALLS--> formatValue
-renderLoading --CALLS--> LoadingWrapper --CALLS--> formatValue
 trackMetric --CALLS--> formatValue
+renderLoading --INCLUDES--> LoadingWrapper --CALLS--> formatValue
 
 ## Nodes
 
 renderDashboard:
-  file: modules/app/packages/frontend/src/App.ts
+  file: modules/app/packages/frontend/src/App.tsx
   offset: 4, limit: 4
   snippet:
     4: export function renderDashboard(config: Config): string {
@@ -287,22 +287,6 @@ renderButton:
   > 4:   return \`<button>\${label}: \${formatValue(value)}</button>\`;
     5: }
 
-renderLoading:
-  file: modules/app/packages/frontend/src/App.ts
-  offset: 9, limit: 3
-  snippet:
-    9: export function renderLoading(value: number): string {
-  > 10:   return LoadingWrapper(value);
-    11: }
-
-LoadingWrapper:
-  file: libs/ui/src/components/LoadingWrapper/LoadingWrapper.ts
-  offset: 3, limit: 3
-  snippet:
-    3: const LoadingWrapper = (value: number): string => {
-  > 4:   return \`<div class="loading">\${formatValue(value)}</div>\`;
-    5: };
-
 trackMetric:
   file: modules/analytics-api/src/tracker.ts
   offset: 4, limit: 7
@@ -314,6 +298,22 @@ trackMetric:
     8: ): string {
   > 9:   return \`\${name}=\${formatValue(value)}, max=\${config.maxItems}\`;
     10: }
+
+renderLoading:
+  file: modules/app/packages/frontend/src/App.tsx
+  offset: 9, limit: 3
+  snippet:
+    9: export function renderLoading(value: number) {
+  > 10:   return <LoadingWrapper>{value}</LoadingWrapper>;
+    11: }
+
+LoadingWrapper:
+  file: libs/ui/src/components/LoadingWrapper/LoadingWrapper.tsx
+  offset: 3, limit: 3
+  snippet:
+    3: const LoadingWrapper = (value: number): string => {
+  > 4:   return \`<div class="loading">\${formatValue(value)}</div>\`;
+    5: };
 `.trimStart(),
       );
     });
@@ -336,7 +336,7 @@ handleConfigUpdate --CALLS--> validateThreshold
 ## Nodes
 
 renderDashboard:
-  file: modules/app/packages/frontend/src/App.ts
+  file: modules/app/packages/frontend/src/App.tsx
   offset: 4, limit: 4
   snippet:
     4: export function renderDashboard(config: Config): string {
@@ -346,74 +346,138 @@ renderDashboard:
 
 handleConfigUpdate:
   file: modules/app/packages/backend/src/api.ts
-  offset: 4, limit: 7
+  offset: 6, limit: 7
   snippet:
-    4: export function handleConfigUpdate(input: unknown): Config {
-    5:   const config = input as Config;
-    6:   return {
-    7:     ...config,
-  > 8:     threshold: validateThreshold(config.threshold),
-    9:   };
-    10: }
+    6: export function handleConfigUpdate(input: unknown): Config {
+    7:   const config = input as Config;
+    8:   return {
+    9:     ...config,
+  > 10:     threshold: validateThreshold(config.threshold),
+    11:   };
+    12: }
 `.trimStart(),
       );
     });
   });
 
-  describe("path alias in barrel re-exports (reproduces pocmonorepo bug)", () => {
-    // BUG: When a barrel file uses path aliases in re-exports, cross-package
-    // dependency tracing fails. This matches the wagyz-ui issue in pocmonorepo.
-    //
-    // Setup:
-    //   libs/ui/tsconfig.json: paths: { "@/components/*": ["src/components/*"] }
-    //   libs/ui/src/index.ts: export { default as LoadingWrapper } from "@/components/LoadingWrapper/LoadingWrapper"
-    //   frontend/App.ts: import { LoadingWrapper } from "@libs/ui"; LoadingWrapper(value);
-    //
-    // What happens:
-    //   1. When indexing frontend, import "@libs/ui" resolves to libs/ui/src/index.ts
-    //   2. The barrel re-export uses @/components/* path alias
-    //   3. Path alias resolution FAILS because we're in frontend's context, not ui's
-    //   4. Edge points to non-existent node: "libs/ui/src/index.ts:LoadingWrapper"
-    //   5. But the actual node is: "libs/ui/src/components/LoadingWrapper/LoadingWrapper.ts:LoadingWrapper"
-    //
-    // Compare with renderButton (WORKS):
-    //   libs/ui/src/index.ts: export * from "./Button"  ← relative path, no alias
-    //   Edge correctly points to: "libs/ui/src/Button.ts:renderButton"
+  describe("path alias in barrel re-exports (reproduces real-life monorepo bug)", () => {
+    // Tests path alias resolution in barrel re-exports.
+    // LoadingWrapper is exported via path alias: export { default as LoadingWrapper } from "@/components/LoadingWrapper/LoadingWrapper"
+    // This requires cross-package resolution to work correctly.
 
-    it("finds dependents of symbol exported via path alias in barrel", () => {
-      // LoadingWrapper is called by renderLoading in frontend/App.ts
-      // This should work like renderButton, but fails due to path alias in barrel
+    it("finds dependents of LoadingWrapper through path alias barrel re-export", () => {
+      // LoadingWrapper is used via JSX in frontend/App.tsx
+      // The INCLUDES edge should point to the actual definition
       const output = dependentsOf(
         db,
         projectRoot,
-        "libs/ui/src/components/LoadingWrapper/LoadingWrapper.ts",
+        "libs/ui/src/components/LoadingWrapper/LoadingWrapper.tsx",
         "LoadingWrapper",
       );
 
-      // BUG: Returns "No dependents found" because edge targets wrong node ID
-      // Edge target: "libs/ui/src/index.ts:LoadingWrapper" (doesn't exist)
-      // Should be:   "libs/ui/src/components/LoadingWrapper/LoadingWrapper.ts:LoadingWrapper"
-      expect(output).toContain("renderLoading");
-      expect(output).toContain("modules/app/packages/frontend/src/App.ts");
+      expect(output).toBe(
+        `
+## Graph
+
+renderLoading --INCLUDES--> LoadingWrapper
+
+## Nodes
+
+renderLoading:
+  file: modules/app/packages/frontend/src/App.tsx
+  offset: 9, limit: 3
+  snippet:
+    9: export function renderLoading(value: number) {
+  > 10:   return <LoadingWrapper>{value}</LoadingWrapper>;
+    11: }
+`.trimStart(),
+      );
     });
 
-    it("finds dependencies through path alias barrel re-export", () => {
-      // renderLoading calls LoadingWrapper from @libs/ui
-      // Should trace to the actual definition in components/LoadingWrapper/LoadingWrapper.ts
+    it("finds dependencies of renderLoading through path alias barrel re-export", () => {
+      // renderLoading uses <LoadingWrapper> from @libs/ui
+      // Should trace to the actual definition through the path alias in barrel
       const output = dependenciesOf(
         db,
         projectRoot,
-        "modules/app/packages/frontend/src/App.ts",
+        "modules/app/packages/frontend/src/App.tsx",
         "renderLoading",
       );
 
-      // BUG: Edge exists but target node doesn't, so no node details shown
-      // Graph shows: renderLoading --CALLS--> LoadingWrapper
-      // But Nodes section is empty because target node ID is wrong
-      expect(output).toContain("LoadingWrapper");
-      expect(output).toContain(
-        "libs/ui/src/components/LoadingWrapper/LoadingWrapper.ts",
+      expect(output).toBe(
+        `
+## Graph
+
+renderLoading --INCLUDES--> LoadingWrapper --CALLS--> formatValue
+
+## Nodes
+
+LoadingWrapper:
+  file: libs/ui/src/components/LoadingWrapper/LoadingWrapper.tsx
+  offset: 3, limit: 3
+  snippet:
+    3: const LoadingWrapper = (value: number): string => {
+  > 4:   return \`<div class="loading">\${formatValue(value)}</div>\`;
+    5: };
+
+formatValue:
+  file: libs/toolkit/src/helpers.ts
+  offset: 1, limit: 3
+  snippet:
+    1: export function formatValue(value: number): string {
+    2:   return value.toFixed(2);
+    3: }
+`.trimStart(),
       );
+    });
+  });
+
+  describe("cross-package edge resolution (text-utils vs error-utils)", () => {
+    // Reproduces an issue where cross-package edges fail based on package configuration.
+    // Key differences between text-utils and error-utils:
+    // | Aspect                | text-utils        | error-utils       |
+    // |-----------------------|-------------------|-------------------|
+    // | types in package.json | null              | "dist/index.d.ts" |
+    // | paths in tsconfig     | 1 path alias      | 12 path aliases   |
+    // | declarationMap        | not set           | true              |
+    // | index.ts export style | export * from     | export { x } from |
+
+    it("finds both toUpperCase and formatError as dependencies", () => {
+      const output = dependenciesOf(
+        db,
+        projectRoot,
+        "modules/app/packages/backend/src/api.ts",
+        "processInput",
+      );
+
+      // Both edges should be found
+      expect(output).toContain("toUpperCase");
+      expect(output).toContain("formatError");
+      expect(output).toContain("libs/text-utils/src/utils.ts");
+      expect(output).toContain("libs/error-utils/src/utils.ts");
+    });
+
+    it("finds dependents of toUpperCase from text-utils", () => {
+      const output = dependentsOf(
+        db,
+        projectRoot,
+        "libs/text-utils/src/utils.ts",
+        "toUpperCase",
+      );
+
+      expect(output).toContain("processInput");
+    });
+
+    it("finds dependents of formatError from error-utils", () => {
+      const output = dependentsOf(
+        db,
+        projectRoot,
+        "libs/error-utils/src/utils.ts",
+        "formatError",
+      );
+
+      // This is the failing case - if the bug exists, this will fail
+      expect(output).toContain("processInput");
     });
   });
 
@@ -443,7 +507,7 @@ trackMetric --CALLS--> formatValue
         db,
         projectRoot,
         {
-          file_path: "modules/app/packages/frontend/src/App.ts",
+          file_path: "modules/app/packages/frontend/src/App.tsx",
           symbol: "renderDashboard",
         },
         { file_path: "libs/toolkit/src/helpers.ts", symbol: "clamp" },

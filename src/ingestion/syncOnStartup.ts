@@ -4,6 +4,7 @@ import type { ProjectConfig } from "../config/Config.schemas.js";
 import { createSqliteWriter } from "../db/sqlite/createSqliteWriter.js";
 import { createProject } from "./createProject.js";
 import type { NodeExtractionContext } from "./extract/nodes/NodeExtractionContext.js";
+import { extractConfiguredPackageNames } from "./extractConfiguredPackageNames.js";
 import { indexFile } from "./indexFile.js";
 import {
   compareManifest,
@@ -43,6 +44,7 @@ interface FileContext {
 const buildFileContextMap = (
   config: ProjectConfig,
   projectRoot: string,
+  configuredPackageNames: Set<string>,
 ): Map<string, FileContext> => {
   const contextMap = new Map<string, FileContext>();
 
@@ -50,9 +52,11 @@ const buildFileContextMap = (
     const absoluteTsConfigPath = join(projectRoot, pkg.tsconfig);
     const packageRoot = dirname(absoluteTsConfigPath);
 
-    // Create ts-morph project to discover files from tsconfig (supports Yarn PnP)
+    // Create ts-morph project to discover files from tsconfig (workspace-aware resolution)
     const project = createProject({
       tsConfigFilePath: absoluteTsConfigPath,
+      workspaceRoot: projectRoot,
+      configuredPackageNames,
     });
 
     // Filter source files like indexProject does
@@ -101,8 +105,17 @@ export const syncOnStartup = async (
   const errors: Array<{ file: string; message: string }> = [];
   const writer = createSqliteWriter(db);
 
+  const configuredPackageNames = extractConfiguredPackageNames(
+    config,
+    options.projectRoot,
+  );
+
   // Build context map for all configured files
-  const fileContextMap = buildFileContextMap(config, options.projectRoot);
+  const fileContextMap = buildFileContextMap(
+    config,
+    options.projectRoot,
+    configuredPackageNames,
+  );
   const currentFiles = Array.from(fileContextMap.keys());
 
   // Compare manifest with filesystem
@@ -143,6 +156,8 @@ export const syncOnStartup = async (
   for (const [tsconfigPath, files] of filesByTsconfig) {
     const project = createProject({
       tsConfigFilePath: tsconfigPath,
+      workspaceRoot: options.projectRoot,
+      configuredPackageNames,
     });
 
     for (const relativePath of files) {

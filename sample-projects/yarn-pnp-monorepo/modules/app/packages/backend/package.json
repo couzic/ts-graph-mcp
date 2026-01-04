@@ -9,6 +9,8 @@
   },
   "dependencies": {
     "@app/shared": "workspace:*",
+    "@libs/error-utils": "workspace:*",
+    "@libs/text-utils": "workspace:*",
     "@libs/toolkit": "workspace:*"
   }
 }

@@ -1,14 +1,15 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "CommonJS",
+    "target": "es2024",
+    "moduleResolution": "bundler",
+    "module": "esnext",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "declaration": true,
     "declarationMap": true,
-    "outDir": "./dist",
-    "rootDir": "./src",
+    "outDir": "dist",
+    "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
       "@/components/*": ["src/components/*"]

@@ -247,6 +247,77 @@ This prevents SQLite from using any index on `name`, causing a full table scan.
 
 ---
 
+### Edge Types Duplication
+
+**Impact:** Low (maintainability)
+
+**Problem:** Edge types are defined in two places that can go out of sync:
+
+1. `src/db/Types.ts` — `EdgeType` union type (source of truth for all edge types)
+2. `src/tools/shared/constants.ts` — `EDGE_TYPES` array (subset used by traversal tools)
+
+```typescript
+// Types.ts
+export type EdgeType =
+  | "CALLS" | "IMPORTS" | "CONTAINS" | "IMPLEMENTS"
+  | "EXTENDS" | "USES_TYPE" | "REFERENCES" | "INCLUDES";
+
+// constants.ts
+export const EDGE_TYPES = ["CALLS", "INCLUDES", "REFERENCES", "EXTENDS", "IMPLEMENTS"];
+```
+
+No compile-time check ensures `EDGE_TYPES` values are valid `EdgeType` members.
+
+**Fix approach:**
+
+Option 1 — Type-safe array in constants.ts:
+```typescript
+import { EdgeType } from "../../db/Types";
+export const EDGE_TYPES: EdgeType[] = ["CALLS", "INCLUDES", "REFERENCES", "EXTENDS", "IMPLEMENTS"];
+```
+
+Option 2 — Derive type from array (if array should be source of truth):
+```typescript
+export const EDGE_TYPES = ["CALLS", "INCLUDES", "REFERENCES", "EXTENDS", "IMPLEMENTS"] as const;
+export type TraversalEdgeType = typeof EDGE_TYPES[number];
+```
+
+---
+
+### Workspace Map Rebuilt Per createProject() Call
+
+**Impact:** Low (performance)
+
+**Problem:** `buildWorkspaceMap()` is called every time `createProject()` is invoked. In `ProjectRegistry`, `indexProject`, `syncOnStartup`, and `watchProject`, each creates projects independently, rebuilding the workspace map each time.
+
+For large monorepos with many packages, this adds overhead: parsing all `package.json` files, expanding workspace globs, inferring source entries from tsconfig.
+
+**Current behavior:** Acceptable for typical monorepos (~10-50 packages). May become noticeable with 100+ packages.
+
+**Fix approach:** Cache the workspace map at the `ProjectRegistry` level and pass it to `createProject()`.
+
+---
+
+### No Cycle Detection in Workspace Traversal
+
+**Impact:** Low (edge case)
+
+**Problem:** `buildWorkspaceMap.ts` has recursive functions (`processWorkspaceRoot`, `findAllPackageDirectories`) that could loop infinitely if workspace definitions are circular:
+
+```json
+// package-a/package.json
+{ "workspaces": ["../package-b"] }
+
+// package-b/package.json
+{ "workspaces": ["../package-a"] }
+```
+
+**Likelihood:** Very low — circular workspace definitions are invalid and break Yarn/npm.
+
+**Fix approach:** Track visited directories in a Set and skip already-processed paths.
+
+---
+
 ### Namespace Call Resolution Iterates All Exports
 
 **Impact:** Low (performance)

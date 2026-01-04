@@ -17,7 +17,8 @@ export type EdgeType =
   | "IMPLEMENTS"
   | "EXTENDS"
   | "USES_TYPE"
-  | "REFERENCES";
+  | "REFERENCES"
+  | "INCLUDES";
 
 // Call Site Range (line numbers where a call occurs)
 export interface CallSiteRange {

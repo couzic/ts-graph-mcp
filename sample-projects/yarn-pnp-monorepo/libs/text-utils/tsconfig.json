@@ -3,14 +3,16 @@
     "target": "ES2022",
     "module": "CommonJS",
     "moduleResolution": "Node",
-    "jsx": "react-jsx",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "declaration": true,
-    "declarationMap": true,
     "outDir": "./dist",
-    "rootDir": "./src"
+    "rootDir": "./src",
+    "baseUrl": ".",
+    "paths": {
+      "@/custom-types/*": ["src/custom-types/*"]
+    }
   },
   "include": ["src/**/*"]
 }

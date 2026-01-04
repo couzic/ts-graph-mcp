@@ -97,6 +97,19 @@ See `src/db/Types.ts` for node and edge type definitions.
 
 **Node ID format**: `{filePath}:{symbolPath}` — e.g., `src/utils.ts:formatDate`, `src/models/User.ts:User.save`
 
+### Edge Types
+
+| Edge | Description |
+|------|-------------|
+| `CALLS` | Direct function/method invocation |
+| `INCLUDES` | JSX component usage (`<Component />`) |
+| `IMPORTS` | File imports another file |
+| `CONTAINS` | File contains top-level symbol |
+| `EXTENDS` | Class/interface inheritance |
+| `IMPLEMENTS` | Class implements interface |
+| `USES_TYPE` | Type reference in signature |
+| `REFERENCES` | Function passed as callback or stored |
+
 ### Transparent Re-exports
 
 **Re-exports are completely invisible in the graph.** No nodes, no edges, nothing.
@@ -133,9 +146,33 @@ Memory efficient: O(1) per file, scales to any codebase size.
 ### Cross-File Resolution
 
 Edge extractors use `buildImportMap` to resolve cross-file references:
-- ts-morph resolves import paths (handles aliases like `@shared/*`)
+- ts-morph resolves import paths (handles tsconfig `paths` aliases like `@shared/*`)
+- Workspace map resolves cross-package imports in monorepos (see below)
 - Import map constructs target IDs: `{targetPath}:{symbolName}`
 - No need to validate target exists — queries use JOINs to filter dangling edges
+
+### Workspace Resolution
+
+For monorepos with multiple packages, ts-graph-mcp builds a **workspace map** at project creation time that maps package names directly to source entry files:
+
+```
+"@libs/toolkit" → "/path/to/libs/toolkit/src/index.ts"
+"@app/shared"   → "/path/to/app/shared/src/index.ts"
+```
+
+**Why not use package manager resolution (PnP, node_modules)?**
+
+Package managers resolve to compiled output (`dist/index.js`). This tool analyzes **source code** — it should never require `dist/` folders to exist.
+
+**How it works** (`buildWorkspaceMap.ts`):
+1. Parse root `package.json` workspaces field (supports globs like `libs/*`)
+2. For each package, read its `package.json` to get the npm package name
+3. Infer source entry from `main` + tsconfig `outDir`/`rootDir` mapping
+4. Build map: `packageName → absoluteSourcePath`
+
+**Resolution order** in `createProject.ts`:
+1. Check workspace map for exact package name match
+2. Fall back to standard TypeScript resolution (relative imports, external packages)
 
 ### No Foreign Key Constraints
 
@@ -189,4 +226,5 @@ Watch options can be read from `tsconfig.json` `watchOptions` as defaults. See R
 ## Limitations
 
 1. **SQLite only** — Query logic uses direct SQL. DbWriter interface exists for writes only.
-2. **No tsconfig watching** — Changes to tsconfig.json require server restart.
+2. **No config watching** — Changes to tsconfig.json or package.json workspaces require server restart.
+3. **Base package imports only** — Workspace resolution handles `@libs/toolkit` but not subpath imports like `@libs/toolkit/helpers` (would require `exports` field parsing).
