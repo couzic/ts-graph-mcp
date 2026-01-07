@@ -6,6 +6,65 @@
 
 ## Near-term Enhancements
 
+### Type Signature Edges (TAKES/RETURNS)
+**Impact: High | Effort: Medium**
+
+New edge types to capture function signature relationships with types.
+
+**New Edge Types:**
+- `TAKES` — function → type (parameter type)
+- `RETURNS` — function → type (return type)
+
+**Purpose:**
+Provide context for understanding data flow and polymorphism, without deep traversal.
+
+```typescript
+function persistData(repo: Repository, data: Entity) {
+  repo.save(data);  // Where's the implementation?
+}
+```
+
+With TAKES/RETURNS + existing IMPLEMENTS edges:
+```
+persistData --TAKES--> Repository
+SqlRepository --IMPLEMENTS--> Repository
+MongoRepository --IMPLEMENTS--> Repository
+```
+
+The agent immediately sees: function takes abstract type, here are the implementations.
+
+**Traversal Depth:**
+- CALLS: deep (call chains)
+- TAKES/RETURNS: 1 hop (signature types only)
+- IMPLEMENTS/EXTENDS: 1 hop from types (show implementations)
+
+**Graph Output Format:**
+Keep current flat format, one edge per line, stored direction. No fancy chaining or indentation.
+
+**Nodes Section Enhancement:**
+Add `type` field to each node (already stored in DB, just not displayed):
+```
+UserDTO:
+  type: Interface
+  file: src/types.ts
+  offset: 3, limit: 8
+```
+
+**Open Questions:**
+- Generics (`Promise<User>`, `Array<T>`) — edge to inner type, wrapper type, or both?
+- Union types (`User | null`) — multiple edges?
+- Inline/anonymous types — skip?
+- Primitives (`string`, `number`) — skip or include?
+- Does `pathsBetween` traverse type edges, or only CALLS?
+
+**Implementation:**
+- New edge types in `Types.ts`
+- New extractor for function signatures
+- Update `queryNodeInfos.ts` to include node type
+- Update `formatNodes.ts` to display node type
+
+---
+
 ### Rich Output Hints
 **Impact: Medium | Effort: Low**
 
