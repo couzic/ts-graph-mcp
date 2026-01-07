@@ -14,14 +14,14 @@
 
 import { access, mkdir, unlink } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import type { ProjectConfig } from "../../src/config/Config.schemas.js";
-import { createSqliteWriter } from "../../src/db/sqlite/createSqliteWriter.js";
+import type { ProjectConfig } from "../../http/src/config/Config.schemas.js";
+import { createSqliteWriter } from "../../http/src/db/sqlite/createSqliteWriter.js";
 import {
   closeDatabase,
   openDatabase,
-} from "../../src/db/sqlite/sqliteConnection.utils.js";
-import { initializeSchema } from "../../src/db/sqlite/sqliteSchema.utils.js";
-import { indexProject } from "../../src/ingestion/indexProject.js";
+} from "../../http/src/db/sqlite/sqliteConnection.utils.js";
+import { initializeSchema } from "../../http/src/db/sqlite/sqliteSchema.utils.js";
+import { indexProject } from "../../http/src/ingestion/indexProject.js";
 import type { BenchmarkConfig } from "./types.js";
 
 const dbDirName = ".ts-graph-mcp";

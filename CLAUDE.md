@@ -7,15 +7,26 @@
 
 **Built for Claude Code, by Claude Code.** The agent using this tool is also its developer.
 
-Code is fundamentally a graph — we store it as text for practical reasons, but its true nature is nodes (symbols) and edges (relationships). Grep and LSP require multiple hops to trace connections. ts-graph-mcp captures code as a graph, enabling instant traversal of entire call chains.
+Code is fundamentally a graph — we store it as text for practical reasons, but its true nature is nodes (symbols) and edges (relationships). Grep and LSP require multiple hops to trace connections. ts-graph captures code as a graph, enabling instant traversal of entire call chains.
 
-**Complements LSP**: LSP gives point-to-point queries. ts-graph-mcp gives transitive paths — "How does A reach B?" in one query instead of manual file-by-file tracing.
+**Complements LSP**: LSP gives point-to-point queries. ts-graph gives transitive paths — "How does A reach B?" in one query instead of manual file-by-file tracing.
 
 **Simplicity is a feature.** Each tool should do one thing well. If a tool tries to do multiple things, split it. The code, the architecture, the tools — all should reflect simplicity.
 
 ## Structure
 
-Each tool has its own folder (`src/tools/<tool>/`) with shared formatting in `src/tools/shared/`.
+Monorepo with 4 internal workspace packages:
+
+| Package | Purpose |
+|---------|---------|
+| `shared/` | Types and interfaces used by all packages |
+| `http/` | HTTP server (Express), REST API, serves UI |
+| `mcp/` | MCP stdio wrapper (calls HTTP API) |
+| `ui/` | React SPA (Vite build) |
+
+Root `main.ts` dispatches to HTTP server or MCP wrapper based on `--mcp` flag.
+
+Query tools live in `http/src/query/<tool>/` with shared formatting in `http/src/query/shared/`.
 
 ## Documentation
 
@@ -37,7 +48,7 @@ Remove items from ISSUES.md/ROADMAP.md when done. Update ARCHITECTURE.md when ad
   - **Function** → camelCase: `generateNodeId.ts`
   - **Type/Interface** → PascalCase: `Node.ts`
   - **Collections** → suffixes: `*.types.ts`, `*.schemas.ts`, `*.utils.ts`
-- No `index.ts` barrel files
+- No `index.ts` barrel files (except `shared/src/index.ts` for types)
 - Direct imports only
 - Tests colocated with implementation
 
@@ -45,7 +56,7 @@ Remove items from ISSUES.md/ROADMAP.md when done. Update ARCHITECTURE.md when ad
 
 - `npm run check` — **Always use this to verify changes** (tests + build + lint)
 - `npm test` — Run tests
-- `npm run build` — Compile TypeScript
+- `npm run build` — Compile TypeScript + build UI
 
 ## Database Abstraction
 

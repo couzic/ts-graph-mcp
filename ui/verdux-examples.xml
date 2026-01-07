@@ -1,0 +1,2345 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+The content has been processed where security check has been disabled.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Security check has been disabled - content may contain sensitive information
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+public/
+  vite.svg
+src/
+  assets/
+    react.svg
+  common/
+    GraphContext.ts
+    Route.tsx
+    Spinner.tsx
+    useDispatch.ts
+    useVertexState.ts
+  pages/
+    examples/
+      example01a/
+        Example01a.tsx
+        vertexConfig.ts
+      example01b/
+        Example01b.tsx
+        vertexConfig.ts
+      example02a/
+        Example02a.tsx
+        vertexConfig.ts
+      example02b/
+        Example02b.tsx
+        vertexConfig.ts
+      example03a/
+        Example03a.tsx
+        PokemonOption.ts
+        vertexConfig.ts
+      example03b/
+        Example03b.tsx
+        PokemonOption.ts
+        vertexConfig.ts
+      example03c/
+        Example03c.tsx
+        PokemonOption.ts
+        vertexConfig.ts
+      pokemon/
+        Pokemon.ts
+        PokemonDisplay.tsx
+        PokemonService.ts
+      real-life/
+        about/
+          AboutPage.tsx
+        pokemon/
+          description/
+            PokemonDescriptionPage.tsx
+            vertexConfig.ts
+          evolutions/
+            PokemonEvolutionsPage.tsx
+            vertexConfig.ts
+          PokemonOption.ts
+          PokemonPage.tsx
+          vertexConfig.ts
+        RealLifeExample.tsx
+        realLifeVertexConfigs.ts
+        route.ts
+        Tabs.tsx
+        vertexConfig.ts
+      ExampleDescription.tsx
+      ExampleLink.tsx
+      ExamplesPage.tsx
+      examplesVertexConfigs.ts
+    home/
+      HomePage.tsx
+  router/
+    createRouter.ts
+  App.css
+  App.tsx
+  graph.ts
+  index.css
+  main.tsx
+  rootVertexConfig.ts
+  vite-env.d.ts
+.eslintrc.cjs
+.firebaserc
+.gitignore
+firebase.json
+index.html
+package.json
+README.md
+tsconfig.json
+tsconfig.node.json
+vite.config.ts
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="public/vite.svg">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--logos" width="31.88" height="32" preserveAspectRatio="xMidYMid meet" viewBox="0 0 256 257"><defs><linearGradient id="IconifyId1813088fe1fbc01fb466" x1="-.828%" x2="57.636%" y1="7.652%" y2="78.411%"><stop offset="0%" stop-color="#41D1FF"></stop><stop offset="100%" stop-color="#BD34FE"></stop></linearGradient><linearGradient id="IconifyId1813088fe1fbc01fb467" x1="43.376%" x2="50.316%" y1="2.242%" y2="89.03%"><stop offset="0%" stop-color="#FFEA83"></stop><stop offset="8.333%" stop-color="#FFDD35"></stop><stop offset="100%" stop-color="#FFA800"></stop></linearGradient></defs><path fill="url(#IconifyId1813088fe1fbc01fb466)" d="M255.153 37.938L134.897 252.976c-2.483 4.44-8.862 4.466-11.382.048L.875 37.958c-2.746-4.814 1.371-10.646 6.827-9.67l120.385 21.517a6.537 6.537 0 0 0 2.322-.004l117.867-21.483c5.438-.991 9.574 4.796 6.877 9.62Z"></path><path fill="url(#IconifyId1813088fe1fbc01fb467)" d="M185.432.063L96.44 17.501a3.268 3.268 0 0 0-2.634 3.014l-5.474 92.456a3.268 3.268 0 0 0 3.997 3.378l24.777-5.718c2.318-.535 4.413 1.507 3.936 3.838l-7.361 36.047c-.495 2.426 1.782 4.5 4.151 3.78l15.304-4.649c2.372-.72 4.652 1.36 4.15 3.788l-11.698 56.621c-.732 3.542 3.979 5.473 5.943 2.437l1.313-2.028l72.516-144.72c1.215-2.423-.88-5.186-3.54-4.672l-25.505 4.922c-2.396.462-4.435-1.77-3.759-4.114l16.646-57.705c.677-2.35-1.37-4.583-3.769-4.113Z"></path></svg>
+</file>
+
+<file path="src/assets/react.svg">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--logos" width="35.93" height="32" preserveAspectRatio="xMidYMid meet" viewBox="0 0 256 228"><path fill="#00D8FF" d="M210.483 73.824a171.49 171.49 0 0 0-8.24-2.597c.465-1.9.893-3.777 1.273-5.621c6.238-30.281 2.16-54.676-11.769-62.708c-13.355-7.7-35.196.329-57.254 19.526a171.23 171.23 0 0 0-6.375 5.848a155.866 155.866 0 0 0-4.241-3.917C100.759 3.829 77.587-4.822 63.673 3.233C50.33 10.957 46.379 33.89 51.995 62.588a170.974 170.974 0 0 0 1.892 8.48c-3.28.932-6.445 1.924-9.474 2.98C17.309 83.498 0 98.307 0 113.668c0 15.865 18.582 31.778 46.812 41.427a145.52 145.52 0 0 0 6.921 2.165a167.467 167.467 0 0 0-2.01 9.138c-5.354 28.2-1.173 50.591 12.134 58.266c13.744 7.926 36.812-.22 59.273-19.855a145.567 145.567 0 0 0 5.342-4.923a168.064 168.064 0 0 0 6.92 6.314c21.758 18.722 43.246 26.282 56.54 18.586c13.731-7.949 18.194-32.003 12.4-61.268a145.016 145.016 0 0 0-1.535-6.842c1.62-.48 3.21-.974 4.76-1.488c29.348-9.723 48.443-25.443 48.443-41.52c0-15.417-17.868-30.326-45.517-39.844Zm-6.365 70.984c-1.4.463-2.836.91-4.3 1.345c-3.24-10.257-7.612-21.163-12.963-32.432c5.106-11 9.31-21.767 12.459-31.957c2.619.758 5.16 1.557 7.61 2.4c23.69 8.156 38.14 20.213 38.14 29.504c0 9.896-15.606 22.743-40.946 31.14Zm-10.514 20.834c2.562 12.94 2.927 24.64 1.23 33.787c-1.524 8.219-4.59 13.698-8.382 15.893c-8.067 4.67-25.32-1.4-43.927-17.412a156.726 156.726 0 0 1-6.437-5.87c7.214-7.889 14.423-17.06 21.459-27.246c12.376-1.098 24.068-2.894 34.671-5.345a134.17 134.17 0 0 1 1.386 6.193ZM87.276 214.515c-7.882 2.783-14.16 2.863-17.955.675c-8.075-4.657-11.432-22.636-6.853-46.752a156.923 156.923 0 0 1 1.869-8.499c10.486 2.32 22.093 3.988 34.498 4.994c7.084 9.967 14.501 19.128 21.976 27.15a134.668 134.668 0 0 1-4.877 4.492c-9.933 8.682-19.886 14.842-28.658 17.94ZM50.35 144.747c-12.483-4.267-22.792-9.812-29.858-15.863c-6.35-5.437-9.555-10.836-9.555-15.216c0-9.322 13.897-21.212 37.076-29.293c2.813-.98 5.757-1.905 8.812-2.773c3.204 10.42 7.406 21.315 12.477 32.332c-5.137 11.18-9.399 22.249-12.634 32.792a134.718 134.718 0 0 1-6.318-1.979Zm12.378-84.26c-4.811-24.587-1.616-43.134 6.425-47.789c8.564-4.958 27.502 2.111 47.463 19.835a144.318 144.318 0 0 1 3.841 3.545c-7.438 7.987-14.787 17.08-21.808 26.988c-12.04 1.116-23.565 2.908-34.161 5.309a160.342 160.342 0 0 1-1.76-7.887Zm110.427 27.268a347.8 347.8 0 0 0-7.785-12.803c8.168 1.033 15.994 2.404 23.343 4.08c-2.206 7.072-4.956 14.465-8.193 22.045a381.151 381.151 0 0 0-7.365-13.322Zm-45.032-43.861c5.044 5.465 10.096 11.566 15.065 18.186a322.04 322.04 0 0 0-30.257-.006c4.974-6.559 10.069-12.652 15.192-18.18ZM82.802 87.83a323.167 323.167 0 0 0-7.227 13.238c-3.184-7.553-5.909-14.98-8.134-22.152c7.304-1.634 15.093-2.97 23.209-3.984a321.524 321.524 0 0 0-7.848 12.897Zm8.081 65.352c-8.385-.936-16.291-2.203-23.593-3.793c2.26-7.3 5.045-14.885 8.298-22.6a321.187 321.187 0 0 0 7.257 13.246c2.594 4.48 5.28 8.868 8.038 13.147Zm37.542 31.03c-5.184-5.592-10.354-11.779-15.403-18.433c4.902.192 9.899.29 14.978.29c5.218 0 10.376-.117 15.453-.343c-4.985 6.774-10.018 12.97-15.028 18.486Zm52.198-57.817c3.422 7.8 6.306 15.345 8.596 22.52c-7.422 1.694-15.436 3.058-23.88 4.071a382.417 382.417 0 0 0 7.859-13.026a347.403 347.403 0 0 0 7.425-13.565Zm-16.898 8.101a358.557 358.557 0 0 1-12.281 19.815a329.4 329.4 0 0 1-23.444.823c-7.967 0-15.716-.248-23.178-.732a310.202 310.202 0 0 1-12.513-19.846h.001a307.41 307.41 0 0 1-10.923-20.627a310.278 310.278 0 0 1 10.89-20.637l-.001.001a307.318 307.318 0 0 1 12.413-19.761c7.613-.576 15.42-.876 23.31-.876H128c7.926 0 15.743.303 23.354.883a329.357 329.357 0 0 1 12.335 19.695a358.489 358.489 0 0 1 11.036 20.54a329.472 329.472 0 0 1-11 20.722Zm22.56-122.124c8.572 4.944 11.906 24.881 6.52 51.026c-.344 1.668-.73 3.367-1.15 5.09c-10.622-2.452-22.155-4.275-34.23-5.408c-7.034-10.017-14.323-19.124-21.64-27.008a160.789 160.789 0 0 1 5.888-5.4c18.9-16.447 36.564-22.941 44.612-18.3ZM128 90.808c12.625 0 22.86 10.235 22.86 22.86s-10.235 22.86-22.86 22.86s-22.86-10.235-22.86-22.86s10.235-22.86 22.86-22.86Z"></path></svg>
+</file>
+
+<file path="src/common/GraphContext.ts">
+import { createContext } from "react";
+import { Graph } from "verdux";
+
+export const GraphContext = createContext<Graph>(undefined as any);
+</file>
+
+<file path="src/common/Route.tsx">
+import { useObservableEagerState } from "observable-hooks";
+import { FC, PropsWithChildren } from "react";
+import { Observable } from "rxjs";
+
+export const Route: FC<
+  PropsWithChildren<{
+    match: { match$: Observable<null | { exact: boolean }> };
+    exact?: boolean;
+  }>
+> = ({ match: route, exact, children }) => {
+  const match = useObservableEagerState(route.match$);
+  if (!match) return null;
+  if (exact && !match.exact) return null;
+  return <>{children}</>;
+};
+</file>
+
+<file path="src/common/Spinner.tsx">
+import { Oval } from "react-loader-spinner";
+
+export const Spinner = () => (
+  <Oval
+    color="#646cffaa"
+    wrapperStyle={{
+      justifyContent: "center",
+      marginTop: "20px",
+      marginBottom: "20px",
+    }}
+  />
+);
+</file>
+
+<file path="src/common/useDispatch.ts">
+import { UnknownAction } from "@reduxjs/toolkit";
+import { useContext } from "react";
+import { GraphContext } from "./GraphContext";
+
+export const useDispatch = () => {
+  const graph = useContext(GraphContext);
+  if (!graph) throw new Error("No verdux graph found in Context !");
+  const dispatch = (action: UnknownAction) => graph.dispatch(action);
+  return dispatch;
+};
+</file>
+
+<file path="src/common/useVertexState.ts">
+import { ObservableResource, useObservableSuspense } from "observable-hooks";
+import { useContext, useMemo } from "react";
+import { VertexConfig, VertexFieldsDefinition, VertexInstance } from "verdux";
+import { GraphContext } from "./GraphContext";
+
+export const useVertexState = <
+  Fields extends VertexFieldsDefinition,
+  PickedFields extends keyof Fields
+>(options: {
+  vertex: VertexConfig<Fields>;
+  fields: PickedFields[];
+}) => {
+  const graph = useContext(GraphContext);
+  if (!graph) throw new Error("GraphContext not found");
+  let vertex: VertexInstance<Fields, any> | undefined;
+  try {
+    vertex = graph.getVertexInstance(options.vertex);
+  } catch (e: any) {
+    console.error(e);
+  }
+  if (!vertex) {
+    throw new Error(
+      "Error connecting component to vertex instance: Vertex config " +
+        options.vertex.name +
+        " was probably not passed to graph constructor"
+    );
+  }
+  const resource = useMemo(
+    () =>
+      new ObservableResource(
+        vertex.pick(options.fields),
+        (_: any) => _.status === "loaded"
+      ),
+    []
+  );
+  const loadableState = useObservableSuspense(resource);
+  if (loadableState.status !== "loaded") throw new Error("SHOULD NEVER HAPPEN");
+  return loadableState.state;
+};
+</file>
+
+<file path="src/pages/examples/example01a/Example01a.tsx">
+import { Suspense } from "react";
+import { Route } from "../../../common/Route";
+import { useVertexState } from "../../../common/useVertexState";
+import { router } from "../../../router/createRouter";
+import { ExampleDescription } from "../ExampleDescription";
+import { ExampleLink } from "../ExampleLink";
+import { PokemonDisplay } from "../pokemon/PokemonDisplay";
+import { example01a_VertexConfig } from "./vertexConfig";
+import { Spinner } from "../../../common/Spinner";
+
+export const Example01a = () => (
+  <Route match={router.examples[1].a}>
+    <h2>Example 1a</h2>
+    <Description />
+    <Suspense fallback={<Spinner />}>
+      <Pokemon />
+    </Suspense>
+  </Route>
+);
+
+const Description = () => (
+  <ExampleDescription>
+    <p>
+      When route is first entered, we fetch the data for the pokemon named
+      "pikachu" and store that data in the "pokemon" field.
+    </p>
+    <p>While pokemon data is being loaded, a spinner is displayed.</p>
+    <ExampleLink filename="example01a/vertexConfig.ts" />
+  </ExampleDescription>
+);
+
+const Pokemon = () => {
+  const { pokemon } = useVertexState({
+    vertex: example01a_VertexConfig,
+    fields: ["pokemon"],
+  });
+  return <PokemonDisplay pokemon={pokemon!} />;
+};
+</file>
+
+<file path="src/pages/examples/example01a/vertexConfig.ts">
+import { filter, first, mergeMap } from "rxjs";
+import { rootVertexConfig } from "../../../rootVertexConfig";
+import { createSlice } from "@reduxjs/toolkit";
+
+export const example01a_VertexConfig = rootVertexConfig
+  .configureDownstreamVertex({
+    slice: createSlice({ name: "example01a", initialState: {}, reducers: {} }),
+  })
+  .withDependencies(({ router, pokemonService }, vertex) =>
+    vertex.load({
+      pokemon: router.examples[1].a.match$.pipe(
+        filter(Boolean), // Positive matches only => route is entered
+        first(),
+        mergeMap(() => pokemonService.findByName("pikachu"))
+      ),
+    })
+  );
+</file>
+
+<file path="src/pages/examples/example01b/Example01b.tsx">
+import { Suspense, useContext } from "react";
+import { GraphContext } from "../../../common/GraphContext";
+import { Route } from "../../../common/Route";
+import { useVertexState } from "../../../common/useVertexState";
+import { router } from "../../../router/createRouter";
+import { ExampleDescription } from "../ExampleDescription";
+import { ExampleLink } from "../ExampleLink";
+import { PokemonDisplay } from "../pokemon/PokemonDisplay";
+import { example01b_VertexConfig, example01b_actions } from "./vertexConfig";
+import { Spinner } from "../../../common/Spinner";
+
+const route = router.examples["1"].b;
+
+const { inputValueChanged } = example01b_actions;
+
+export const Example01b = () => {
+  const graph = useContext(GraphContext);
+  const onNameInputValueChange = (e: any) =>
+    graph.dispatch(inputValueChanged(e.target.value));
+  return (
+    <Route match={route}>
+      <h2>Example 1b</h2>
+      <Description />
+      <input
+        type="text"
+        onChange={onNameInputValueChange}
+        style={{
+          width: "300px",
+          padding: "8px",
+          border: "1px solid #ccc",
+          borderRadius: "4px",
+          fontFamily: "Arial, sans-serif",
+          fontSize: "16px",
+        }}
+        placeholder="Enter pokemon name"
+      />
+      <Suspense fallback={<Spinner />}>
+        <Pokemon />
+      </Suspense>
+    </Route>
+  );
+};
+
+const Description = () => (
+  <ExampleDescription>
+    <p>
+      When input value changes, the value is stored in a field. We then treat
+      changes of this field's value as a stream, debouncing and mapping to a
+      stream of API results.
+    </p>
+    <ExampleLink filename="example01b/vertexConfig.ts" />
+  </ExampleDescription>
+);
+
+export const Pokemon = () => {
+  const { pokemon } = useVertexState({
+    vertex: example01b_VertexConfig,
+    fields: ["pokemon"],
+  });
+  if (pokemon === "empty input") return null;
+  if (pokemon === null) return <h4>Pokemon not found</h4>;
+  return <PokemonDisplay pokemon={pokemon!} />;
+};
+</file>
+
+<file path="src/pages/examples/example01b/vertexConfig.ts">
+import { PayloadAction, createSlice } from "@reduxjs/toolkit";
+import { debounceTime, map, of, pipe, switchMap } from "rxjs";
+import { rootVertexConfig } from "../../../rootVertexConfig";
+
+const slice = createSlice({
+  name: "example01b",
+  initialState: { searchedPokemonName: "" },
+  reducers: {
+    inputValueChanged: (state, action: PayloadAction<string>) => {
+      state.searchedPokemonName = action.payload;
+    },
+  },
+});
+
+export const example01b_actions = slice.actions;
+
+export const example01b_VertexConfig = rootVertexConfig
+  .configureDownstreamVertex({ slice })
+  .withDependencies(({ pokemonService }, vertex) =>
+    vertex.loadFromFields$(["searchedPokemonName"], {
+      pokemon: pipe(
+        map((_) => _.searchedPokemonName),
+        map((_) => _.trim().toLowerCase()),
+        debounceTime(500),
+        switchMap((_) =>
+          _.length === 0
+            ? of("empty input" as const)
+            : pokemonService.findByName(_)
+        )
+      ),
+    })
+  );
+</file>
+
+<file path="src/pages/examples/example02a/Example02a.tsx">
+import { Suspense } from "react";
+import { Route } from "../../../common/Route";
+import { Spinner } from "../../../common/Spinner";
+import { useVertexState } from "../../../common/useVertexState";
+import { router } from "../../../router/createRouter";
+import {
+  ExampleDescription,
+  descriptionButtonStyle,
+} from "../ExampleDescription";
+import { ExampleLink } from "../ExampleLink";
+import { PokemonDisplay } from "../pokemon/PokemonDisplay";
+import { example02a_VertexConfig } from "./vertexConfig";
+
+const route = router.examples["2"].a;
+
+export const Example02a = () => (
+  <Route match={route}>
+    <h2>Example 2a</h2>
+    <Description />
+    <Suspense fallback={<Spinner />}>
+      <Pokemon />
+    </Suspense>
+  </Route>
+);
+
+const Description = () => (
+  <ExampleDescription>
+    <p>
+      We are listening to an observable stream of the URL param holding a
+      pokemon name. Every time the route is entered or the params change, we
+      extract the pokemon name from that param and start loading data for that
+      pokemon.
+    </p>
+    <p>While the pokemon data is being loaded, a spinner is displayed</p>
+    <p>
+      Have fun and change the URL param manually, or click on one of those
+      buttons:{" "}
+      <span
+        style={{
+          marginTop: "10px",
+          display: "flex",
+          justifyContent: "center",
+          gap: 10,
+        }}
+      >
+        <button
+          onClick={() => route.push({ "pokemon-name": "pichu" })}
+          style={descriptionButtonStyle}
+        >
+          Pichu
+        </button>
+        <button
+          onClick={() => route.push({ "pokemon-name": "pikachu" })}
+          style={descriptionButtonStyle}
+        >
+          Pikachu
+        </button>
+        <button
+          onClick={() => route.push({ "pokemon-name": "raichu" })}
+          style={descriptionButtonStyle}
+        >
+          Raichu
+        </button>
+      </span>
+    </p>
+    <ExampleLink filename="example02a/vertexConfig.ts" />
+  </ExampleDescription>
+);
+
+const Pokemon = () => {
+  const { pokemon } = useVertexState({
+    vertex: example02a_VertexConfig,
+    fields: ["pokemon"],
+  });
+  if (!pokemon) return <h3>Pokemon not found</h3>;
+  return <PokemonDisplay pokemon={pokemon!} />;
+};
+</file>
+
+<file path="src/pages/examples/example02a/vertexConfig.ts">
+import { createSlice } from "@reduxjs/toolkit";
+import { distinctUntilChanged, filter, map } from "rxjs";
+import { rootVertexConfig } from "../../../rootVertexConfig";
+
+export const example02a_VertexConfig = rootVertexConfig
+  .configureDownstreamVertex({
+    slice: createSlice({ name: "example02a", initialState: {}, reducers: {} }),
+  })
+  .withDependencies(({ router, pokemonService }, vertex) =>
+    vertex
+      .load({
+        pokemonName: router.examples[2].a.match$.pipe(
+          filter(Boolean),
+          map(({ params }) => params["pokemon-name"]),
+          distinctUntilChanged()
+        ),
+      })
+      .loadFromFields(["pokemonName"], {
+        pokemon: ({ pokemonName }) => pokemonService.findByName(pokemonName),
+      })
+  );
+
+// Maybe later
+// .loadFromStream(
+//   ({ router }) =>
+//     router.examples[2].a.match$.pipe(
+//       filter(Boolean),
+//       map(({ params }) => params["pokemon-name"]),
+//       distinctUntilChanged()
+//     ),
+//   ({ pokemonService }) => ({
+//     pokemon: (pokemonName) => pokemonService.findByName(pokemonName),
+//   })
+</file>
+
+<file path="src/pages/examples/example02b/Example02b.tsx">
+import { Suspense } from "react";
+import { Route } from "../../../common/Route";
+import { Spinner } from "../../../common/Spinner";
+import { useVertexState } from "../../../common/useVertexState";
+import { router } from "../../../router/createRouter";
+import {
+  ExampleDescription,
+  descriptionButtonStyle,
+} from "../ExampleDescription";
+import { ExampleLink } from "../ExampleLink";
+import { PokemonDisplay } from "../pokemon/PokemonDisplay";
+import { example02b_VertexConfig } from "./vertexConfig";
+
+const route = router.examples["2"].b;
+
+export const Example02b = () => (
+  <Route match={route}>
+    <h2>Example 2b</h2>
+    <Description />
+    <Suspense fallback={<Spinner />}>
+      <PokemonAsap />
+    </Suspense>
+    <h1>OR</h1>
+    <Suspense fallback={<Spinner />}>
+      <PokemonFullyLoaded />
+    </Suspense>
+  </Route>
+);
+
+const Description = () => (
+  <ExampleDescription>
+    <p>
+      We are still observing URL params for a pokemon name. The difference is
+      that once the pokemon is loaded, we then load the forms it can evolve from
+      and to. Two different approaches are presented here :
+    </p>
+    <p>
+      In the first one (top), the searched pokemon is displayed as soon as
+      possible, and two spinners are then displayed, one for each pending http
+      call. Once the evolutions are loaded, they are displayed. The downside of
+      this approach is that we don't know beforehand if an evolution exists for
+      the searched pokemon, and it feels strange to show a spinner and then make
+      it vanish without anything new displayed.
+    </p>
+    <p>
+      In the second one (bottom), we wait until all data is loaded and available
+      before displaying it.
+    </p>
+    <p>
+      Have fun and change the URL param manually, or click on one of those
+      buttons:{" "}
+      <span
+        style={{
+          marginTop: "10px",
+          display: "flex",
+          justifyContent: "center",
+          gap: 10,
+        }}
+      >
+        <button
+          onClick={() => route.push({ "pokemon-name": "pichu" })}
+          style={descriptionButtonStyle}
+        >
+          Pichu
+        </button>
+        <button
+          onClick={() => route.push({ "pokemon-name": "pikachu" })}
+          style={descriptionButtonStyle}
+        >
+          Pikachu
+        </button>
+        <button
+          onClick={() => route.push({ "pokemon-name": "raichu" })}
+          style={descriptionButtonStyle}
+        >
+          Raichu
+        </button>
+        <button
+          onClick={() => route.push({ "pokemon-name": "eevee" })}
+          style={{ ...descriptionButtonStyle, fontWeight: "bold" }}
+        >
+          Eevee
+        </button>
+      </span>
+    </p>
+    <ExampleLink filename="example02b/vertexConfig.ts" />
+  </ExampleDescription>
+);
+
+const PokemonAsap = () => {
+  const { pokemon } = useVertexState({
+    vertex: example02b_VertexConfig,
+    fields: ["pokemon"],
+  });
+  if (!pokemon) return null;
+  return (
+    <div style={{ display: "flex", justifyContent: "center" }}>
+      <Suspense fallback={<Spinner />}>
+        <EvolvesFrom />
+      </Suspense>
+      <PokemonDisplay pokemon={pokemon} />
+      <Suspense fallback={<Spinner />}>
+        <EvolvesTo />
+      </Suspense>
+    </div>
+  );
+};
+
+const PokemonFullyLoaded = () => {
+  const { pokemon } = useVertexState({
+    vertex: example02b_VertexConfig,
+    fields: ["pokemon"],
+  });
+  if (!pokemon) return null;
+  return (
+    <div style={{ display: "flex", justifyContent: "center" }}>
+      <EvolvesFrom />
+      <PokemonDisplay pokemon={pokemon} />
+      <EvolvesTo />
+    </div>
+  );
+};
+
+const EvolvesFrom = () => {
+  const { evolvesFrom } = useVertexState({
+    vertex: example02b_VertexConfig,
+    fields: ["evolvesFrom"],
+  });
+  if (!evolvesFrom) return null;
+  return <PokemonDisplay pokemon={evolvesFrom} />;
+};
+
+const EvolvesTo = () => {
+  const { evolvesTo } = useVertexState({
+    vertex: example02b_VertexConfig,
+    fields: ["evolvesTo"],
+  });
+  return (
+    <>
+      {evolvesTo.map((evo) => (
+        <PokemonDisplay pokemon={evo} key={evo.id} />
+      ))}
+    </>
+  );
+};
+</file>
+
+<file path="src/pages/examples/example02b/vertexConfig.ts">
+import { createSlice } from "@reduxjs/toolkit";
+import { distinctUntilChanged, filter, map, of } from "rxjs";
+import { rootVertexConfig } from "../../../rootVertexConfig";
+
+export const example02b_VertexConfig = rootVertexConfig
+  .configureDownstreamVertex({
+    slice: createSlice({ name: "example02b", initialState: {}, reducers: {} }),
+  })
+  .withDependencies(({ router, pokemonService }, vertex) =>
+    vertex
+      .load({
+        pokemonName: router.examples[2].b.match$.pipe(
+          filter(Boolean),
+          map(({ params }) => params["pokemon-name"]),
+          distinctUntilChanged()
+        ),
+      })
+      .loadFromFields(["pokemonName"], {
+        pokemon: ({ pokemonName }) => pokemonService.findByName(pokemonName),
+      })
+      .loadFromFields(["pokemon"], {
+        evolvesFrom: ({ pokemon }) =>
+          !pokemon ? of(null) : pokemonService.getEvolvesFrom(pokemon.id),
+        evolvesTo: ({ pokemon }) =>
+          !pokemon ? of([]) : pokemonService.getEvolvesTo(pokemon.id),
+      })
+  );
+
+// Maybe later
+// .loadFromStream(
+//   ({ router }) =>
+//     router.examples[2].b.match$.pipe(
+//       filter(Boolean),
+//       map(({ params }) => params["pokemon-name"]),
+//       distinctUntilChanged()
+//     ),
+//   ({ pokemonService }) => ({
+//     pokemon: (pokemonName) => pokemonService.findByName(pokemonName),
+//   })
+// )
+</file>
+
+<file path="src/pages/examples/example03a/Example03a.tsx">
+import { Suspense } from "react";
+import Select from "react-select";
+import { Route } from "../../../common/Route";
+import { useDispatch } from "../../../common/useDispatch";
+import { useVertexState } from "../../../common/useVertexState";
+import { router } from "../../../router/createRouter";
+import { ExampleDescription } from "../ExampleDescription";
+import { ExampleLink } from "../ExampleLink";
+import { PokemonDisplay } from "../pokemon/PokemonDisplay";
+import { PokemonOption } from "./PokemonOption";
+import { example03a_Actions, example03a_VertexConfig } from "./vertexConfig";
+import { Spinner } from "../../../common/Spinner";
+
+const route = router.examples["3"].a;
+
+const pokemonOptions: PokemonOption[] = [
+  {
+    label: "bulbasaur",
+    value: "1",
+  },
+  {
+    label: "ivysaur",
+    value: "2",
+  },
+  {
+    label: "venusaur",
+    value: "3",
+  },
+  {
+    label: "charmander",
+    value: "4",
+  },
+  {
+    label: "charmeleon",
+    value: "5",
+  },
+  {
+    label: "charizard",
+    value: "6",
+  },
+  {
+    label: "squirtle",
+    value: "7",
+  },
+  {
+    label: "wartortle",
+    value: "8",
+  },
+  {
+    label: "blastoise",
+    value: "9",
+  },
+  {
+    label: "caterpie",
+    value: "10",
+  },
+  {
+    label: "metapod",
+    value: "11",
+  },
+  {
+    label: "kakuna",
+    value: "12",
+  },
+  {
+    label: "weedle",
+    value: "13",
+  },
+  {
+    label: "kakuna",
+    value: "14",
+  },
+  {
+    label: "beedrill",
+    value: "15",
+  },
+  {
+    label: "pidgey",
+    value: "16",
+  },
+  {
+    label: "pidgeotto",
+    value: "17",
+  },
+  {
+    label: "pidgeot",
+    value: "18",
+  },
+  {
+    label: "rattata",
+    value: "19",
+  },
+  {
+    label: "raticate",
+    value: "20",
+  },
+] as any;
+
+export const Example03a = () => (
+  <Route match={route}>
+    <h2>Example 3a</h2>
+    <div
+      style={{ display: "flex", flexDirection: "column", alignItems: "center" }}
+    >
+      <Description />
+      <Suspense fallback={<Spinner />}>
+        <PokemonSelect />
+      </Suspense>
+      <Suspense fallback={<Spinner />}>
+        <Pokemon />
+      </Suspense>
+    </div>
+  </Route>
+);
+
+const Description = () => (
+  <ExampleDescription>
+    <p>
+      We start from a select with a static list of options. Once an option is
+      selected, the data for the selected pokemon is loaded.
+    </p>
+    <ExampleLink filename="example03a/vertexConfig.ts" />
+  </ExampleDescription>
+);
+
+const PokemonSelect = () => {
+  const dispatch = useDispatch();
+  const { selectedOption } = useVertexState({
+    vertex: example03a_VertexConfig,
+    fields: ["selectedOption"],
+  });
+  const onPokemonSelected = (option: PokemonOption | null) =>
+    dispatch(example03a_Actions.selectPokemon(option));
+  return (
+    <div style={{ width: 300, color: "#333" }}>
+      <Select
+        placeholder="Select a pokemon"
+        options={pokemonOptions}
+        value={selectedOption}
+        onChange={onPokemonSelected}
+      />
+    </div>
+  );
+};
+
+const Pokemon = () => {
+  const { pokemon } = useVertexState({
+    vertex: example03a_VertexConfig,
+    fields: ["pokemon"],
+  });
+  if (!pokemon) return null;
+  return <PokemonDisplay pokemon={pokemon} />;
+};
+</file>
+
+<file path="src/pages/examples/example03a/PokemonOption.ts">
+import { PokemonId, PokemonName } from "../pokemon/Pokemon";
+
+export interface PokemonOption {
+  label: PokemonName;
+  value: PokemonId;
+}
+</file>
+
+<file path="src/pages/examples/example03a/vertexConfig.ts">
+import { PayloadAction, createSlice } from "@reduxjs/toolkit";
+import { of } from "rxjs";
+import { rootVertexConfig } from "../../../rootVertexConfig";
+import { PokemonOption } from "./PokemonOption";
+
+const slice = createSlice({
+  name: "example03a",
+  initialState: { selectedOption: null as PokemonOption | null },
+  reducers: {
+    selectPokemon: (state, action: PayloadAction<PokemonOption | null>) => {
+      state.selectedOption = action.payload;
+    },
+  },
+});
+
+export const example03a_Actions = slice.actions;
+
+export const example03a_VertexConfig = rootVertexConfig
+  .configureDownstreamVertex({ slice })
+  .withDependencies(({ pokemonService }, vertex) =>
+    vertex.loadFromFields(["selectedOption"], {
+      pokemon: ({ selectedOption }) =>
+        !selectedOption
+          ? of(null)
+          : pokemonService.loadByName(selectedOption.label),
+    })
+  );
+</file>
+
+<file path="src/pages/examples/example03b/Example03b.tsx">
+import Select from "react-select";
+import { Route } from "../../../common/Route";
+import { useDispatch } from "../../../common/useDispatch";
+import { useVertexState } from "../../../common/useVertexState";
+import { router } from "../../../router/createRouter";
+import { ExampleDescription } from "../ExampleDescription";
+import { ExampleLink } from "../ExampleLink";
+import { PokemonDisplay } from "../pokemon/PokemonDisplay";
+import { PokemonOption } from "./PokemonOption";
+import { example03b_Actions, example03b_VertexConfig } from "./vertexConfig";
+import { Suspense } from "react";
+import { Spinner } from "../../../common/Spinner";
+
+const route = router.examples["3"].b;
+
+export const Example03b = () => (
+  <Route match={route}>
+    <h2>Example 3b</h2>
+    <div
+      style={{ display: "flex", flexDirection: "column", alignItems: "center" }}
+    >
+      <Description />
+      <Suspense fallback={<Spinner />}>
+        <PokemonSelect />
+      </Suspense>
+      <Suspense fallback={<Spinner />}>
+        <Pokemon />
+      </Suspense>
+    </div>
+  </Route>
+);
+
+const Description = () => (
+  <ExampleDescription>
+    <p>
+      Much like the previous example, the only difference is that the select
+      options are loaded from the API.
+    </p>
+    <ExampleLink filename="example03b/vertexConfig.ts" />
+  </ExampleDescription>
+);
+
+const PokemonSelect = () => {
+  const { pokemonOptions, selectedOption } = useVertexState({
+    vertex: example03b_VertexConfig,
+    fields: ["pokemonOptions", "selectedOption"],
+  });
+  const dispatch = useDispatch();
+  const onPokemonSelected = (option: PokemonOption | null) =>
+    dispatch(example03b_Actions.selectPokemon(option));
+  return (
+    <div style={{ width: 300, color: "#333" }}>
+      <Select
+        placeholder="Select a pokemon"
+        options={pokemonOptions}
+        value={selectedOption}
+        onChange={onPokemonSelected}
+      />
+    </div>
+  );
+};
+
+const Pokemon = () => {
+  const { pokemon } = useVertexState({
+    vertex: example03b_VertexConfig,
+    fields: ["pokemon"],
+  });
+  if (!pokemon) return null;
+  return <PokemonDisplay pokemon={pokemon} />;
+};
+</file>
+
+<file path="src/pages/examples/example03b/PokemonOption.ts">
+import { PokemonName, PokemonUrl } from "../pokemon/Pokemon";
+
+export interface PokemonOption {
+  label: PokemonName;
+  value: PokemonUrl;
+}
+</file>
+
+<file path="src/pages/examples/example03b/vertexConfig.ts">
+import { PayloadAction, createSlice } from "@reduxjs/toolkit";
+import { filter, first, map, mergeMap, of } from "rxjs";
+import { rootVertexConfig } from "../../../rootVertexConfig";
+import { PokemonOption } from "./PokemonOption";
+
+const slice = createSlice({
+  name: "example03b",
+  initialState: { selectedOption: null as PokemonOption | null },
+  reducers: {
+    selectPokemon: (state, action: PayloadAction<PokemonOption | null>) => {
+      state.selectedOption = action.payload;
+    },
+  },
+});
+
+export const example03b_Actions = slice.actions;
+
+export const example03b_VertexConfig = rootVertexConfig
+  .configureDownstreamVertex({ slice })
+  .withDependencies(({ router, pokemonService }, vertex) =>
+    vertex
+      .load({
+        pokemonOptions: router.examples[3].b.match$.pipe(
+          filter(Boolean),
+          first(),
+          mergeMap(() => pokemonService.listAll()),
+          map((list) =>
+            list.map((_): PokemonOption => ({ label: _.name, value: _.url }))
+          )
+        ),
+      })
+      .loadFromFields(["selectedOption"], {
+        pokemon: ({ selectedOption }) =>
+          !selectedOption
+            ? of(null)
+            : pokemonService.loadByName(selectedOption.label),
+      })
+  );
+</file>
+
+<file path="src/pages/examples/example03c/Example03c.tsx">
+import { Suspense } from "react";
+import Select from "react-select";
+import { Route } from "../../../common/Route";
+import { Spinner } from "../../../common/Spinner";
+import { useDispatch } from "../../../common/useDispatch";
+import { useVertexState } from "../../../common/useVertexState";
+import { router } from "../../../router/createRouter";
+import { ExampleDescription } from "../ExampleDescription";
+import { ExampleLink } from "../ExampleLink";
+import { PokemonDisplay } from "../pokemon/PokemonDisplay";
+import { PokemonOption } from "./PokemonOption";
+import { example03c_Actions, example03c_VertexConfig } from "./vertexConfig";
+
+const route = router.examples["3"].c;
+
+export const Example03c = () => (
+  <Route match={route}>
+    <h2>Example 3c</h2>
+    <div
+      style={{ display: "flex", flexDirection: "column", alignItems: "center" }}
+    >
+      <Description />
+      <Suspense fallback={<Spinner />}>
+        <PokemonSelection />
+      </Suspense>
+    </div>
+  </Route>
+);
+
+const Description = () => (
+  <ExampleDescription>
+    <p>
+      Again we build from the previous example. This time, we add the selected
+      pokemon name as an URL param.
+    </p>
+    <p>Have fun playing with the browser Back and Forward buttons !</p>
+    <ExampleLink filename="example03c/vertexConfig.ts" />
+  </ExampleDescription>
+);
+
+const PokemonSelection = () => {
+  const dispatch = useDispatch();
+  const { pokemonOptions, selectedPokemonOption } = useVertexState({
+    vertex: example03c_VertexConfig,
+    fields: ["pokemonOptions", "selectedPokemonOption"],
+  });
+  const onPokemonSelected = (option: PokemonOption | null) =>
+    dispatch(example03c_Actions.selectPokemon(option));
+  return (
+    <div style={{ width: 300 }}>
+      <div style={{ color: "#333" }}>
+        <Select
+          placeholder="Select a pokemon"
+          options={pokemonOptions}
+          value={selectedPokemonOption}
+          onChange={onPokemonSelected}
+        />
+      </div>
+      <Suspense fallback={<Spinner />}>
+        <Pokemon />
+      </Suspense>
+    </div>
+  );
+};
+
+const Pokemon = () => {
+  const { pokemon } = useVertexState({
+    vertex: example03c_VertexConfig,
+    fields: ["pokemon"],
+  });
+  return <PokemonDisplay pokemon={pokemon} />;
+};
+</file>
+
+<file path="src/pages/examples/example03c/PokemonOption.ts">
+import { PokemonName, PokemonUrl } from "../pokemon/Pokemon";
+
+export interface PokemonOption {
+  label: PokemonName;
+  value: PokemonUrl;
+}
+</file>
+
+<file path="src/pages/examples/example03c/vertexConfig.ts">
+import { PayloadAction, createSlice } from "@reduxjs/toolkit";
+import { filter, first, map, mergeMap } from "rxjs";
+import { asSequence } from "sequency";
+import { rootVertexConfig } from "../../../rootVertexConfig";
+import { PokemonName } from "../pokemon/Pokemon";
+import { PokemonOption } from "./PokemonOption";
+
+const slice = createSlice({
+  name: "example03c",
+  initialState: { selectedOption: null as PokemonOption | null },
+  reducers: {
+    selectPokemon: (state, action: PayloadAction<PokemonOption | null>) => {
+      state.selectedOption = action.payload;
+    },
+  },
+});
+
+export const example03c_Actions = slice.actions;
+
+export const example03c_VertexConfig = rootVertexConfig
+  .configureDownstreamVertex({ slice })
+  .withDependencies(({ router, pokemonService }, vertex) =>
+    vertex
+      .load({
+        pokemonOptions: router.examples[3].c.match$.pipe(
+          filter(Boolean),
+          first(),
+          mergeMap(() => pokemonService.listAll()),
+          map((list) =>
+            list.map((_): PokemonOption => ({ label: _.name, value: _.url }))
+          )
+        ),
+        selectedPokemonName: router.examples[3].c.match$.pipe(
+          filter(Boolean),
+          map((match) => match.params["pokemon-name"] as PokemonName)
+        ),
+      })
+      .sideEffect(slice.actions.selectPokemon, ({ payload: pokemon }) => {
+        if (pokemon) {
+          router.examples[3].c.push({
+            "pokemon-name": pokemon.label,
+          });
+        }
+      })
+      .computeFromFields(["pokemonOptions", "selectedPokemonName"], {
+        selectedPokemonOption: ({ pokemonOptions, selectedPokemonName }) =>
+          asSequence(pokemonOptions || []).find(
+            (_) => _.label === selectedPokemonName
+          ),
+      })
+      .loadFromFields(["selectedPokemonName"], {
+        pokemon: ({ selectedPokemonName }) =>
+          pokemonService.loadByName(selectedPokemonName),
+      })
+  );
+</file>
+
+<file path="src/pages/examples/pokemon/Pokemon.ts">
+export type PokemonId = "PokemonId";
+export type PokemonName = "PokemonName";
+export type PokemonImgUrl = "PokemonImgUrl";
+
+export interface Pokemon {
+  id: PokemonId;
+  name: PokemonName;
+  imgUrl: PokemonImgUrl;
+}
+
+export type PokemonUrl = "PokemonUrl";
+</file>
+
+<file path="src/pages/examples/pokemon/PokemonDisplay.tsx">
+import { FC } from "react";
+import { Pokemon } from "./Pokemon";
+
+export const PokemonDisplay: FC<{ pokemon: Pokemon }> = ({ pokemon }) => (
+  <div>
+    <img src={pokemon.imgUrl} style={{ width: 300 }} />
+    <h3>{pokemon.name}</h3>
+  </div>
+);
+</file>
+
+<file path="src/pages/examples/pokemon/PokemonService.ts">
+import {
+  Observable,
+  catchError,
+  delay,
+  forkJoin,
+  map,
+  of,
+  switchMap,
+} from "rxjs";
+import { ajax } from "rxjs/ajax";
+import { asSequence } from "sequency";
+import { Pokemon, PokemonId, PokemonName, PokemonUrl } from "./Pokemon";
+
+const loadByName = (name: PokemonName) =>
+  ajax
+    .getJSON<any>(`https://pokeapi.co/api/v2/pokemon/${name}` as PokemonUrl)
+    .pipe(
+      map(
+        (_): Pokemon => ({
+          id: _.id,
+          name: _.name,
+          imgUrl: _.sprites.other["official-artwork"].front_default,
+        })
+      ),
+      delay(1500)
+    );
+
+export const createPokemonService = () => ({
+  findByName: (pokemonName: string) =>
+    loadByName(pokemonName as PokemonName).pipe(
+      catchError((error) => {
+        if (error.status === 404) return of(null);
+        else throw error;
+      })
+    ),
+  loadByName,
+  getEvolvesFrom: (pokemonId: PokemonId) =>
+    ajax
+      .getJSON<any>(`https://pokeapi.co/api/v2/pokemon-species/${pokemonId}`)
+      .pipe(
+        map((species) => species.evolves_from_species),
+        switchMap((_) =>
+          _ === null
+            ? of(null)
+            : ajax.getJSON<any>(_.url).pipe(
+                map((_) =>
+                  asSequence(_.varieties)
+                    .filter((_: any) => _.is_default)
+                    .map((_: any) => _.pokemon.url as string)
+                    .first()
+                ),
+                switchMap((url) => ajax.getJSON<any>(url)),
+                map(
+                  (_): Pokemon => ({
+                    id: _.id,
+                    name: _.name,
+                    imgUrl: _.sprites.other["official-artwork"].front_default,
+                  })
+                )
+              )
+        ),
+        delay(1500)
+      ),
+  getEvolvesTo: (pokemonId: PokemonId): Observable<Pokemon[]> =>
+    ajax
+      .getJSON<any>(`https://pokeapi.co/api/v2/pokemon-species/${pokemonId}`)
+      .pipe(
+        switchMap((_) => ajax.getJSON<any>(_.evolution_chain.url)),
+        map((_) => {
+          let { chain } = _;
+          let matchedChain = {} as any;
+          const checkChain = (chain: any) => {
+            if (
+              chain.species.url ===
+              `https://pokeapi.co/api/v2/pokemon-species/${pokemonId}/`
+            ) {
+              matchedChain = chain;
+            } else {
+              chain.evolves_to.forEach((evo: any) => {
+                checkChain(evo);
+              });
+            }
+          };
+          checkChain(chain);
+          return matchedChain.evolves_to.map(
+            (evo: any) => evo.species.url
+          ) as string[];
+        }),
+        switchMap((urls) =>
+          urls.length === 0
+            ? of([])
+            : forkJoin(
+                urls.map((url) =>
+                  ajax.getJSON<any>(url).pipe(
+                    map((_) =>
+                      asSequence(_.varieties)
+                        .filter((_: any) => _.is_default)
+                        .first()
+                    ),
+                    switchMap((_: any) => ajax.getJSON<any>(_.pokemon.url))
+                  )
+                )
+              )
+        ),
+        map((_) =>
+          _.map((_: any) => ({
+            id: _.id,
+            name: _.name,
+            imgUrl: _.sprites.other["official-artwork"].front_default,
+          }))
+        ),
+        delay(1500)
+      ),
+  listAll: () =>
+    ajax
+      .getJSON<{ results: Array<{ name: PokemonName; url: PokemonUrl }> }>(
+        "https://pokeapi.co/api/v2/pokemon/?limit=300"
+      )
+      .pipe(
+        map((_) => _.results),
+        delay(1500)
+      ),
+});
+</file>
+
+<file path="src/pages/examples/real-life/about/AboutPage.tsx">
+import { Route } from "../../../../common/Route";
+import { router } from "../../../../router/createRouter";
+
+export const AboutPage = () => (
+  <Route match={router.examples.realLife.about}>
+    <h3>AboutPage</h3>
+  </Route>
+);
+</file>
+
+<file path="src/pages/examples/real-life/pokemon/description/PokemonDescriptionPage.tsx">
+import { Suspense } from "react";
+import { Route } from "../../../../../common/Route";
+import { Spinner } from "../../../../../common/Spinner";
+import { useVertexState } from "../../../../../common/useVertexState";
+import { router } from "../../../../../router/createRouter";
+import { PokemonDisplay } from "../../../pokemon/PokemonDisplay";
+import { pokemonDescriptionVertexConfig } from "./vertexConfig";
+
+export const PokemonDescriptionPage = () => (
+  <Route match={router.examples.realLife.pokemon.selected.description}>
+    <Suspense fallback={<Spinner />}>
+      <PageContent />
+    </Suspense>
+  </Route>
+);
+
+const PageContent = () => {
+  const { selectedPokemon } = useVertexState({
+    vertex: pokemonDescriptionVertexConfig,
+    fields: ["selectedPokemon"],
+  });
+  if (selectedPokemon === null) return null;
+  return <PokemonDisplay pokemon={selectedPokemon} />;
+};
+</file>
+
+<file path="src/pages/examples/real-life/pokemon/description/vertexConfig.ts">
+import { createSlice } from "@reduxjs/toolkit";
+import { pokemonVertexConfig } from "../vertexConfig";
+
+const slice = createSlice({
+  name: "pokemonDescription",
+  initialState: {},
+  reducers: {},
+});
+
+export const pokemonDescriptionVertexConfig =
+  pokemonVertexConfig.configureDownstreamVertex({
+    slice,
+    upstreamFields: ["selectedPokemon"],
+  });
+</file>
+
+<file path="src/pages/examples/real-life/pokemon/evolutions/PokemonEvolutionsPage.tsx">
+import { Suspense } from "react";
+import { Route } from "../../../../../common/Route";
+import { Spinner } from "../../../../../common/Spinner";
+import { useVertexState } from "../../../../../common/useVertexState";
+import { router } from "../../../../../router/createRouter";
+import { PokemonDisplay } from "../../../pokemon/PokemonDisplay";
+import { pokemonEvolutionsVertexConfig } from "./vertexConfig";
+
+export const PokemonEvolutionsPage = () => (
+  <Route match={router.examples.realLife.pokemon.selected.evolutions}>
+    <Suspense fallback={<Spinner />}>
+      <PageContent />
+    </Suspense>
+  </Route>
+);
+
+const PageContent = () => {
+  const { selectedPokemon, evolvesFrom, evolvesTo } = useVertexState({
+    vertex: pokemonEvolutionsVertexConfig,
+    fields: ["selectedPokemon", "evolvesFrom", "evolvesTo"],
+  });
+  return (
+    <div style={{ display: "flex", justifyContent: "center" }}>
+      {!evolvesFrom ? null : <PokemonDisplay pokemon={evolvesFrom} />}
+      {!selectedPokemon ? null : <PokemonDisplay pokemon={selectedPokemon} />}
+      {(evolvesTo || []).map((evo) => (
+        <PokemonDisplay pokemon={evo} key={evo.id} />
+      ))}
+    </div>
+  );
+};
+</file>
+
+<file path="src/pages/examples/real-life/pokemon/evolutions/vertexConfig.ts">
+import { createSlice } from "@reduxjs/toolkit";
+import { distinctUntilChanged, filter, map, of } from "rxjs";
+import { PokemonName } from "../../../pokemon/Pokemon";
+import { pokemonVertexConfig } from "../vertexConfig";
+
+const slice = createSlice({
+  name: "pokemonEvolutions",
+  initialState: {},
+  reducers: {},
+});
+
+export const pokemonEvolutionsVertexConfig = pokemonVertexConfig
+  .configureDownstreamVertex({
+    slice,
+    upstreamFields: ["selectedPokemon"],
+  })
+  .withDependencies(({ pokemonService, router }, vertex) =>
+    vertex
+      .load({
+        evolutionsPokemonNameParam:
+          router.examples.realLife.pokemon.selected.evolutions.match$.pipe(
+            filter(Boolean),
+            map(({ params }) => params["pokemon-name"] as PokemonName),
+            distinctUntilChanged()
+          ),
+      })
+      .computeFromFields(["evolutionsPokemonNameParam", "selectedPokemon"], {
+        selectedPokemonForEvolutions: ({
+          evolutionsPokemonNameParam,
+          selectedPokemon,
+        }) =>
+          !selectedPokemon ||
+          selectedPokemon.name !== evolutionsPokemonNameParam
+            ? null
+            : selectedPokemon,
+      })
+      .loadFromFields(["selectedPokemonForEvolutions"], {
+        evolvesFrom: ({ selectedPokemonForEvolutions }) =>
+          !selectedPokemonForEvolutions
+            ? of(null)
+            : pokemonService.getEvolvesFrom(selectedPokemonForEvolutions.id),
+        evolvesTo: ({ selectedPokemonForEvolutions }) =>
+          !selectedPokemonForEvolutions
+            ? of(null)
+            : pokemonService.getEvolvesTo(selectedPokemonForEvolutions.id),
+      })
+  );
+</file>
+
+<file path="src/pages/examples/real-life/pokemon/PokemonOption.ts">
+import { PokemonName, PokemonUrl } from "../../pokemon/Pokemon";
+
+export interface PokemonOption {
+  label: PokemonName;
+  value: PokemonUrl;
+}
+</file>
+
+<file path="src/pages/examples/real-life/pokemon/PokemonPage.tsx">
+import { Suspense } from "react";
+import Select from "react-select";
+import { Route } from "../../../../common/Route";
+import { Spinner } from "../../../../common/Spinner";
+import { useDispatch } from "../../../../common/useDispatch";
+import { useVertexState } from "../../../../common/useVertexState";
+import { router } from "../../../../router/createRouter";
+import { Tab, Tabs } from "../Tabs";
+import { PokemonOption } from "./PokemonOption";
+import { PokemonDescriptionPage } from "./description/PokemonDescriptionPage";
+import { PokemonEvolutionsPage } from "./evolutions/PokemonEvolutionsPage";
+import { pokemonActions, pokemonVertexConfig } from "./vertexConfig";
+
+export const PokemonPage = () => (
+  <>
+    <div style={{ display: "flex", justifyContent: "center" }}>
+      <Suspense fallback={<Spinner />}>
+        <PokemonSelect />
+      </Suspense>
+    </div>
+    <Route match={router.examples.realLife.pokemon.selected}>
+      <Suspense fallback={<Spinner />}>
+        <SelectedPokemonPage />
+      </Suspense>
+    </Route>
+  </>
+);
+
+const PokemonSelect = () => {
+  const { pokemonOptions, selectedPokemonOption } = useVertexState({
+    vertex: pokemonVertexConfig,
+    fields: ["pokemonOptions", "selectedPokemonOption"],
+  });
+  const dispatch = useDispatch();
+  const onPokemonSelected = (option: PokemonOption | null) =>
+    dispatch(pokemonActions.selectPokemon(option));
+  return (
+    <div style={{ width: 300, color: "#333" }}>
+      <Select
+        placeholder="Select a pokemon"
+        options={pokemonOptions}
+        value={selectedPokemonOption}
+        onChange={onPokemonSelected}
+      />
+    </div>
+  );
+};
+
+const SelectedPokemonPage = () => {
+  const {
+    selectedPokemonName,
+    pokemonDescriptionMatch,
+    pokemonEvolutionsMatch,
+  } = useVertexState({
+    vertex: pokemonVertexConfig,
+    fields: [
+      "selectedPokemonName",
+      "pokemonDescriptionMatch",
+      "pokemonEvolutionsMatch",
+    ],
+  });
+  const goToDescriptionPage = () =>
+    selectedPokemonName &&
+    router.examples.realLife.pokemon.selected.description.push({
+      "pokemon-name": selectedPokemonName,
+    });
+  const goToEvolutionsPage = () =>
+    selectedPokemonName &&
+    router.examples.realLife.pokemon.selected.evolutions.push({
+      "pokemon-name": selectedPokemonName,
+    });
+  return (
+    <>
+      <Tabs>
+        <Tab
+          onClick={goToDescriptionPage}
+          active={pokemonDescriptionMatch}
+          text="Description"
+        />
+        <Tab
+          onClick={goToEvolutionsPage}
+          active={pokemonEvolutionsMatch}
+          text="Evolutions"
+        />
+      </Tabs>
+      <PokemonDescriptionPage />
+      <PokemonEvolutionsPage />
+    </>
+  );
+};
+</file>
+
+<file path="src/pages/examples/real-life/pokemon/vertexConfig.ts">
+import { PayloadAction, createSlice } from "@reduxjs/toolkit";
+import { distinctUntilChanged, filter, first, map, mergeMap, of } from "rxjs";
+import { asSequence } from "sequency";
+import { PokemonName } from "../../pokemon/Pokemon";
+import { realLifeExampleVertexConfig } from "../vertexConfig";
+import { PokemonOption } from "./PokemonOption";
+
+const initialState = { selectedOption: null } as {
+  selectedOption: PokemonOption | null;
+};
+
+const slice = createSlice({
+  name: "pokemon",
+  initialState,
+  reducers: {
+    selectPokemon: (state, action: PayloadAction<PokemonOption | null>) => {
+      state.selectedOption = action.payload;
+    },
+  },
+});
+
+export const pokemonActions = slice.actions;
+
+export const pokemonVertexConfig = realLifeExampleVertexConfig
+  .configureDownstreamVertex({
+    slice,
+    upstreamFields: ["pokemonTabMatch"],
+  })
+  .withDependencies(({ router, pokemonService }, vertex) =>
+    vertex
+      .load({
+        pokemonDescriptionMatch:
+          router.examples.realLife.pokemon.selected.description.match$.pipe(
+            map(Boolean)
+          ),
+        pokemonEvolutionsMatch:
+          router.examples.realLife.pokemon.selected.evolutions.match$.pipe(
+            map(Boolean)
+          ),
+      })
+      .load({
+        pokemonOptions: router.examples.realLife.pokemon.match$.pipe(
+          filter(Boolean),
+          first(),
+          mergeMap(() => pokemonService.listAll()),
+          map((list) =>
+            list.map((_): PokemonOption => ({ label: _.name, value: _.url }))
+          )
+        ),
+        selectedPokemonName:
+          router.examples.realLife.pokemon.selected.match$.pipe(
+            // filter(Boolean),
+            map((match) =>
+              match ? (match.params["pokemon-name"] as PokemonName) : null
+            ),
+            distinctUntilChanged()
+          ),
+      })
+      .computeFromFields(["pokemonOptions", "selectedPokemonName"], {
+        selectedPokemonOption: ({ pokemonOptions, selectedPokemonName }) =>
+          asSequence(pokemonOptions || []).find(
+            (_) => _.label === selectedPokemonName
+          ),
+      })
+      .sideEffect(pokemonActions.selectPokemon, ({ payload: pokemon }) => {
+        if (pokemon) {
+          router.examples.realLife.pokemon.selected.description.push({
+            "pokemon-name": pokemon.label,
+          });
+        }
+      })
+      .loadFromFields(["selectedPokemonName"], {
+        selectedPokemon: ({ selectedPokemonName }) =>
+          selectedPokemonName
+            ? pokemonService.loadByName(selectedPokemonName)
+            : of(null),
+      })
+      .computeFromFields(["selectedPokemon"], {
+        selectedPokemonImage: ({ selectedPokemon }) => selectedPokemon?.imgUrl,
+      })
+  );
+</file>
+
+<file path="src/pages/examples/real-life/RealLifeExample.tsx">
+import { Route } from "../../../common/Route";
+import { useVertexState } from "../../../common/useVertexState";
+import { router } from "../../../router/createRouter";
+import { Tab, Tabs } from "./Tabs";
+import { AboutPage } from "./about/AboutPage";
+import { PokemonPage } from "./pokemon/PokemonPage";
+import { realLifeExampleVertexConfig } from "./vertexConfig";
+
+const route = router.examples.realLife;
+
+const goToPokemonPage = () => route.pokemon.push();
+const goToAboutPage = () => route.about.push();
+
+export const RealLifeExample = () => {
+  const { pokemonTabMatch, aboutTabMatch } = useVertexState({
+    vertex: realLifeExampleVertexConfig,
+    fields: ["pokemonTabMatch", "aboutTabMatch"],
+  });
+  return (
+    <Route match={route}>
+      <div style={{ height: "80vh" }}>
+        <h2>Real World (sort of) Example</h2>
+        <Tabs>
+          <Tab
+            onClick={goToPokemonPage}
+            active={pokemonTabMatch}
+            text="Pokemon"
+          />
+          <Tab onClick={goToAboutPage} active={aboutTabMatch} text="About" />
+        </Tabs>
+        <Route match={route.pokemon}>
+          <PokemonPage />
+        </Route>
+        <AboutPage />
+      </div>
+    </Route>
+  );
+};
+</file>
+
+<file path="src/pages/examples/real-life/realLifeVertexConfigs.ts">
+import { pokemonDescriptionVertexConfig } from "./pokemon/description/vertexConfig";
+import { pokemonEvolutionsVertexConfig } from "./pokemon/evolutions/vertexConfig";
+import { pokemonVertexConfig } from "./pokemon/vertexConfig";
+import { realLifeExampleVertexConfig } from "./vertexConfig";
+
+export const realLifeVertexConfigs = [
+  realLifeExampleVertexConfig,
+  pokemonVertexConfig,
+  pokemonDescriptionVertexConfig,
+  pokemonEvolutionsVertexConfig,
+];
+</file>
+
+<file path="src/pages/examples/real-life/route.ts">
+import { route } from "observable-tree-router";
+
+export const realLifeRoute = route({
+  path: "/real-life",
+  nested: {
+    pokemon: route({
+      path: "/pokemon",
+      nested: {
+        selected: route({
+          path: "/:pokemon-name",
+          params: ["pokemon-name"],
+          nested: {
+            description: route({ path: "/description" }),
+            evolutions: route({ path: "/evolutions" }),
+          },
+        }),
+      },
+    }),
+    about: route({ path: "/about" }),
+  },
+});
+</file>
+
+<file path="src/pages/examples/real-life/Tabs.tsx">
+import { FC } from "react";
+
+export const Tabs: FC<any> = ({ children }) => (
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "space-evenly",
+      marginBottom: 30,
+    }}
+  >
+    {children}
+  </div>
+);
+
+export const Tab: FC<{
+  onClick: () => void;
+  active: boolean;
+  text: string;
+}> = ({ onClick, active, text }) => (
+  <div
+    onClick={active ? undefined : onClick}
+    style={{
+      borderBottom: active ? "2px solid grey" : undefined,
+      cursor: "pointer",
+    }}
+  >
+    <h3>{text}</h3>
+  </div>
+);
+</file>
+
+<file path="src/pages/examples/real-life/vertexConfig.ts">
+import { createSlice } from "@reduxjs/toolkit";
+import { map } from "rxjs";
+import { rootVertexConfig } from "../../../rootVertexConfig";
+
+const slice = createSlice({
+  name: "realLifeExample",
+  initialState: {},
+  reducers: {},
+});
+
+export const realLifeExampleVertexConfig = rootVertexConfig
+  .configureDownstreamVertex({
+    slice,
+  })
+  .withDependencies(({ router }, vertex) =>
+    vertex.load({
+      pokemonTabMatch: router.examples.realLife.pokemon.match$.pipe(
+        map(Boolean)
+      ),
+      aboutTabMatch: router.examples.realLife.about.match$.pipe(map(Boolean)),
+    })
+  );
+</file>
+
+<file path="src/pages/examples/ExampleDescription.tsx">
+import { CSSProperties } from "react";
+
+export const ExampleDescription = ({ children }: any) => (
+  <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
+    <div
+      style={{
+        maxWidth: 600,
+        backgroundColor: "#f2f2f2",
+        padding: "0px 20px 10px",
+        border: "1px solid #ccc",
+        borderRadius: "4px",
+        fontFamily: "Arial, sans-serif",
+        fontSize: "16px",
+        color: "#333",
+      }}
+    >
+      {children}
+    </div>
+  </div>
+);
+
+export const descriptionButtonStyle: CSSProperties = {
+  padding: "8px 16px",
+  backgroundColor: "#f5f5f5",
+  border: "1px solid #ccc",
+  borderRadius: "4px",
+  fontFamily: "Arial, sans-serif",
+  fontSize: "14px",
+  color: "#333",
+};
+</file>
+
+<file path="src/pages/examples/ExampleLink.tsx">
+import { FC } from "react";
+
+export const examplesBaseUrl =
+  "https://github.com/couzic/verdux-examples/blob/master/src/pages/examples/";
+
+export const ExampleLink: FC<{ filename: string }> = ({ filename }) => (
+  <a target="__blank" href={examplesBaseUrl + filename}>
+    See source code
+  </a>
+);
+</file>
+
+<file path="src/pages/examples/ExamplesPage.tsx">
+import { Suspense } from "react";
+import { Route } from "../../common/Route";
+import { Spinner } from "../../common/Spinner";
+import { router } from "../../router/createRouter";
+import { Example01a } from "./example01a/Example01a";
+import { Example01b } from "./example01b/Example01b";
+import { Example02a } from "./example02a/Example02a";
+import { Example02b } from "./example02b/Example02b";
+import { Example03a } from "./example03a/Example03a";
+import { Example03b } from "./example03b/Example03b";
+import { Example03c } from "./example03c/Example03c";
+import { RealLifeExample } from "./real-life/RealLifeExample";
+
+const goHome = () => router.home.push();
+
+export const ExamplesPage = () => (
+  <Route match={router.examples}>
+    <button onClick={goHome}>Home</button>
+    <Suspense fallback={<Spinner />}>
+      <Example01a />
+      <Example01b />
+      <Example02a />
+      <Example02b />
+      <Example03a />
+      <Example03b />
+      <Example03c />
+      <RealLifeExample />
+    </Suspense>
+  </Route>
+);
+</file>
+
+<file path="src/pages/examples/examplesVertexConfigs.ts">
+import { example01a_VertexConfig } from "./example01a/vertexConfig";
+import { example01b_VertexConfig } from "./example01b/vertexConfig";
+import { example02a_VertexConfig } from "./example02a/vertexConfig";
+import { example02b_VertexConfig } from "./example02b/vertexConfig";
+import { example03a_VertexConfig } from "./example03a/vertexConfig";
+import { example03b_VertexConfig } from "./example03b/vertexConfig";
+import { example03c_VertexConfig } from "./example03c/vertexConfig";
+import { realLifeVertexConfigs } from "./real-life/realLifeVertexConfigs";
+
+export const examplesVertexConfigs = [
+  example01a_VertexConfig,
+  example01b_VertexConfig,
+  example02a_VertexConfig,
+  example02b_VertexConfig,
+  example03a_VertexConfig,
+  example03b_VertexConfig,
+  example03c_VertexConfig,
+  ...realLifeVertexConfigs,
+];
+</file>
+
+<file path="src/pages/home/HomePage.tsx">
+import { Route } from "../../common/Route";
+import { router } from "../../router/createRouter";
+
+const { examples } = router;
+
+const goToExample01a = () => examples["1"].a.push();
+const goToExample01b = () => examples["1"].b.push();
+const goToExample02a = () =>
+  examples["2"].a.push({ "pokemon-name": "pikachu" });
+const goToExample02b = () =>
+  examples["2"].b.push({ "pokemon-name": "pikachu" });
+const goToExample03a = () => examples["3"].a.push();
+const goToExample03b = () => examples["3"].b.push();
+const goToExample03c = () =>
+  examples["3"].c.push({ "pokemon-name": "charizard" });
+const goToRealWorldExample = () => examples.realLife.push();
+
+export const HomePage = () => (
+  <Route exact match={router.home}>
+    <h1>Welcome 🌀</h1>
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <button onClick={goToExample01a}>Example 1a</button>
+      <button onClick={goToExample01b}>Example 1b</button>
+      <button onClick={goToExample02a}>Example 2a</button>
+      <button onClick={goToExample02b}>Example 2b</button>
+      <button onClick={goToExample03a}>Example 3a</button>
+      <button onClick={goToExample03b}>Example 3b</button>
+      <button onClick={goToExample03c}>Example 3c</button>
+      <button onClick={goToRealWorldExample}>
+        Real life example (sort of)
+      </button>
+    </div>
+  </Route>
+);
+</file>
+
+<file path="src/router/createRouter.ts">
+import { History, createBrowserHistory } from "history";
+import { createBrowserRouter, route } from "observable-tree-router";
+import { realLifeRoute } from "../pages/examples/real-life/route";
+
+export const createRouter = (history: History) =>
+  createBrowserRouter(history, {
+    home: route({ path: "/" }),
+    examples: route({
+      path: "/examples",
+      nested: {
+        "1": route({
+          path: "/1",
+          nested: {
+            a: route({ path: "/a" }),
+            b: route({ path: "/b" }),
+          },
+        }),
+        "2": route({
+          path: "/2",
+          nested: {
+            a: route({ path: "/a/:pokemon-name", params: ["pokemon-name"] }),
+            b: route({ path: "/b/:pokemon-name", params: ["pokemon-name"] }),
+          },
+        }),
+        "3": route({
+          path: "/3",
+          nested: {
+            a: route({ path: "/a" }),
+            b: route({ path: "/b" }),
+            c: route({ path: "/c/:pokemon-name", params: ["pokemon-name"] }),
+          },
+        }),
+        realLife: realLifeRoute,
+      },
+    }),
+  });
+
+export type Router = ReturnType<typeof createRouter>;
+
+export const router = createRouter(createBrowserHistory());
+</file>
+
+<file path="src/App.css">
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+</file>
+
+<file path="src/App.tsx">
+import "./App.css";
+import { GraphContext } from "./common/GraphContext";
+import { graph } from "./graph";
+import { ExamplesPage } from "./pages/examples/ExamplesPage";
+import { HomePage } from "./pages/home/HomePage";
+
+function App() {
+  return (
+    <GraphContext.Provider value={graph}>
+      <HomePage />
+      <ExamplesPage />
+    </GraphContext.Provider>
+  );
+}
+
+export default App;
+</file>
+
+<file path="src/graph.ts">
+import { createGraph } from "verdux";
+import { examplesVertexConfigs } from "./pages/examples/examplesVertexConfigs";
+
+export const graph = createGraph({
+  vertices: [...examplesVertexConfigs],
+  devtools: (window as any).__VERDUX_DEVTOOLS_EXTENSION__,
+});
+</file>
+
+<file path="src/index.css">
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9;
+  }
+}
+</file>
+
+<file path="src/main.tsx">
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App.tsx";
+import "./index.css";
+
+ReactDOM.createRoot(document.getElementById("root")!).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+</file>
+
+<file path="src/rootVertexConfig.ts">
+import { createSlice } from "@reduxjs/toolkit";
+import { configureRootVertex } from "verdux";
+import { createPokemonService } from "./pages/examples/pokemon/PokemonService";
+import { router } from "./router/createRouter";
+
+export const rootVertexConfig = configureRootVertex({
+  slice: createSlice({
+    name: "root",
+    initialState: {},
+    reducers: {},
+  }),
+  dependencies: {
+    router: () => router,
+    pokemonService: createPokemonService,
+  },
+});
+</file>
+
+<file path="src/vite-env.d.ts">
+/// <reference types="vite/client" />
+</file>
+
+<file path=".eslintrc.cjs">
+module.exports = {
+  root: true,
+  env: { browser: true, es2020: true },
+  extends: [
+    'eslint:recommended',
+    'plugin:@typescript-eslint/recommended',
+    'plugin:react-hooks/recommended',
+  ],
+  ignorePatterns: ['dist', '.eslintrc.cjs'],
+  parser: '@typescript-eslint/parser',
+  plugins: ['react-refresh'],
+  rules: {
+    'react-refresh/only-export-components': [
+      'warn',
+      { allowConstantExport: true },
+    ],
+  },
+}
+</file>
+
+<file path=".firebaserc">
+{
+  "projects": {
+    "default": "verdux-examples"
+  }
+}
+</file>
+
+<file path=".gitignore">
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+.firebase
+dist
+dist-ssr
+node_modules
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+</file>
+
+<file path="firebase.json">
+{
+  "hosting": {
+    "public": "dist",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}
+</file>
+
+<file path="index.html">
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌀</text></svg>">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Verdux Examples</title>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
+</html>
+</file>
+
+<file path="package.json">
+{
+  "name": "verdux-examples",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview",
+    "deploy": "npm run build && firebase deploy"
+  },
+  "dependencies": {
+    "@reduxjs/toolkit": "^2.2.5",
+    "history": "^5.3.0",
+    "observable-hooks": "^4.2.4",
+    "observable-tree-router": "^0.2.1",
+    "ramda": "^0.29.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-loader-spinner": "^5.4.5",
+    "react-select": "^5.7.4",
+    "rxjs": "^7.8.1",
+    "sequency": "^0.20.0",
+    "verdux": "^0.6.5"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.246",
+    "@types/react": "^18.2.15",
+    "@types/react-dom": "^18.2.7",
+    "@typescript-eslint/eslint-plugin": "^6.6.0",
+    "@typescript-eslint/parser": "^6.6.0",
+    "@vitejs/plugin-react": "^4.0.3",
+    "eslint": "^8.45.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.3",
+    "firebase": "^10.3.1",
+    "typescript": "^5.0.2",
+    "vite": "^4.4.5"
+  }
+}
+</file>
+
+<file path="README.md">
+# verdux-examples
+
+##### Examples for `verdux` : [https://github.com/couzic/verdux](https://github.com/couzic/verdux)
+
+### Live demo: [https://verdux-examples.web.app](https://verdux-examples.web.app)
+
+### DevTools (WIP)
+
+![DevTools screenshot](https://raw.githubusercontent.com/couzic/verdux/refs/heads/master/doc/devtools.png)
+</file>
+
+<file path="tsconfig.json">
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src"],
+  "references": [{ "path": "./tsconfig.node.json" }]
+}
+</file>
+
+<file path="tsconfig.node.json">
+{
+  "compilerOptions": {
+    "composite": true,
+    "skipLibCheck": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowSyntheticDefaultImports": true
+  },
+  "include": ["vite.config.ts"]
+}
+</file>
+
+<file path="vite.config.ts">
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+// https://vitejs.dev/config/
+export default defineConfig({
+  plugins: [react()],
+})
+</file>
+
+</files>

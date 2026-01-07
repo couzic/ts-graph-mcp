@@ -1,16 +1,16 @@
 import type { Database } from "better-sqlite3";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { loadConfig } from "../../src/config/configLoader.utils.js";
-import { createSqliteWriter } from "../../src/db/sqlite/createSqliteWriter.js";
+import { loadConfig } from "../../http/src/config/configLoader.utils.js";
+import { createSqliteWriter } from "../../http/src/db/sqlite/createSqliteWriter.js";
 import {
   closeDatabase,
   openDatabase,
-} from "../../src/db/sqlite/sqliteConnection.utils.js";
-import { initializeSchema } from "../../src/db/sqlite/sqliteSchema.utils.js";
-import { indexProject } from "../../src/ingestion/indexProject.js";
-import { dependenciesOf } from "../../src/tools/dependencies-of/dependenciesOf.js";
-import { dependentsOf } from "../../src/tools/dependents-of/dependentsOf.js";
-import { pathsBetween } from "../../src/tools/paths-between/pathsBetween.js";
+} from "../../http/src/db/sqlite/sqliteConnection.utils.js";
+import { initializeSchema } from "../../http/src/db/sqlite/sqliteSchema.utils.js";
+import { indexProject } from "../../http/src/ingestion/indexProject.js";
+import { dependenciesOf } from "../../http/src/query/dependencies-of/dependenciesOf.js";
+import { dependentsOf } from "../../http/src/query/dependents-of/dependentsOf.js";
+import { pathsBetween } from "../../http/src/query/paths-between/pathsBetween.js";
 
 /**
  * E2E tests for web-app sample project (multi-package).

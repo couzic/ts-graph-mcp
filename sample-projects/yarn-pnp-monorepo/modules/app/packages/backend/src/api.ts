@@ -13,7 +13,7 @@ export function handleConfigUpdate(input: unknown): Config {
 
 /**
  * Uses namespace import pattern: MathUtils.multiply
- * This tests that ts-graph-mcp resolves Namespace.Symbol to the actual definition.
+ * This tests that ts-graph resolves Namespace.Symbol to the actual definition.
  */
 export function calculateArea(width: number, height: number): number {
   return MathUtils.multiply(width, height);

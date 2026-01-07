@@ -1,6 +1,6 @@
 # Benchmark Library
 
-Shared utilities for running benchmarks across ts-graph-mcp test projects.
+Shared utilities for running benchmarks across ts-graph test projects.
 
 ## Quick Start
 
@@ -65,7 +65,7 @@ The `BenchmarkConfig` interface:
 | `tsconfig` | Yes | - | Relative path to tsconfig.json |
 | `moduleName` | No | `projectName` | Module name for indexing |
 | `packageName` | No | `"main"` | Package name for indexing |
-| `dbPath` | No | `".ts-graph/graph.db"` | Database path |
+| `dbPath` | No | `".ts-graph-mcp/graph.db"` | Database path |
 
 ## Architecture
 
@@ -104,7 +104,7 @@ TypeScript interfaces for benchmark data structures:
 
 ### `scenarios.ts`
 Pre-defined scenarios for benchmarking:
-- `with-mcp` - All ts-graph-mcp tools enabled
+- `with-mcp` - All ts-graph tools enabled
 - `without-mcp` - MCP tools disabled, file reading only
 
 ### `report.ts`

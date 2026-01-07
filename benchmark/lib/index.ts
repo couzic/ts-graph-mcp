@@ -1,5 +1,5 @@
 /**
- * Benchmark library for ts-graph-mcp test projects.
+ * Benchmark library for ts-graph test projects.
  *
  * Provides shared utilities for running benchmarks across test projects.
  *

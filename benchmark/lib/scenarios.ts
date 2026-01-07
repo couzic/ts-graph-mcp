@@ -9,12 +9,12 @@ import type { BenchmarkScenario } from "./types.js";
  * Benchmark scenarios compare Claude's performance WITH vs WITHOUT MCP tools.
  *
  * Design principle: Both scenarios have access to ALL standard Claude Code tools
- * (Read, Glob, Grep, LSP, Task, etc.). The only difference is whether ts-graph-mcp
+ * (Read, Glob, Grep, LSP, Task, etc.). The only difference is whether ts-graph
  * tools are available. This measures: "Does adding MCP improve performance?"
  *
  * How it works:
  * - Each sample project has two MCP config files:
- *   - `.mcp.json` - Configures ts-graph-mcp server
+ *   - `.mcp.json` - Configures ts-graph server
  *   - `.no-mcp.json` - Empty config (no MCP servers)
  * - `--strict-mcp-config` ensures ONLY the specified config is loaded
  *   (ignores global and project-level .mcp.json files)
@@ -34,9 +34,9 @@ export const scenarios: BenchmarkScenario[] = [
       ".mcp.json",
       "--strict-mcp-config",
       "--allowedTools",
-      "mcp__ts-graph-mcp__*",
+      "mcp__ts-graph__*",
     ],
-    description: "ts-graph-mcp tools available",
+    description: "ts-graph tools available",
   },
   {
     id: "without-mcp",

@@ -24,7 +24,13 @@ import {
 import { appendRuns, loadHistory } from "./history.js";
 import { formatReportMarkdown, generateReport } from "./report.js";
 import { shouldRunScenario } from "./runDecision.js";
-import { checkDatabase, runBenchmarkIteration, saveResults } from "./runner.js";
+import {
+  checkDatabase,
+  runBenchmarkIteration,
+  saveResults,
+  startHttpServer,
+  stopHttpServer,
+} from "./runner.js";
 import { scenarios } from "./scenarios.js";
 import type {
   BenchmarkConfig,
@@ -165,6 +171,16 @@ export async function runBenchmarks(
   // Check database exists
   checkDatabase(config.projectRoot, dbPath);
 
+  // Start HTTP server (required for MCP tools)
+  const serverResult = await startHttpServer(config.projectRoot);
+  if (!serverResult) {
+    console.error("");
+    console.error(
+      "Cannot run benchmarks without HTTP server. Ensure ts-graph-mcp.config.json has server.port configured.",
+    );
+    process.exit(1);
+  }
+
   // Filter prompts and scenarios
   const selectedPrompts = options.promptFilter
     ? prompts.filter((p) => p.id === options.promptFilter)
@@ -303,6 +319,7 @@ export async function runBenchmarks(
     if (comparisons.length > 0) {
       printHistoricalComparison(comparisons);
     }
+    stopHttpServer();
     return;
   }
 
@@ -337,6 +354,7 @@ export async function runBenchmarks(
         `  ${v.promptId}: ${v.numTurns} turns (expected: ${prompt?.expectedTurns})`,
       );
     }
+    stopHttpServer();
     process.exit(1);
   }
 
@@ -375,6 +393,9 @@ export async function runBenchmarks(
   if (comparisons.length > 0) {
     printHistoricalComparison(comparisons);
   }
+
+  // Stop HTTP server if we started it
+  stopHttpServer();
 }
 
 /**
@@ -450,6 +471,7 @@ async function main() {
 const isMainModule = import.meta.url === `file://${process.argv[1]}`;
 if (isMainModule) {
   main().catch((err) => {
+    stopHttpServer();
     console.error("Benchmark failed:", err);
     process.exit(1);
   });

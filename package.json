@@ -1,19 +1,31 @@
 {
   "name": "ts-graph-mcp",
-  "version": "0.2.1",
-  "description": "MCP server that extracts TypeScript code structure into a graph database, enabling advanced exploration for AI coding agents",
+  "version": "0.3.0",
+  "description": "TypeScript code graph with MCP server and Web UI for AI coding agents",
   "type": "module",
-  "main": "dist/mcp/main.js",
+  "main": "dist/main.js",
   "bin": {
-    "ts-graph-mcp": "dist/mcp/main.js"
+    "ts-graph-mcp": "dist/main.js"
   },
+  "workspaces": [
+    "http",
+    "mcp",
+    "shared",
+    "ui"
+  ],
   "scripts": {
     "prepublishOnly": "npm i && npm run check",
-    "check": "npm run test && npm run build && npm run lint:fix",
-    "build": "tsc && chmod +x dist/mcp/main.js",
+    "check": "npm test && npm run test:e2e && npm run build && npm run lint:fix",
+    "start": "node dist/main.js",
+    "start:mcp": "node dist/main.js --mcp",
+    "prebuild": "rm -rf dist",
+    "build": "tsc && npm run build:ui && chmod +x dist/main.js && cp package.json dist",
+    "build:ui": "cd ui && npm run build",
     "test": "vitest run",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts",
     "test:watch": "vitest",
     "dev": "tsc --watch",
+    "dev:ui": "cd ui && npm run dev",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
@@ -31,16 +43,17 @@
   "license": "MIT",
   "files": [
     "dist",
-    "!dist/**/*.test.*"
+    "!dist/**/*.test.*",
+    "dist/public"
   ],
   "engines": {
     "node": ">=18.0.0"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
-    "@toon-format/toon": "^2.1.0",
     "better-sqlite3": "^11.0.0",
     "chokidar": "^5.0.0",
+    "express": "^5.0.0",
     "rxjs": "^7.0.0",
     "ts-morph": "^24.0.0",
     "zod": "^3.0.0"
@@ -51,7 +64,7 @@
     "@types/express": "^5.0.6",
     "@types/node": "^22.0.0",
     "typescript": "^5.0.0",
-    "vitest": "^2.0.0"
+    "vitest": "^4.0.16"
   },
   "optionalDependencies": {
     "neo4j-driver": "^5.0.0"

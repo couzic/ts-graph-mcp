@@ -1,6 +1,6 @@
-# ts-graph-mcp Roadmap
+# ts-graph Roadmap
 
-> **The Vision:** ts-graph-mcp provides **graph-based code analysis** that complements LSP — transitive traversals, impact analysis, and architectural queries that point-to-point LSP tools cannot offer.
+> **The Vision:** ts-graph provides **graph-based code analysis** that complements LSP — transitive traversals, impact analysis, and architectural queries that point-to-point LSP tools cannot offer.
 
 ---
 

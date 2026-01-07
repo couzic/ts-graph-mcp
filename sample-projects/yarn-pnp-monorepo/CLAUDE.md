@@ -1,6 +1,6 @@
 # Yarn PnP Monorepo Sample Project
 
-Tests that ts-graph-mcp correctly indexes cross-package edges in a **Yarn 4 Plug'n'Play (PnP)** monorepo without relying on tsconfig `paths`.
+Tests that ts-graph correctly indexes cross-package edges in a **Yarn 4 Plug'n'Play (PnP)** monorepo without relying on tsconfig `paths`.
 
 ## Why This Matters
 
@@ -21,7 +21,7 @@ Real Yarn PnP monorepos don't use `paths`. They rely on:
 1. `package.json` dependencies with `workspace:*` protocol
 2. Yarn's `.pnp.cjs` for runtime resolution
 
-This sample project validates that ts-graph-mcp works with **pure PnP resolution**.
+This sample project validates that ts-graph works with **pure PnP resolution**.
 
 ## How PnP Resolution Works
 
@@ -45,7 +45,7 @@ Looks up package location in PnP map
 Returns: /path/to/libs/toolkit/src/helpers.ts
 ```
 
-### ts-graph-mcp Integration
+### ts-graph Integration
 
 ts-morph (our AST parser) needs to resolve imports at parse time, not runtime. We bridge this gap in `src/ingestion/createProject.ts`:
 

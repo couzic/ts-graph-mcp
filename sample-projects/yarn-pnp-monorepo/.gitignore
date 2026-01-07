@@ -6,5 +6,5 @@
 .yarn/install-state.gz
 yarn.lock
 
-# ts-graph-mcp
-.ts-graph/
+# ts-graph
+.ts-graph-mcp/

@@ -1,6 +1,6 @@
 # Benchmark Module
 
-Measures MCP tool effectiveness by comparing Claude Code performance WITH vs WITHOUT ts-graph-mcp tools.
+Measures MCP tool effectiveness by comparing Claude Code performance WITH vs WITHOUT ts-graph tools.
 
 ## Quick Start
 
@@ -15,7 +15,7 @@ npm run benchmark sample-projects/monorepo
 ## Key Concepts
 
 **Two Scenarios:**
-- `with-mcp` - ts-graph-mcp tools available (always runs)
+- `with-mcp` - ts-graph tools available (always runs)
 - `without-mcp` - No MCP tools, only standard Claude Code tools (skipped if 5+ runs in history)
 
 **History System:**

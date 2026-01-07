@@ -1,0 +1,8 @@
+{
+  "packages": [
+    { "name": "main", "tsconfig": "./tsconfig.json" }
+  ],
+  "server": {
+    "port": 4001
+  }
+}

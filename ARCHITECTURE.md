@@ -1,38 +1,49 @@
 # Architecture
 
-**ts-graph-mcp** is an MCP server that extracts TypeScript code structure into a queryable graph database.
+ts-graph is an MCP server that extracts TypeScript code structure into a queryable graph database.
 
 ## Overview
 
-The graph captures:
-- **Nodes**: Code symbols (functions, classes, methods, interfaces, types, variables, files, properties)
-- **Edges**: Relationships between symbols (calls, imports, type usage, inheritance, etc.)
+Single package with two modes:
 
-The MCP server exposes tools for AI agents to traverse call graphs, find dependencies, and trace paths between symbols.
+| Command | Mode | Purpose |
+|---------|------|---------|
+| `npx ts-graph-mcp` | HTTP server | Indexing + HTTP API + Web UI |
+| `npx ts-graph-mcp --mcp` | MCP wrapper | Stdio MCP server for Claude Code |
+
+The MCP wrapper expects the HTTP server to be running separately.
 
 ## High-Level Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        MCP Server Layer                         │
-│              (startMcpServer.ts dispatches to tool handlers)    │
-├─────────────────────────────────────────────────────────────────┤
-│                         MCP Tools                               │
-│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐             │
-│  │dependenciesOf│ │ dependentsOf │ │ pathsBetween │             │
-│  │  handler.ts  │ │  handler.ts  │ │  handler.ts  │             │
-│  │  <tool>.ts   │ │  <tool>.ts   │ │  <tool>.ts   │             │
-│  └──────┬───────┘ └──────┬───────┘ └──────┬───────┘             │
-│         │ direct SQL     │                │                     │
-└─────────┼────────────────┼────────────────┼─────────────────────┘
-          ↓                ↓                ↓
+│                    Claude Code (MCP client)                     │
+└───────────────────────────┬─────────────────────────────────────┘
+                            │ spawns (stdio)
+                            ↓
+┌─────────────────────────────────────────────────────────────────┐
+│                  MCP Wrapper (mcp/src/wrapper.ts)               │
+│              - Stdio MCP server                                 │
+│              - Calls HTTP API for queries                       │
+└───────────────────────────┬─────────────────────────────────────┘
+                            │ HTTP POST /api/*
+                            ↓
+┌─────────────────────────────────────────────────────────────────┐
+│              HTTP Server (http/src/server.ts)                   │
+│              - REST API (Express)                               │
+│              - File watcher (chokidar)                          │
+│              - SQLite database (one writer)                     │
+│              - Serves Web UI                                    │
+└───────────────────────────┬─────────────────────────────────────┘
+                            │
+                            ↓
 ┌─────────────────────────────────────────────────────────────────┐
 │                    SQLite Database (graph.db)                   │
 │                    - nodes table                                │
 │                    - edges table                                │
-└────────────────────────────────┬────────────────────────────────┘
-                                 ↑ writes
-┌────────────────────────────────┴────────────────────────────────┐
+└────────────────────────────────────────────────────────────────┬┘
+                                                                 ↑
+┌────────────────────────────────────────────────────────────────┴┐
 │                    Ingestion Pipeline                           │
 │          (Extractor → NodeExtractors → EdgeExtractors)          │
 │                            ↑                                    │
@@ -40,60 +51,84 @@ The MCP server exposes tools for AI agents to traverse call graphs, find depende
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-Each tool has its own folder (`src/tools/<tool>/`) with shared formatting code in `src/tools/shared/`.
+## Project Structure
 
-## Server Architecture
-
-The server uses a **wrapper + HTTP server** pattern to share resources across multiple Claude Code sessions:
+Monorepo with 4 internal workspace packages:
 
 ```
-Claude Code Session 1, 2, 3...
-        │ spawns (stdio)
-        ↓
-┌───────────────────────────────────┐
-│  Stdio MCP Server                 │
-│  (wrapperClient.ts)               │
-│  - Checks for running HTTP server │
-│  - Spawns server if not running   │
-│  - Calls HTTP API for queries     │
-└───────────────────────────────────┘
-        │ HTTP POST /api/*
-        ↓
-┌───────────────────────────────────┐
-│  HTTP API Server (httpServer.ts)  │
-│  ONE instance per project:        │
-│  - REST API (Express)             │
-│  - File watcher (chokidar)        │
-│  - SQLite database (one writer)   │
-└───────────────────────────────────┘
+ts-graph-mcp/
+├── http/                        # @ts-graph/http (internal)
+│   └── src/
+│       ├── server.ts            # HTTP server entry point
+│       ├── config/              # Configuration loading
+│       ├── db/                  # Database abstraction
+│       ├── ingestion/           # AST extraction pipeline
+│       └── query/               # Tool implementations
+├── mcp/                         # @ts-graph/mcp (internal)
+│   └── src/
+│       └── wrapper.ts           # MCP stdio wrapper
+├── shared/                      # @ts-graph/shared (internal)
+│   └── src/
+│       └── index.ts             # Shared types
+├── ui/                          # @ts-graph/ui (internal)
+│   └── src/                     # React SPA (Vite build)
+├── main.ts                      # Entry point (--mcp flag dispatch)
+└── package.json                 # Root: ts-graph-mcp (published)
 ```
 
-**Why this design?**
+- `http/` and `mcp/` are parallel — both are "servers", named by protocol
+- `shared/` contains types/interfaces used by all packages
+- `ui/` is a React SPA with its own Vite build
+- Only root `ts-graph-mcp` is published; internal packages use `@ts-graph/*` imports
 
-Without the HTTP server, each Claude session would spawn its own MCP process with its own file watcher and database writer. With N sessions = N watchers = wasted resources and potential conflicts.
+## Server Discovery
 
-The wrapper is transparent — users configure MCP the same way (`npx ts-graph-mcp`), but all sessions share one server.
+The MCP wrapper finds the HTTP server using this priority:
 
-**Key files:**
-- `src/mcp/main.ts` — Entry point, dispatches to stdio MCP or API server mode
-- `src/mcp/wrapperClient.ts` — Stdio MCP server, auto-spawns API server
-- `src/mcp/httpServer.ts` — HTTP API server (simple REST, not MCP)
-- `src/mcp/serverMetadata.ts` — Server discovery via `server.json`
-- `src/mcp/serverCore.ts` — Shared initialization (DB, indexing, watcher)
+1. **Config file:** `ts-graph-mcp.config.json` → `server.port` (required)
+2. **Environment variable:** `TS_GRAPH_URL` (optional override)
 
-The stdio MCP server auto-spawns an HTTP API server if not already running, then makes HTTP calls for queries.
+The port must be configured in `ts-graph-mcp.config.json`. There is no default port.
 
-**Async startup:** The HTTP server starts immediately, before indexing completes. This prevents MCP connection timeouts on large projects. Tools return "Database is still indexing" until ready.
+## HTTP API
 
-**Race condition prevention:** Multiple Claude sessions may start simultaneously. To prevent duplicate servers:
+### Health Check
 
-1. **PID-based detection** — `getRunningServer()` checks if the process in `server.json` is still alive via `process.kill(pid, 0)`. If alive, trusts it even if health check times out (server may be busy indexing).
+```
+GET /health
 
-2. **Spawn lock** — Before spawning, wrapper acquires exclusive lock (`spawn.lock` with `O_EXCL`). If lock held by another process, waits for that process to finish spawning. Lock includes PID for stale lock detection.
+Response:
+{ "status": "ok", "ready": true, "indexed_files": 142 }
+```
+
+### Symbol Search (for autocomplete)
+
+```
+GET /api/symbols?q=format
+
+Response:
+[
+  { "file_path": "src/utils.ts", "symbol": "formatDate", "type": "Function" },
+  { "file_path": "src/utils.ts", "symbol": "formatNumber", "type": "Function" }
+]
+```
+
+### Graph Queries
+
+All graph endpoints support the `output` query parameter:
+- `mcp` — Compact text format optimized for LLMs
+- `mermaid` — Mermaid diagram syntax
+- `md` — Markdown format
+
+```
+GET /api/graph/dependencies?file=src/api.ts&symbol=handleRequest&output=mcp
+GET /api/graph/dependents?file=src/api.ts&symbol=handleRequest&output=mcp
+GET /api/graph/paths?from_file=src/api.ts&from_symbol=handleRequest&to_file=src/db.ts&to_symbol=saveData&output=mcp
+```
 
 ## Data Model
 
-See `src/db/Types.ts` for node and edge type definitions.
+See `http/src/db/Types.ts` for node and edge type definitions.
 
 **Node ID format**: `{filePath}:{symbolPath}` — e.g., `src/utils.ts:formatDate`, `src/models/User.ts:User.save`
 
@@ -147,13 +182,13 @@ Memory efficient: O(1) per file, scales to any codebase size.
 
 Edge extractors use `buildImportMap` to resolve cross-file references:
 - ts-morph resolves import paths (handles tsconfig `paths` aliases like `@shared/*`)
-- Workspace map resolves cross-package imports in monorepos (see below)
+- Workspace map resolves cross-package imports in monorepos
 - Import map constructs target IDs: `{targetPath}:{symbolName}`
 - No need to validate target exists — queries use JOINs to filter dangling edges
 
 ### Workspace Resolution
 
-For monorepos with multiple packages, ts-graph-mcp builds a **workspace map** at project creation time that maps package names directly to source entry files:
+For monorepos with multiple packages, ts-graph builds a **workspace map** at project creation time that maps package names directly to source entry files:
 
 ```
 "@libs/toolkit" → "/path/to/libs/toolkit/src/index.ts"
@@ -191,7 +226,7 @@ All tools follow the Read tool pattern: `file_path` first (required), then `symb
 | End only | `dependentsOf(file_path, symbol)` | "Who depends on this?" |
 | Both | `pathsBetween(from, to)` | "How does A reach B?" |
 
-See [`src/tools/CLAUDE.md`](src/tools/CLAUDE.md) for parameter details.
+See [`http/src/query/CLAUDE.md`](http/src/query/CLAUDE.md) for implementation details.
 
 ### Design Philosophy
 
@@ -201,8 +236,8 @@ See [`src/tools/CLAUDE.md`](src/tools/CLAUDE.md) for parameter details.
 
 Claude Code has a built-in LSP tool. Use each for its strengths:
 
-| LSP | ts-graph-mcp |
-|-----|--------------|
+| LSP | ts-graph |
+|-----|----------|
 | Real-time, no indexing lag | Pre-indexed, instant complex queries |
 | Point-to-point (definition, direct refs) | Transitive (callers of callers) |
 | Single function context | Path finding (A → B) |
@@ -216,12 +251,40 @@ The server automatically reindexes files on save:
 3. **tsconfig validation** — Only files in tsconfig compilation are indexed (not just any `.ts` file)
 
 **Key files:**
-- `src/ingestion/watchProject.ts` — Chokidar watcher with debouncing
-- `src/ingestion/syncOnStartup.ts` — Manifest-based startup sync
-- `src/ingestion/manifest.ts` — Tracks indexed files (mtime/size)
-- `src/ingestion/indexFile.ts` — Shared extraction function
+- `http/src/ingestion/watchProject.ts` — Chokidar watcher with debouncing
+- `http/src/ingestion/syncOnStartup.ts` — Manifest-based startup sync
+- `http/src/ingestion/manifest.ts` — Tracks indexed files (mtime/size)
+- `http/src/ingestion/indexFile.ts` — Shared extraction function
 
 Watch options can be read from `tsconfig.json` `watchOptions` as defaults. See README for configuration reference.
+
+## Web UI
+
+Single-page application served at the root URL.
+
+### Layout
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  [START node ▼] [×]      [END node ▼] [×]                       │
+├─────────────────────────────────────────────────────────────────┤
+│  [ MCP ] [ Mermaid ] [ Markdown ]                               │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  (output display area)                                          │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Behavior
+
+| Selection | Query | Display |
+|-----------|-------|---------|
+| 0 nodes | — | Empty / instructions |
+| 1 node (START only) | dependentsOf | Who depends on this? |
+| 2 nodes (START + END) | pathsBetween | How does START reach END? |
+
+Both select inputs use fuzzy search against `/api/symbols?q=...` endpoint.
 
 ## Limitations
 

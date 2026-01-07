@@ -3,5 +3,8 @@
     { "name": "shared", "tsconfig": "./shared/tsconfig.json" },
     { "name": "frontend", "tsconfig": "./frontend/tsconfig.json" },
     { "name": "backend", "tsconfig": "./backend/tsconfig.json" }
-  ]
+  ],
+  "server": {
+    "port": 4001
+  }
 }

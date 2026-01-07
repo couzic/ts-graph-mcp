@@ -10,8 +10,8 @@ Sample projects exist for **two purposes only**:
 2. **Benchmarks** — Measure Claude Code agent performance with vs without MCP tools
 
 **Sample projects are NOT for:**
-- Testing AST extraction (covered by unit tests in `src/ingestion/`)
-- Testing node/edge extraction (covered by unit tests in `src/ingestion/`)
+- Testing AST extraction (covered by unit tests in `http/src/ingestion/`)
+- Testing node/edge extraction (covered by unit tests in `http/src/ingestion/`)
 - Testing generic DB queries
 
 ## Documentation Strategy
@@ -30,17 +30,17 @@ Sample projects exist for **two purposes only**:
 
 ### What E2E Tests Must Do
 
-E2E tests call **actual tool functions** from `src/tools/*/`:
+E2E tests call **actual tool functions** from `http/src/query/*/`:
 
 ```typescript
 // ✅ CORRECT — Testing actual MCP tool logic
-import { dependenciesOf } from "../../src/tools/dependencies-of/dependenciesOf.js";
-import { dependentsOf } from "../../src/tools/dependents-of/dependentsOf.js";
-import { pathsBetween } from "../../src/tools/paths-between/pathsBetween.js";
+import { dependenciesOf } from "../../http/src/query/dependencies-of/dependenciesOf.js";
+import { dependentsOf } from "../../http/src/query/dependents-of/dependentsOf.js";
+import { pathsBetween } from "../../http/src/query/paths-between/pathsBetween.js";
 
-// ❌ WRONG — Testing generic DB layer (already covered in src/)
-import { queryNodes } from "../../src/db/queryNodes.js";  // NO!
-import { queryEdges } from "../../src/db/queryEdges.js";  // NO!
+// ❌ WRONG — Testing generic DB layer (already covered in http/src/)
+import { queryNodes } from "../../http/src/db/queryNodes.js";  // NO!
+import { queryEdges } from "../../http/src/db/queryEdges.js";  // NO!
 ```
 
 ### Allowed APIs
@@ -50,9 +50,9 @@ import { queryEdges } from "../../src/db/queryEdges.js";  // NO!
 - `indexProject()` — Index the sample project
 
 **Test assertions** (the actual E2E tests):
-- `dependenciesOf(db, projectRoot, filePath, symbol)` — From `src/tools/dependencies-of/`
-- `dependentsOf(db, projectRoot, filePath, symbol)` — From `src/tools/dependents-of/`
-- `pathsBetween(db, projectRoot, from, to)` — From `src/tools/paths-between/`
+- `dependenciesOf(db, projectRoot, filePath, symbol)` — From `http/src/query/dependencies-of/`
+- `dependentsOf(db, projectRoot, filePath, symbol)` — From `http/src/query/dependents-of/`
+- `pathsBetween(db, projectRoot, from, to)` — From `http/src/query/paths-between/`
 
 ### Forbidden in E2E Tests
 
@@ -138,7 +138,7 @@ step02:
 | Aspect | E2E Tests | Benchmarks |
 |--------|-----------|------------|
 | **Purpose** | Verify MCP tool **logic** works | Measure Claude Code **agent performance** |
-| **What they test** | Tool functions from `src/tools/*/` | Claude's ability to use MCP tools |
+| **What they test** | Tool functions from `http/src/query/*/` | Claude's ability to use MCP tools |
 | **Cost** | Free (in-memory SQLite) | $2-5 per run (real Claude API) |
 | **When to add** | Every tool needs E2E coverage | Only representative query types |
 
@@ -207,7 +207,7 @@ benchmark/
 sample-project/
 ├── .mcp.json              # MCP server config (for WITH MCP scenario)
 ├── .no-mcp.json           # Empty config (for WITHOUT MCP scenario)
-├── .ts-graph/graph.db     # Pre-indexed database (created by setup)
+├── .ts-graph-mcp/graph.db     # Pre-indexed database (created by setup)
 ├── tsconfig.json
 ├── src/
 └── benchmark/

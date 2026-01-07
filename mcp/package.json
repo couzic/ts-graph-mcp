@@ -1,0 +1,10 @@
+{
+  "name": "@ts-graph/mcp",
+  "private": true,
+  "type": "module",
+  "main": "src/wrapper.ts",
+  "types": "src/wrapper.ts",
+  "dependencies": {
+    "@ts-graph/shared": "*"
+  }
+}

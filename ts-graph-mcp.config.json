@@ -1,5 +1,8 @@
 {
   "packages": [{ "name": "ts-graph-mcp", "tsconfig": "tsconfig.json" }],
+  "server": {
+    "port": 4000
+  },
   "watch": {
     "polling": true,
     "pollingInterval": 3000

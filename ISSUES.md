@@ -14,7 +14,7 @@
 - "analyze logic"
 
 **Done:**
-- ✅ Updated tool descriptions to include trigger phrases (`src/mcp/toolDescriptions.ts`)
+- ✅ Updated tool descriptions to include trigger phrases (in `mcp/src/wrapper.ts`)
 
 **Remaining:**
 - Run benchmarks to validate trigger phrases work in longer sessions
@@ -32,49 +32,19 @@
 
 ## Technical Debt
 
-### Race Condition in HTTP Server Spawn
-
-**Impact:** Low (edge case)
-
-**Problem:** When multiple Claude Code sessions start simultaneously for the same project, each stdio MCP wrapper checks for an existing HTTP server and spawns one if not found. A race window exists between the check and the spawn.
-
-**In `wrapperClient.ts:112-117`:**
-```typescript
-let server = await getRunningServer(cacheDir);
-
-if (!server) {
-  spawnApiServer(options);           // ← Both sessions reach here
-  server = await waitForApiServer(cacheDir);
-}
-```
-
-**Consequences:**
-1. Second spawn may fail with port conflict (if first server claimed the port)
-2. Orphan processes if spawn succeeds but server.json is overwritten
-3. `waitForApiServer` may connect to the "wrong" server (benign since they're identical)
-
-**Likelihood:** Low — requires exact timing. In practice, the first session starts the server before others launch.
-
-**Mitigation options:**
-1. File-based locking before spawn (add complexity)
-2. Retry logic in `waitForApiServer` if health check succeeds after spawn fails (simple)
-3. Accept as known limitation (current approach)
-
-**Current behavior:** Second session's spawn fails silently (detached process), but `waitForApiServer` succeeds by connecting to the first session's server. Net effect: works correctly, logs may be confusing.
-
 ---
 
-### 18. Magic Numbers for Traversal Depth Limits
+### Magic Numbers for Traversal Depth Limits
 
 **Impact:** Low (maintainability)
 
 Hardcoded depth limit in query file:
 
-- `src/tools/find-paths/query.ts` — `maxDepth = 20`
+- `http/src/query/paths-between/query.ts` — `maxDepth = 20`
 
 **Fix approach:**
 
-Create `src/tools/shared/queryConstants.ts`:
+Create `http/src/query/shared/queryConstants.ts`:
 ```typescript
 export const MAX_PATH_LENGTH = 20;
 ```
@@ -94,8 +64,8 @@ The REFERENCES edge extractor has basic coverage (13 unit tests, 16 e2e tests) b
 5. **Database query tests** - No tests for `referenceContext` filtering
 
 **Current coverage:**
-- `extractReferenceEdges.test.ts` — 13 unit tests (basic patterns)
-- `references/e2e.test.ts` — 16 tests via `queryPath` (tool behavior)
+- `http/src/ingestion/extract/edges/extractReferenceEdges.test.ts` — 13 unit tests (basic patterns)
+- `sample-projects/references/e2e.test.ts` — 16 tests via `queryPath` (tool behavior)
 
 **Fix approach:** Add unit tests for edge cases; document unsupported patterns.
 
@@ -105,7 +75,7 @@ The REFERENCES edge extractor has basic coverage (13 unit tests, 16 e2e tests) b
 
 **Impact:** Low (performance)
 
-**Current behavior:** `watchProject.ts` creates a fresh ts-morph `Project` for each file change (twice: once for tsconfig validation, once for extraction).
+**Current behavior:** `http/src/ingestion/watchProject.ts` creates a fresh ts-morph `Project` for each file change (twice: once for tsconfig validation, once for extraction).
 
 **Why:** Cached Projects don't know about files added since cache creation. When files are added/modified concurrently, cross-file import resolution fails with stale caches.
 
@@ -117,7 +87,7 @@ The REFERENCES edge extractor has basic coverage (13 unit tests, 16 e2e tests) b
 
 ### Watcher Unit Tests Missing
 
-Watcher module has E2E tests (`watchProject.e2e.test.ts`) but lacks unit tests for:
+Watcher module has E2E tests (`http/src/ingestion/watchProject.e2e.test.ts`) but lacks unit tests for:
 - `createDebouncer()` — batching and flush behavior
 - `resolveFileContext()` — file-to-package mapping
 - `isValidTsconfigFile()` — tsconfig validation
@@ -145,92 +115,11 @@ Users currently can't tell if they're seeing the full picture or a partial view.
 
 ---
 
-### Race Condition on watchHandleRef During Shutdown
-
-**Impact:** Low (edge case)
-
-**Problem:** In `main.ts` `runApiServer`, if shutdown (SIGINT/SIGTERM) is triggered while `runIndexingAndWatch` is still running (before its `.then()` executes), `watchHandleRef` will be null and the watcher won't be closed.
-
-**In `main.ts:126-177`:**
-```typescript
-let watchHandleRef: { close: () => Promise<void> } | null = null;
-
-const shutdown = async () => {
-  if (watchHandleRef) {        // ← null if indexing still running
-    await watchHandleRef.close();
-  }
-  // ...
-};
-
-runIndexingAndWatch({ ... })
-  .then(({ watchHandle }) => {
-    watchHandleRef = watchHandle;  // ← set after indexing completes
-  })
-```
-
-**Likelihood:** Low — requires shutdown during initial indexing. Watcher starts only after indexing completes.
-
-**Consequence:** On early shutdown, watcher handle leaks (but process exits anyway, so benign).
-
-**Fix approach:** Track the promise itself and await it during shutdown, or use a more robust state machine.
-
----
-
-### Indexing Failure Leaves Server in Permanent 503 State
-
-**Impact:** Medium (recovery)
-
-**Problem:** In `main.ts` `runApiServer`, if indexing fails, the error is logged but `state.ready` never becomes true. The server returns 503 forever with no recovery path.
-
-**In `main.ts:159-177`:**
-```typescript
-runIndexingAndWatch({ ... })
-  .then(({ watchHandle }) => {
-    watchHandleRef = watchHandle;
-  })
-  .catch((error) => {
-    console.error("[ts-graph-mcp] Indexing failed:", error);
-    // state.ready remains false forever
-  });
-```
-
-**Consequences:**
-1. All tool calls return 503 indefinitely
-2. No way to retry indexing without restarting server
-3. User may not notice if error log is missed
-
-**Fix options:**
-1. Mark as ready anyway (allow queries on partial/empty data)
-2. Add retry mechanism with backoff
-3. Add `/api/reindex` endpoint for manual retry
-4. Exit process on indexing failure (force restart)
-
----
-
-### Code Duplication Between runFullIndex and serverCore
-
-**Impact:** Low (maintainability)
-
-**Problem:** `src/ingestion/runFullIndex.ts` and `src/mcp/serverCore.ts` have nearly identical indexing/sync logic:
-- Database opening
-- Config loading
-- Initial indexing vs sync decision
-- Manifest handling
-- Error logging
-
-**Files:**
-- `src/ingestion/runFullIndex.ts` — standalone indexing (for `--index` CLI flag)
-- `src/mcp/serverCore.ts` — server startup indexing (`runIndexingAndWatch`)
-
-**Fix approach:** Extract shared indexing logic into a common function that both can call.
-
----
-
 ### Case-Insensitive Symbol Lookup Uses Full Table Scan
 
 **Impact:** Low (performance)
 
-**Problem:** `findSymbolElsewhere()` in `src/tools/shared/symbolNotFound.ts` uses `LOWER()` on both sides of the comparison:
+**Problem:** `findSymbolElsewhere()` in `http/src/query/shared/symbolNotFound.ts` uses `LOWER()` on both sides of the comparison:
 
 ```sql
 SELECT file_path, type FROM nodes WHERE LOWER(name) = LOWER(?) AND file_path != ? LIMIT 5
@@ -253,8 +142,8 @@ This prevents SQLite from using any index on `name`, causing a full table scan.
 
 **Problem:** Edge types are defined in two places that can go out of sync:
 
-1. `src/db/Types.ts` — `EdgeType` union type (source of truth for all edge types)
-2. `src/tools/shared/constants.ts` — `EDGE_TYPES` array (subset used by traversal tools)
+1. `http/src/db/Types.ts` — `EdgeType` union type (source of truth for all edge types)
+2. `http/src/query/shared/constants.ts` — `EDGE_TYPES` array (subset used by traversal tools)
 
 ```typescript
 // Types.ts
@@ -272,7 +161,7 @@ No compile-time check ensures `EDGE_TYPES` values are valid `EdgeType` members.
 
 Option 1 — Type-safe array in constants.ts:
 ```typescript
-import { EdgeType } from "../../db/Types";
+import { EdgeType } from "../../db/Types.js";
 export const EDGE_TYPES: EdgeType[] = ["CALLS", "INCLUDES", "REFERENCES", "EXTENDS", "IMPLEMENTS"];
 ```
 
@@ -288,7 +177,7 @@ export type TraversalEdgeType = typeof EDGE_TYPES[number];
 
 **Impact:** Low (performance)
 
-**Problem:** `buildWorkspaceMap()` is called every time `createProject()` is invoked. In `ProjectRegistry`, `indexProject`, `syncOnStartup`, and `watchProject`, each creates projects independently, rebuilding the workspace map each time.
+**Problem:** `buildWorkspaceMap()` is called every time `createProject()` is invoked. In `http/src/ingestion/ProjectRegistry.ts`, `indexProject`, `syncOnStartup`, and `watchProject`, each creates projects independently, rebuilding the workspace map each time.
 
 For large monorepos with many packages, this adds overhead: parsing all `package.json` files, expanding workspace globs, inferring source entries from tsconfig.
 
@@ -302,7 +191,7 @@ For large monorepos with many packages, this adds overhead: parsing all `package
 
 **Impact:** Low (edge case)
 
-**Problem:** `buildWorkspaceMap.ts` has recursive functions (`processWorkspaceRoot`, `findAllPackageDirectories`) that could loop infinitely if workspace definitions are circular:
+**Problem:** `http/src/ingestion/buildWorkspaceMap.ts` has recursive functions (`processWorkspaceRoot`, `findAllPackageDirectories`) that could loop infinitely if workspace definitions are circular:
 
 ```json
 // package-a/package.json
@@ -322,9 +211,9 @@ For large monorepos with many packages, this adds overhead: parsing all `package
 
 **Impact:** Low (performance)
 
-**Problem:** `resolveNamespaceCallCrossPackage()` in `extractCallEdges.ts` iterates through all export declarations in the barrel file for each namespace property call (e.g., `MathUtils.multiply()`).
+**Problem:** `resolveNamespaceCallCrossPackage()` in `http/src/ingestion/extract/edges/extractCallEdges.ts` iterates through all export declarations in the barrel file for each namespace property call (e.g., `MathUtils.multiply()`).
 
-**In `extractCallEdges.ts:90-130`:**
+**In `http/src/ingestion/extract/edges/extractCallEdges.ts`:**
 ```typescript
 for (const exportDecl of barrelFile.getExportDeclarations()) {
   const namespaceExport = exportDecl.getNamespaceExport();
@@ -361,9 +250,40 @@ frontend/App.ts imports { LoadingWrapper } from "@libs/ui"
 - Falls back to `resolveExportInBarrel()` using the barrel file's correct Project context
 
 **Files:**
-- `src/ingestion/ProjectRegistry.ts` — Maps files to Projects
-- `src/ingestion/extract/edges/buildImportMap.ts` — Cross-package resolution logic
+- `http/src/ingestion/ProjectRegistry.ts` — Maps files to Projects
+- `http/src/ingestion/extract/edges/buildImportMap.ts` — Cross-package resolution logic
 
 **Test coverage:**
 - `sample-projects/path-aliases/` — Tests transparent re-exports with path aliases
 - `sample-projects/yarn-pnp-monorepo/` — Tests cross-package path alias in barrel re-exports
+
+---
+
+### Shared Types Package Unused
+
+**Impact:** Low (tech debt)
+
+**Problem:** `shared/src/index.ts` defines types (`Node`, `Edge`, `NodeType`, `EdgeType`, etc.) but nothing imports from `@ts-graph/shared` yet. The actual code uses local type definitions in `http/src/db/Types.ts`.
+
+**Current state:**
+- `shared/src/index.ts` has comprehensive type definitions
+- `http/src/db/Types.ts` has the actual types used by the codebase
+- Duplication exists between the two
+
+**Fix approach:** Either:
+1. Migrate `http/src/db/Types.ts` to import from `@ts-graph/shared`
+2. Or delete `shared/src/index.ts` and keep types in `http/src/db/Types.ts`
+
+Low priority — can be addressed when the UI needs shared types.
+
+---
+
+### Config Loaded Twice in HTTP Server
+
+**Impact:** Low (minor inefficiency)
+
+**Problem:** In `http/src/server.ts`, `loadConfigOrDetect()` is called twice:
+- Line 36: inside `indexAndOpenDb()` for indexing configuration
+- Line 243: in `startHttpServer()` for reading the port
+
+**Fix approach:** Call `loadConfigOrDetect()` once at the start of `startHttpServer()` and pass the config to `indexAndOpenDb()`.

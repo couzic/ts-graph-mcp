@@ -1,6 +1,6 @@
 # Planned Test Projects
 
-This document tracks test projects to be created for integration testing and benchmarking ts-graph-mcp.
+This document tracks test projects to be created for integration testing and benchmarking ts-graph.
 
 ## Goals
 
@@ -309,7 +309,7 @@ For each project, compare Claude Code performance:
 - Measure: time to answer, number of tool calls, accuracy
 
 **With MCP tools:**
-- Claude uses ts-graph-mcp tools
+- Claude uses ts-graph tools
 - Measure: time to answer, number of tool calls, accuracy
 
 **Metrics:**
