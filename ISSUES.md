@@ -6,31 +6,247 @@
 
 **Impact:** High (tool adoption)
 
-**Problem:** Claude Code uses natural language patterns that should trigger MCP tool calls, but may fall back to Read/Grep in longer sessions.
+**Problem:** Claude Code uses natural language patterns that should trigger MCP
+tool calls, but may fall back to Read/Grep in longer sessions.
 
 **Priority phrases** (observed in real usage):
+
 - "trace the data flow"
 - "trace through the code"
 - "analyze logic"
 
 **Done:**
-- ✅ Updated tool descriptions to include trigger phrases (in `mcp/src/wrapper.ts`)
+
+- ✅ Updated tool descriptions to include trigger phrases (in
+  `mcp/src/wrapper.ts`)
 
 **Remaining:**
+
 - Run benchmarks to validate trigger phrases work in longer sessions
 - If issues persist, investigate context window / attention patterns
 
 **Full catalog of phrases to support (future):**
 
-| Tool | Phrase Patterns |
-|------|-----------------|
-| `dependenciesOf` | "what happens when X runs", "follow the call chain", "step through X", "walk through X", "execution flow" |
-| `dependentsOf` | "who calls X", "what depends on X", "impact of changing X", "what would break", "find all usages", "callers of X", "refactoring X" |
-| `pathsBetween` | "how does A reach B", "path between A and B", "connection between", "how does A use B", "flow from A to B" |
+| Tool             | Phrase Patterns                                                                                                                    |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `dependenciesOf` | "what happens when X runs", "follow the call chain", "step through X", "walk through X", "execution flow"                          |
+| `dependentsOf`   | "who calls X", "what depends on X", "impact of changing X", "what would break", "find all usages", "callers of X", "refactoring X" |
+| `pathsBetween`   | "how does A reach B", "path between A and B", "connection between", "how does A use B", "flow from A to B"                         |
+
+---
+
+## AI Coding Agent DX Improvements
+
+### Auto-Resolve Method Names Without Class Prefix
+
+**Impact:** Medium (usability)
+
+**Problem:** When searching for a class method, users must provide the fully
+qualified name (`ClassName.methodName`). If they only provide the method name,
+the tool returns "Symbol not found" with a list of top-level symbols that
+doesn't include methods.
+
+```typescript
+// User calls:
+dependenciesOf({ file_path: "Bulletin.entity.ts", symbol: "getSituationsLines" })
+
+// Current output:
+Symbol 'getSituationsLines' not found at Bulletin.entity.ts
+
+Available symbols in this file:
+  - situationPaieSorter (Function)
+  - BulletinSalarieEntity (Class)
+  - ...
+```
+
+The method exists in the file, but the user doesn't know they need to use
+`BulletinSalarieEntity.getSituationsLines`.
+
+**Proposed behavior:**
+
+When a symbol is not found, search for exact method name matches across the
+entire codebase:
+
+**Case 1: Single match** → auto-resolve and inform the caller
+
+```
+// User calls:
+dependenciesOf({ file_path: "Bulletin.entity.ts", symbol: "getSituationsLines" })
+
+// Output includes:
+Resolved 'getSituationsLines' to BulletinSalarieEntity.getSituationsLines
+
+[normal results follow]
+```
+
+**Case 2: Multiple matches** → show disambiguation list with file paths
+
+```
+// User calls:
+dependenciesOf({ file_path: "...", symbol: "getLines" })
+
+// Output:
+Multiple symbols named 'getLines' found:
+  - BulletinSalarieEntity.getLines (modules/app/.../Bulletin.entity.ts:187)
+  - BulletinSalarieSituationPaieEntity.getLines (modules/app/.../SituationPaie.entity.ts:270)
+  - LigneBulletinHolder.getLines (modules/app/.../LigneBulletinHolder.ts:21)
+  - getLines (modules/utils/lines.ts:5)  // top-level function
+```
+
+**Scope:**
+
+- Exact match only (no fuzzy matching)
+- Search entire codebase, not just the specified file
+- Include both methods and top-level symbols in disambiguation
+- Applies to `dependenciesOf`, `dependentsOf`, and `pathsBetween` tools
+
+---
+
+### Optional file_path Parameter with Disambiguation
+
+**Impact:** Medium (usability)
+
+**Problem:** The `file_path` parameter is required for all ts-graph tools
+(`dependenciesOf`, `dependentsOf`, `pathsBetween`). Users must know the exact
+file path before querying, which often requires a Grep call first.
+
+**Proposed behavior:**
+
+Make `file_path` optional. When omitted:
+
+1. Search for the symbol across all indexed packages
+2. If exactly one match → use it directly
+3. If multiple matches → return a disambiguation list with file paths
+
+**Example: Unique symbol**
+
+```typescript
+// User calls:
+dependenciesOf({ symbol: "formatDate" })
+
+// Output (single match found):
+[normal results for libs/utils/src/formatDate.ts:formatDate]
+```
+
+**Example: Ambiguous symbol**
+
+```typescript
+// User calls:
+dependenciesOf({ symbol: "formatDate" })
+
+// Output:
+Multiple symbols found for 'formatDate':
+  - libs/wagyz-toolkit/src/date/formatDate.ts
+  - modules/app/packages/clients/src/utils/formatDate.ts
+
+Please specify file_path to disambiguate.
+```
+
+**Use case:**
+
+AI assistants often receive symbol names from users without file context.
+Currently this requires a Grep call first to find the path, then a ts-graph
+call. With optional paths:
+
+- Faster exploration with fewer round-trips
+- Grep only needed for partial/fuzzy matches
+- Disambiguation list provides paths for follow-up calls
+
+**Technical notes:**
+
+- Symbol lookup logic already exists in `symbolNotFound.ts`
+- Disambiguation response should include file paths for subsequent calls
+- Applies to `dependenciesOf`, `dependentsOf`, and `pathsBetween` tools
+
+**Output change when file_path is omitted:**
+
+Currently, the input node is excluded from the Nodes section (`excludeNodeIds`
+in `formatToolOutput`). When `file_path` is omitted and auto-resolved, include
+the input node so the user sees which file was resolved:
+
+| file_path | Input node in Nodes section              |
+| --------- | ---------------------------------------- |
+| Provided  | Excluded (current behavior)              |
+| Omitted   | Included (shows resolved file + snippet) |
+
+See `dependenciesOf.ts:106` — `excludeNodeIds: new Set([nodeId])`
+
+---
+
+### Output Size Management for Context Window Efficiency
+
+**Impact:** Medium (context window usage)
+
+**Problem:** MCP tool output can be very large (10k+ tokens), flooding the
+context window in long Claude Code sessions. The graph section currently has no
+node limit — it renders all edges regardless of count.
+
+**Current behavior:**
+
+- Graph section: renders all edges (unbounded)
+- Nodes section: truncates at 50 nodes (`MAX_NODES` in `formatNodes.ts`)
+- Snippets: adaptive sizing based on node count (10 lines for 1-5 nodes,
+  decreasing curve 6-25, call site only 26-35, omitted 36+)
+
+**Proposed behavior:**
+
+1. **Graph section limit** — Cap at 50 nodes by default. Add `max_nodes`
+   parameter to override.
+
+2. **Nodes section binary choice** — If all nodes fit within limit, show full
+   Nodes section (with adaptive snippets). If truncated, skip Nodes section
+   entirely (graph only).
+
+Rationale: A partial Nodes section isn't useful. Either show complete detail or
+just the graph shape.
+
+**Output examples:**
+
+Small result (≤50 nodes):
+
+```
+## Graph
+A --CALLS--> B --CALLS--> C
+
+## Nodes
+(full list with adaptive snippets)
+```
+
+Large result (>50 nodes):
+
+```
+## Graph
+A --CALLS--> B --CALLS--> C
+...
+
+(73 nodes total — showing graph only. Query a more specific symbol, or use max_nodes param.)
+```
+
+**Files to modify:**
+
+- `http/src/query/shared/formatGraph.ts` — Add node limit
+- `http/src/query/shared/formatNodes.ts` — Skip section when over limit
+- `http/src/query/shared/formatToolOutput.ts` — Coordinate the two sections
+- `mcp/src/wrapper.ts` — Add `max_nodes` parameter to tool definitions
 
 ---
 
 ## Technical Debt
+
+---
+
+### Inconsistent Logging
+
+**Impact:** Low (maintainability)
+
+**Problem:** Some modules use direct `console.log`/`console.error` calls instead of the injected `Logger`. This makes it impossible to fully silence output during tests.
+
+**Current state:**
+- `http/src/server.ts` uses injected `Logger`
+- `http/src/ingestion/watchProject.ts` uses its own `silent` flag with direct `console.error`
+- Other modules may have direct console calls
+
+**Fix approach:** Audit codebase for direct console calls and delegate to the logger where appropriate. Consider whether `watchProject` should also accept an injected logger instead of a `silent` boolean.
 
 ---
 
@@ -45,6 +261,7 @@ Hardcoded depth limit in query file:
 **Fix approach:**
 
 Create `http/src/query/shared/queryConstants.ts`:
+
 ```typescript
 export const MAX_PATH_LENGTH = 20;
 ```
@@ -55,17 +272,22 @@ export const MAX_PATH_LENGTH = 20;
 
 **Impact:** Medium (edge case coverage)
 
-The REFERENCES edge extractor has basic coverage (13 unit tests, 16 e2e tests) but lacks:
+The REFERENCES edge extractor has basic coverage (13 unit tests, 16 e2e tests)
+but lacks:
 
-1. **Nested patterns** - Objects inside arrays (`[{ handler: fn }]`) not extracted
+1. **Nested patterns** - Objects inside arrays (`[{ handler: fn }]`) not
+   extracted
 2. **Method call arguments** - `map.set(key, fn)` not captured as callback
 3. **Destructuring patterns** - `const { handler } = obj; handler()` not tracked
 4. **Spread patterns** - `[...handlers]` not tracked
 5. **Database query tests** - No tests for `referenceContext` filtering
 
 **Current coverage:**
-- `http/src/ingestion/extract/edges/extractReferenceEdges.test.ts` — 13 unit tests (basic patterns)
-- `sample-projects/references/e2e.test.ts` — 16 tests via `queryPath` (tool behavior)
+
+- `http/src/ingestion/extract/edges/extractReferenceEdges.test.ts` — 13 unit
+  tests (basic patterns)
+- `sample-projects/references/e2e.test.ts` — 16 tests via `queryPath` (tool
+  behavior)
 
 **Fix approach:** Add unit tests for edge cases; document unsupported patterns.
 
@@ -75,28 +297,38 @@ The REFERENCES edge extractor has basic coverage (13 unit tests, 16 e2e tests) b
 
 **Impact:** Low (performance)
 
-**Current behavior:** `http/src/ingestion/watchProject.ts` creates a fresh ts-morph `Project` for each file change (twice: once for tsconfig validation, once for extraction).
+**Current behavior:** `http/src/ingestion/watchProject.ts` creates a fresh
+ts-morph `Project` for each file change (twice: once for tsconfig validation,
+once for extraction).
 
-**Why:** Cached Projects don't know about files added since cache creation. When files are added/modified concurrently, cross-file import resolution fails with stale caches.
+**Why:** Cached Projects don't know about files added since cache creation. When
+files are added/modified concurrently, cross-file import resolution fails with
+stale caches.
 
-**Trade-off:** Correctness over performance. Single-file reindexing is typically fast enough (~100-500ms).
+**Trade-off:** Correctness over performance. Single-file reindexing is typically
+fast enough (~100-500ms).
 
-**Future optimization:** If perf becomes an issue, consider batch-level caching (refresh cache at start of each debounced batch, not per-file).
+**Future optimization:** If perf becomes an issue, consider batch-level caching
+(refresh cache at start of each debounced batch, not per-file).
 
 ---
 
 ### Watcher Unit Tests Missing
 
-Watcher module has E2E tests (`http/src/ingestion/watchProject.e2e.test.ts`) but lacks unit tests for:
-- `createDebouncer()` — batching and flush behavior
+Watcher module has integration tests
+(`http/src/ingestion/watchProject.integration.test.ts`) and server E2E tests
+(`http/src/server.e2e.test.ts`) but lacks unit tests for:
+
+- `bufferDebounce()` — RxJS batching and flush behavior
 - `resolveFileContext()` — file-to-package mapping
 - `isValidTsconfigFile()` — tsconfig validation
 
-Low priority since E2E tests cover the main flows.
+Low priority since integration and E2E tests cover the main flows.
 
 ### Format Test Gaps
 
-Format tests have good happy-path coverage but lack edge cases and negative tests. Low priority.
+Format tests have good happy-path coverage but lack edge cases and negative
+tests. Low priority.
 
 ---
 
@@ -105,13 +337,14 @@ Format tests have good happy-path coverage but lack edge cases and negative test
 **Impact:** Medium (observability)
 
 No E2E tests verify behavior when:
+
 1. Traversal hits max depth limit — should output indicate truncation?
-2. Results are truncated due to size limits
-3. Circular dependencies are encountered
+2. Circular dependencies are encountered
 
 Users currently can't tell if they're seeing the full picture or a partial view.
 
-**Fix approach:** Add E2E tests that create deep/circular graphs and verify output includes truncation indicators when applicable.
+**Fix approach:** Add E2E tests that create deep/circular graphs and verify
+output includes truncation indicators when applicable.
 
 ---
 
@@ -119,7 +352,9 @@ Users currently can't tell if they're seeing the full picture or a partial view.
 
 **Impact:** Low (performance)
 
-**Problem:** `findSymbolElsewhere()` in `http/src/query/shared/symbolNotFound.ts` uses `LOWER()` on both sides of the comparison:
+**Problem:** `findSymbolElsewhere()` in
+`http/src/query/shared/symbolNotFound.ts` uses `LOWER()` on both sides of the
+comparison:
 
 ```sql
 SELECT file_path, type FROM nodes WHERE LOWER(name) = LOWER(?) AND file_path != ? LIMIT 5
@@ -127,9 +362,11 @@ SELECT file_path, type FROM nodes WHERE LOWER(name) = LOWER(?) AND file_path != 
 
 This prevents SQLite from using any index on `name`, causing a full table scan.
 
-**Current mitigation:** `LIMIT 5` caps the result set, making the scan acceptable for typical codebases.
+**Current mitigation:** `LIMIT 5` caps the result set, making the scan
+acceptable for typical codebases.
 
 **Future options:**
+
 1. Add a `name_lower` column with index (adds storage/write overhead)
 2. Use SQLite's `COLLATE NOCASE` on the column definition
 3. Accept as-is since it only runs on error paths
@@ -142,17 +379,31 @@ This prevents SQLite from using any index on `name`, causing a full table scan.
 
 **Problem:** Edge types are defined in two places that can go out of sync:
 
-1. `http/src/db/Types.ts` — `EdgeType` union type (source of truth for all edge types)
-2. `http/src/query/shared/constants.ts` — `EDGE_TYPES` array (subset used by traversal tools)
+1. `http/src/db/Types.ts` — `EdgeType` union type (source of truth for all edge
+   types)
+2. `http/src/query/shared/constants.ts` — `EDGE_TYPES` array (subset used by
+   traversal tools)
 
 ```typescript
 // Types.ts
 export type EdgeType =
-  | "CALLS" | "IMPORTS" | "CONTAINS" | "IMPLEMENTS"
-  | "EXTENDS" | "USES_TYPE" | "REFERENCES" | "INCLUDES";
+  | "CALLS"
+  | "IMPORTS"
+  | "CONTAINS"
+  | "IMPLEMENTS"
+  | "EXTENDS"
+  | "USES_TYPE"
+  | "REFERENCES"
+  | "INCLUDES";
 
 // constants.ts
-export const EDGE_TYPES = ["CALLS", "INCLUDES", "REFERENCES", "EXTENDS", "IMPLEMENTS"];
+export const EDGE_TYPES = [
+  "CALLS",
+  "INCLUDES",
+  "REFERENCES",
+  "EXTENDS",
+  "IMPLEMENTS",
+];
 ```
 
 No compile-time check ensures `EDGE_TYPES` values are valid `EdgeType` members.
@@ -160,14 +411,28 @@ No compile-time check ensures `EDGE_TYPES` values are valid `EdgeType` members.
 **Fix approach:**
 
 Option 1 — Type-safe array in constants.ts:
+
 ```typescript
 import { EdgeType } from "../../db/Types.js";
-export const EDGE_TYPES: EdgeType[] = ["CALLS", "INCLUDES", "REFERENCES", "EXTENDS", "IMPLEMENTS"];
+export const EDGE_TYPES: EdgeType[] = [
+  "CALLS",
+  "INCLUDES",
+  "REFERENCES",
+  "EXTENDS",
+  "IMPLEMENTS",
+];
 ```
 
 Option 2 — Derive type from array (if array should be source of truth):
+
 ```typescript
-export const EDGE_TYPES = ["CALLS", "INCLUDES", "REFERENCES", "EXTENDS", "IMPLEMENTS"] as const;
+export const EDGE_TYPES = [
+  "CALLS",
+  "INCLUDES",
+  "REFERENCES",
+  "EXTENDS",
+  "IMPLEMENTS",
+] as const;
 export type TraversalEdgeType = typeof EDGE_TYPES[number];
 ```
 
@@ -177,13 +442,20 @@ export type TraversalEdgeType = typeof EDGE_TYPES[number];
 
 **Impact:** Low (performance)
 
-**Problem:** `buildWorkspaceMap()` is called every time `createProject()` is invoked. In `http/src/ingestion/ProjectRegistry.ts`, `indexProject`, `syncOnStartup`, and `watchProject`, each creates projects independently, rebuilding the workspace map each time.
+**Problem:** `buildWorkspaceMap()` is called every time `createProject()` is
+invoked. In `http/src/ingestion/ProjectRegistry.ts`, `indexProject`,
+`syncOnStartup`, and `watchProject`, each creates projects independently,
+rebuilding the workspace map each time.
 
-For large monorepos with many packages, this adds overhead: parsing all `package.json` files, expanding workspace globs, inferring source entries from tsconfig.
+For large monorepos with many packages, this adds overhead: parsing all
+`package.json` files, expanding workspace globs, inferring source entries from
+tsconfig.
 
-**Current behavior:** Acceptable for typical monorepos (~10-50 packages). May become noticeable with 100+ packages.
+**Current behavior:** Acceptable for typical monorepos (~10-50 packages). May
+become noticeable with 100+ packages.
 
-**Fix approach:** Cache the workspace map at the `ProjectRegistry` level and pass it to `createProject()`.
+**Fix approach:** Cache the workspace map at the `ProjectRegistry` level and
+pass it to `createProject()`.
 
 ---
 
@@ -191,7 +463,9 @@ For large monorepos with many packages, this adds overhead: parsing all `package
 
 **Impact:** Low (edge case)
 
-**Problem:** `http/src/ingestion/buildWorkspaceMap.ts` has recursive functions (`processWorkspaceRoot`, `findAllPackageDirectories`) that could loop infinitely if workspace definitions are circular:
+**Problem:** `http/src/ingestion/buildWorkspaceMap.ts` has recursive functions
+(`processWorkspaceRoot`, `findAllPackageDirectories`) that could loop infinitely
+if workspace definitions are circular:
 
 ```json
 // package-a/package.json
@@ -201,9 +475,11 @@ For large monorepos with many packages, this adds overhead: parsing all `package
 { "workspaces": ["../package-a"] }
 ```
 
-**Likelihood:** Very low — circular workspace definitions are invalid and break Yarn/npm.
+**Likelihood:** Very low — circular workspace definitions are invalid and break
+Yarn/npm.
 
-**Fix approach:** Track visited directories in a Set and skip already-processed paths.
+**Fix approach:** Track visited directories in a Set and skip already-processed
+paths.
 
 ---
 
@@ -211,9 +487,13 @@ For large monorepos with many packages, this adds overhead: parsing all `package
 
 **Impact:** Low (performance)
 
-**Problem:** `resolveNamespaceCallCrossPackage()` in `http/src/ingestion/extract/edges/extractCallEdges.ts` iterates through all export declarations in the barrel file for each namespace property call (e.g., `MathUtils.multiply()`).
+**Problem:** `resolveNamespaceCallCrossPackage()` in
+`http/src/ingestion/extract/edges/extractCallEdges.ts` iterates through all
+export declarations in the barrel file for each namespace property call (e.g.,
+`MathUtils.multiply()`).
 
 **In `http/src/ingestion/extract/edges/extractCallEdges.ts`:**
+
 ```typescript
 for (const exportDecl of barrelFile.getExportDeclarations()) {
   const namespaceExport = exportDecl.getNamespaceExport();
@@ -223,9 +503,11 @@ for (const exportDecl of barrelFile.getExportDeclarations()) {
 }
 ```
 
-**Likelihood:** Low — most barrel files have few namespace exports. Only affects files with many `export * as X from` statements.
+**Likelihood:** Low — most barrel files have few namespace exports. Only affects
+files with many `export * as X from` statements.
 
-**Future optimization:** If perf becomes an issue, cache namespace-to-export-declaration mappings per barrel file during indexing.
+**Future optimization:** If perf becomes an issue, cache
+namespace-to-export-declaration mappings per barrel file during indexing.
 
 ---
 
@@ -233,9 +515,12 @@ for (const exportDecl of barrelFile.getExportDeclarations()) {
 
 **Impact:** Medium (edge case) — **RESOLVED**
 
-**Problem:** When a barrel file uses path aliases that are defined in its package's tsconfig (not the consumer's tsconfig), resolution fails if we use the consumer's ts-morph Project context.
+**Problem:** When a barrel file uses path aliases that are defined in its
+package's tsconfig (not the consumer's tsconfig), resolution fails if we use the
+consumer's ts-morph Project context.
 
 **Example:**
+
 ```
 frontend/App.ts imports { LoadingWrapper } from "@libs/ui"
   → resolves to libs/ui/src/index.ts (barrel file)
@@ -245,17 +530,25 @@ frontend/App.ts imports { LoadingWrapper } from "@libs/ui"
 ```
 
 **Solution implemented:**
+
 - `ProjectRegistry` maps file paths to their owning ts-morph Project
-- `buildImportMap.ts` detects when `followAliasChain()` returns "unknown" (resolution failed)
-- Falls back to `resolveExportInBarrel()` using the barrel file's correct Project context
+- `buildImportMap.ts` detects when `followAliasChain()` returns "unknown"
+  (resolution failed)
+- Falls back to `resolveExportInBarrel()` using the barrel file's correct
+  Project context
 
 **Files:**
+
 - `http/src/ingestion/ProjectRegistry.ts` — Maps files to Projects
-- `http/src/ingestion/extract/edges/buildImportMap.ts` — Cross-package resolution logic
+- `http/src/ingestion/extract/edges/buildImportMap.ts` — Cross-package
+  resolution logic
 
 **Test coverage:**
-- `sample-projects/path-aliases/` — Tests transparent re-exports with path aliases
-- `sample-projects/yarn-pnp-monorepo/` — Tests cross-package path alias in barrel re-exports
+
+- `sample-projects/path-aliases/` — Tests transparent re-exports with path
+  aliases
+- `sample-projects/yarn-pnp-monorepo/` — Tests cross-package path alias in
+  barrel re-exports
 
 ---
 
@@ -263,14 +556,18 @@ frontend/App.ts imports { LoadingWrapper } from "@libs/ui"
 
 **Impact:** Low (tech debt)
 
-**Problem:** `shared/src/index.ts` defines types (`Node`, `Edge`, `NodeType`, `EdgeType`, etc.) but nothing imports from `@ts-graph/shared` yet. The actual code uses local type definitions in `http/src/db/Types.ts`.
+**Problem:** `shared/src/index.ts` defines types (`Node`, `Edge`, `NodeType`,
+`EdgeType`, etc.) but nothing imports from `@ts-graph/shared` yet. The actual
+code uses local type definitions in `http/src/db/Types.ts`.
 
 **Current state:**
+
 - `shared/src/index.ts` has comprehensive type definitions
 - `http/src/db/Types.ts` has the actual types used by the codebase
 - Duplication exists between the two
 
 **Fix approach:** Either:
+
 1. Migrate `http/src/db/Types.ts` to import from `@ts-graph/shared`
 2. Or delete `shared/src/index.ts` and keep types in `http/src/db/Types.ts`
 
@@ -278,12 +575,81 @@ Low priority — can be addressed when the UI needs shared types.
 
 ---
 
-### Config Loaded Twice in HTTP Server
+### Config Loaded Twice in HTTP Server — RESOLVED
 
-**Impact:** Low (minor inefficiency)
+**Status:** Fixed. `indexAndOpenDb()` now returns the config, which is reused
+for reading the port. Config is loaded once.
 
-**Problem:** In `http/src/server.ts`, `loadConfigOrDetect()` is called twice:
-- Line 36: inside `indexAndOpenDb()` for indexing configuration
-- Line 243: in `startHttpServer()` for reading the port
+---
 
-**Fix approach:** Call `loadConfigOrDetect()` once at the start of `startHttpServer()` and pass the config to `indexAndOpenDb()`.
+### ServerHandle.close() Missing Error Handling
+
+**Impact:** Low (edge case)
+
+**Problem:** In `http/src/server.ts`, the `close()` function chains
+`watchHandle.close()` before closing the server and database. If
+`watchHandle.close()` throws, the promise chain breaks and server/db may not
+close properly.
+
+```typescript
+const close = async (): Promise<void> => {
+  if (watchHandle) {
+    await watchHandle.close(); // If this throws, server and db stay open
+  }
+  return new Promise((resolve) => {
+    server.close(() => {
+      db.close();
+      resolve();
+    });
+  });
+};
+```
+
+**Fix approach:** Wrap watcher close in try/finally:
+
+```typescript
+const close = async (): Promise<void> => {
+  try {
+    if (watchHandle) await watchHandle.close();
+  } finally {
+    return new Promise((resolve) => {
+      server.close(() => {
+        db.close();
+        resolve();
+      });
+    });
+  }
+};
+```
+
+---
+
+### No Test Coverage for Missing Config Path
+
+**Impact:** Low (edge case)
+
+**Problem:** In `http/src/server.ts`, when `loadConfigOrDetect()` returns null
+(no config file or tsconfig.json found), `indexAndOpenDb()` returns early with
+`config: null`. The watcher correctly doesn't start in this case, but no test
+verifies this behavior.
+
+```typescript
+if (!configResult) {
+  console.error(
+    "[ts-graph] No config file or tsconfig.json found. Nothing to index.",
+  );
+  return {
+    db,
+    indexedFiles: 0,
+    manifest: { version: 1, files: {} },
+    config: null,
+  };
+}
+```
+
+**Current state:** The code handles the edge case correctly, but tests only
+cover the happy path (config exists).
+
+**Fix approach:** Add a test in `server.e2e.test.ts` that starts the server in
+an empty directory and verifies it handles gracefully (no crash, returns valid
+ServerHandle).

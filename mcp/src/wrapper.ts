@@ -48,7 +48,7 @@ const httpRequest = async (
   } catch {
     return {
       ok: false,
-      text: `Error: ts-graph server not running. Start it with: npx ts-graph`,
+      text: `Error: ts-graph server not running. Start it with: npx ts-graph-mcp`,
     };
   }
 };
