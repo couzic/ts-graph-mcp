@@ -7,6 +7,9 @@ import type { GraphEdge, NodeInfo } from "./GraphTypes.js";
 /** Default maximum nodes before truncation */
 const DEFAULT_MAX_NODES = 50;
 
+/** Threshold above which snippets are omitted (too much noise) */
+const NO_SNIPPET_THRESHOLD = 30;
+
 /**
  * Edge with optional call site information.
  */
@@ -59,8 +62,10 @@ export const formatToolOutput = (input: FormatInput): string => {
     return formatTruncatedOutput(edges, totalNodeCount, maxNodes);
   }
 
-  // Full output path (under limit)
-  return formatFullOutput(edges, nodes, excludeNodeIds);
+  // Full output path (under maxNodes limit)
+  // Omit snippets when over NO_SNIPPET_THRESHOLD (too much noise)
+  const includeSnippets = totalNodeCount <= NO_SNIPPET_THRESHOLD;
+  return formatFullOutput(edges, nodes, excludeNodeIds, includeSnippets);
 };
 
 /**
@@ -70,9 +75,19 @@ const formatFullOutput = (
   edges: EdgeWithCallSites[],
   nodes: NodeInfo[],
   excludeNodeIds: Set<string>,
+  includeSnippets: boolean,
 ): string => {
   // Enrich nodes with call site information
-  const enrichedNodes = enrichNodesWithCallSites(nodes, edges);
+  let enrichedNodes = enrichNodesWithCallSites(nodes, edges);
+
+  // Strip snippets when over threshold
+  if (!includeSnippets) {
+    enrichedNodes = enrichedNodes.map((node) => ({
+      ...node,
+      locs: undefined,
+      callSites: undefined,
+    }));
+  }
 
   // Collect all node IDs for display name generation
   const allNodeIds = new Set<string>();

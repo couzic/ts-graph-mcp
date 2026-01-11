@@ -232,7 +232,10 @@ See [`http/src/query/CLAUDE.md`](http/src/query/CLAUDE.md) for implementation de
 
 **`symbol`**: Symbol name. Supports both top-level names (`formatDate`) and method names without class prefix (`save` resolves to `UserService.save` if unique).
 
-**`max_nodes`** (optional, default: 50): Controls output size. When node count exceeds this limit, the Graph section is truncated and the Nodes section is skipped entirely.
+**`max_nodes`** (optional, default: 50): Controls output size. Output adapts based on node count:
+- **1-30 nodes**: Full output with snippets
+- **31-50 nodes**: Metadata only (snippets omitted to reduce noise)
+- **51+ nodes**: Graph truncated, Nodes section skipped entirely
 
 ### Symbol Resolution
 
@@ -260,14 +263,28 @@ fnB:
     3: }
 ```
 
-When over `max_nodes` limit:
+When between 31-50 nodes (snippets omitted):
+```
+## Graph
+
+fnA --CALLS--> fnB --CALLS--> fnC
+
+## Nodes
+
+fnB:
+  type: Function
+  file: src/b.ts
+  offset: 1, limit: 3
+```
+
+When over `max_nodes` limit (51+ nodes):
 ```
 ## Graph
 
 fnA --CALLS--> fnB --CALLS--> fnC
 ...
 
-(73 nodes total — Nodes section skipped. Increase max_nodes param for full details.)
+(73 nodes total — Nodes section skipped. Use max_nodes param for full details.)
 ```
 
 ### Design Philosophy

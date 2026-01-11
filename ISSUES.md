@@ -15,17 +15,14 @@ tool calls, but may fall back to Read/Grep in longer sessions.
 - "trace through the code"
 - "analyze logic"
 
-**Done:**
+**Current state:** Tool descriptions in `mcp/src/wrapper.ts` include trigger phrases.
 
-- ✅ Updated tool descriptions to include trigger phrases (in
-  `mcp/src/wrapper.ts`)
-
-**Remaining:**
+**Next steps:**
 
 - Run benchmarks to validate trigger phrases work in longer sessions
 - If issues persist, investigate context window / attention patterns
 
-**Full catalog of phrases to support (future):**
+**Full catalog of phrases to support:**
 
 | Tool             | Phrase Patterns                                                                                                                    |
 | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
@@ -315,47 +312,6 @@ namespace-to-export-declaration mappings per barrel file during indexing.
 
 ---
 
-### Cross-Package Path Alias Resolution
-
-**Impact:** Medium (edge case) — **RESOLVED**
-
-**Problem:** When a barrel file uses path aliases that are defined in its
-package's tsconfig (not the consumer's tsconfig), resolution fails if we use the
-consumer's ts-morph Project context.
-
-**Example:**
-
-```
-frontend/App.ts imports { LoadingWrapper } from "@libs/ui"
-  → resolves to libs/ui/src/index.ts (barrel file)
-  → barrel has: export { default as LoadingWrapper } from "@/components/LoadingWrapper/LoadingWrapper"
-  → @/components/* is defined in libs/ui/tsconfig.json, NOT frontend's tsconfig
-  → Resolution fails because we're in frontend's Project context
-```
-
-**Solution implemented:**
-
-- `ProjectRegistry` maps file paths to their owning ts-morph Project
-- `buildImportMap.ts` detects when `followAliasChain()` returns "unknown"
-  (resolution failed)
-- Falls back to `resolveExportInBarrel()` using the barrel file's correct
-  Project context
-
-**Files:**
-
-- `http/src/ingestion/ProjectRegistry.ts` — Maps files to Projects
-- `http/src/ingestion/extract/edges/buildImportMap.ts` — Cross-package
-  resolution logic
-
-**Test coverage:**
-
-- `sample-projects/path-aliases/` — Tests transparent re-exports with path
-  aliases
-- `sample-projects/yarn-pnp-monorepo/` — Tests cross-package path alias in
-  barrel re-exports
-
----
-
 ### Shared Types Package Unused
 
 **Impact:** Low (tech debt)
@@ -376,13 +332,6 @@ code uses local type definitions in `http/src/db/Types.ts`.
 2. Or delete `shared/src/index.ts` and keep types in `http/src/db/Types.ts`
 
 Low priority — can be addressed when the UI needs shared types.
-
----
-
-### Config Loaded Twice in HTTP Server — RESOLVED
-
-**Status:** Fixed. `indexAndOpenDb()` now returns the config, which is reused
-for reading the port. Config is loaded once.
 
 ---
 
@@ -425,35 +374,6 @@ const close = async (): Promise<void> => {
   }
 };
 ```
-
----
-
-### Snippet Threshold Behavior Change (Possible Regression)
-
-**Impact:** Low (output verbosity)
-
-**Problem:** The `NO_SNIPPET_THRESHOLD` constant (35) was removed from
-`formatNodes.ts` as part of the Output Size Management feature. Previously,
-snippets were omitted when node count exceeded 35. Now, snippets are included
-for all nodes up to `maxNodes` (default 50).
-
-**Before:**
-- 1-35 nodes: snippets included
-- 36-50 nodes: snippets omitted, message shown
-- 51+ nodes: truncated
-
-**After:**
-- 1-50 nodes: snippets included
-- 51+ nodes: Nodes section skipped entirely
-
-**Behavior change:** Results with 36-50 nodes now show more output (snippets
-included where they were previously omitted).
-
-**Question:** Was this intentional? The binary approach (all or nothing) is
-simpler but produces more output in the 36-50 range.
-
-**Fix approach (if regression):** Add a failing test that expects snippets to be
-omitted in the 36-50 range, then restore the threshold logic.
 
 ---
 

@@ -38,7 +38,7 @@ Query tools live in `http/src/query/<tool>/` with shared formatting in `http/src
 | `ROADMAP.md` | **Future work only** — planned features not yet implemented | Contributors |
 | Module `CLAUDE.md` | Must-know info for that module | Contributors |
 
-Remove items from ISSUES.md/ROADMAP.md when done. Update ARCHITECTURE.md when adding features. Don't use ROADMAP.md to document completed work — push documentation down the tree: module `CLAUDE.md` > JSDoc > `ARCHITECTURE.md` (only for cross-cutting concerns).
+**No history in docs.** ISSUES.md and ROADMAP.md describe current state and future work — never past. When work is done: delete the item entirely, don't add "Done" sections or checkboxes. Document completed features in the appropriate place: module `CLAUDE.md` > JSDoc > `ARCHITECTURE.md` (only for cross-cutting concerns).
 
 ## Code Style
 

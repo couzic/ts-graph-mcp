@@ -197,4 +197,135 @@ fnA --CALLS--> fnB`);
       expect(result).toContain("51 nodes total");
     });
   });
+
+  describe("snippet threshold", () => {
+    it("includes snippets when node count is at or below 30", () => {
+      // Create a graph with exactly 30 nodes
+      const edges = [];
+      for (let i = 0; i < 29; i++) {
+        edges.push({
+          source: `src/fn${i}.ts:fn${i}`,
+          target: `src/fn${i + 1}.ts:fn${i + 1}`,
+          type: "CALLS" as const,
+        });
+      }
+
+      const nodes = [
+        {
+          id: "src/fn1.ts:fn1",
+          name: "fn1",
+          type: "Function" as const,
+          filePath: "src/fn1.ts",
+          startLine: 1,
+          endLine: 3,
+          locs: [
+            { line: 1, code: "function fn1() {" },
+            { line: 2, code: "  return fn2();" },
+            { line: 3, code: "}" },
+          ],
+        },
+      ];
+
+      const input: FormatInput = {
+        edges,
+        nodes,
+        excludeNodeIds: new Set(["src/fn0.ts:fn0"]),
+      };
+
+      const result = formatToolOutput(input);
+
+      // 30 nodes should include snippets
+      expect(result).toContain("## Nodes");
+      expect(result).toContain("snippet:");
+      expect(result).toContain("function fn1()");
+    });
+
+    it("omits snippets but shows node metadata when node count exceeds 30", () => {
+      // Create a graph with exactly 31 nodes
+      const edges = [];
+      for (let i = 0; i < 30; i++) {
+        edges.push({
+          source: `src/fn${i}.ts:fn${i}`,
+          target: `src/fn${i + 1}.ts:fn${i + 1}`,
+          type: "CALLS" as const,
+        });
+      }
+
+      const nodes = [
+        {
+          id: "src/fn1.ts:fn1",
+          name: "fn1",
+          type: "Function" as const,
+          filePath: "src/fn1.ts",
+          startLine: 1,
+          endLine: 3,
+          locs: [
+            { line: 1, code: "function fn1() {" },
+            { line: 2, code: "  return fn2();" },
+            { line: 3, code: "}" },
+          ],
+        },
+      ];
+
+      const input: FormatInput = {
+        edges,
+        nodes,
+        excludeNodeIds: new Set(["src/fn0.ts:fn0"]),
+      };
+
+      const result = formatToolOutput(input);
+
+      // 31 nodes should show Nodes section but omit snippets
+      expect(result).toContain("## Nodes");
+      expect(result).toContain("fn1:");
+      expect(result).toContain("type: Function");
+      expect(result).toContain("file: src/fn1.ts");
+      expect(result).toContain("offset: 1, limit: 3");
+      // Snippets should NOT be included
+      expect(result).not.toContain("snippet:");
+      expect(result).not.toContain("function fn1()");
+    });
+
+    it("omits snippets at 40 nodes (between snippet and maxNodes thresholds)", () => {
+      // Create a graph with exactly 40 nodes
+      const edges = [];
+      for (let i = 0; i < 39; i++) {
+        edges.push({
+          source: `src/fn${i}.ts:fn${i}`,
+          target: `src/fn${i + 1}.ts:fn${i + 1}`,
+          type: "CALLS" as const,
+        });
+      }
+
+      const nodes = [
+        {
+          id: "src/fn1.ts:fn1",
+          name: "fn1",
+          type: "Function" as const,
+          filePath: "src/fn1.ts",
+          startLine: 1,
+          endLine: 3,
+          locs: [
+            { line: 1, code: "function fn1() {" },
+            { line: 2, code: "  return fn2();" },
+            { line: 3, code: "}" },
+          ],
+        },
+      ];
+
+      const input: FormatInput = {
+        edges,
+        nodes,
+        excludeNodeIds: new Set(["src/fn0.ts:fn0"]),
+      };
+
+      const result = formatToolOutput(input);
+
+      // 40 nodes: under maxNodes (50) so Nodes section shown,
+      // but over snippet threshold (30) so no snippets
+      expect(result).toContain("## Nodes");
+      expect(result).toContain("fn1:");
+      expect(result).not.toContain("snippet:");
+    });
+  });
 });
