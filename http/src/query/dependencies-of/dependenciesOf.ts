@@ -12,7 +12,8 @@ import {
   parseEdgeRows,
 } from "../shared/parseEdgeRows.js";
 import { queryNodeInfos } from "../shared/queryNodeInfos.js";
-import { symbolNotFound } from "../shared/symbolNotFound.js";
+import type { QueryOptions } from "../shared/QueryTypes.js";
+import { resolveSymbol } from "../shared/symbolNotFound.js";
 
 /**
  * Query all forward dependencies from a source node.
@@ -61,31 +62,34 @@ const queryDependencyEdges = (
 export function dependenciesOf(
   db: Database.Database,
   projectRoot: string,
-  filePath: string,
+  filePath: string | undefined,
   symbol: string,
+  options: QueryOptions = {},
 ): string {
-  const nodeId = `${filePath}:${symbol}`;
-
-  // Validate symbol exists
-  const exists = db
-    .prepare<[string], { found: 1 }>(
-      "SELECT 1 as found FROM nodes WHERE id = ?",
-    )
-    .get(nodeId);
-
-  if (!exists) {
-    return symbolNotFound(db, filePath, symbol);
+  // Resolve symbol (handles exact match + method name auto-resolution)
+  const resolution = resolveSymbol(db, filePath, symbol);
+  if (!resolution.success) {
+    return resolution.error;
   }
+
+  const nodeId = resolution.nodeId;
+  const resolutionMessage = resolution.message;
+  const filePathWasResolved = resolution.filePathWasResolved ?? false;
 
   // Query edges
   const edges = queryDependencyEdges(db, nodeId);
 
   if (edges.length === 0) {
-    return "No dependencies found.";
+    const noResults = "No dependencies found.";
+    return resolutionMessage ? `${resolutionMessage}\n\n${noResults}` : noResults;
   }
 
   // Query node information
+  // When file_path was auto-resolved, include input node so agent sees which file was resolved
   const nodeIds = collectNodeIds(edges, nodeId);
+  if (filePathWasResolved) {
+    nodeIds.push(nodeId);
+  }
   const nodes = queryNodeInfos(db, nodeIds);
 
   // Enrich with call sites BEFORE loading snippets
@@ -99,10 +103,17 @@ export function dependenciesOf(
     nodes.length,
   );
 
+  // Exclude input node from output unless file_path was auto-resolved
+  const excludeNodeIds = filePathWasResolved ? new Set<string>() : new Set([nodeId]);
+
   // Format output (pure)
-  return formatToolOutput({
+  const output = formatToolOutput({
     edges,
     nodes: nodesWithSnippets,
-    excludeNodeIds: new Set([nodeId]),
+    excludeNodeIds,
+    maxNodes: options.maxNodes,
   });
+
+  // Prepend resolution message if symbol was auto-resolved
+  return resolutionMessage ? `${resolutionMessage}\n\n${output}` : output;
 }

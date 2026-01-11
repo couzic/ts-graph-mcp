@@ -6,6 +6,14 @@
  */
 
 /**
+ * Options for query functions.
+ */
+export interface QueryOptions {
+  /** Maximum nodes to include in output. When exceeded, graph is truncated and Nodes section is skipped. */
+  maxNodes?: number;
+}
+
+/**
  * Raw node row from SQLite nodes table.
  */
 export interface NodeRow {

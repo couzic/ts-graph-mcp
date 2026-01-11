@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { collectNodeIds } from "./collectNodeIds.js";
+import type { GraphEdge } from "./GraphTypes.js";
 
 describe(collectNodeIds.name, () => {
   it("collects unique source and target IDs", () => {
-    const edges = [
+    const edges: GraphEdge[] = [
       { source: "a.ts:foo", target: "b.ts:bar", type: "CALLS" },
       { source: "b.ts:bar", target: "c.ts:baz", type: "CALLS" },
     ];
@@ -17,7 +18,9 @@ describe(collectNodeIds.name, () => {
   });
 
   it("excludes specified ID", () => {
-    const edges = [{ source: "a.ts:foo", target: "b.ts:bar", type: "CALLS" }];
+    const edges: GraphEdge[] = [
+      { source: "a.ts:foo", target: "b.ts:bar", type: "CALLS" },
+    ];
 
     const ids = collectNodeIds(edges, "a.ts:foo");
 
@@ -27,7 +30,7 @@ describe(collectNodeIds.name, () => {
   });
 
   it("deduplicates IDs appearing in multiple edges", () => {
-    const edges = [
+    const edges: GraphEdge[] = [
       { source: "a.ts:foo", target: "b.ts:bar", type: "CALLS" },
       { source: "a.ts:foo", target: "c.ts:baz", type: "CALLS" },
     ];

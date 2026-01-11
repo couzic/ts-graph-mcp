@@ -67,6 +67,7 @@ calculateArea --CALLS--> multiply
 ## Nodes
 
 multiply:
+  type: Function
   file: libs/toolkit/src/math/operations.ts
   offset: 1, limit: 3
   snippet:
@@ -95,6 +96,7 @@ calculateArea --CALLS--> multiply
 ## Nodes
 
 calculateArea:
+  type: Function
   file: modules/app/packages/backend/src/api.ts
   offset: 18, limit: 3
   snippet:
@@ -131,6 +133,7 @@ formatLabel --CALLS--> capitalize
 ## Nodes
 
 capitalize:
+  type: Function
   file: libs/toolkit/src/strings/operations.ts
   offset: 1, limit: 3
   snippet:
@@ -159,6 +162,7 @@ formatLabel --CALLS--> capitalize
 ## Nodes
 
 formatLabel:
+  type: Function
   file: modules/app/packages/backend/src/api.ts
   offset: 26, limit: 3
   snippet:
@@ -189,6 +193,7 @@ renderDashboard --CALLS--> renderButton --CALLS--> formatValue
 ## Nodes
 
 validateThreshold:
+  type: Function
   file: modules/app/packages/shared/src/types.ts
   offset: 8, limit: 3
   snippet:
@@ -197,6 +202,7 @@ validateThreshold:
     10: }
 
 clamp:
+  type: Function
   file: libs/toolkit/src/helpers.ts
   offset: 5, limit: 3
   snippet:
@@ -205,6 +211,7 @@ clamp:
     7: }
 
 renderButton:
+  type: Function
   file: libs/ui/src/Button.ts
   offset: 3, limit: 3
   snippet:
@@ -213,6 +220,7 @@ renderButton:
     5: }
 
 formatValue:
+  type: Function
   file: libs/toolkit/src/helpers.ts
   offset: 1, limit: 3
   snippet:
@@ -240,6 +248,7 @@ trackMetric --CALLS--> formatValue
 ## Nodes
 
 formatValue:
+  type: Function
   file: libs/toolkit/src/helpers.ts
   offset: 1, limit: 3
   snippet:
@@ -271,6 +280,7 @@ renderLoading --INCLUDES--> LoadingWrapper --CALLS--> formatValue
 ## Nodes
 
 renderDashboard:
+  type: Function
   file: modules/app/packages/frontend/src/App.tsx
   offset: 4, limit: 4
   snippet:
@@ -280,6 +290,7 @@ renderDashboard:
     7: }
 
 renderButton:
+  type: Function
   file: libs/ui/src/Button.ts
   offset: 3, limit: 3
   snippet:
@@ -288,6 +299,7 @@ renderButton:
     5: }
 
 trackMetric:
+  type: Function
   file: modules/analytics-api/src/tracker.ts
   offset: 4, limit: 7
   snippet:
@@ -300,6 +312,7 @@ trackMetric:
     10: }
 
 renderLoading:
+  type: Function
   file: modules/app/packages/frontend/src/App.tsx
   offset: 9, limit: 3
   snippet:
@@ -308,6 +321,7 @@ renderLoading:
     11: }
 
 LoadingWrapper:
+  type: Variable
   file: libs/ui/src/components/LoadingWrapper/LoadingWrapper.tsx
   offset: 3, limit: 3
   snippet:
@@ -336,6 +350,7 @@ handleConfigUpdate --CALLS--> validateThreshold
 ## Nodes
 
 renderDashboard:
+  type: Function
   file: modules/app/packages/frontend/src/App.tsx
   offset: 4, limit: 4
   snippet:
@@ -345,6 +360,7 @@ renderDashboard:
     7: }
 
 handleConfigUpdate:
+  type: Function
   file: modules/app/packages/backend/src/api.ts
   offset: 6, limit: 7
   snippet:
@@ -384,6 +400,7 @@ renderLoading --INCLUDES--> LoadingWrapper
 ## Nodes
 
 renderLoading:
+  type: Function
   file: modules/app/packages/frontend/src/App.tsx
   offset: 9, limit: 3
   snippet:
@@ -413,6 +430,7 @@ renderLoading --INCLUDES--> LoadingWrapper --CALLS--> formatValue
 ## Nodes
 
 LoadingWrapper:
+  type: Variable
   file: libs/ui/src/components/LoadingWrapper/LoadingWrapper.tsx
   offset: 3, limit: 3
   snippet:
@@ -421,6 +439,7 @@ LoadingWrapper:
     5: };
 
 formatValue:
+  type: Function
   file: libs/toolkit/src/helpers.ts
   offset: 1, limit: 3
   snippet:
@@ -522,6 +541,7 @@ renderDashboard --CALLS--> validateThreshold --CALLS--> clamp
 ## Nodes
 
 validateThreshold:
+  type: Function
   file: modules/app/packages/shared/src/types.ts
   offset: 8, limit: 3
   snippet:

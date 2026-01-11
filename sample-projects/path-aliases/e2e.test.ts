@@ -81,8 +81,9 @@ describe("path-aliases E2E tests", () => {
   });
 
   describe("barrel file invisibility", () => {
-    it("querying re-exported symbol at barrel file returns not found", () => {
+    it("querying re-exported symbol at barrel file auto-resolves to actual definition", () => {
       // Barrel files have no symbol nodes - re-exports are invisible
+      // When querying at barrel file, symbol auto-resolves to actual definition
       const output = dependenciesOf(
         db,
         projectRoot,
@@ -90,12 +91,8 @@ describe("path-aliases E2E tests", () => {
         "formatValue",
       );
 
-      expect(output).toContain(
-        "Symbol 'formatValue' not found at src/index.ts",
-      );
-      // Rich error message also shows where the symbol was found
-      expect(output).toContain("Found 'formatValue' in:");
-      expect(output).toContain("src/utils/helper.ts");
+      // Auto-resolve finds the actual definition
+      expect(output).toContain("Resolved 'formatValue' to src/utils/helper.ts");
     });
   });
 });

@@ -41,15 +41,6 @@ The agent immediately sees: function takes abstract type, here are the implement
 **Graph Output Format:**
 Keep current flat format, one edge per line, stored direction. No fancy chaining or indentation.
 
-**Nodes Section Enhancement:**
-Add `type` field to each node (already stored in DB, just not displayed):
-```
-UserDTO:
-  type: Interface
-  file: src/types.ts
-  offset: 3, limit: 8
-```
-
 **Open Questions:**
 - Generics (`Promise<User>`, `Array<T>`) — edge to inner type, wrapper type, or both?
 - Union types (`User | null`) — multiple edges?
@@ -60,24 +51,8 @@ UserDTO:
 **Implementation:**
 - New edge types in `Types.ts`
 - New extractor for function signatures
-- Update `queryNodeInfos.ts` to include node type
-- Update `formatNodes.ts` to display node type
 
 ---
-
-### Rich Output Hints
-**Impact: Medium | Effort: Low**
-
-Tool outputs should include interpretation guidance:
-- Depth indicators (e.g., "depth=1 are direct callers")
-- Suggested next steps
-- Contextual hints based on actual results
-
-| Tool | Status |
-|------|:---:|
-| `dependenciesOf` | Pending |
-| `dependentsOf` | Pending |
-| `pathsBetween` | Pending |
 
 ### Session-Aware Output Deduplication
 **Impact: High | Effort: Medium**
@@ -100,6 +75,57 @@ After 3-4 queries, the agent's context contains the same code snippets multiple 
 - Session scope? Per-conversation? Per tool? Time-based expiry? MCP connection lifetime?
 - Should agents be able to opt-out? (e.g., `fresh: true` parameter)
 - Should the Graph section also dedupe, or only the Nodes section?
+
+### Traversal Limit Indicators
+**Impact: Medium | Effort: Low**
+
+Communicate when results are incomplete due to traversal limits.
+
+**The Problem:**
+AI agents can't tell if a graph result is complete or truncated. When `dependenciesOf` returns 5 nodes, is that the full picture or did traversal stop at a depth limit? This affects how the agent interprets results and whether it should dig deeper.
+
+**Current limits (invisible to agents):**
+- `pathsBetween`: max depth 20 (`http/src/query/paths-between/query.ts`)
+- `max_nodes`: truncates output but doesn't indicate if graph was cut short during traversal
+- Cycles: no detection or reporting
+
+**Proposed indicators:**
+
+```
+## Graph
+
+fnA --CALLS--> fnB --CALLS--> fnC
+
+## Status
+
+- Traversal: complete (depth 3)
+```
+
+Or when limited:
+
+```
+## Graph
+
+fnA --CALLS--> fnB --CALLS--> ... (truncated)
+
+## Status
+
+- Traversal: stopped at depth limit (20)
+- Cycles detected: fnX → fnY → fnX
+```
+
+**What to report:**
+- Whether traversal completed or hit a limit
+- Actual depth reached
+- Cycle detection (nodes involved)
+- Node count vs max_nodes (already done for truncation)
+
+**Implementation:**
+- Track traversal metadata in query functions
+- Return status alongside edges
+- Format status section in output
+
+---
 
 ### CLI Tool
 **Impact: Medium | Effort: Low**

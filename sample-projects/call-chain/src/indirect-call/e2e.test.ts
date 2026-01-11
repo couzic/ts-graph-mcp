@@ -59,6 +59,7 @@ entry --CALLS--> step02 --CALLS--> step03 --CALLS--> step04 --CALLS--> step05
 ## Nodes
 
 step02:
+  type: Function
   file: src/indirect-call/handlers/step02.ts
   offset: 4, limit: 4
   snippet:
@@ -68,6 +69,7 @@ step02:
     7: }
 
 step03:
+  type: Function
   file: src/indirect-call/core/step03.ts
   offset: 4, limit: 4
   snippet:
@@ -77,6 +79,7 @@ step03:
     7: }
 
 step04:
+  type: Function
   file: src/indirect-call/utils/step04.ts
   offset: 4, limit: 4
   snippet:
@@ -86,6 +89,7 @@ step04:
     7: }
 
 step05:
+  type: Function
   file: src/indirect-call/lib/step05.ts
   offset: 2, limit: 3
   snippet:
@@ -126,6 +130,7 @@ entry --CALLS--> step02 --CALLS--> step03 --CALLS--> step04 --CALLS--> step05
 ## Nodes
 
 entry:
+  type: Function
   file: src/indirect-call/entry.ts
   offset: 4, limit: 4
   snippet:
@@ -135,6 +140,7 @@ entry:
     7: }
 
 step02:
+  type: Function
   file: src/indirect-call/handlers/step02.ts
   offset: 4, limit: 4
   snippet:
@@ -144,6 +150,7 @@ step02:
     7: }
 
 step03:
+  type: Function
   file: src/indirect-call/core/step03.ts
   offset: 4, limit: 4
   snippet:
@@ -153,6 +160,7 @@ step03:
     7: }
 
 step04:
+  type: Function
   file: src/indirect-call/utils/step04.ts
   offset: 4, limit: 4
   snippet:
@@ -194,6 +202,7 @@ entry --CALLS--> step02 --CALLS--> step03 --CALLS--> step04 --CALLS--> step05
 ## Nodes
 
 step02:
+  type: Function
   file: src/indirect-call/handlers/step02.ts
   offset: 4, limit: 4
   snippet:
@@ -203,6 +212,7 @@ step02:
     7: }
 
 step03:
+  type: Function
   file: src/indirect-call/core/step03.ts
   offset: 4, limit: 4
   snippet:
@@ -212,6 +222,7 @@ step03:
     7: }
 
 step04:
+  type: Function
   file: src/indirect-call/utils/step04.ts
   offset: 4, limit: 4
   snippet:
@@ -240,6 +251,7 @@ step03 --CALLS--> step04 --CALLS--> step05
 ## Nodes
 
 step04:
+  type: Function
   file: src/indirect-call/utils/step04.ts
   offset: 4, limit: 4
   snippet:

@@ -59,6 +59,7 @@ entry --CALLS--> step02 --CALLS--> step03 --CALLS--> step04 --CALLS--> step05
 ## Nodes
 
 step02:
+  type: Function
   file: src/direct-call/handlers/step02.ts
   offset: 3, limit: 3
   snippet:
@@ -67,6 +68,7 @@ step02:
     5: }
 
 step03:
+  type: Function
   file: src/direct-call/core/step03.ts
   offset: 3, limit: 3
   snippet:
@@ -75,6 +77,7 @@ step03:
     5: }
 
 step04:
+  type: Function
   file: src/direct-call/utils/step04.ts
   offset: 3, limit: 3
   snippet:
@@ -83,6 +86,7 @@ step04:
     5: }
 
 step05:
+  type: Function
   file: src/direct-call/lib/step05.ts
   offset: 1, limit: 3
   snippet:
@@ -123,6 +127,7 @@ entry --CALLS--> step02 --CALLS--> step03 --CALLS--> step04 --CALLS--> step05
 ## Nodes
 
 entry:
+  type: Function
   file: src/direct-call/entry.ts
   offset: 3, limit: 3
   snippet:
@@ -131,6 +136,7 @@ entry:
     5: }
 
 step02:
+  type: Function
   file: src/direct-call/handlers/step02.ts
   offset: 3, limit: 3
   snippet:
@@ -139,6 +145,7 @@ step02:
     5: }
 
 step03:
+  type: Function
   file: src/direct-call/core/step03.ts
   offset: 3, limit: 3
   snippet:
@@ -147,6 +154,7 @@ step03:
     5: }
 
 step04:
+  type: Function
   file: src/direct-call/utils/step04.ts
   offset: 3, limit: 3
   snippet:
@@ -187,6 +195,7 @@ entry --CALLS--> step02 --CALLS--> step03 --CALLS--> step04 --CALLS--> step05
 ## Nodes
 
 step02:
+  type: Function
   file: src/direct-call/handlers/step02.ts
   offset: 3, limit: 3
   snippet:
@@ -195,6 +204,7 @@ step02:
     5: }
 
 step03:
+  type: Function
   file: src/direct-call/core/step03.ts
   offset: 3, limit: 3
   snippet:
@@ -203,6 +213,7 @@ step03:
     5: }
 
 step04:
+  type: Function
   file: src/direct-call/utils/step04.ts
   offset: 3, limit: 3
   snippet:
@@ -230,6 +241,7 @@ step03 --CALLS--> step04 --CALLS--> step05
 ## Nodes
 
 step04:
+  type: Function
   file: src/direct-call/utils/step04.ts
   offset: 3, limit: 3
   snippet:
@@ -259,6 +271,7 @@ entry --CALLS--> step02 --CALLS--> step03 --CALLS--> step04 --CALLS--> step05
 ## Nodes
 
 step02:
+  type: Function
   file: src/direct-call/handlers/step02.ts
   offset: 3, limit: 3
   snippet:
@@ -267,6 +280,7 @@ step02:
     5: }
 
 step03:
+  type: Function
   file: src/direct-call/core/step03.ts
   offset: 3, limit: 3
   snippet:
@@ -275,6 +289,7 @@ step03:
     5: }
 
 step04:
+  type: Function
   file: src/direct-call/utils/step04.ts
   offset: 3, limit: 3
   snippet:

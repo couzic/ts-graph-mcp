@@ -49,6 +49,7 @@ describe("long functions E2E - snippet truncation", () => {
         ## Nodes
 
         step02:
+          type: Function
           file: src/long-functions/step02.ts
           offset: 3, limit: 3
           snippet:
@@ -57,6 +58,7 @@ describe("long functions E2E - snippet truncation", () => {
             5: }
 
         step03:
+          type: Function
           file: src/long-functions/step03.ts
           offset: 3, limit: 3
           snippet:
@@ -65,6 +67,7 @@ describe("long functions E2E - snippet truncation", () => {
             5: }
 
         step04:
+          type: Function
           file: src/long-functions/step04.ts
           offset: 9, limit: 31
           snippet:
@@ -91,6 +94,7 @@ describe("long functions E2E - snippet truncation", () => {
             30: 
 
         terminal:
+          type: Function
           file: src/long-functions/terminal.ts
           offset: 1, limit: 3
           snippet:
@@ -118,6 +122,7 @@ describe("long functions E2E - snippet truncation", () => {
         ## Nodes
 
         entry:
+          type: Function
           file: src/long-functions/entry.ts
           offset: 3, limit: 3
           snippet:
@@ -126,6 +131,7 @@ describe("long functions E2E - snippet truncation", () => {
             5: }
 
         step02:
+          type: Function
           file: src/long-functions/step02.ts
           offset: 3, limit: 3
           snippet:
@@ -134,6 +140,7 @@ describe("long functions E2E - snippet truncation", () => {
             5: }
 
         step03:
+          type: Function
           file: src/long-functions/step03.ts
           offset: 3, limit: 3
           snippet:
@@ -142,6 +149,7 @@ describe("long functions E2E - snippet truncation", () => {
             5: }
 
         step04:
+          type: Function
           file: src/long-functions/step04.ts
           offset: 9, limit: 31
           snippet:
@@ -187,6 +195,7 @@ describe("long functions E2E - snippet truncation", () => {
         ## Nodes
 
         step02:
+          type: Function
           file: src/long-functions/step02.ts
           offset: 3, limit: 3
           snippet:
@@ -195,6 +204,7 @@ describe("long functions E2E - snippet truncation", () => {
             5: }
 
         step03:
+          type: Function
           file: src/long-functions/step03.ts
           offset: 3, limit: 3
           snippet:
@@ -203,6 +213,7 @@ describe("long functions E2E - snippet truncation", () => {
             5: }
 
         step04:
+          type: Function
           file: src/long-functions/step04.ts
           offset: 9, limit: 31
           snippet:

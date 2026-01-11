@@ -35,202 +35,6 @@ tool calls, but may fall back to Read/Grep in longer sessions.
 
 ---
 
-## AI Coding Agent DX Improvements
-
-### Auto-Resolve Method Names Without Class Prefix
-
-**Impact:** Medium (usability)
-
-**Problem:** When searching for a class method, users must provide the fully
-qualified name (`ClassName.methodName`). If they only provide the method name,
-the tool returns "Symbol not found" with a list of top-level symbols that
-doesn't include methods.
-
-```typescript
-// User calls:
-dependenciesOf({ file_path: "Bulletin.entity.ts", symbol: "getSituationsLines" })
-
-// Current output:
-Symbol 'getSituationsLines' not found at Bulletin.entity.ts
-
-Available symbols in this file:
-  - situationPaieSorter (Function)
-  - BulletinSalarieEntity (Class)
-  - ...
-```
-
-The method exists in the file, but the user doesn't know they need to use
-`BulletinSalarieEntity.getSituationsLines`.
-
-**Proposed behavior:**
-
-When a symbol is not found, search for exact method name matches across the
-entire codebase:
-
-**Case 1: Single match** → auto-resolve and inform the caller
-
-```
-// User calls:
-dependenciesOf({ file_path: "Bulletin.entity.ts", symbol: "getSituationsLines" })
-
-// Output includes:
-Resolved 'getSituationsLines' to BulletinSalarieEntity.getSituationsLines
-
-[normal results follow]
-```
-
-**Case 2: Multiple matches** → show disambiguation list with file paths
-
-```
-// User calls:
-dependenciesOf({ file_path: "...", symbol: "getLines" })
-
-// Output:
-Multiple symbols named 'getLines' found:
-  - BulletinSalarieEntity.getLines (modules/app/.../Bulletin.entity.ts:187)
-  - BulletinSalarieSituationPaieEntity.getLines (modules/app/.../SituationPaie.entity.ts:270)
-  - LigneBulletinHolder.getLines (modules/app/.../LigneBulletinHolder.ts:21)
-  - getLines (modules/utils/lines.ts:5)  // top-level function
-```
-
-**Scope:**
-
-- Exact match only (no fuzzy matching)
-- Search entire codebase, not just the specified file
-- Include both methods and top-level symbols in disambiguation
-- Applies to `dependenciesOf`, `dependentsOf`, and `pathsBetween` tools
-
----
-
-### Optional file_path Parameter with Disambiguation
-
-**Impact:** Medium (usability)
-
-**Problem:** The `file_path` parameter is required for all ts-graph tools
-(`dependenciesOf`, `dependentsOf`, `pathsBetween`). Users must know the exact
-file path before querying, which often requires a Grep call first.
-
-**Proposed behavior:**
-
-Make `file_path` optional. When omitted:
-
-1. Search for the symbol across all indexed packages
-2. If exactly one match → use it directly
-3. If multiple matches → return a disambiguation list with file paths
-
-**Example: Unique symbol**
-
-```typescript
-// User calls:
-dependenciesOf({ symbol: "formatDate" })
-
-// Output (single match found):
-[normal results for libs/utils/src/formatDate.ts:formatDate]
-```
-
-**Example: Ambiguous symbol**
-
-```typescript
-// User calls:
-dependenciesOf({ symbol: "formatDate" })
-
-// Output:
-Multiple symbols found for 'formatDate':
-  - libs/wagyz-toolkit/src/date/formatDate.ts
-  - modules/app/packages/clients/src/utils/formatDate.ts
-
-Please specify file_path to disambiguate.
-```
-
-**Use case:**
-
-AI assistants often receive symbol names from users without file context.
-Currently this requires a Grep call first to find the path, then a ts-graph
-call. With optional paths:
-
-- Faster exploration with fewer round-trips
-- Grep only needed for partial/fuzzy matches
-- Disambiguation list provides paths for follow-up calls
-
-**Technical notes:**
-
-- Symbol lookup logic already exists in `symbolNotFound.ts`
-- Disambiguation response should include file paths for subsequent calls
-- Applies to `dependenciesOf`, `dependentsOf`, and `pathsBetween` tools
-
-**Output change when file_path is omitted:**
-
-Currently, the input node is excluded from the Nodes section (`excludeNodeIds`
-in `formatToolOutput`). When `file_path` is omitted and auto-resolved, include
-the input node so the user sees which file was resolved:
-
-| file_path | Input node in Nodes section              |
-| --------- | ---------------------------------------- |
-| Provided  | Excluded (current behavior)              |
-| Omitted   | Included (shows resolved file + snippet) |
-
-See `dependenciesOf.ts:106` — `excludeNodeIds: new Set([nodeId])`
-
----
-
-### Output Size Management for Context Window Efficiency
-
-**Impact:** Medium (context window usage)
-
-**Problem:** MCP tool output can be very large (10k+ tokens), flooding the
-context window in long Claude Code sessions. The graph section currently has no
-node limit — it renders all edges regardless of count.
-
-**Current behavior:**
-
-- Graph section: renders all edges (unbounded)
-- Nodes section: truncates at 50 nodes (`MAX_NODES` in `formatNodes.ts`)
-- Snippets: adaptive sizing based on node count (10 lines for 1-5 nodes,
-  decreasing curve 6-25, call site only 26-35, omitted 36+)
-
-**Proposed behavior:**
-
-1. **Graph section limit** — Cap at 50 nodes by default. Add `max_nodes`
-   parameter to override.
-
-2. **Nodes section binary choice** — If all nodes fit within limit, show full
-   Nodes section (with adaptive snippets). If truncated, skip Nodes section
-   entirely (graph only).
-
-Rationale: A partial Nodes section isn't useful. Either show complete detail or
-just the graph shape.
-
-**Output examples:**
-
-Small result (≤50 nodes):
-
-```
-## Graph
-A --CALLS--> B --CALLS--> C
-
-## Nodes
-(full list with adaptive snippets)
-```
-
-Large result (>50 nodes):
-
-```
-## Graph
-A --CALLS--> B --CALLS--> C
-...
-
-(73 nodes total — showing graph only. Query a more specific symbol, or use max_nodes param.)
-```
-
-**Files to modify:**
-
-- `http/src/query/shared/formatGraph.ts` — Add node limit
-- `http/src/query/shared/formatNodes.ts` — Skip section when over limit
-- `http/src/query/shared/formatToolOutput.ts` — Coordinate the two sections
-- `mcp/src/wrapper.ts` — Add `max_nodes` parameter to tool definitions
-
----
-
 ## Technical Debt
 
 ---
@@ -621,6 +425,73 @@ const close = async (): Promise<void> => {
   }
 };
 ```
+
+---
+
+### Snippet Threshold Behavior Change (Possible Regression)
+
+**Impact:** Low (output verbosity)
+
+**Problem:** The `NO_SNIPPET_THRESHOLD` constant (35) was removed from
+`formatNodes.ts` as part of the Output Size Management feature. Previously,
+snippets were omitted when node count exceeded 35. Now, snippets are included
+for all nodes up to `maxNodes` (default 50).
+
+**Before:**
+- 1-35 nodes: snippets included
+- 36-50 nodes: snippets omitted, message shown
+- 51+ nodes: truncated
+
+**After:**
+- 1-50 nodes: snippets included
+- 51+ nodes: Nodes section skipped entirely
+
+**Behavior change:** Results with 36-50 nodes now show more output (snippets
+included where they were previously omitted).
+
+**Question:** Was this intentional? The binary approach (all or nothing) is
+simpler but produces more output in the 36-50 range.
+
+**Fix approach (if regression):** Add a failing test that expects snippets to be
+omitted in the 36-50 range, then restore the threshold logic.
+
+---
+
+### pathsBetween Fails Fast on First Resolution Error
+
+**Impact:** Low (UX)
+
+**Problem:** When both `from` and `to` symbols fail to resolve in `pathsBetween`,
+only the first error is shown. The user doesn't know if both symbols are invalid.
+
+```typescript
+// pathsBetween.ts
+const fromResolution = resolveSymbol(db, from.file_path, from.symbol);
+if (!fromResolution.success) {
+  return fromResolution.error;  // Stops here, toResolution never attempted
+}
+
+const toResolution = resolveSymbol(db, to.file_path, to.symbol);
+if (!toResolution.success) {
+  return toResolution.error;
+}
+```
+
+**Example:**
+```typescript
+// User calls with two invalid symbols:
+pathsBetween({ from: "a.ts:invalidA", to: "b.ts:invalidB" })
+
+// Current output (only first error):
+Symbol 'invalidA' not found at a.ts
+
+// Better output (both errors):
+Symbol 'invalidA' not found at a.ts
+Symbol 'invalidB' not found at b.ts
+```
+
+**Fix approach:** Resolve both symbols before checking for errors, then combine
+error messages if both failed.
 
 ---
 

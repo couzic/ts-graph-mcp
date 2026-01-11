@@ -63,6 +63,7 @@ formatMessageByAccessLevel --REFERENCES--> formatAdminError
 ## Nodes
 
 formatMessageByAccessLevel:
+  type: Variable
   file: src/record-dispatch/formatErrorMessage.ts
   offset: 20, limit: 7
   snippet:
@@ -75,6 +76,7 @@ formatMessageByAccessLevel:
     26: };
 
 formatCustomerError:
+  type: Function
   file: src/record-dispatch/formatCustomerError.ts
   offset: 1, limit: 3
   snippet:
@@ -83,6 +85,7 @@ formatCustomerError:
     3: }
 
 formatAdminError:
+  type: Function
   file: src/record-dispatch/formatAdminError.ts
   offset: 1, limit: 3
   snippet:
@@ -112,6 +115,7 @@ formatErrorMessage --REFERENCES--> formatMessageByAccessLevel --REFERENCES--> fo
 ## Nodes
 
 formatErrorMessage:
+  type: Function
   file: src/record-dispatch/formatErrorMessage.ts
   offset: 28, limit: 6
   snippet:
@@ -123,6 +127,7 @@ formatErrorMessage:
     33: }
 
 formatMessageByAccessLevel:
+  type: Variable
   file: src/record-dispatch/formatErrorMessage.ts
   offset: 20, limit: 7
   snippet:
@@ -162,6 +167,7 @@ formatErrorMessage --REFERENCES--> formatMessageByAccessLevel --REFERENCES--> fo
 ## Nodes
 
 formatMessageByAccessLevel:
+  type: Variable
   file: src/record-dispatch/formatErrorMessage.ts
   offset: 20, limit: 7
   snippet:

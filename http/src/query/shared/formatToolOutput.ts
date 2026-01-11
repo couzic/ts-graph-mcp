@@ -4,6 +4,9 @@ import { formatGraph } from "./formatGraph.js";
 import { formatNodes } from "./formatNodes.js";
 import type { GraphEdge, NodeInfo } from "./GraphTypes.js";
 
+/** Default maximum nodes before truncation */
+const DEFAULT_MAX_NODES = 50;
+
 /**
  * Edge with optional call site information.
  */
@@ -21,6 +24,8 @@ export interface FormatInput {
   nodes: NodeInfo[];
   /** Node IDs to exclude from Nodes section (query inputs) */
   excludeNodeIds: Set<string>;
+  /** Maximum nodes before truncation (default: 50) */
+  maxNodes?: number;
 }
 
 /**
@@ -31,22 +36,45 @@ export interface FormatInput {
  * the formatted output string.
  *
  * Flow:
- * 1. Enrich nodes with call site information from edges
- * 2. Build disambiguated display names
- * 3. Format Graph section (chain-compacted)
- * 4. Format Nodes section (with snippets if locs present)
- * 5. Assemble final output
+ * 1. Count unique nodes and check against maxNodes limit
+ * 2. If over limit: truncate graph (BFS order), skip Nodes section
+ * 3. If under limit: format full Graph + Nodes sections
  *
- * @param input - Edges, nodes, and exclusion set
- * @returns Formatted output string (Graph + Nodes sections)
+ * @param input - Edges, nodes, exclusion set, and optional maxNodes limit
+ * @returns Formatted output string (Graph + optionally Nodes sections)
  */
 export const formatToolOutput = (input: FormatInput): string => {
-  const { edges, nodes, excludeNodeIds } = input;
+  const { edges, nodes, excludeNodeIds, maxNodes = DEFAULT_MAX_NODES } = input;
 
-  // 1. Enrich nodes with call site information from edges
+  // Count unique nodes in the graph
+  const allNodeIds = new Set<string>();
+  for (const edge of edges) {
+    allNodeIds.add(edge.source);
+    allNodeIds.add(edge.target);
+  }
+  const totalNodeCount = allNodeIds.size;
+
+  // Check if truncation is needed
+  if (totalNodeCount > maxNodes) {
+    return formatTruncatedOutput(edges, totalNodeCount, maxNodes);
+  }
+
+  // Full output path (under limit)
+  return formatFullOutput(edges, nodes, excludeNodeIds);
+};
+
+/**
+ * Format full output with Graph and Nodes sections.
+ */
+const formatFullOutput = (
+  edges: EdgeWithCallSites[],
+  nodes: NodeInfo[],
+  excludeNodeIds: Set<string>,
+): string => {
+  // Enrich nodes with call site information
   const enrichedNodes = enrichNodesWithCallSites(nodes, edges);
 
-  // 2. Collect all node IDs for display name generation
+  // Collect all node IDs for display name generation
   const allNodeIds = new Set<string>();
   for (const edge of edges) {
     allNodeIds.add(edge.source);
@@ -54,10 +82,10 @@ export const formatToolOutput = (input: FormatInput): string => {
   }
   const displayNames = buildDisplayNames([...allNodeIds]);
 
-  // 3. Format graph section
+  // Format graph section
   const { text: graphSection, nodeOrder } = formatGraph(edges);
 
-  // 4. Format nodes section
+  // Format nodes section
   const nodesResult = formatNodes(
     enrichedNodes,
     displayNames,
@@ -65,17 +93,41 @@ export const formatToolOutput = (input: FormatInput): string => {
     nodeOrder,
   );
 
-  // 5. Assemble output
+  // Assemble output
   if (nodesResult.text.trim() === "") {
     return `## Graph\n\n${graphSection}`;
   }
 
-  let output = `## Graph\n\n${graphSection}\n\n## Nodes\n\n${nodesResult.text}`;
-  if (nodesResult.message) {
-    output += `\n${nodesResult.message}`;
-  }
+  return `## Graph\n\n${graphSection}\n\n## Nodes\n\n${nodesResult.text}`;
+};
 
-  return output;
+/**
+ * Format truncated output with Graph section only.
+ * Truncates to first maxNodes nodes in BFS traversal order.
+ */
+const formatTruncatedOutput = (
+  edges: EdgeWithCallSites[],
+  totalNodeCount: number,
+  maxNodes: number,
+): string => {
+  // First pass: get node traversal order from formatGraph
+  const { nodeOrder } = formatGraph(edges);
+
+  // Keep only first maxNodes nodes
+  const keptNodes = new Set(nodeOrder.slice(0, maxNodes));
+
+  // Filter edges to only those where both endpoints are in kept set
+  const truncatedEdges = edges.filter(
+    (e) => keptNodes.has(e.source) && keptNodes.has(e.target),
+  );
+
+  // Format truncated graph
+  const { text: graphSection } = formatGraph(truncatedEdges);
+
+  // Build output with truncation message
+  const message = `(${totalNodeCount} nodes total — Nodes section skipped. Use max_nodes param for full details.)`;
+
+  return `## Graph\n\n${graphSection}\n\n${message}`;
 };
 
 /**

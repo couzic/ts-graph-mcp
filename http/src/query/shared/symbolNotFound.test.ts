@@ -8,7 +8,7 @@ import {
   openDatabase,
 } from "../../db/sqlite/sqliteConnection.utils.js";
 import { extractNodes } from "../../ingestion/extract/nodes/extractNodes.js";
-import { symbolNotFound } from "./symbolNotFound.js";
+import { resolveSymbol, symbolNotFound } from "./symbolNotFound.js";
 
 describe("symbolNotFound", () => {
   let db: Database.Database;
@@ -210,5 +210,223 @@ export function parser() {}`,
     expect(result).toContain("helper (Function)");
     expect(result).toContain("Found 'formatDate' in:");
     expect(result).toContain("src/dateUtils.ts");
+  });
+});
+
+describe("resolveSymbol", () => {
+  let db: Database.Database;
+  let writer: DbWriter;
+  let project: Project;
+
+  beforeEach(() => {
+    db = openDatabase({ path: ":memory:" });
+    writer = createSqliteWriter(db);
+    project = new Project({ useInMemoryFileSystem: true });
+  });
+
+  afterEach(() => {
+    closeDatabase(db);
+  });
+
+  const createContext = (filePath: string) => ({
+    filePath,
+    package: "test-pkg",
+  });
+
+  it("returns success for exact match", async () => {
+    const filePath = "src/utils.ts";
+    const sourceFile = project.createSourceFile(
+      filePath,
+      "export function formatDate() {}",
+    );
+    await writer.addNodes(extractNodes(sourceFile, createContext(filePath)));
+
+    const result = resolveSymbol(db, filePath, "formatDate");
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.nodeId).toBe("src/utils.ts:formatDate");
+      expect(result.message).toBeUndefined();
+    }
+  });
+
+  it("auto-resolves method name to ClassName.methodName", async () => {
+    const filePath = "src/entity.ts";
+    const sourceFile = project.createSourceFile(
+      filePath,
+      `export class User {
+        getSituations() { return []; }
+      }`,
+    );
+    await writer.addNodes(extractNodes(sourceFile, createContext(filePath)));
+
+    // Search for method without class prefix
+    const result = resolveSymbol(db, filePath, "getSituations");
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.nodeId).toBe("src/entity.ts:User.getSituations");
+      expect(result.message).toContain("Resolved 'getSituations' to User.getSituations");
+    }
+  });
+
+  it("auto-resolves to symbol in different file", async () => {
+    // Index file A with formatDate
+    const fileA = "src/dateUtils.ts";
+    const sourceA = project.createSourceFile(
+      fileA,
+      "export function formatDate() {}",
+    );
+    await writer.addNodes(extractNodes(sourceA, createContext(fileA)));
+
+    // Search for formatDate in a different file
+    const result = resolveSymbol(db, "src/other.ts", "formatDate");
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.nodeId).toBe("src/dateUtils.ts:formatDate");
+      expect(result.message).toContain("Resolved 'formatDate' to src/dateUtils.ts");
+    }
+  });
+
+  it("returns disambiguation when multiple matches found", async () => {
+    // Index two classes with same method name
+    const fileA = "src/user.ts";
+    const sourceA = project.createSourceFile(
+      fileA,
+      `export class User {
+        getLines() { return []; }
+      }`,
+    );
+    await writer.addNodes(extractNodes(sourceA, createContext(fileA)));
+
+    const fileB = "src/order.ts";
+    const sourceB = project.createSourceFile(
+      fileB,
+      `export class Order {
+        getLines() { return []; }
+      }`,
+    );
+    await writer.addNodes(extractNodes(sourceB, createContext(fileB)));
+
+    const result = resolveSymbol(db, "src/other.ts", "getLines");
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toContain("Multiple symbols named 'getLines' found:");
+      expect(result.error).toContain("User.getLines");
+      expect(result.error).toContain("Order.getLines");
+    }
+  });
+
+  it("returns error when no matches found", async () => {
+    // Index a file with different symbol
+    const filePath = "src/utils.ts";
+    const sourceFile = project.createSourceFile(
+      filePath,
+      "export function helper() {}",
+    );
+    await writer.addNodes(extractNodes(sourceFile, createContext(filePath)));
+
+    const result = resolveSymbol(db, filePath, "nonExistent");
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toContain("Symbol 'nonExistent' not found");
+    }
+  });
+
+  it("performs case-insensitive method name matching", async () => {
+    const filePath = "src/entity.ts";
+    const sourceFile = project.createSourceFile(
+      filePath,
+      `export class User {
+        GetData() { return {}; }
+      }`,
+    );
+    await writer.addNodes(extractNodes(sourceFile, createContext(filePath)));
+
+    // Search with different case
+    const result = resolveSymbol(db, filePath, "getdata");
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.nodeId).toBe("src/entity.ts:User.GetData");
+    }
+  });
+
+  it("resolves symbol when file_path is undefined (single match)", async () => {
+    const filePath = "src/utils.ts";
+    const sourceFile = project.createSourceFile(
+      filePath,
+      "export function formatDate() {}",
+    );
+    await writer.addNodes(extractNodes(sourceFile, createContext(filePath)));
+
+    const result = resolveSymbol(db, undefined, "formatDate");
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.nodeId).toBe("src/utils.ts:formatDate");
+      expect(result.message).toContain("Resolved 'formatDate' to src/utils.ts");
+      expect(result.filePathWasResolved).toBe(true);
+    }
+  });
+
+  it("returns disambiguation when file_path undefined and multiple matches", async () => {
+    const fileA = "src/dateA.ts";
+    const sourceA = project.createSourceFile(
+      fileA,
+      "export function formatDate() {}",
+    );
+    await writer.addNodes(extractNodes(sourceA, createContext(fileA)));
+
+    const fileB = "src/dateB.ts";
+    const sourceB = project.createSourceFile(
+      fileB,
+      "export function formatDate() {}",
+    );
+    await writer.addNodes(extractNodes(sourceB, createContext(fileB)));
+
+    const result = resolveSymbol(db, undefined, "formatDate");
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toContain("Multiple symbols named 'formatDate' found:");
+      expect(result.error).toContain("src/dateA.ts");
+      expect(result.error).toContain("src/dateB.ts");
+    }
+  });
+
+  it("returns error when file_path undefined and symbol not found", async () => {
+    const result = resolveSymbol(db, undefined, "nonExistent");
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toBe("Symbol 'nonExistent' not found.");
+    }
+  });
+
+  it("sets filePathWasResolved to false when file_path is provided", async () => {
+    const filePath = "src/utils.ts";
+    const sourceFile = project.createSourceFile(
+      filePath,
+      "export function helper() {}",
+    );
+    await writer.addNodes(extractNodes(sourceFile, createContext(filePath)));
+
+    // Method name requires resolution even with file_path provided
+    const sourceFile2 = project.createSourceFile(
+      "src/entity.ts",
+      `export class User { save() {} }`,
+    );
+    await writer.addNodes(extractNodes(sourceFile2, createContext("src/entity.ts")));
+
+    const result = resolveSymbol(db, "src/entity.ts", "save");
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.filePathWasResolved).toBeFalsy();
+    }
   });
 });

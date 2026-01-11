@@ -218,15 +218,57 @@ The schema omits FK constraints intentionally:
 
 ## MCP Tools
 
-All tools follow the Read tool pattern: `file_path` first (required), then `symbol`. The tool decides internal limits (depth, result count) for optimal performance.
-
 | Constraint | Tool | Query |
 |------------|------|-------|
-| Start only | `dependenciesOf(file_path, symbol)` | "What does this depend on?" |
-| End only | `dependentsOf(file_path, symbol)` | "Who depends on this?" |
+| Start only | `dependenciesOf(file_path?, symbol)` | "What does this depend on?" |
+| End only | `dependentsOf(file_path?, symbol)` | "Who depends on this?" |
 | Both | `pathsBetween(from, to)` | "How does A reach B?" |
 
 See [`http/src/query/CLAUDE.md`](http/src/query/CLAUDE.md) for implementation details.
+
+### Parameters
+
+**`file_path`** (optional): When omitted, searches for the symbol across all packages. Single match auto-resolves; multiple matches return a disambiguation list.
+
+**`symbol`**: Symbol name. Supports both top-level names (`formatDate`) and method names without class prefix (`save` resolves to `UserService.save` if unique).
+
+**`max_nodes`** (optional, default: 50): Controls output size. When node count exceeds this limit, the Graph section is truncated and the Nodes section is skipped entirely.
+
+### Symbol Resolution
+
+When a symbol isn't found at the exact path:
+1. **Method name matching** — Searches for method names across all classes
+2. **Single match** — Auto-resolves and proceeds (output shows resolved name)
+3. **Multiple matches** — Returns disambiguation list with file paths
+
+### Output Format
+
+```
+## Graph
+
+fnA --CALLS--> fnB --CALLS--> fnC
+
+## Nodes
+
+fnB:
+  type: Function
+  file: src/b.ts
+  offset: 1, limit: 3
+  snippet:
+    1: function fnB() {
+  > 2:   return fnC();
+    3: }
+```
+
+When over `max_nodes` limit:
+```
+## Graph
+
+fnA --CALLS--> fnB --CALLS--> fnC
+...
+
+(73 nodes total — Nodes section skipped. Increase max_nodes param for full details.)
+```
 
 ### Design Philosophy
 

@@ -84,14 +84,25 @@ export const startMcpWrapper = async () => {
       inputSchema: {
         file_path: z
           .string()
-          .describe("File path containing the symbol (e.g., 'src/utils.ts')"),
+          .optional()
+          .describe("File path containing the symbol (e.g., 'src/utils.ts'). Optional — omit to search across all files."),
         symbol: z
           .string()
           .describe("Symbol name (e.g., 'formatDate', 'User.save')"),
+        max_nodes: z
+          .number()
+          .optional()
+          .describe("Maximum nodes to include in output (default: 50). When exceeded, shows graph only without node details."),
       },
     },
-    async ({ file_path, symbol }) => {
-      const path = `/api/graph/dependencies?file=${encodeURIComponent(file_path)}&symbol=${encodeURIComponent(symbol)}`;
+    async ({ file_path, symbol, max_nodes }) => {
+      let path = `/api/graph/dependencies?symbol=${encodeURIComponent(symbol)}`;
+      if (file_path) {
+        path += `&file=${encodeURIComponent(file_path)}`;
+      }
+      if (max_nodes !== undefined) {
+        path += `&max_nodes=${max_nodes}`;
+      }
       const result = await httpRequest(port, path);
 
       return {
@@ -110,14 +121,25 @@ export const startMcpWrapper = async () => {
       inputSchema: {
         file_path: z
           .string()
-          .describe("File path containing the symbol (e.g., 'src/utils.ts')"),
+          .optional()
+          .describe("File path containing the symbol (e.g., 'src/utils.ts'). Optional — omit to search across all files."),
         symbol: z
           .string()
           .describe("Symbol name (e.g., 'formatDate', 'User.save')"),
+        max_nodes: z
+          .number()
+          .optional()
+          .describe("Maximum nodes to include in output (default: 50). When exceeded, shows graph only without node details."),
       },
     },
-    async ({ file_path, symbol }) => {
-      const path = `/api/graph/dependents?file=${encodeURIComponent(file_path)}&symbol=${encodeURIComponent(symbol)}`;
+    async ({ file_path, symbol, max_nodes }) => {
+      let path = `/api/graph/dependents?symbol=${encodeURIComponent(symbol)}`;
+      if (file_path) {
+        path += `&file=${encodeURIComponent(file_path)}`;
+      }
+      if (max_nodes !== undefined) {
+        path += `&max_nodes=${max_nodes}`;
+      }
       const result = await httpRequest(port, path);
 
       return {
@@ -135,19 +157,30 @@ export const startMcpWrapper = async () => {
         "Find how two symbols connect through the code graph. Answers: 'How does A reach B?' 'What's the path between these symbols?'",
       inputSchema: {
         from: z.object({
-          file_path: z.string().describe("File path (e.g., 'src/api/handler.ts')"),
+          file_path: z.string().optional().describe("File path (e.g., 'src/api/handler.ts'). Optional — omit to search across all files."),
           symbol: z.string().describe("Symbol name (e.g., 'handleRequest')"),
         }),
         to: z.object({
-          file_path: z.string().describe("File path (e.g., 'src/db/queries.ts')"),
+          file_path: z.string().optional().describe("File path (e.g., 'src/db/queries.ts'). Optional — omit to search across all files."),
           symbol: z.string().describe("Symbol name (e.g., 'executeQuery')"),
         }),
+        max_nodes: z
+          .number()
+          .optional()
+          .describe("Maximum nodes to include in output (default: 50). When exceeded, shows graph only without node details."),
       },
     },
-    async ({ from, to }) => {
-      const path =
-        `/api/graph/paths?from_file=${encodeURIComponent(from.file_path)}&from_symbol=${encodeURIComponent(from.symbol)}` +
-        `&to_file=${encodeURIComponent(to.file_path)}&to_symbol=${encodeURIComponent(to.symbol)}`;
+    async ({ from, to, max_nodes }) => {
+      let path = `/api/graph/paths?from_symbol=${encodeURIComponent(from.symbol)}&to_symbol=${encodeURIComponent(to.symbol)}`;
+      if (from.file_path) {
+        path += `&from_file=${encodeURIComponent(from.file_path)}`;
+      }
+      if (to.file_path) {
+        path += `&to_file=${encodeURIComponent(to.file_path)}`;
+      }
+      if (max_nodes !== undefined) {
+        path += `&max_nodes=${max_nodes}`;
+      }
       const result = await httpRequest(port, path);
 
       return {

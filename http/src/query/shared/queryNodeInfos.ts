@@ -1,4 +1,5 @@
 import type Database from "better-sqlite3";
+import type { NodeType } from "../../db/Types.js";
 import type { NodeInfo } from "./GraphTypes.js";
 
 /**
@@ -7,6 +8,7 @@ import type { NodeInfo } from "./GraphTypes.js";
 interface NodeRow {
   id: string;
   name: string;
+  type: string;
   file_path: string;
   start_line: number;
   end_line: number;
@@ -25,7 +27,7 @@ export const queryNodeInfos = (
 
   const placeholders = nodeIds.map(() => "?").join(", ");
   const sql = `
-		SELECT id, name, file_path, start_line, end_line
+		SELECT id, name, type, file_path, start_line, end_line
 		FROM nodes
 		WHERE id IN (${placeholders})
 	`;
@@ -35,6 +37,7 @@ export const queryNodeInfos = (
   return rows.map((row) => ({
     id: row.id,
     name: row.name,
+    type: row.type as NodeType,
     filePath: row.file_path,
     startLine: row.start_line,
     endLine: row.end_line,

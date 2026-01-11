@@ -1,33 +1,12 @@
 import type { CallSiteRange } from "../../db/Types.js";
 import type { LOC, NodeInfo } from "./GraphTypes.js";
 
-/** Maximum number of nodes before list is truncated */
-const MAX_NODES = 50;
-
-/** Threshold above which snippets are omitted entirely */
-const NO_SNIPPET_THRESHOLD = 35;
-
-/**
- * Get the appropriate message for the output based on node count.
- */
-const getAdaptiveMessage = (nodeCount: number): string | undefined => {
-  if (nodeCount > MAX_NODES) {
-    return `Note: Results truncated to ${MAX_NODES} nodes. Refine query with more specific symbol.`;
-  }
-  if (nodeCount > NO_SNIPPET_THRESHOLD) {
-    return `Note: Snippets omitted (${nodeCount} nodes). Use Read tool with offset/limit shown above.`;
-  }
-  return undefined;
-};
-
 /**
  * Result of formatting the Nodes section.
  */
 export interface FormatNodesResult {
   /** Formatted nodes text */
   text: string;
-  /** Optional message about truncation/snippet omission */
-  message?: string;
   /** Order of node IDs as they appear in output */
   nodeOrder: string[];
 }
@@ -76,18 +55,20 @@ const renderLOCs = (locs: LOC[], callSites?: CallSiteRange[]): string[] => {
  * This is a pure function - all I/O (file reading) must be done
  * beforehand by populating node.locs via loadNodeSnippets().
  *
+ * Truncation is handled by formatToolOutput - this function formats
+ * all nodes it receives without truncation.
+ *
  * Rules:
  * - Excludes query input nodes (passed in excludeIds)
  * - Shows file, offset, limit for Read tool compatibility
  * - Renders snippets from node.locs if present
- * - Truncates node list if exceeds MAX_NODES
  * - Orders nodes by appearance in Graph section (if nodeOrder provided)
  *
  * @param nodes - All nodes (with locs pre-loaded if snippets desired)
  * @param displayNames - Map of nodeId → display name
  * @param excludeIds - Node IDs to exclude (query inputs)
  * @param nodeOrder - Optional order of node IDs (from formatGraph traversal)
- * @returns Formatted Nodes section with optional message
+ * @returns Formatted Nodes section
  */
 export const formatNodes = (
   nodes: NodeInfo[],
@@ -112,15 +93,6 @@ export const formatNodes = (
     return { text: "", nodeOrder: [] };
   }
 
-  // Get adaptive message before potential truncation
-  const originalCount = included.length;
-  const message = getAdaptiveMessage(originalCount);
-
-  // Truncate if exceeds MAX_NODES
-  if (included.length > MAX_NODES) {
-    included = included.slice(0, MAX_NODES);
-  }
-
   const lines: string[] = [];
   const outputNodeOrder: string[] = [];
 
@@ -130,6 +102,7 @@ export const formatNodes = (
 
     outputNodeOrder.push(node.id);
     lines.push(`${displayName}:`);
+    lines.push(`  type: ${node.type}`);
     lines.push(`  file: ${node.filePath}`);
     lines.push(`  offset: ${node.startLine}, limit: ${limit}`);
 
@@ -144,7 +117,6 @@ export const formatNodes = (
 
   return {
     text: lines.join("\n"),
-    message,
     nodeOrder: outputNodeOrder,
   };
 };

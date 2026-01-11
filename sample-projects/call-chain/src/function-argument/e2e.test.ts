@@ -60,6 +60,7 @@ entry --REFERENCES--> processor
 ## Nodes
 
 orchestrate:
+  type: Function
   file: src/function-argument/handlers/orchestrate.ts
   offset: 4, limit: 6
   snippet:
@@ -71,6 +72,7 @@ orchestrate:
     9: }
 
 transform:
+  type: Function
   file: src/function-argument/core/transform.ts
   offset: 4, limit: 7
   snippet:
@@ -83,6 +85,7 @@ transform:
     10: }
 
 validate:
+  type: Function
   file: src/function-argument/utils/validate.ts
   offset: 2, limit: 6
   snippet:
@@ -94,6 +97,7 @@ validate:
     7: }
 
 processor:
+  type: Function
   file: src/function-argument/lib/processor.ts
   offset: 2, limit: 3
   snippet:
@@ -123,6 +127,7 @@ entry --REFERENCES--> processor
 ## Nodes
 
 entry:
+  type: Function
   file: src/function-argument/entry.ts
   offset: 5, limit: 4
   snippet:

@@ -12,6 +12,123 @@ interface SymbolElsewhere {
   type: NodeType;
 }
 
+interface SymbolMatch {
+  nodeId: string;
+  name: string;
+  filePath: string;
+  type: NodeType;
+}
+
+/**
+ * Result of attempting to resolve a symbol.
+ */
+export type SymbolResolution =
+  | { success: true; nodeId: string; message?: string; filePathWasResolved?: boolean }
+  | { success: false; error: string };
+
+/**
+ * Attempt to resolve a symbol, including method name auto-resolution.
+ *
+ * Resolution order:
+ * 1. If filePath provided: exact match `{filePath}:{symbol}`
+ * 2. Exact name match anywhere (e.g., top-level function)
+ * 3. Method name match: symbols ending with `.{symbol}` (e.g., `ClassName.methodName`)
+ *
+ * When filePath is omitted, searches across all files.
+ *
+ * @example
+ * // With file_path - exact match
+ * resolveSymbol(db, 'src/entity.ts', 'getSituations')
+ * // { success: true, nodeId: 'src/entity.ts:User.getSituations', message: "Resolved 'getSituations' to User.getSituations" }
+ *
+ * // Without file_path - auto-resolves if unique
+ * resolveSymbol(db, undefined, 'formatDate')
+ * // { success: true, nodeId: 'src/utils.ts:formatDate', message: "Resolved 'formatDate' to src/utils.ts", filePathWasResolved: true }
+ *
+ * // Multiple matches - disambiguation
+ * resolveSymbol(db, undefined, 'getLines')
+ * // { success: false, error: "Multiple symbols named 'getLines' found:\n  - User.getLines (src/user.ts)\n  - Order.getLines (src/order.ts)" }
+ */
+export const resolveSymbol = (
+  db: Database.Database,
+  filePath: string | undefined,
+  symbol: string,
+): SymbolResolution => {
+  // When filePath provided, try exact match first
+  if (filePath) {
+    const nodeId = `${filePath}:${symbol}`;
+    const exactMatch = db
+      .prepare<[string], { found: 1 }>("SELECT 1 as found FROM nodes WHERE id = ?")
+      .get(nodeId);
+
+    if (exactMatch) {
+      return { success: true, nodeId };
+    }
+  }
+
+  // Search for matches across codebase
+  const matches = findSymbolMatches(db, symbol);
+
+  if (matches.length === 0) {
+    if (filePath) {
+      return { success: false, error: symbolNotFound(db, filePath, symbol) };
+    }
+    return { success: false, error: `Symbol '${symbol}' not found.` };
+  }
+
+  if (matches.length === 1) {
+    const match = matches[0]!;
+    const filePathWasResolved = !filePath;
+    const message =
+      match.name === symbol
+        ? `Resolved '${symbol}' to ${match.filePath}`
+        : `Resolved '${symbol}' to ${match.name} (${match.filePath})`;
+    return { success: true, nodeId: match.nodeId, message, filePathWasResolved };
+  }
+
+  // Multiple matches - disambiguation
+  const lines = [`Multiple symbols named '${symbol}' found:`];
+  for (const match of matches) {
+    lines.push(`  - ${match.name} (${match.filePath})`);
+  }
+  return { success: false, error: lines.join("\n") };
+};
+
+/**
+ * Find all symbols matching the given name.
+ * Searches for exact matches and method matches (*.symbol).
+ */
+const findSymbolMatches = (
+  db: Database.Database,
+  symbol: string,
+): SymbolMatch[] => {
+  // Search for exact name match OR method match (name ends with .symbol)
+  const rows = db
+    .prepare<
+      [string, string],
+      { id: string; name: string; file_path: string; type: NodeType }
+    >(
+      `SELECT id, name, file_path, type FROM nodes
+       WHERE (LOWER(name) = LOWER(?) OR LOWER(name) LIKE '%.' || LOWER(?))
+       AND type != 'File'
+       LIMIT 10`,
+    )
+    .all(symbol, symbol);
+
+  return rows.map((r) => {
+    // Extract full symbol name from nodeId (format: filePath:symbolPath)
+    // e.g., "src/entity.ts:User.getSituations" → "User.getSituations"
+    const colonIndex = r.id.indexOf(":");
+    const symbolFromId = colonIndex >= 0 ? r.id.slice(colonIndex + 1) : r.name;
+    return {
+      nodeId: r.id,
+      name: symbolFromId,
+      filePath: r.file_path,
+      type: r.type,
+    };
+  });
+};
+
 /**
  * Generates a rich error message when a symbol lookup fails.
  * Distinguishes between different failure modes and provides actionable guidance.

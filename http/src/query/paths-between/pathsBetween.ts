@@ -6,11 +6,12 @@ import {
 } from "../shared/formatToolOutput.js";
 import { loadNodeSnippets } from "../shared/loadNodeSnippets.js";
 import { queryNodeInfos } from "../shared/queryNodeInfos.js";
-import { symbolNotFound } from "../shared/symbolNotFound.js";
+import type { QueryOptions } from "../shared/QueryTypes.js";
+import { resolveSymbol } from "../shared/symbolNotFound.js";
 import { queryPath } from "./query.js";
 
 export interface SymbolRef {
-  file_path: string;
+  file_path: string | undefined;
   symbol: string;
 }
 
@@ -27,34 +28,39 @@ export function pathsBetween(
   projectRoot: string,
   from: SymbolRef,
   to: SymbolRef,
+  options: QueryOptions = {},
 ): string {
-  const fromId = `${from.file_path}:${from.symbol}`;
-  const toId = `${to.file_path}:${to.symbol}`;
+  // Resolve both symbols (handles exact match + method name auto-resolution)
+  const fromResolution = resolveSymbol(db, from.file_path, from.symbol);
+  if (!fromResolution.success) {
+    return fromResolution.error;
+  }
+
+  const toResolution = resolveSymbol(db, to.file_path, to.symbol);
+  if (!toResolution.success) {
+    return toResolution.error;
+  }
+
+  const fromId = fromResolution.nodeId;
+  const toId = toResolution.nodeId;
+  const fromFilePathWasResolved = fromResolution.filePathWasResolved ?? false;
+  const toFilePathWasResolved = toResolution.filePathWasResolved ?? false;
+
+  // Collect resolution messages
+  const resolutionMessages: string[] = [];
+  if (fromResolution.message) {
+    resolutionMessages.push(fromResolution.message);
+  }
+  if (toResolution.message) {
+    resolutionMessages.push(toResolution.message);
+  }
+  const resolutionPrefix = resolutionMessages.length > 0
+    ? resolutionMessages.join("\n") + "\n\n"
+    : "";
 
   // Same-node check
   if (fromId === toId) {
-    return "Invalid query: source and target are the same symbol.";
-  }
-
-  // Validate both exist
-  const fromExists = db
-    .prepare<[string], { found: 1 }>(
-      "SELECT 1 as found FROM nodes WHERE id = ?",
-    )
-    .get(fromId);
-
-  if (!fromExists) {
-    return symbolNotFound(db, from.file_path, from.symbol);
-  }
-
-  const toExists = db
-    .prepare<[string], { found: 1 }>(
-      "SELECT 1 as found FROM nodes WHERE id = ?",
-    )
-    .get(toId);
-
-  if (!toExists) {
-    return symbolNotFound(db, to.file_path, to.symbol);
+    return resolutionPrefix + "Invalid query: source and target are the same symbol.";
   }
 
   // Try forward path (from → to)
@@ -66,12 +72,12 @@ export function pathsBetween(
   }
 
   if (paths.length === 0) {
-    return "No path found.";
+    return resolutionPrefix + "No path found.";
   }
 
   const path = paths[0];
   if (!path) {
-    return "No path found.";
+    return resolutionPrefix + "No path found.";
   }
 
   // Convert path edges to EdgeWithCallSites format
@@ -82,13 +88,20 @@ export function pathsBetween(
     callSites: e.callSites,
   }));
 
-  // Get intermediate node IDs (excluding from/to)
-  const intermediateIds = path.nodes.filter(
-    (id) => id !== fromId && id !== toId,
-  );
+  // Get intermediate node IDs
+  // When file_path was auto-resolved, include that endpoint so agent sees which file was resolved
+  const excludeIds = new Set<string>();
+  if (!fromFilePathWasResolved) {
+    excludeIds.add(fromId);
+  }
+  if (!toFilePathWasResolved) {
+    excludeIds.add(toId);
+  }
 
-  // Query node information for intermediates
-  const nodes = queryNodeInfos(db, intermediateIds);
+  const nodeIdsToQuery = path.nodes.filter((id) => !excludeIds.has(id));
+
+  // Query node information
+  const nodes = queryNodeInfos(db, nodeIdsToQuery);
 
   // Enrich with call sites BEFORE loading snippets
   // (so extractSnippet can truncate around call sites)
@@ -102,9 +115,13 @@ export function pathsBetween(
   );
 
   // Format output (pure)
-  return formatToolOutput({
+  const output = formatToolOutput({
     edges: graphEdges,
     nodes: nodesWithSnippets,
-    excludeNodeIds: new Set([fromId, toId]),
+    excludeNodeIds: excludeIds,
+    maxNodes: options.maxNodes,
   });
+
+  // Prepend resolution messages if any symbols were auto-resolved
+  return resolutionPrefix + output;
 }

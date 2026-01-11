@@ -75,7 +75,7 @@ Or manually in `.mcp.json`:
 
 ## MCP Tools
 
-All tools use `file_path` and `symbol` to reference code elements.
+All tools use `symbol` to reference code elements. The `file_path` parameter is optional — when omitted, the tool searches across all packages.
 
 ### dependenciesOf
 
@@ -84,6 +84,9 @@ Find all code that a symbol depends on (forward dependencies).
 ```typescript
 // What does handleRequest call?
 { file_path: "src/api.ts", symbol: "handleRequest" }
+
+// Or without file_path (auto-resolves if unique)
+{ symbol: "handleRequest" }
 ```
 
 ### dependentsOf
@@ -107,6 +110,20 @@ Find how two symbols connect through the code graph.
 }
 ```
 
+### Symbol Resolution
+
+- **Method names** work without class prefix: `save` resolves to `UserService.save` if unique
+- **Multiple matches** return a disambiguation list with file paths
+- **Single match** auto-resolves and proceeds
+
+### Parameters
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `symbol` | Yes | Symbol name (function, class, method, etc.) |
+| `file_path` | No | File containing the symbol. Auto-resolves if unique. |
+| `max_nodes` | No | Output limit (default: 50). Larger graphs truncate. |
+
 ### Example Output
 
 ```
@@ -117,6 +134,7 @@ handleRequest --CALLS--> validate --CALLS--> saveUser
 ## Nodes
 
 validate:
+  type: Function
   file: src/service.ts
   offset: 10, limit: 5
   snippet:
@@ -125,6 +143,7 @@ validate:
     12: }
 
 saveUser:
+  type: Function
   file: src/db/user.ts
   offset: 3, limit: 4
   snippet:

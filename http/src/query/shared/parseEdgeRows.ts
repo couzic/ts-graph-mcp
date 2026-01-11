@@ -1,4 +1,4 @@
-import type { CallSiteRange } from "../../db/Types.js";
+import type { CallSiteRange, EdgeType } from "../../db/Types.js";
 
 /**
  * Raw edge row from SQLite with call sites as JSON string.
@@ -17,7 +17,7 @@ export interface EdgeRowWithCallSites {
 export interface GraphEdgeWithCallSites {
   source: string;
   target: string;
-  type: string;
+  type: EdgeType;
   callSites?: CallSiteRange[];
 }
 
@@ -31,7 +31,7 @@ export const parseEdgeRows = (
   return rows.map((row) => ({
     source: row.source,
     target: row.target,
-    type: row.type,
+    type: row.type as EdgeType,
     callSites: row.call_sites ? JSON.parse(row.call_sites) : undefined,
   }));
 };

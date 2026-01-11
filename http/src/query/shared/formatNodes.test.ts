@@ -8,6 +8,7 @@ describe(formatNodes.name, () => {
       {
         id: "src/a.ts:fnA",
         name: "fnA",
+        type: "Function",
         filePath: "src/fnA.ts",
         startLine: 1,
         endLine: 5,
@@ -23,6 +24,7 @@ describe(formatNodes.name, () => {
     const result = formatNodes(nodes, displayNames, new Set());
 
     expect(result.text).toBe(`fnA:
+  type: Function
   file: src/fnA.ts
   offset: 1, limit: 5
   snippet:
@@ -38,6 +40,7 @@ describe(formatNodes.name, () => {
       {
         id: "src/a.ts:fnA",
         name: "fnA",
+        type: "Function",
         filePath: "src/fnA.ts",
         startLine: 1,
         endLine: 5,
@@ -61,6 +64,7 @@ describe(formatNodes.name, () => {
       {
         id: "src/a.ts:fnA",
         name: "fnA",
+        type: "Function",
         filePath: "src/fnA.ts",
         startLine: 1,
         endLine: 10,
@@ -82,6 +86,7 @@ describe(formatNodes.name, () => {
       {
         id: "src/a.ts:fnA",
         name: "fnA",
+        type: "Function",
         filePath: "src/fnA.ts",
         startLine: 1,
         endLine: 5,
@@ -89,6 +94,7 @@ describe(formatNodes.name, () => {
       {
         id: "src/b.ts:fnB",
         name: "fnB",
+        type: "Function",
         filePath: "src/fnB.ts",
         startLine: 1,
         endLine: 5,
@@ -110,6 +116,7 @@ describe(formatNodes.name, () => {
       {
         id: "src/a.ts:fnA",
         name: "fnA",
+        type: "Function",
         filePath: "src/fnA.ts",
         startLine: 1,
         endLine: 5,
@@ -117,6 +124,7 @@ describe(formatNodes.name, () => {
       {
         id: "src/b.ts:fnB",
         name: "fnB",
+        type: "Function",
         filePath: "src/fnB.ts",
         startLine: 1,
         endLine: 5,
@@ -124,6 +132,7 @@ describe(formatNodes.name, () => {
       {
         id: "src/c.ts:fnC",
         name: "fnC",
+        type: "Function",
         filePath: "src/fnC.ts",
         startLine: 1,
         endLine: 5,
@@ -150,6 +159,7 @@ describe(formatNodes.name, () => {
       {
         id: "src/a.ts:fnA",
         name: "fnA",
+        type: "Function",
         filePath: "src/fnA.ts",
         startLine: 1,
         endLine: 5,

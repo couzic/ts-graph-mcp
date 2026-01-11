@@ -58,6 +58,7 @@ getUser --CALLS--> createUser
 ## Nodes
 
 createUser:
+  type: Function
   file: shared/src/common.ts
   offset: 18, limit: 8
   snippet:
@@ -104,6 +105,7 @@ listUsers --CALLS--> createUser
 ## Nodes
 
 getUser:
+  type: Function
   file: backend/src/userApi.ts
   offset: 15, limit: 7
   snippet:
@@ -116,6 +118,7 @@ getUser:
     21: }
 
 listUsers:
+  type: Function
   file: backend/src/userApi.ts
   offset: 23, limit: 6
   snippet:

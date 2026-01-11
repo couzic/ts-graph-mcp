@@ -21,6 +21,21 @@ import { pathsBetween } from "./query/paths-between/pathsBetween.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
+ * Parse max_nodes query parameter.
+ * Returns undefined if not provided or invalid.
+ */
+const parseMaxNodes = (value: unknown): number | undefined => {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const parsed = parseInt(value, 10);
+  if (isNaN(parsed) || parsed <= 0) {
+    return undefined;
+  }
+  return parsed;
+};
+
+/**
  * Index the project and return the open database connection.
  */
 const indexAndOpenDb = async (
@@ -219,26 +234,28 @@ export const startHttpServer = async (
   app.get("/api/graph/dependencies", (req, res) => {
     const filePath = req.query["file"] as string | undefined;
     const symbol = req.query["symbol"] as string | undefined;
+    const maxNodes = parseMaxNodes(req.query["max_nodes"]);
 
-    if (!filePath || !symbol) {
-      res.status(400).send("Missing required parameters: file, symbol");
+    if (!symbol) {
+      res.status(400).send("Missing required parameter: symbol");
       return;
     }
 
-    const result = dependenciesOf(db, projectRoot, filePath, symbol);
+    const result = dependenciesOf(db, projectRoot, filePath, symbol, { maxNodes });
     res.type("text/plain").send(result);
   });
 
   app.get("/api/graph/dependents", (req, res) => {
     const filePath = req.query["file"] as string | undefined;
     const symbol = req.query["symbol"] as string | undefined;
+    const maxNodes = parseMaxNodes(req.query["max_nodes"]);
 
-    if (!filePath || !symbol) {
-      res.status(400).send("Missing required parameters: file, symbol");
+    if (!symbol) {
+      res.status(400).send("Missing required parameter: symbol");
       return;
     }
 
-    const result = dependentsOf(db, projectRoot, filePath, symbol);
+    const result = dependentsOf(db, projectRoot, filePath, symbol, { maxNodes });
     res.type("text/plain").send(result);
   });
 
@@ -247,13 +264,10 @@ export const startHttpServer = async (
     const fromSymbol = req.query["from_symbol"] as string | undefined;
     const toFile = req.query["to_file"] as string | undefined;
     const toSymbol = req.query["to_symbol"] as string | undefined;
+    const maxNodes = parseMaxNodes(req.query["max_nodes"]);
 
-    if (!fromFile || !fromSymbol || !toFile || !toSymbol) {
-      res
-        .status(400)
-        .send(
-          "Missing required parameters: from_file, from_symbol, to_file, to_symbol",
-        );
+    if (!fromSymbol || !toSymbol) {
+      res.status(400).send("Missing required parameters: from_symbol, to_symbol");
       return;
     }
 
@@ -262,6 +276,7 @@ export const startHttpServer = async (
       projectRoot,
       { file_path: fromFile, symbol: fromSymbol },
       { file_path: toFile, symbol: toSymbol },
+      { maxNodes },
     );
     res.type("text/plain").send(result);
   });

@@ -1,4 +1,4 @@
-import type { CallSiteRange } from "../../db/Types.js";
+import type { CallSiteRange, EdgeType, NodeType } from "../../db/Types.js";
 
 /**
  * A line of code with its line number.
@@ -14,7 +14,7 @@ export interface LOC {
 export interface GraphEdge {
   source: string; // Node ID (e.g., "src/utils.ts:formatDate")
   target: string; // Node ID
-  type: string; // CALLS, REFERENCES, EXTENDS, IMPLEMENTS
+  type: EdgeType;
 }
 
 /**
@@ -23,6 +23,7 @@ export interface GraphEdge {
 export interface NodeInfo {
   id: string;
   name: string;
+  type: NodeType;
   filePath: string;
   startLine: number;
   endLine: number;
