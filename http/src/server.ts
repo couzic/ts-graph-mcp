@@ -1,3 +1,4 @@
+import type { OutputFormat } from "@ts-graph/shared";
 import type Database from "better-sqlite3";
 import express from "express";
 import { existsSync } from "node:fs";
@@ -33,6 +34,20 @@ const parseMaxNodes = (value: unknown): number | undefined => {
     return undefined;
   }
   return parsed;
+};
+
+/**
+ * Parse output format query parameter.
+ * Returns undefined for invalid values (defaults to MCP format in query functions).
+ */
+const parseOutputFormat = (value: unknown): OutputFormat | undefined => {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  if (value === "mcp" || value === "mermaid" || value === "md") {
+    return value;
+  }
+  return undefined;
 };
 
 /**
@@ -240,13 +255,14 @@ export const startHttpServer = async (
     const filePath = req.query["file"] as string | undefined;
     const symbol = req.query["symbol"] as string | undefined;
     const maxNodes = parseMaxNodes(req.query["max_nodes"]);
+    const format = parseOutputFormat(req.query["output"]);
 
     if (!symbol) {
       res.status(400).send("Missing required parameter: symbol");
       return;
     }
 
-    const result = dependenciesOf(db, projectRoot, filePath, symbol, { maxNodes });
+    const result = dependenciesOf(db, projectRoot, filePath, symbol, { maxNodes, format });
     res.type("text/plain").send(result);
   });
 
@@ -254,13 +270,14 @@ export const startHttpServer = async (
     const filePath = req.query["file"] as string | undefined;
     const symbol = req.query["symbol"] as string | undefined;
     const maxNodes = parseMaxNodes(req.query["max_nodes"]);
+    const format = parseOutputFormat(req.query["output"]);
 
     if (!symbol) {
       res.status(400).send("Missing required parameter: symbol");
       return;
     }
 
-    const result = dependentsOf(db, projectRoot, filePath, symbol, { maxNodes });
+    const result = dependentsOf(db, projectRoot, filePath, symbol, { maxNodes, format });
     res.type("text/plain").send(result);
   });
 
@@ -270,6 +287,7 @@ export const startHttpServer = async (
     const toFile = req.query["to_file"] as string | undefined;
     const toSymbol = req.query["to_symbol"] as string | undefined;
     const maxNodes = parseMaxNodes(req.query["max_nodes"]);
+    const format = parseOutputFormat(req.query["output"]);
 
     if (!fromSymbol || !toSymbol) {
       res.status(400).send("Missing required parameters: from_symbol, to_symbol");
@@ -281,7 +299,7 @@ export const startHttpServer = async (
       projectRoot,
       { file_path: fromFile, symbol: fromSymbol },
       { file_path: toFile, symbol: toSymbol },
-      { maxNodes },
+      { maxNodes, format },
     );
     res.type("text/plain").send(result);
   });

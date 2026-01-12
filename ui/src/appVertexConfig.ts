@@ -14,6 +14,7 @@ import { SymbolOption } from "./SymbolOption.js";
 
 
 export type OutputFormat = "mcp" | "mermaid" | "md";
+export type MermaidDirection = "LR" | "TD";
 
 const appSlice = createSlice({
   name: "app",
@@ -21,6 +22,7 @@ const appSlice = createSlice({
     startNode: null as SymbolOption | null,
     endNode: null as SymbolOption | null,
     outputFormat: "mcp" as OutputFormat,
+    mermaidDirection: "LR" as MermaidDirection,
     startSearchQuery: "",
     endSearchQuery: "",
   },
@@ -33,6 +35,9 @@ const appSlice = createSlice({
     },
     setOutputFormat: (state, action: PayloadAction<OutputFormat>) => {
       state.outputFormat = action.payload;
+    },
+    setMermaidDirection: (state, action: PayloadAction<MermaidDirection>) => {
+      state.mermaidDirection = action.payload;
     },
     setStartSearchQuery: (state, action: PayloadAction<string>) => {
       state.startSearchQuery = action.payload;

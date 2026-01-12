@@ -1,5 +1,5 @@
 import { Suspense, useSyncExternalStore } from "react";
-import { appVertex, graph, appActions, OutputFormat } from "./graph.js";
+import { appVertex, graph, appActions, OutputFormat, MermaidDirection } from "./graph.js";
 import { useVertexState } from "./useVertexState.js";
 import { SymbolSelect } from "./SymbolSelect.js";
 import { OutputTabs } from "./OutputTabs.js";
@@ -61,11 +61,12 @@ const HealthBadge = () => {
 
 const MainContent = () => {
   // Subscribe to sync slice state only - these never suspend
-  const { startNode, endNode, outputFormat, startSearchQuery, endSearchQuery } =
+  const { startNode, endNode, outputFormat, mermaidDirection, startSearchQuery, endSearchQuery } =
     useVertexState(appVertex, [
       "startNode",
       "endNode",
       "outputFormat",
+      "mermaidDirection",
       "startSearchQuery",
       "endSearchQuery",
     ]);
@@ -102,6 +103,10 @@ const MainContent = () => {
     graph.dispatch(appActions.setOutputFormat(format));
   };
 
+  const handleDirectionChange = (direction: MermaidDirection) => {
+    graph.dispatch(appActions.setMermaidDirection(direction));
+  };
+
   return (
     <main style={mainStyle}>
       <section style={selectorsStyle}>
@@ -126,13 +131,22 @@ const MainContent = () => {
       </section>
 
       <section style={outputSectionStyle}>
-        <OutputTabs
-          activeFormat={outputFormat}
-          onFormatChange={handleFormatChange}
-        />
+        <div style={outputControlsStyle}>
+          <OutputTabs
+            activeFormat={outputFormat}
+            onFormatChange={handleFormatChange}
+          />
+          {outputFormat === "mermaid" && (
+            <DirectionToggle
+              direction={mermaidDirection}
+              onDirectionChange={handleDirectionChange}
+            />
+          )}
+        </div>
         <Suspense fallback={<ResultsLoading />}>
           <ResultsContent
             outputFormat={outputFormat}
+            mermaidDirection={mermaidDirection}
             hasStartNode={startNode !== null}
             hasEndNode={endNode !== null}
           />
@@ -148,21 +162,45 @@ const ResultsLoading = () => (
 
 type ResultsContentProps = {
   outputFormat: OutputFormat;
+  mermaidDirection: MermaidDirection;
   hasStartNode: boolean;
   hasEndNode: boolean;
 };
 
-const ResultsContent = ({ outputFormat, hasStartNode, hasEndNode }: ResultsContentProps) => {
+const ResultsContent = ({ outputFormat, mermaidDirection, hasStartNode, hasEndNode }: ResultsContentProps) => {
   const { queryResult } = useVertexState(appVertex, ["queryResult"]);
   return (
     <QueryResults
       result={queryResult}
       format={outputFormat}
+      mermaidDirection={mermaidDirection}
       hasStartNode={hasStartNode}
       hasEndNode={hasEndNode}
     />
   );
 };
+
+type DirectionToggleProps = {
+  direction: MermaidDirection;
+  onDirectionChange: (direction: MermaidDirection) => void;
+};
+
+const DirectionToggle = ({ direction, onDirectionChange }: DirectionToggleProps) => (
+  <div style={directionToggleStyle}>
+    <button
+      style={direction === "LR" ? directionButtonActiveStyle : directionButtonStyle}
+      onClick={() => onDirectionChange("LR")}
+    >
+      LR
+    </button>
+    <button
+      style={direction === "TD" ? directionButtonActiveStyle : directionButtonStyle}
+      onClick={() => onDirectionChange("TD")}
+    >
+      TD
+    </button>
+  </div>
+);
 
 const appContainerStyle: React.CSSProperties = {
   display: "flex",
@@ -236,4 +274,33 @@ const resultsLoadingStyle: React.CSSProperties = {
   justifyContent: "center",
   flex: 1,
   color: "#666",
+};
+
+const outputControlsStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: "1rem",
+};
+
+const directionToggleStyle: React.CSSProperties = {
+  display: "flex",
+  gap: "0.25rem",
+};
+
+const directionButtonStyle: React.CSSProperties = {
+  padding: "0.25rem 0.5rem",
+  fontSize: "0.75rem",
+  fontWeight: 500,
+  backgroundColor: "transparent",
+  border: "1px solid #444",
+  borderRadius: "3px",
+  color: "#888",
+  cursor: "pointer",
+};
+
+const directionButtonActiveStyle: React.CSSProperties = {
+  ...directionButtonStyle,
+  backgroundColor: "#333",
+  borderColor: "#646cff",
+  color: "#fff",
 };

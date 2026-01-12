@@ -1,15 +1,24 @@
-import type { OutputFormat } from "./graph.js";
+import type { MermaidDirection, OutputFormat } from "./graph.js";
+import { MermaidRenderer } from "./MermaidRenderer.js";
 
 type QueryResultsProps = {
   result: string | null;
   format: OutputFormat;
+  mermaidDirection: MermaidDirection;
   hasStartNode: boolean;
   hasEndNode: boolean;
+};
+
+const queryTypeBySelection: Record<string, string> = {
+  "start-": "dependenciesOf",
+  "-end": "dependentsOf",
+  "start-end": "pathsBetween",
 };
 
 export const QueryResults = ({
   result,
   format,
+  mermaidDirection,
   hasStartNode,
   hasEndNode,
 }: QueryResultsProps) => {
@@ -24,14 +33,6 @@ export const QueryResults = ({
     );
   }
 
-  if (format === "mermaid") {
-    return (
-      <div style={emptyStateStyle}>
-        <p>Coming soon</p>
-      </div>
-    );
-  }
-
   if (!result) {
     return (
       <div style={emptyStateStyle}>
@@ -40,12 +41,7 @@ export const QueryResults = ({
     );
   }
 
-  const queryTypeKey = `${hasStartNode ? "start" : ""}-${hasEndNode ? "end" : ""}` as const;
-  const queryTypeBySelection: Record<string, string> = {
-    "start-": "dependenciesOf",
-    "-end": "dependentsOf",
-    "start-end": "pathsBetween",
-  };
+  const queryTypeKey = `${hasStartNode ? "start" : ""}-${hasEndNode ? "end" : ""}`;
   const queryType = queryTypeBySelection[queryTypeKey];
 
   return (
@@ -54,7 +50,11 @@ export const QueryResults = ({
         <span style={queryTypeStyle}>{queryType}</span>
         <span style={formatBadgeStyle}>{format.toUpperCase()}</span>
       </div>
-      <pre style={resultStyle}>{result}</pre>
+      {format === "mermaid" ? (
+        <MermaidRenderer syntax={result} direction={mermaidDirection} />
+      ) : (
+        <pre style={resultStyle}>{result}</pre>
+      )}
     </div>
   );
 };

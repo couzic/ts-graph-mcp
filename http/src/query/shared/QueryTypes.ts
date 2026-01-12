@@ -5,12 +5,16 @@
  * (snake_case) before conversion to domain types (camelCase).
  */
 
+import type { OutputFormat } from "@ts-graph/shared";
+
 /**
  * Options for query functions.
  */
 export interface QueryOptions {
   /** Maximum nodes to include in output. When exceeded, graph is truncated and Nodes section is skipped. */
   maxNodes?: number;
+  /** Output format: "mcp" (default), "mermaid", or "md" */
+  format?: OutputFormat;
 }
 
 /**

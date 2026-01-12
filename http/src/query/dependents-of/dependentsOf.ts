@@ -5,6 +5,7 @@ import {
 } from "../shared/classMethodFallback.js";
 import { collectNodeIds } from "../shared/collectNodeIds.js";
 import { EDGE_TYPES, MAX_DEPTH } from "../shared/constants.js";
+import { formatMermaid } from "../shared/formatMermaid.js";
 import {
   enrichNodesWithCallSites,
   formatToolOutput,
@@ -116,6 +117,12 @@ export function dependentsOf(
   if (edges.length === 0) {
     const noResults = "No dependents found.";
     return combinedMessage ? `${combinedMessage}\n\n${noResults}` : noResults;
+  }
+
+  // For mermaid format, skip node loading and return graph only
+  if (options.format === "mermaid") {
+    const output = formatMermaid(edges);
+    return combinedMessage ? `${combinedMessage}\n\n${output}` : output;
   }
 
   // Query node information

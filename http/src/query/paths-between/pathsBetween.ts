@@ -3,6 +3,7 @@ import {
   attemptClassMethodFallback,
   formatDisambiguationMessage,
 } from "../shared/classMethodFallback.js";
+import { formatMermaid } from "../shared/formatMermaid.js";
 import {
   type EdgeWithCallSites,
   enrichNodesWithCallSites,
@@ -137,6 +138,12 @@ export function pathsBetween(
     type: e.type,
     callSites: e.callSites,
   }));
+
+  // For mermaid format, skip node loading and return graph only
+  if (options.format === "mermaid") {
+    const output = formatMermaid(graphEdges);
+    return resolutionPrefix + output;
+  }
 
   // Get intermediate node IDs
   // When file_path was auto-resolved, include that endpoint so agent sees which file was resolved
