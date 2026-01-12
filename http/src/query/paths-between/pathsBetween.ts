@@ -1,5 +1,9 @@
 import type Database from "better-sqlite3";
 import {
+  attemptClassMethodFallback,
+  formatDisambiguationMessage,
+} from "../shared/classMethodFallback.js";
+import {
   type EdgeWithCallSites,
   enrichNodesWithCallSites,
   formatToolOutput,
@@ -41,8 +45,8 @@ export function pathsBetween(
     return toResolution.error;
   }
 
-  const fromId = fromResolution.nodeId;
-  const toId = toResolution.nodeId;
+  let fromId = fromResolution.nodeId;
+  let toId = toResolution.nodeId;
   const fromFilePathWasResolved = fromResolution.filePathWasResolved ?? false;
   const toFilePathWasResolved = toResolution.filePathWasResolved ?? false;
 
@@ -54,9 +58,55 @@ export function pathsBetween(
   if (toResolution.message) {
     resolutionMessages.push(toResolution.message);
   }
-  const resolutionPrefix = resolutionMessages.length > 0
-    ? resolutionMessages.join("\n") + "\n\n"
-    : "";
+
+  // Attempt class method fallback for 'from' symbol
+  const fromFallback = attemptClassMethodFallback(db, fromId);
+  if (fromFallback.type === "multiple-methods") {
+    const className = from.symbol.includes(".")
+      ? from.symbol.split(".")[0]!
+      : from.symbol;
+    const prefix =
+      resolutionMessages.length > 0
+        ? resolutionMessages.join("\n") + "\n\n"
+        : "";
+    return prefix + formatDisambiguationMessage(className, fromFallback.methods);
+  }
+  if (fromFallback.type === "single-method") {
+    const className = from.symbol.includes(".")
+      ? from.symbol.split(".")[0]!
+      : from.symbol;
+    resolutionMessages.push(
+      `Resolved '${className}' to ${className}.${fromFallback.methodName}`,
+    );
+    fromId = fromFallback.methodId;
+  }
+
+  // Attempt class method fallback for 'to' symbol
+  const toFallback = attemptClassMethodFallback(db, toId);
+  if (toFallback.type === "multiple-methods") {
+    const className = to.symbol.includes(".")
+      ? to.symbol.split(".")[0]!
+      : to.symbol;
+    const prefix =
+      resolutionMessages.length > 0
+        ? resolutionMessages.join("\n") + "\n\n"
+        : "";
+    return prefix + formatDisambiguationMessage(className, toFallback.methods);
+  }
+  if (toFallback.type === "single-method") {
+    const className = to.symbol.includes(".")
+      ? to.symbol.split(".")[0]!
+      : to.symbol;
+    resolutionMessages.push(
+      `Resolved '${className}' to ${className}.${toFallback.methodName}`,
+    );
+    toId = toFallback.methodId;
+  }
+
+  const resolutionPrefix =
+    resolutionMessages.length > 0
+      ? resolutionMessages.join("\n") + "\n\n"
+      : "";
 
   // Same-node check
   if (fromId === toId) {

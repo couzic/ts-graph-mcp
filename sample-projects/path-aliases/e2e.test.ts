@@ -92,7 +92,7 @@ describe("path-aliases E2E tests", () => {
       );
 
       // Auto-resolve finds the actual definition
-      expect(output).toContain("Resolved 'formatValue' to src/utils/helper.ts");
+      expect(output).toContain("Found 'formatValue' in src/utils/helper.ts");
     });
   });
 });

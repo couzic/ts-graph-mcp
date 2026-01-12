@@ -270,6 +270,36 @@ export class UserService {
 - New extractor `extractDecoratesEdges.ts`
 - Wire up in `extractEdges.ts`
 
+### UI: max_nodes Select Input
+**Impact: Low | Effort: Low**
+
+Add a select input in the Web UI to control the `max_nodes` parameter.
+
+**Current state:** The UI has no way to control output size. Users must use the API directly or MCP tools to specify `max_nodes`.
+
+**Implementation:**
+- Add a small select input next to the output format tabs
+- Options: 30, 50 (default), 100, 200
+- Pass selected value as query parameter to API calls
+
+---
+
+### UI: Persist Selected Options in Symbol Search
+**Impact: Low | Effort: Low**
+
+Keep previously selected symbols visible in the dropdown without requiring a new search.
+
+**Current state:** When a symbol is selected in the START or END dropdown, the options list is cleared. To see or change the selection, the user must search again.
+
+**Desired behavior:** Selected symbols should remain visible in the options list, allowing users to quickly switch between recent selections or see what they've already chosen.
+
+**Implementation:**
+- Track selected symbols in component state
+- Merge selected symbols with search results
+- Show selected symbols at the top of the dropdown (or in a separate "Recent" section)
+
+---
+
 ### CLI Flag Tests
 **Impact: Low | Effort: Low**
 
@@ -281,6 +311,22 @@ Add tests for the CLI flags introduced in the async startup refactoring:
 **Current state:** No tests. Flags are implemented in `src/mcp/main.ts`.
 
 **Test approach:** Integration tests that spawn the CLI and verify behavior (e.g., cache deleted on `--clean`, no server started on `--index`).
+
+### Fuzzy Symbol Suggestions
+**Impact: Medium | Effort: Low**
+
+Suggest similar symbol names when a symbol doesn't exist.
+
+**Current state:** When a symbol is not found anywhere in the graph, the error is minimal: `Symbol 'handleDependenciesOf' not found.`
+
+**Improvement:** Use fuzzy matching to suggest similar symbols: `Symbol 'handleDependenciesOf' not found. Did you mean: dependenciesOf?`
+
+This helps agents recover from typos or incorrect assumptions about naming conventions.
+
+**Implementation:**
+- Query all symbol names from nodes table
+- Fuzzy match against the requested symbol (Levenshtein distance or similar)
+- Return top 1-3 matches if similarity is above threshold
 
 ## Advanced Analysis
 

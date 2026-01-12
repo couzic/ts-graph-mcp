@@ -1,6 +1,6 @@
 import { ObservableResource, useObservableSuspense } from "observable-hooks";
 import { useMemo } from "react";
-import type { VertexFieldsDefinition, VertexInstance } from "verdux";
+import type { VertexInstance } from "verdux";
 
 /**
  * Hook to consume vertex state with Suspense support.
@@ -8,21 +8,22 @@ import type { VertexFieldsDefinition, VertexInstance } from "verdux";
  * @example
  * const { health } = useVertexState(healthVertex, ["health"]);
  */
-export const useVertexState = <
-  Fields extends VertexFieldsDefinition,
-  PickedFields extends keyof Fields
->(
-  vertex: VertexInstance<Fields, unknown>,
-  fields: PickedFields[]
-): Pick<Fields, PickedFields> => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const useVertexState = <T extends Record<string, any>>(
+  vertex: VertexInstance<any, any>,
+  fields: (keyof T)[]
+): T => {
   const resource = useMemo(
     () =>
-      new ObservableResource(vertex.pick(fields), (_) => _.status === "loaded"),
+      new ObservableResource(
+        vertex.pick(fields as string[]),
+        (state: { status: string }) => state.status === "loaded"
+      ),
     [vertex, ...fields]
   );
   const loadableState = useObservableSuspense(resource);
   if (loadableState.status !== "loaded") {
     throw new Error("Unexpected: status should be loaded after suspense");
   }
-  return loadableState.state;
+  return loadableState.state as T;
 };

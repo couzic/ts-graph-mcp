@@ -140,7 +140,7 @@ const formatTruncatedOutput = (
   const { text: graphSection } = formatGraph(truncatedEdges);
 
   // Build output with truncation message
-  const message = `(${totalNodeCount} nodes total — Nodes section skipped. Use max_nodes param for full details.)`;
+  const message = `(${maxNodes}/${totalNodeCount} nodes displayed. Nodes section skipped. Use max_nodes param for full output.)`;
 
   return `## Graph\n\n${graphSection}\n\n${message}`;
 };

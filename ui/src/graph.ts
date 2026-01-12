@@ -1,31 +1,13 @@
-import { createSlice } from "@reduxjs/toolkit";
-import { interval, startWith, switchMap } from "rxjs";
-import { ajax } from "rxjs/ajax";
-import { configureRootVertex, createGraph } from "verdux";
+import { createGraph } from "verdux";
+import { appVertexConfig } from "./appVertexConfig.js";
 
-export type HealthResponse = {
-  status: string;
-  ready: boolean;
-  indexed_files: number;
-};
-
-const healthSlice = createSlice({
-  name: "health",
-  initialState: {},
-  reducers: {},
-});
-
-const healthVertexConfig = configureRootVertex({
-  slice: healthSlice,
-}).load({
-  health: interval(3000).pipe(
-    startWith(0),
-    switchMap(() => ajax.getJSON<HealthResponse>("/health"))
-  ),
-});
+export type { SymbolOption } from "./SymbolOption.js";
+export type { OutputFormat } from "./appVertexConfig.js";
+export { appActions } from "./appVertexConfig.js";
+export type { HealthResponse } from "./ApiService.js";
 
 export const graph = createGraph({
-  vertices: [healthVertexConfig],
+  vertices: [appVertexConfig],
 });
 
-export const healthVertex = graph.getVertexInstance(healthVertexConfig);
+export const appVertex = graph.getVertexInstance(appVertexConfig);

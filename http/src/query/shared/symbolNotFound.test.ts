@@ -266,7 +266,7 @@ describe("resolveSymbol", () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.nodeId).toBe("src/entity.ts:User.getSituations");
-      expect(result.message).toContain("Resolved 'getSituations' to User.getSituations");
+      expect(result.message).toContain("Found 'getSituations' as User.getSituations in src/entity.ts");
     }
   });
 
@@ -285,7 +285,7 @@ describe("resolveSymbol", () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.nodeId).toBe("src/dateUtils.ts:formatDate");
-      expect(result.message).toContain("Resolved 'formatDate' to src/dateUtils.ts");
+      expect(result.message).toContain("Found 'formatDate' in src/dateUtils.ts");
     }
   });
 
@@ -368,7 +368,7 @@ describe("resolveSymbol", () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.nodeId).toBe("src/utils.ts:formatDate");
-      expect(result.message).toContain("Resolved 'formatDate' to src/utils.ts");
+      expect(result.message).toContain("Found 'formatDate' in src/utils.ts");
       expect(result.filePathWasResolved).toBe(true);
     }
   });

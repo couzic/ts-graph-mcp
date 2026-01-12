@@ -39,11 +39,11 @@ export type SymbolResolution =
  * @example
  * // With file_path - exact match
  * resolveSymbol(db, 'src/entity.ts', 'getSituations')
- * // { success: true, nodeId: 'src/entity.ts:User.getSituations', message: "Resolved 'getSituations' to User.getSituations" }
+ * // { success: true, nodeId: 'src/entity.ts:User.getSituations', message: "Found 'getSituations' as User.getSituations in src/entity.ts" }
  *
  * // Without file_path - auto-resolves if unique
  * resolveSymbol(db, undefined, 'formatDate')
- * // { success: true, nodeId: 'src/utils.ts:formatDate', message: "Resolved 'formatDate' to src/utils.ts", filePathWasResolved: true }
+ * // { success: true, nodeId: 'src/utils.ts:formatDate', message: "Found 'formatDate' in src/utils.ts", filePathWasResolved: true }
  *
  * // Multiple matches - disambiguation
  * resolveSymbol(db, undefined, 'getLines')
@@ -81,8 +81,8 @@ export const resolveSymbol = (
     const filePathWasResolved = !filePath;
     const message =
       match.name === symbol
-        ? `Resolved '${symbol}' to ${match.filePath}`
-        : `Resolved '${symbol}' to ${match.name} (${match.filePath})`;
+        ? `Found '${symbol}' in ${match.filePath}`
+        : `Found '${symbol}' as ${match.name} in ${match.filePath}`;
     return { success: true, nodeId: match.nodeId, message, filePathWasResolved };
   }
 

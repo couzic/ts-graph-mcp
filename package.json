@@ -1,6 +1,6 @@
 {
   "name": "ts-graph-mcp",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "TypeScript code graph with MCP server and Web UI for AI coding agents",
   "type": "module",
   "main": "dist/main.js",
@@ -15,7 +15,8 @@
   ],
   "scripts": {
     "prepublishOnly": "npm i && npm run check",
-    "check": "npm test && npm run test:e2e && npm run build && npm run lint:fix",
+    "check": "npm test && npm run test:e2e && npm run build && npm run lint:fix && npm run check:ui",
+    "check:ui": "cd ui && npm run typecheck",
     "start": "node dist/main.js",
     "start:mcp": "node dist/main.js --mcp",
     "prebuild": "rm -rf dist",
@@ -32,7 +33,8 @@
     "benchmark:call-chain": "npm run build && npx tsx benchmark/lib/setup.ts sample-projects/call-chain && npx tsx benchmark/lib/run.ts sample-projects/call-chain",
     "benchmark:layered-api": "npm run build && npx tsx benchmark/lib/setup.ts sample-projects/layered-api && npx tsx benchmark/lib/run.ts sample-projects/layered-api",
     "benchmark:monorepo": "npm run build && npx tsx benchmark/lib/setup.ts sample-projects/monorepo && npx tsx benchmark/lib/run.ts sample-projects/monorepo",
-    "benchmark:all": "npm run benchmark:call-chain && npm run benchmark:layered-api && npm run benchmark:mixed-types && npm run benchmark:monorepo"
+    "benchmark:clean-architecture": "npm run build && npx tsx benchmark/lib/setup.ts sample-projects/clean-architecture && npx tsx benchmark/lib/run.ts sample-projects/clean-architecture",
+    "benchmark:all": "npm run benchmark:call-chain && npm run benchmark:clean-architecture && npm run benchmark:layered-api && npm run benchmark:mixed-types && npm run benchmark:monorepo"
   },
   "keywords": [
     "typescript",

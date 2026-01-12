@@ -218,9 +218,13 @@ export const startHttpServer = async (
     }
 
     // Search symbols by name (case-insensitive prefix match)
+    // Extract full symbol path from node ID (format: filePath:symbolPath)
     const results = db
       .prepare<[string], { file_path: string; symbol: string; type: string }>(
-        `SELECT file_path, name as symbol, type FROM nodes
+        `SELECT file_path,
+                SUBSTR(id, INSTR(id, ':') + 1) as symbol,
+                type
+         FROM nodes
          WHERE name LIKE ? || '%' COLLATE NOCASE
          AND type != 'File'
          ORDER BY name

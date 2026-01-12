@@ -143,8 +143,7 @@ fnA --CALLS--> fnB`);
 
       expect(result).toContain("## Graph");
       expect(result).not.toContain("## Nodes");
-      expect(result).toContain("4 nodes total");
-      expect(result).toContain("Nodes section skipped");
+      expect(result).toContain("(2/4 nodes displayed. Nodes section skipped. Use max_nodes param for full output.)");
     });
 
     it("truncates graph to first maxNodes nodes in traversal order", () => {
@@ -169,7 +168,7 @@ fnA --CALLS--> fnB`);
       // D and E should not appear in the truncated graph
       expect(result).not.toContain("fnD");
       expect(result).not.toContain("fnE");
-      expect(result).toContain("5 nodes total");
+      expect(result).toContain("(3/5 nodes displayed. Nodes section skipped. Use max_nodes param for full output.)");
     });
 
     it("uses default maxNodes of 50 when not specified", () => {
@@ -194,7 +193,7 @@ fnA --CALLS--> fnB`);
 
       // 51 nodes > 50 default, so should be truncated
       expect(result).not.toContain("## Nodes");
-      expect(result).toContain("51 nodes total");
+      expect(result).toContain("(50/51 nodes displayed. Nodes section skipped. Use max_nodes param for full output.)");
     });
   });
 

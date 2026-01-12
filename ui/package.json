@@ -4,7 +4,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build"
+    "build": "vite build",
+    "test": "vitest run",
+    "typecheck": "tsc"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.0.0",
@@ -12,6 +14,7 @@
     "observable-hooks": "^4.2.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-select": "^5.8.0",
     "rxjs": "^7.8.0",
     "verdux": "^0.6.6"
   },

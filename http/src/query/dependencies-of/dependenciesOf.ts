@@ -1,4 +1,8 @@
 import type Database from "better-sqlite3";
+import {
+  attemptClassMethodFallback,
+  formatDisambiguationMessage,
+} from "../shared/classMethodFallback.js";
 import { collectNodeIds } from "../shared/collectNodeIds.js";
 import { EDGE_TYPES, MAX_DEPTH } from "../shared/constants.js";
 import {
@@ -77,16 +81,46 @@ export function dependenciesOf(
   const filePathWasResolved = resolution.filePathWasResolved ?? false;
 
   // Query edges
-  const edges = queryDependencyEdges(db, nodeId);
+  let edges = queryDependencyEdges(db, nodeId);
+  let currentNodeId = nodeId;
+  let fallbackMessage: string | undefined;
+
+  // If no dependencies found, attempt class method fallback
+  if (edges.length === 0) {
+    const fallback = attemptClassMethodFallback(db, nodeId);
+
+    if (fallback.type === "single-method") {
+      // Auto-resolve to the single method with dependencies
+      const className = symbol.includes(".") ? symbol.split(".")[0]! : symbol;
+      fallbackMessage = `Resolved '${className}' to ${className}.${fallback.methodName}`;
+      currentNodeId = fallback.methodId;
+      edges = queryDependencyEdges(db, currentNodeId);
+    } else if (fallback.type === "multiple-methods") {
+      // Return disambiguation message
+      const className = symbol.includes(".") ? symbol.split(".")[0]! : symbol;
+      const disambiguation = formatDisambiguationMessage(
+        className,
+        fallback.methods,
+      );
+      return resolutionMessage
+        ? `${resolutionMessage}\n\n${disambiguation}`
+        : disambiguation;
+    }
+  }
+
+  // Combine resolution messages
+  const combinedMessage = [resolutionMessage, fallbackMessage]
+    .filter(Boolean)
+    .join("\n\n");
 
   if (edges.length === 0) {
     const noResults = "No dependencies found.";
-    return resolutionMessage ? `${resolutionMessage}\n\n${noResults}` : noResults;
+    return combinedMessage ? `${combinedMessage}\n\n${noResults}` : noResults;
   }
 
   // Query node information
   // When file_path was auto-resolved, include input node so agent sees which file was resolved
-  const nodeIds = collectNodeIds(edges, nodeId);
+  const nodeIds = collectNodeIds(edges, currentNodeId);
   if (filePathWasResolved) {
     nodeIds.push(nodeId);
   }
@@ -104,7 +138,9 @@ export function dependenciesOf(
   );
 
   // Exclude input node from output unless file_path was auto-resolved
-  const excludeNodeIds = filePathWasResolved ? new Set<string>() : new Set([nodeId]);
+  const excludeNodeIds = filePathWasResolved
+    ? new Set<string>()
+    : new Set([currentNodeId]);
 
   // Format output (pure)
   const output = formatToolOutput({
@@ -115,5 +151,5 @@ export function dependenciesOf(
   });
 
   // Prepend resolution message if symbol was auto-resolved
-  return resolutionMessage ? `${resolutionMessage}\n\n${output}` : output;
+  return combinedMessage ? `${combinedMessage}\n\n${output}` : output;
 }

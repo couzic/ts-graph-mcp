@@ -284,7 +284,7 @@ When over `max_nodes` limit (51+ nodes):
 fnA --CALLS--> fnB --CALLS--> fnC
 ...
 
-(73 nodes total — Nodes section skipped. Use max_nodes param for full details.)
+(50/73 nodes displayed. Nodes section skipped. Use max_nodes param for full output.)
 ```
 
 ### Design Philosophy
