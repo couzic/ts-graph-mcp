@@ -407,6 +407,25 @@ describe("resolveSymbol", () => {
     }
   });
 
+  it("resolves fully-qualified method name (ClassName.methodName)", async () => {
+    const filePath = "src/entity.ts";
+    const sourceFile = project.createSourceFile(
+      filePath,
+      `export class User {
+        getSituations() { return []; }
+      }`,
+    );
+    await writer.addNodes(extractNodes(sourceFile, createContext(filePath)));
+
+    // Search with fully-qualified method name (as suggested by disambiguation message)
+    const result = resolveSymbol(db, undefined, "User.getSituations");
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.nodeId).toBe("src/entity.ts:User.getSituations");
+    }
+  });
+
   it("sets filePathWasResolved to false when file_path is provided", async () => {
     const filePath = "src/utils.ts";
     const sourceFile = project.createSourceFile(

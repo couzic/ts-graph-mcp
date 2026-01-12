@@ -96,24 +96,29 @@ export const resolveSymbol = (
 
 /**
  * Find all symbols matching the given name.
- * Searches for exact matches and method matches (*.symbol).
+ * Searches for exact matches, method matches (*.symbol), and symbol path matches.
  */
 const findSymbolMatches = (
   db: Database.Database,
   symbol: string,
 ): SymbolMatch[] => {
-  // Search for exact name match OR method match (name ends with .symbol)
+  // Search for:
+  // 1. Exact name match
+  // 2. Method match (name ends with .symbol)
+  // 3. Symbol path match (extract from ID: "file:ClassName.method" -> "ClassName.method")
   const rows = db
     .prepare<
-      [string, string],
+      [string, string, string],
       { id: string; name: string; file_path: string; type: NodeType }
     >(
       `SELECT id, name, file_path, type FROM nodes
-       WHERE (LOWER(name) = LOWER(?) OR LOWER(name) LIKE '%.' || LOWER(?))
+       WHERE (LOWER(name) = LOWER(?)
+              OR LOWER(name) LIKE '%.' || LOWER(?)
+              OR LOWER(SUBSTR(id, INSTR(id, ':') + 1)) = LOWER(?))
        AND type != 'File'
        LIMIT 10`,
     )
-    .all(symbol, symbol);
+    .all(symbol, symbol, symbol);
 
   return rows.map((r) => {
     // Extract full symbol name from nodeId (format: filePath:symbolPath)

@@ -186,7 +186,7 @@ output includes truncation indicators when applicable.
 
 ### Missing Fully Qualified Symbol Name Column
 
-**Impact:** Low (maintainability)
+**Impact:** Low (performance optimization)
 
 **Problem:** The `nodes` table stores `name` (short name like `errors`) but not the fully qualified symbol path (like `IndexResult.errors`). To get the full path, we extract it from the node ID using `SUBSTR(id, INSTR(id, ':') + 1)`.
 
@@ -195,9 +195,9 @@ output includes truncation indicators when applicable.
 - `name` column: `errors`
 - Needed for symbol resolution: `IndexResult.errors`
 
-This shows up in `/api/symbols` endpoint where we need to return the full symbol path for proper disambiguation.
+**Current workaround:** Both `findSymbolMatches()` in `symbolNotFound.ts` and `/api/symbols` endpoint use `SUBSTR(id, INSTR(id, ':') + 1)` to extract the symbol path at query time. This works correctly but computes the value on every query.
 
-**Fix approach:** Add a `symbol_path` column to the nodes table that stores the fully qualified name (`ClassName.methodName`). This would:
+**Future optimization:** Add a `symbol_path` column to the nodes table that stores the fully qualified name (`ClassName.methodName`). This would:
 1. Simplify queries (no string manipulation)
 2. Enable proper indexing for symbol lookups
 3. Make the data model more explicit

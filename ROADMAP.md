@@ -284,6 +284,22 @@ Add a select input in the Web UI to control the `max_nodes` parameter.
 
 ---
 
+### UI: Swap Button for Node Selectors
+**Impact: Low | Effort: Low**
+
+Add a swap button between the START and END node selectors.
+
+**Current state:** To swap the selected nodes, users must manually clear and re-select each one.
+
+**Desired behavior:** A button with bidirectional arrows (⇄) between the two selectors. Clicking it swaps the START and END selections instantly.
+
+**Implementation:**
+- Add button between the two select inputs
+- On click, swap the values in component state
+- Disable button when fewer than 2 nodes are selected
+
+---
+
 ### UI: Persist Selected Options in Symbol Search
 **Impact: Low | Effort: Low**
 
@@ -297,6 +313,34 @@ Keep previously selected symbols visible in the dropdown without requiring a new
 - Track selected symbols in component state
 - Merge selected symbols with search results
 - Show selected symbols at the top of the dropdown (or in a separate "Recent" section)
+
+---
+
+### Indexing Progress Indicator
+**Impact: Medium | Effort: Low**
+
+Show progress feedback when indexing large monorepos.
+
+**The Problem:**
+When launching the HTTP server on a large codebase, initial indexing can take significant time with no feedback to the user. The terminal appears frozen, leaving users uncertain whether the process is working or stuck.
+
+**Proposed solution:**
+Display progress in the terminal during indexing:
+
+```
+Indexing... [████████░░░░░░░░] 142/350 files (40%)
+```
+
+Or simpler:
+```
+Indexing package "backend"... 142/350 files
+```
+
+**Implementation:**
+- Count total files to index before starting
+- Track files processed during indexing
+- Update terminal output (using `\r` for in-place updates or a progress library)
+- Show package name for multi-package monorepos
 
 ---
 

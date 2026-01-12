@@ -217,20 +217,21 @@ export const startHttpServer = async (
       return;
     }
 
-    // Search symbols by name (case-insensitive prefix match)
-    // Extract full symbol path from node ID (format: filePath:symbolPath)
+    // Search symbols by name OR symbol path (case-insensitive prefix match)
+    // This allows finding methods by class name (e.g., "User" finds "User.getSituations")
     const results = db
-      .prepare<[string], { file_path: string; symbol: string; type: string }>(
+      .prepare<[string, string], { file_path: string; symbol: string; type: string }>(
         `SELECT file_path,
                 SUBSTR(id, INSTR(id, ':') + 1) as symbol,
                 type
          FROM nodes
-         WHERE name LIKE ? || '%' COLLATE NOCASE
+         WHERE (name LIKE ? || '%' COLLATE NOCASE
+                OR SUBSTR(id, INSTR(id, ':') + 1) LIKE ? || '%' COLLATE NOCASE)
          AND type != 'File'
          ORDER BY name
          LIMIT 50`,
       )
-      .all(query);
+      .all(query, query);
 
     res.json(results);
   });
