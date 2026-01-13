@@ -128,7 +128,7 @@ export const SymbolSelect = ({
   };
 
   return (
-    <div style={{ minWidth: "300px" }}>
+    <div style={{ flex: 1, minWidth: "200px" }}>
       <label
         style={{
           display: "block",

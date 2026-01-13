@@ -81,4 +81,43 @@ describe("formatMermaid", () => {
 
     expect(result).toBe(expected);
   });
+
+  describe("maxNodes truncation", () => {
+    it("truncates graph when node count exceeds maxNodes", () => {
+      // Create a chain: A -> B -> C -> D -> E (5 nodes)
+      const edges: GraphEdge[] = [
+        { source: "src/a.ts:fnA", target: "src/b.ts:fnB", type: "CALLS" },
+        { source: "src/b.ts:fnB", target: "src/c.ts:fnC", type: "CALLS" },
+        { source: "src/c.ts:fnC", target: "src/d.ts:fnD", type: "CALLS" },
+        { source: "src/d.ts:fnD", target: "src/e.ts:fnE", type: "CALLS" },
+      ];
+
+      const result = formatMermaid(edges, { maxNodes: 3 });
+
+      // Should only include first 3 nodes (A, B, C) and edges between them
+      expect(result).toContain("fnA");
+      expect(result).toContain("fnB");
+      expect(result).toContain("fnC");
+      expect(result).not.toContain("fnD");
+      expect(result).not.toContain("fnE");
+      // Should include truncation comment
+      expect(result).toContain("%% (3/5 nodes displayed)");
+    });
+
+    it("does not truncate when node count is within maxNodes", () => {
+      const edges: GraphEdge[] = [
+        { source: "src/a.ts:fnA", target: "src/b.ts:fnB", type: "CALLS" },
+        { source: "src/b.ts:fnB", target: "src/c.ts:fnC", type: "CALLS" },
+      ];
+
+      const result = formatMermaid(edges, { maxNodes: 10 });
+
+      // All nodes should be present
+      expect(result).toContain("fnA");
+      expect(result).toContain("fnB");
+      expect(result).toContain("fnC");
+      // No truncation message
+      expect(result).not.toContain("%%");
+    });
+  });
 });

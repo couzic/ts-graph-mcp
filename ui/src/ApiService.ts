@@ -14,16 +14,16 @@ export const createApiService = () => ({
   searchSymbols: (query: string) =>
     ajax.getJSON<SymbolOption[]>(`/api/symbols?q=${encodeURIComponent(query)}`),
 
-  getDependencies: (file: string, symbol: string, output: string) => {
-    const params = new URLSearchParams({ file, symbol, output });
+  getDependencies: (file: string, symbol: string, output: string, maxNodes: number) => {
+    const params = new URLSearchParams({ file, symbol, output, max_nodes: String(maxNodes) });
     return ajax<string>({
       url: `/api/graph/dependencies?${params}`,
       responseType: "text",
     }).pipe(map((r) => r.response));
   },
 
-  getDependents: (file: string, symbol: string, output: string) => {
-    const params = new URLSearchParams({ file, symbol, output });
+  getDependents: (file: string, symbol: string, output: string, maxNodes: number) => {
+    const params = new URLSearchParams({ file, symbol, output, max_nodes: String(maxNodes) });
     return ajax<string>({
       url: `/api/graph/dependents?${params}`,
       responseType: "text",
@@ -35,7 +35,8 @@ export const createApiService = () => ({
     fromSymbol: string,
     toFile: string,
     toSymbol: string,
-    output: string
+    output: string,
+    maxNodes: number
   ) => {
     const params = new URLSearchParams({
       from_file: fromFile,
@@ -43,6 +44,7 @@ export const createApiService = () => ({
       to_file: toFile,
       to_symbol: toSymbol,
       output,
+      max_nodes: String(maxNodes),
     });
     return ajax<string>({
       url: `/api/graph/paths?${params}`,

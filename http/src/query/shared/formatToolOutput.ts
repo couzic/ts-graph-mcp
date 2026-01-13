@@ -5,7 +5,7 @@ import { formatNodes } from "./formatNodes.js";
 import type { GraphEdge, NodeInfo } from "./GraphTypes.js";
 
 /** Default maximum nodes before truncation */
-const DEFAULT_MAX_NODES = 50;
+export const DEFAULT_MAX_NODES = 50;
 
 /** Threshold above which snippets are omitted (too much noise) */
 const NO_SNIPPET_THRESHOLD = 30;
@@ -117,6 +117,31 @@ const formatFullOutput = (
 };
 
 /**
+ * Truncate edges to include only the first maxNodes nodes.
+ * Uses formatGraph's traversal order to determine which nodes to keep.
+ *
+ * @example
+ * // Given edges: A -> B -> C -> D -> E and maxNodes: 3
+ * // Returns edges between A, B, C only (first 3 in traversal order)
+ *
+ * @param edges - All edges in the graph
+ * @param maxNodes - Maximum number of nodes to keep
+ * @returns Truncated edges and total node count
+ */
+export const truncateEdges = <T extends GraphEdge>(
+  edges: T[],
+  maxNodes: number,
+): { truncatedEdges: T[]; totalNodeCount: number } => {
+  const { nodeOrder } = formatGraph(edges);
+  const totalNodeCount = nodeOrder.length;
+  const keptNodes = new Set(nodeOrder.slice(0, maxNodes));
+  const truncatedEdges = edges.filter(
+    (e) => keptNodes.has(e.source) && keptNodes.has(e.target),
+  );
+  return { truncatedEdges, totalNodeCount };
+};
+
+/**
  * Format truncated output with Graph section only.
  * Truncates to first maxNodes nodes in BFS traversal order.
  */
@@ -125,16 +150,7 @@ const formatTruncatedOutput = (
   totalNodeCount: number,
   maxNodes: number,
 ): string => {
-  // First pass: get node traversal order from formatGraph
-  const { nodeOrder } = formatGraph(edges);
-
-  // Keep only first maxNodes nodes
-  const keptNodes = new Set(nodeOrder.slice(0, maxNodes));
-
-  // Filter edges to only those where both endpoints are in kept set
-  const truncatedEdges = edges.filter(
-    (e) => keptNodes.has(e.source) && keptNodes.has(e.target),
-  );
+  const { truncatedEdges } = truncateEdges(edges, maxNodes);
 
   // Format truncated graph
   const { text: graphSection } = formatGraph(truncatedEdges);

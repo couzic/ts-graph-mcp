@@ -121,7 +121,7 @@ export function dependentsOf(
 
   // For mermaid format, skip node loading and return graph only
   if (options.format === "mermaid") {
-    const output = formatMermaid(edges);
+    const output = formatMermaid(edges, { maxNodes: options.maxNodes });
     return combinedMessage ? `${combinedMessage}\n\n${output}` : output;
   }
 

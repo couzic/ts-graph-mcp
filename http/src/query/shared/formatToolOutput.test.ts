@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
+import type { GraphEdge } from "./GraphTypes.js";
 import type { FormatInput } from "./formatToolOutput.js";
-import { formatToolOutput } from "./formatToolOutput.js";
+import { formatToolOutput, truncateEdges } from "./formatToolOutput.js";
 
 describe("formatToolOutput", () => {
   it("formats a simple call chain with node snippets", () => {
@@ -195,6 +196,7 @@ fnA --CALLS--> fnB`);
       expect(result).not.toContain("## Nodes");
       expect(result).toContain("(50/51 nodes displayed. Nodes section skipped. Use max_nodes param for full output.)");
     });
+
   });
 
   describe("snippet threshold", () => {
@@ -326,5 +328,53 @@ fnA --CALLS--> fnB`);
       expect(result).toContain("fn1:");
       expect(result).not.toContain("snippet:");
     });
+  });
+});
+
+describe("truncateEdges", () => {
+  it("returns all edges when node count is within maxNodes", () => {
+    const edges: GraphEdge[] = [
+      { source: "src/a.ts:fnA", target: "src/b.ts:fnB", type: "CALLS" },
+      { source: "src/b.ts:fnB", target: "src/c.ts:fnC", type: "CALLS" },
+    ];
+
+    const result = truncateEdges(edges, 10);
+
+    expect(result.truncatedEdges).toEqual(edges);
+    expect(result.totalNodeCount).toBe(3);
+  });
+
+  it("truncates edges to first maxNodes in traversal order", () => {
+    // Chain: A -> B -> C -> D -> E
+    const edges: GraphEdge[] = [
+      { source: "src/a.ts:fnA", target: "src/b.ts:fnB", type: "CALLS" },
+      { source: "src/b.ts:fnB", target: "src/c.ts:fnC", type: "CALLS" },
+      { source: "src/c.ts:fnC", target: "src/d.ts:fnD", type: "CALLS" },
+      { source: "src/d.ts:fnD", target: "src/e.ts:fnE", type: "CALLS" },
+    ];
+
+    const result = truncateEdges(edges, 3);
+
+    // Should only include edges where BOTH nodes are in first 3 (A, B, C)
+    expect(result.truncatedEdges).toEqual([
+      { source: "src/a.ts:fnA", target: "src/b.ts:fnB", type: "CALLS" },
+      { source: "src/b.ts:fnB", target: "src/c.ts:fnC", type: "CALLS" },
+    ]);
+    expect(result.totalNodeCount).toBe(5);
+  });
+
+  it("handles branching graphs", () => {
+    // Tree: A -> B, A -> C, B -> D
+    const edges: GraphEdge[] = [
+      { source: "src/a.ts:fnA", target: "src/b.ts:fnB", type: "CALLS" },
+      { source: "src/a.ts:fnA", target: "src/c.ts:fnC", type: "CALLS" },
+      { source: "src/b.ts:fnB", target: "src/d.ts:fnD", type: "CALLS" },
+    ];
+
+    const result = truncateEdges(edges, 3);
+
+    // Traversal order depends on formatGraph, but should keep first 3 nodes
+    expect(result.totalNodeCount).toBe(4);
+    expect(result.truncatedEdges.length).toBeLessThanOrEqual(edges.length);
   });
 });

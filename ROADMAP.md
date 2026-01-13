@@ -284,22 +284,6 @@ Add a select input in the Web UI to control the `max_nodes` parameter.
 
 ---
 
-### UI: Swap Button for Node Selectors
-**Impact: Low | Effort: Low**
-
-Add a swap button between the START and END node selectors.
-
-**Current state:** To swap the selected nodes, users must manually clear and re-select each one.
-
-**Desired behavior:** A button with bidirectional arrows (⇄) between the two selectors. Clicking it swaps the START and END selections instantly.
-
-**Implementation:**
-- Add button between the two select inputs
-- On click, swap the values in component state
-- Disable button when fewer than 2 nodes are selected
-
----
-
 ### UI: Persist Selected Options in Symbol Search
 **Impact: Low | Effort: Low**
 

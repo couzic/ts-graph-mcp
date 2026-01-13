@@ -141,7 +141,7 @@ export function pathsBetween(
 
   // For mermaid format, skip node loading and return graph only
   if (options.format === "mermaid") {
-    const output = formatMermaid(graphEdges);
+    const output = formatMermaid(graphEdges, { maxNodes: options.maxNodes });
     return resolutionPrefix + output;
   }
 

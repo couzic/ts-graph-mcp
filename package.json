@@ -1,6 +1,6 @@
 {
   "name": "ts-graph-mcp",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "TypeScript code graph with MCP server and Web UI for AI coding agents",
   "type": "module",
   "main": "dist/main.js",

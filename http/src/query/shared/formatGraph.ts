@@ -157,5 +157,18 @@ export const formatGraph = (edges: GraphEdge[]): FormatGraphResult => {
     }
   }
 
+  // Process any remaining unvisited nodes (handles disconnected cycles)
+  for (const nodeId of allNodeIds) {
+    if (!visitedNodes.has(nodeId)) {
+      const outs = outgoing.get(nodeId) ?? [];
+      if (outs.some((e) => !visitedEdges.has(edgeKey(e)))) {
+        buildChain(nodeId);
+      } else {
+        // Node has no unvisited outgoing edges, just track it
+        trackNode(nodeId);
+      }
+    }
+  }
+
   return { text: lines.join("\n"), nodeOrder };
 };

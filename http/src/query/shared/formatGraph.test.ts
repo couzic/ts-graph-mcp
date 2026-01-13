@@ -69,4 +69,29 @@ root --CALLS--> right --CALLS--> rightChild`);
     expect(result.text).toBe(`Child --EXTENDS--> Parent
 Child --IMPLEMENTS--> IFace`);
   });
+
+  it("includes all nodes in nodeOrder even when cycles exist alongside roots", () => {
+    // Graph structure:
+    // A -> B (linear chain, A is a root)
+    // C -> D -> C (cycle - neither C nor D is a root since both have incoming edges)
+    //
+    // Bug: DFS only starts from roots (nodes with no incoming edges).
+    // The cycle C <-> D has no root, so it's never visited.
+    const result = formatGraph([
+      { source: "src/a.ts:fnA", target: "src/b.ts:fnB", type: "CALLS" },
+      { source: "src/c.ts:fnC", target: "src/d.ts:fnD", type: "CALLS" },
+      { source: "src/d.ts:fnD", target: "src/c.ts:fnC", type: "CALLS" },
+    ]);
+
+    // All 4 nodes should be in nodeOrder
+    const allNodes = new Set([
+      "src/a.ts:fnA",
+      "src/b.ts:fnB",
+      "src/c.ts:fnC",
+      "src/d.ts:fnD",
+    ]);
+    expect(result.nodeOrder.length).toBe(allNodes.size);
+    expect(new Set(result.nodeOrder)).toEqual(allNodes);
+  });
+
 });

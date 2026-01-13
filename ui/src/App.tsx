@@ -61,12 +61,13 @@ const HealthBadge = () => {
 
 const MainContent = () => {
   // Subscribe to sync slice state only - these never suspend
-  const { startNode, endNode, outputFormat, mermaidDirection, startSearchQuery, endSearchQuery } =
+  const { startNode, endNode, outputFormat, mermaidDirection, maxNodes, startSearchQuery, endSearchQuery } =
     useVertexState(appVertex, [
       "startNode",
       "endNode",
       "outputFormat",
       "mermaidDirection",
+      "maxNodes",
       "startSearchQuery",
       "endSearchQuery",
     ]);
@@ -99,12 +100,20 @@ const MainContent = () => {
     graph.dispatch(appActions.clearEndNode());
   };
 
+  const handleSwap = () => {
+    graph.dispatch(appActions.swapNodes());
+  };
+
   const handleFormatChange = (format: OutputFormat) => {
     graph.dispatch(appActions.setOutputFormat(format));
   };
 
   const handleDirectionChange = (direction: MermaidDirection) => {
     graph.dispatch(appActions.setMermaidDirection(direction));
+  };
+
+  const handleMaxNodesChange = (value: number) => {
+    graph.dispatch(appActions.setMaxNodes(value));
   };
 
   return (
@@ -119,6 +128,14 @@ const MainContent = () => {
           onSelect={handleStartSelect}
           onClear={handleClearStart}
         />
+        <button
+          style={swapButtonStyle}
+          onClick={handleSwap}
+          disabled={startNode === null && endNode === null}
+          title="Swap START and END nodes"
+        >
+          ⇄
+        </button>
         <SymbolSelect
           label="END node"
           value={endNode}
@@ -135,6 +152,8 @@ const MainContent = () => {
           <OutputTabs
             activeFormat={outputFormat}
             onFormatChange={handleFormatChange}
+            maxNodes={maxNodes}
+            onMaxNodesChange={handleMaxNodesChange}
           />
           {outputFormat === "mermaid" && (
             <DirectionToggle
@@ -303,4 +322,20 @@ const directionButtonActiveStyle: React.CSSProperties = {
   backgroundColor: "#333",
   borderColor: "#646cff",
   color: "#fff",
+};
+
+const swapButtonStyle: React.CSSProperties = {
+  height: 40,
+  width: 40,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontSize: "1.25rem",
+  fontWeight: 500,
+  backgroundColor: "transparent",
+  border: "1px solid #444",
+  borderRadius: "4px",
+  color: "#888",
+  cursor: "pointer",
+  alignSelf: "flex-end",
 };

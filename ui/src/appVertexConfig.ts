@@ -16,28 +16,68 @@ import { SymbolOption } from "./SymbolOption.js";
 export type OutputFormat = "mcp" | "mermaid" | "md";
 export type MermaidDirection = "LR" | "TD";
 
+type AppState = {
+  startNode: SymbolOption | null;
+  endNode: SymbolOption | null;
+  outputFormat: OutputFormat;
+  mermaidDirection: MermaidDirection;
+  maxNodes: number;
+  startSearchQuery: string;
+  endSearchQuery: string;
+  selectionHistory: SymbolOption[];
+};
+
+const addToHistory = (state: AppState, option: SymbolOption) => {
+  const filtered = state.selectionHistory.filter(
+    (h) => h.file_path !== option.file_path || h.symbol !== option.symbol
+  );
+  state.selectionHistory = [option, ...filtered].slice(0, 12);
+};
+
+const filterOutSelected = (
+  history: SymbolOption[],
+  startNode: SymbolOption | null,
+  endNode: SymbolOption | null
+): SymbolOption[] =>
+  history.filter(
+    (h) =>
+      !(startNode && h.file_path === startNode.file_path && h.symbol === startNode.symbol) &&
+      !(endNode && h.file_path === endNode.file_path && h.symbol === endNode.symbol)
+  );
+
 const appSlice = createSlice({
   name: "app",
   initialState: {
-    startNode: null as SymbolOption | null,
-    endNode: null as SymbolOption | null,
-    outputFormat: "mcp" as OutputFormat,
-    mermaidDirection: "LR" as MermaidDirection,
+    startNode: null,
+    endNode: null,
+    outputFormat: "mcp",
+    mermaidDirection: "LR",
+    maxNodes: 50,
     startSearchQuery: "",
     endSearchQuery: "",
-  },
+    selectionHistory: [],
+  } as AppState,
   reducers: {
     setStartNode: (state, action: PayloadAction<SymbolOption | null>) => {
       state.startNode = action.payload;
+      if (action.payload) {
+        addToHistory(state, action.payload);
+      }
     },
     setEndNode: (state, action: PayloadAction<SymbolOption | null>) => {
       state.endNode = action.payload;
+      if (action.payload) {
+        addToHistory(state, action.payload);
+      }
     },
     setOutputFormat: (state, action: PayloadAction<OutputFormat>) => {
       state.outputFormat = action.payload;
     },
     setMermaidDirection: (state, action: PayloadAction<MermaidDirection>) => {
       state.mermaidDirection = action.payload;
+    },
+    setMaxNodes: (state, action: PayloadAction<number>) => {
+      state.maxNodes = action.payload;
     },
     setStartSearchQuery: (state, action: PayloadAction<string>) => {
       state.startSearchQuery = action.payload;
@@ -50,6 +90,11 @@ const appSlice = createSlice({
     },
     clearEndNode: (state) => {
       state.endNode = null;
+    },
+    swapNodes: (state) => {
+      const temp = state.startNode;
+      state.startNode = state.endNode;
+      state.endNode = temp;
     },
   },
 });
@@ -68,45 +113,56 @@ const buildVertexConfig = (dependencies: { apiService: () => ApiService }) =>
           switchMap(() => apiService.getHealth())
         ),
       })
-      .loadFromFields$(["startSearchQuery"], {
+      .loadFromFields$(["startSearchQuery", "selectionHistory", "startNode", "endNode"], {
         startSymbolOptions: (fields$) =>
           fields$.pipe(
-            map((f) => f.startSearchQuery),
             debounceTime(200),
-            distinctUntilChanged(),
-            switchMap((query) => {
-              if (query.length < 2) {
-                return of([]);
+            distinctUntilChanged(
+              (prev, curr) =>
+                prev.startSearchQuery === curr.startSearchQuery &&
+                prev.selectionHistory === curr.selectionHistory &&
+                prev.startNode === curr.startNode &&
+                prev.endNode === curr.endNode
+            ),
+            switchMap(({ startSearchQuery, selectionHistory, startNode, endNode }) => {
+              if (startSearchQuery.length < 2) {
+                return of(filterOutSelected(selectionHistory, startNode, endNode));
               }
-              return apiService.searchSymbols(query);
+              return apiService.searchSymbols(startSearchQuery);
             })
           ),
       })
-      .loadFromFields$(["endSearchQuery"], {
+      .loadFromFields$(["endSearchQuery", "selectionHistory", "startNode", "endNode"], {
         endSymbolOptions: (fields$) =>
           fields$.pipe(
-            map((f) => f.endSearchQuery),
             debounceTime(200),
-            distinctUntilChanged(),
-            switchMap((query) => {
-              if (query.length < 2) {
-                return of([]);
+            distinctUntilChanged(
+              (prev, curr) =>
+                prev.endSearchQuery === curr.endSearchQuery &&
+                prev.selectionHistory === curr.selectionHistory &&
+                prev.startNode === curr.startNode &&
+                prev.endNode === curr.endNode
+            ),
+            switchMap(({ endSearchQuery, selectionHistory, startNode, endNode }) => {
+              if (endSearchQuery.length < 2) {
+                return of(filterOutSelected(selectionHistory, startNode, endNode));
               }
-              return apiService.searchSymbols(query);
+              return apiService.searchSymbols(endSearchQuery);
             })
           ),
       })
-      .loadFromFields$(["startNode", "endNode", "outputFormat"], {
+      .loadFromFields$(["startNode", "endNode", "outputFormat", "maxNodes"], {
         queryResult: (fields$) =>
           fields$.pipe(
             debounceTime(100),
-            switchMap(({ startNode, endNode, outputFormat }) => {
+            switchMap(({ startNode, endNode, outputFormat, maxNodes }) => {
               // START only → dependenciesOf (what does this call?)
               if (startNode && !endNode) {
                 return apiService.getDependencies(
                   startNode.file_path,
                   startNode.symbol,
-                  outputFormat
+                  outputFormat,
+                  maxNodes
                 );
               }
               // END only → dependentsOf (who calls this?)
@@ -114,7 +170,8 @@ const buildVertexConfig = (dependencies: { apiService: () => ApiService }) =>
                 return apiService.getDependents(
                   endNode.file_path,
                   endNode.symbol,
-                  outputFormat
+                  outputFormat,
+                  maxNodes
                 );
               }
               // Both → pathsBetween
@@ -124,7 +181,8 @@ const buildVertexConfig = (dependencies: { apiService: () => ApiService }) =>
                   startNode.symbol,
                   endNode.file_path,
                   endNode.symbol,
-                  outputFormat
+                  outputFormat,
+                  maxNodes
                 );
               }
               // Neither selected

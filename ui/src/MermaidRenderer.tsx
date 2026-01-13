@@ -38,8 +38,8 @@ export const MermaidRenderer = ({ syntax, direction }: MermaidRendererProps) => 
 
       try {
         setError(null);
-        // Apply direction by replacing graph directive
-        const directedSyntax = syntax.replace(/^graph \w+/, `graph ${direction}`);
+        // Apply direction by replacing graph directive (handles optional comment prefix)
+        const directedSyntax = syntax.replace(/graph \w+/, `graph ${direction}`);
         // Generate unique ID for each render
         const id = `mermaid-${Date.now()}`;
         const { svg } = await mermaid.render(id, directedSyntax);
