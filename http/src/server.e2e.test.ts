@@ -8,7 +8,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { silentLogger } from "./logger.js";
+import { silentLogger } from "./logging/SilentTsGraphLogger.js";
 import { type ServerHandle, startHttpServer } from "./server.js";
 
 /**

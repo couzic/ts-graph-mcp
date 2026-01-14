@@ -2,6 +2,7 @@ import { dirname, join, relative } from "node:path";
 import type Database from "better-sqlite3";
 import type { ProjectConfig } from "../config/Config.schemas.js";
 import { createSqliteWriter } from "../db/sqlite/createSqliteWriter.js";
+import type { TsGraphLogger } from "../logging/TsGraphLogger.js";
 import { createProject } from "./createProject.js";
 import type { NodeExtractionContext } from "./extract/nodes/NodeExtractionContext.js";
 import { extractConfiguredPackageNames } from "./extractConfiguredPackageNames.js";
@@ -99,6 +100,7 @@ export const syncOnStartup = async (
   options: {
     projectRoot: string;
     cacheDir: string;
+    logger: TsGraphLogger;
   },
 ): Promise<SyncOnStartupResult> => {
   const startTime = Date.now();
@@ -145,11 +147,21 @@ export const syncOnStartup = async (
   const filesByTsconfig = new Map<string, string[]>();
   for (const relativePath of filesToReindex) {
     const context = fileContextMap.get(relativePath);
-    if (!context) continue;
+    if (!context) {
+      continue;
+    }
 
     const existing = filesByTsconfig.get(context.tsconfigPath) ?? [];
     existing.push(relativePath);
     filesByTsconfig.set(context.tsconfigPath, existing);
+  }
+
+  // Start progress tracking for sync
+  const { logger } = options;
+  let filesReindexed = 0;
+  let nodesAdded = 0;
+  if (filesToReindex.length > 0) {
+    logger.startProgress(filesToReindex.length, "sync");
   }
 
   // Process each tsconfig group
@@ -162,7 +174,9 @@ export const syncOnStartup = async (
 
     for (const relativePath of files) {
       const context = fileContextMap.get(relativePath);
-      if (!context) continue;
+      if (!context) {
+        continue;
+      }
 
       const absolutePath = join(options.projectRoot, relativePath);
 
@@ -179,7 +193,12 @@ export const syncOnStartup = async (
         };
 
         // Use shared indexFile function
-        await indexFile(sourceFile, extractionContext, writer);
+        const result = await indexFile(sourceFile, extractionContext, writer);
+        filesReindexed++;
+        nodesAdded += result.nodesAdded;
+
+        // Update progress
+        logger.updateProgress(filesReindexed);
 
         // Update manifest
         updateManifestEntry(manifest, relativePath, absolutePath);
@@ -190,6 +209,11 @@ export const syncOnStartup = async (
         });
       }
     }
+  }
+
+  // Complete progress
+  if (filesToReindex.length > 0) {
+    logger.completeProgress(filesReindexed, nodesAdded);
   }
 
   // Save updated manifest

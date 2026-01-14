@@ -6,6 +6,7 @@ import { watch } from "chokidar";
 import { Subject, type Subscription } from "rxjs";
 import type { ProjectConfig } from "../config/Config.schemas.js";
 import { createSqliteWriter } from "../db/sqlite/createSqliteWriter.js";
+import type { TsGraphLogger } from "../logging/TsGraphLogger.js";
 import { bufferDebounce } from "./bufferDebounce.js";
 import { createProject } from "./createProject.js";
 import type { NodeExtractionContext } from "./extract/nodes/NodeExtractionContext.js";
@@ -45,9 +46,9 @@ export interface WatchOptions {
   /** Files to exclude from watching (globs supported) */
   excludeFiles?: string[];
 
-  // Misc
-  /** Suppress reindex log messages (default: false) */
-  silent?: boolean;
+  // Logging
+  /** Logger for watch output */
+  logger: TsGraphLogger;
 
   // Callbacks
   /** Called after each batch of files is reindexed. Useful for testing. */
@@ -121,7 +122,7 @@ export const watchProject = (
     debounceInterval = 300,
     excludeDirectories = [],
     excludeFiles = [],
-    silent = false,
+    logger,
     onReindex,
   } = options;
 
@@ -217,17 +218,13 @@ export const watchProject = (
             reindexedFiles.push(context.relativePath);
           }
           updateManifestEntry(manifest, context.relativePath, absolutePath);
-          if (!silent) {
-            console.error(
-              `[ts-graph] Reindexed ${context.relativePath} (${nodesAdded} nodes, ${edgesAdded} edges)`,
-            );
-          }
+          logger.success(
+            `Reindexed ${context.relativePath} (${nodesAdded} nodes, ${edgesAdded} edges)`,
+          );
         }
       } catch (error) {
-        console.error(
-          `[ts-graph] Error reindexing ${context.relativePath}: ${
-            error instanceof Error ? error.message : String(error)
-          }`,
+        logger.error(
+          `Error reindexing ${context.relativePath}: ${error instanceof Error ? error.message : String(error)}`,
         );
       }
     }
@@ -247,10 +244,8 @@ export const watchProject = (
       removeManifestEntry(manifest, relativePath);
       saveManifest(cacheDir, manifest);
     } catch (error) {
-      console.error(
-        `[ts-graph] Error removing ${relativePath}: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
+      logger.error(
+        `Error removing ${relativePath}: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   };
@@ -266,10 +261,8 @@ export const watchProject = (
       .pipe(bufferDebounce(debounceInterval))
       .subscribe((paths) => {
         processBatch(paths).catch((error) => {
-          console.error(
-            `[ts-graph] Batch processing error: ${
-              error instanceof Error ? error.message : String(error)
-            }`,
+          logger.error(
+            `Batch processing error: ${error instanceof Error ? error.message : String(error)}`,
           );
         });
       });
@@ -327,10 +320,8 @@ export const watchProject = (
     } else {
       // Polling mode or no debounce: process immediately (polling batches inherently)
       processBatch([absolutePath]).catch((error) => {
-        console.error(
-          `[ts-graph] Processing error: ${
-            error instanceof Error ? error.message : String(error)
-          }`,
+        logger.error(
+          `Processing error: ${error instanceof Error ? error.message : String(error)}`,
         );
       });
     }
@@ -345,8 +336,9 @@ export const watchProject = (
       handleUnlink(relativePath);
     })
     .on("error", (error: unknown) => {
-      const message = error instanceof Error ? error.message : String(error);
-      console.error(`[ts-graph] Watcher error: ${message}`);
+      logger.error(
+        `Watcher error: ${error instanceof Error ? error.message : String(error)}`,
+      );
     });
 
   return {

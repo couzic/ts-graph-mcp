@@ -10,6 +10,7 @@ import {
   openDatabase,
 } from "../db/sqlite/sqliteConnection.utils.js";
 import type { Edge, Node } from "../db/Types.js";
+import { silentLogger } from "../logging/SilentTsGraphLogger.js";
 import { indexProject } from "./indexProject.js";
 
 /**
@@ -133,6 +134,7 @@ describe("Ingestion", () => {
       const writer = createMockWriter();
       const result = await indexProject(config, writer, {
         projectRoot: TEST_DIR,
+        logger: silentLogger,
       });
 
       expect(result.filesProcessed).toBeGreaterThanOrEqual(2);
@@ -164,6 +166,7 @@ describe("Ingestion", () => {
       const writer = createMockWriter();
       const result = await indexProject(config, writer, {
         projectRoot: TEST_DIR,
+        logger: silentLogger,
       });
 
       // Should still process valid files
@@ -191,6 +194,7 @@ describe("Ingestion", () => {
       await indexProject(config, writer, {
         projectRoot: TEST_DIR,
         clearFirst: true,
+        logger: silentLogger,
       });
 
       expect(writer.cleared).toBe(true);
@@ -255,6 +259,7 @@ export function helper(): void {
 
         const result = await indexProject(config, sqliteWriter, {
           projectRoot: TEST_DIR,
+          logger: silentLogger,
         });
 
         // Should have no errors - cross-file edges should work
@@ -323,6 +328,7 @@ export function getPath(): string {
 
         const result = await indexProject(config, sqliteWriter, {
           projectRoot: TEST_DIR,
+          logger: silentLogger,
         });
 
         // Should have no errors - edges to external deps should be filtered out
@@ -406,6 +412,7 @@ export function formatDate(date: Date): string {
 
         const result = await indexProject(config, sqliteWriter, {
           projectRoot: TEST_DIR,
+          logger: silentLogger,
         });
 
         // Should have no errors - cross-package edges should work

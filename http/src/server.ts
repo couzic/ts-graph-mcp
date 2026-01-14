@@ -14,7 +14,8 @@ import { indexProject } from "./ingestion/indexProject.js";
 import { type IndexManifest, loadManifest, populateManifest, saveManifest } from "./ingestion/manifest.js";
 import { syncOnStartup } from "./ingestion/syncOnStartup.js";
 import { type WatchHandle, watchProject } from "./ingestion/watchProject.js";
-import { type Logger, consoleLogger } from "./logger.js";
+import { consoleLogger } from "./logging/ConsoleTsGraphLogger.js";
+import type { TsGraphLogger } from "./logging/TsGraphLogger.js";
 import { dependenciesOf } from "./query/dependencies-of/dependenciesOf.js";
 import { dependentsOf } from "./query/dependents-of/dependentsOf.js";
 import { pathsBetween } from "./query/paths-between/pathsBetween.js";
@@ -57,15 +58,15 @@ const indexAndOpenDb = async (
   projectRoot: string,
   cacheDir: string,
   forceReindex: boolean,
-  logger: Logger,
+  logger: TsGraphLogger,
 ): Promise<{
   db: Database.Database;
   indexedFiles: number;
   manifest: IndexManifest;
   config: ProjectConfig | null;
 }> => {
-  logger.error(`[ts-graph] Cache: ${cacheDir}`);
-  logger.error(`[ts-graph] Project root: ${projectRoot}`);
+  logger.info(`Cache: ${cacheDir}`);
+  logger.info(`Project root: ${projectRoot}`);
   const dbPath = join(cacheDir, "graph.db");
   const dbExists = existsSync(dbPath);
   const db = openDatabase({ path: dbPath });
@@ -73,37 +74,38 @@ const indexAndOpenDb = async (
   const configResult = loadConfigOrDetect(projectRoot);
 
   if (!configResult) {
-    logger.error("[ts-graph] No config file or tsconfig.json found. Nothing to index.");
+    logger.warn("No config file or tsconfig.json found. Nothing to index.");
     return { db, indexedFiles: 0, manifest: { version: 1, files: {} }, config: null };
   }
 
   if (forceReindex || !dbExists) {
     if (forceReindex) {
-      logger.error("[ts-graph] Force reindex requested. Clearing database...");
+      logger.info("Force reindex requested. Clearing database...");
     } else {
-      logger.error("[ts-graph] Database not found. Indexing project...");
+      logger.info("Database not found. Indexing project...");
     }
 
     if (configResult.source === "explicit") {
-      logger.error(`[ts-graph] Using config: ${configResult.configPath}`);
+      logger.info(`Using config: ${configResult.configPath}`);
     } else {
-      logger.error("[ts-graph] No config file found. Auto-detected tsconfig.json.");
+      logger.info("No config file found. Auto-detected tsconfig.json.");
     }
 
     const writer = createSqliteWriter(db);
     const result = await indexProject(configResult.config, writer, {
       projectRoot,
       clearFirst: forceReindex,
+      logger,
     });
 
-    logger.error(
-      `[ts-graph] Indexed ${result.filesProcessed} files (${result.nodesAdded} symbols, ${result.edgesAdded} connections) in ${result.durationMs}ms`,
+    logger.success(
+      `Indexed ${result.filesProcessed} files (${result.nodesAdded} symbols, ${result.edgesAdded} connections) in ${result.durationMs}ms`,
     );
 
     if (result.errors && result.errors.length > 0) {
-      logger.error(`[ts-graph] Indexing completed with ${result.errors.length} errors:`);
+      logger.warn(`Indexing completed with ${result.errors.length} errors:`);
       for (const error of result.errors) {
-        logger.error(`  - ${error.file}: ${error.message}`);
+        logger.error(`${error.file}: ${error.message}`);
       }
     }
 
@@ -114,30 +116,30 @@ const indexAndOpenDb = async (
     return { db, indexedFiles: result.filesProcessed, manifest, config: configResult.config };
   }
 
-  logger.error("[ts-graph] Using existing database. Checking for file changes...");
+  logger.info("Using existing database. Checking for file changes...");
 
   const manifest = loadManifest(cacheDir);
   const syncResult = await syncOnStartup(
     db,
     configResult.config,
     manifest,
-    { projectRoot, cacheDir },
+    { projectRoot, cacheDir, logger },
   );
 
   const totalChanges =
     syncResult.staleCount + syncResult.deletedCount + syncResult.addedCount;
   if (totalChanges > 0) {
-    logger.error(
-      `[ts-graph] Synced ${totalChanges} file changes (${syncResult.staleCount} modified, ${syncResult.addedCount} new, ${syncResult.deletedCount} deleted) in ${syncResult.durationMs}ms`,
+    logger.success(
+      `Synced ${totalChanges} file changes (${syncResult.staleCount} modified, ${syncResult.addedCount} new, ${syncResult.deletedCount} deleted) in ${syncResult.durationMs}ms`,
     );
   } else {
-    logger.error("[ts-graph] Database is up to date.");
+    logger.success("Database is up to date.");
   }
 
   if (syncResult.errors && syncResult.errors.length > 0) {
-    logger.error(`[ts-graph] Sync completed with ${syncResult.errors.length} errors:`);
+    logger.warn(`Sync completed with ${syncResult.errors.length} errors:`);
     for (const error of syncResult.errors) {
-      logger.error(`  - ${error.file}: ${error.message}`);
+      logger.error(`${error.file}: ${error.message}`);
     }
   }
 
@@ -165,7 +167,7 @@ export interface ServerHandle {
  */
 export interface ServerOptions {
   /** Logger for server output (default: consoleLogger) */
-  logger?: Logger;
+  logger?: TsGraphLogger;
 }
 
 /**
@@ -203,7 +205,7 @@ export const startHttpServer = async (
     watchHandle = watchProject(db, config, manifest, {
       projectRoot,
       cacheDir,
-      silent: true, // Watcher uses its own silent flag, derived from config.watch
+      logger,
       ...config.watch,
     });
     await watchHandle.ready;
@@ -312,12 +314,12 @@ export const startHttpServer = async (
   // Get port from config (required)
   const port = config?.server?.port;
   if (!port) {
-    logger.error("[ts-graph] Error: No port configured. Add server.port to ts-graph-mcp.config.json");
+    logger.error("No port configured. Add server.port to ts-graph-mcp.config.json");
     process.exit(1);
   }
 
   const server = app.listen(port, () => {
-    logger.info(`ts-graph server running at http://localhost:${port}`);
+    logger.success(`Server running at http://localhost:${port}`);
     logger.info("Press CTRL+C to stop");
   });
 
@@ -335,7 +337,7 @@ export const startHttpServer = async (
 
   // Handle graceful shutdown
   process.on("SIGINT", () => {
-    logger.info("\nShutting down...");
+    logger.info("Shutting down...");
     close().then(() => process.exit(0));
   });
 

@@ -16,6 +16,7 @@ import {
   openDatabase,
 } from "../db/sqlite/sqliteConnection.utils.js";
 import { initializeSchema } from "../db/sqlite/sqliteSchema.utils.js";
+import { silentLogger } from "../logging/SilentTsGraphLogger.js";
 import { dependenciesOf } from "../query/dependencies-of/dependenciesOf.js";
 import { dependentsOf } from "../query/dependents-of/dependentsOf.js";
 import { indexProject } from "./indexProject.js";
@@ -125,7 +126,10 @@ export function entry(): string { return helper(); }
     };
 
     const writer = createSqliteWriter(db);
-    await indexProject(projectConfig, writer, { projectRoot: TEST_DIR });
+    await indexProject(projectConfig, writer, {
+      projectRoot: TEST_DIR,
+      logger: silentLogger,
+    });
 
     // Create initial manifest
     manifest = { version: 1, files: {} };
@@ -135,7 +139,7 @@ export function entry(): string { return helper(); }
     watchHandle = watchProject(db, projectConfig, manifest, {
       projectRoot: TEST_DIR,
       cacheDir: CACHE_DIR,
-      silent: true,
+      logger: silentLogger,
       onReindex: (files) => reindexCalls.push(files),
       ...config,
     });

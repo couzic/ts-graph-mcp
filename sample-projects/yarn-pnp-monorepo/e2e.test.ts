@@ -8,6 +8,7 @@ import {
 } from "../../http/src/db/sqlite/sqliteConnection.utils.js";
 import { initializeSchema } from "../../http/src/db/sqlite/sqliteSchema.utils.js";
 import { indexProject } from "../../http/src/ingestion/indexProject.js";
+import { silentLogger } from "../../http/src/logging/SilentTsGraphLogger.js";
 import { dependenciesOf } from "../../http/src/query/dependencies-of/dependenciesOf.js";
 import { dependentsOf } from "../../http/src/query/dependents-of/dependentsOf.js";
 import { pathsBetween } from "../../http/src/query/paths-between/pathsBetween.js";
@@ -39,7 +40,7 @@ describe("yarn-pnp-monorepo E2E tests", () => {
     projectRoot = import.meta.dirname;
     const config = loadConfig(`${projectRoot}/ts-graph-mcp.config.json`);
     const writer = createSqliteWriter(db);
-    await indexProject(config, writer, { projectRoot });
+    await indexProject(config, writer, { projectRoot, logger: silentLogger });
   });
 
   afterAll(() => {

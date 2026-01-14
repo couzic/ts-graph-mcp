@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { loadConfigOrDetect } from "../config/configLoader.utils.js";
 import { createSqliteWriter } from "../db/sqlite/createSqliteWriter.js";
 import { openDatabase } from "../db/sqlite/sqliteConnection.utils.js";
+import { consoleLogger } from "../logging/ConsoleTsGraphLogger.js";
 import { indexProject } from "./indexProject.js";
 import { loadManifest, populateManifest, saveManifest } from "./manifest.js";
 import { syncOnStartup } from "./syncOnStartup.js";
@@ -62,6 +63,7 @@ export const runFullIndex = async (
       const result = await indexProject(configResult.config, writer, {
         projectRoot,
         clearFirst: false,
+        logger: consoleLogger,
       });
 
       console.error(
@@ -90,7 +92,7 @@ export const runFullIndex = async (
         db,
         configResult.config,
         manifest,
-        { projectRoot, cacheDir },
+        { projectRoot, cacheDir, logger: consoleLogger },
       );
 
       const totalChanges =

@@ -9,6 +9,7 @@ import {
 } from "../../../../http/src/db/sqlite/sqliteConnection.utils.js";
 import { initializeSchema } from "../../../../http/src/db/sqlite/sqliteSchema.utils.js";
 import { indexProject } from "../../../../http/src/ingestion/indexProject.js";
+import { silentLogger } from "../../../../http/src/logging/SilentTsGraphLogger.js";
 import { dependenciesOf } from "../../../../http/src/query/dependencies-of/dependenciesOf.js";
 
 describe("small gaps E2E - gap indicator threshold", () => {
@@ -24,7 +25,7 @@ describe("small gaps E2E - gap indicator threshold", () => {
       packages: [{ name: "main", tsconfig: "tsconfig.json" }],
     };
     const writer = createSqliteWriter(db);
-    await indexProject(config, writer, { projectRoot });
+    await indexProject(config, writer, { projectRoot, logger: silentLogger });
   });
 
   afterAll(() => {

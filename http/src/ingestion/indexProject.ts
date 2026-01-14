@@ -2,6 +2,7 @@ import { dirname, relative, resolve } from "node:path";
 import type { ProjectConfig } from "../config/Config.schemas.js";
 import type { DbWriter } from "../db/DbWriter.js";
 import type { IndexResult } from "../db/Types.js";
+import type { TsGraphLogger } from "../logging/TsGraphLogger.js";
 import { createProject } from "./createProject.js";
 import type { EdgeExtractionContext } from "./extract/edges/EdgeExtractionContext.js";
 import { extractConfiguredPackageNames } from "./extractConfiguredPackageNames.js";
@@ -19,6 +20,8 @@ export interface IndexProjectOptions {
   projectRoot: string;
   /** Clear database before indexing */
   clearFirst?: boolean;
+  /** Logger for progress reporting */
+  logger: TsGraphLogger;
 }
 
 /**
@@ -69,6 +72,7 @@ export const indexProject = async (
         dbWriter,
         projectRegistry,
         configuredPackageNames,
+        options.logger,
       );
 
       filesProcessed += result.filesProcessed;
@@ -127,6 +131,7 @@ const processPackage = async (
   dbWriter: DbWriter,
   projectRegistry: ProjectRegistry,
   configuredPackageNames: Set<string>,
+  logger: TsGraphLogger,
 ): Promise<PackageProcessResult> => {
   const errors: Array<{ file: string; message: string }> = [];
   const filesIndexed: string[] = [];
@@ -162,6 +167,9 @@ const processPackage = async (
     );
   });
 
+  // Start progress tracking for this package
+  logger.startProgress(sourceFiles.length, packageName);
+
   // Process each file using shared indexFile()
   for (const sourceFile of sourceFiles) {
     const absolutePath = sourceFile.getFilePath();
@@ -178,13 +186,21 @@ const processPackage = async (
       edgesAdded += result.edgesAdded;
       filesProcessed++;
       filesIndexed.push(relativePath);
+
+      // Update progress after each file
+      logger.updateProgress(filesProcessed);
     } catch (e) {
+      const message = `Failed to index ${relativePath}: ${(e as Error).message}`;
+      logger.error(message);
       errors.push({
         file: relativePath,
-        message: `File processing failed: ${(e as Error).message}`,
+        message,
       });
     }
   }
+
+  // Complete progress for this package
+  logger.completeProgress(filesProcessed, nodesAdded);
 
   return {
     filesProcessed,
