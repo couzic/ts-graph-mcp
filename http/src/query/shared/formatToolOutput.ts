@@ -25,8 +25,6 @@ export interface FormatInput {
   edges: EdgeWithCallSites[];
   /** Nodes with locs pre-loaded (via loadNodeSnippets) */
   nodes: NodeInfo[];
-  /** Node IDs to exclude from Nodes section (query inputs) */
-  excludeNodeIds: Set<string>;
   /** Maximum nodes before truncation (default: 50) */
   maxNodes?: number;
 }
@@ -43,11 +41,11 @@ export interface FormatInput {
  * 2. If over limit: truncate graph (BFS order), skip Nodes section
  * 3. If under limit: format full Graph + Nodes sections
  *
- * @param input - Edges, nodes, exclusion set, and optional maxNodes limit
+ * @param input - Edges, nodes, and optional maxNodes limit
  * @returns Formatted output string (Graph + optionally Nodes sections)
  */
 export const formatToolOutput = (input: FormatInput): string => {
-  const { edges, nodes, excludeNodeIds, maxNodes = DEFAULT_MAX_NODES } = input;
+  const { edges, nodes, maxNodes = DEFAULT_MAX_NODES } = input;
 
   // Count unique nodes in the graph
   const allNodeIds = new Set<string>();
@@ -65,7 +63,7 @@ export const formatToolOutput = (input: FormatInput): string => {
   // Full output path (under maxNodes limit)
   // Omit snippets when over NO_SNIPPET_THRESHOLD (too much noise)
   const includeSnippets = totalNodeCount <= NO_SNIPPET_THRESHOLD;
-  return formatFullOutput(edges, nodes, excludeNodeIds, includeSnippets);
+  return formatFullOutput(edges, nodes, includeSnippets);
 };
 
 /**
@@ -74,7 +72,6 @@ export const formatToolOutput = (input: FormatInput): string => {
 const formatFullOutput = (
   edges: EdgeWithCallSites[],
   nodes: NodeInfo[],
-  excludeNodeIds: Set<string>,
   includeSnippets: boolean,
 ): string => {
   // Enrich nodes with call site information
@@ -104,7 +101,7 @@ const formatFullOutput = (
   const nodesResult = formatNodes(
     enrichedNodes,
     displayNames,
-    excludeNodeIds,
+    new Set<string>(),
     nodeOrder,
   );
 

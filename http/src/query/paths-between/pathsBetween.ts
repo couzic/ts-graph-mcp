@@ -11,6 +11,7 @@ import {
 } from "../shared/formatToolOutput.js";
 import { loadNodeSnippets } from "../shared/loadNodeSnippets.js";
 import { queryNodeInfos } from "../shared/queryNodeInfos.js";
+import { queryNodeMetadata } from "../shared/queryNodeMetadata.js";
 import type { QueryOptions } from "../shared/QueryTypes.js";
 import { resolveSymbol } from "../shared/symbolNotFound.js";
 import { queryPath } from "./query.js";
@@ -141,7 +142,11 @@ export function pathsBetween(
 
   // For mermaid format, skip node loading and return graph only
   if (options.format === "mermaid") {
-    const output = formatMermaid(graphEdges, { maxNodes: options.maxNodes });
+    const metadataByNodeId = queryNodeMetadata(db, path.nodes);
+    const output = formatMermaid(graphEdges, {
+      maxNodes: options.maxNodes,
+      metadataByNodeId,
+    });
     return resolutionPrefix + output;
   }
 
@@ -172,10 +177,10 @@ export function pathsBetween(
   );
 
   // Format output (pure)
+  // Exclusion already happened at query time (nodeIdsToQuery)
   const output = formatToolOutput({
     edges: graphEdges,
     nodes: nodesWithSnippets,
-    excludeNodeIds: excludeIds,
     maxNodes: options.maxNodes,
   });
 

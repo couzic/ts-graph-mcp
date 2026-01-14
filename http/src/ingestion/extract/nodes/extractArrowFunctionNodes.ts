@@ -1,34 +1,24 @@
-import { Node, type SourceFile, VariableDeclarationKind } from "ts-morph";
-import type { VariableNode } from "../../../db/Types.js";
+import { Node, type SourceFile } from "ts-morph";
+import type { FunctionNode } from "../../../db/Types.js";
 import { generateNodeId } from "../../generateNodeId.js";
 import type { NodeExtractionContext } from "./NodeExtractionContext.js";
 import { normalizeTypeText } from "./normalizeTypeText.js";
 
 /**
- * Check if a variable's initializer is a callable (arrow function or function expression).
- * These are extracted as Function nodes by extractArrowFunctionNodes instead.
+ * Extract arrow functions and function expressions as Function nodes.
+ *
+ * @example
+ * const handler = (req: Request) => res.send("OK");
+ * // Extracted as FunctionNode with name "handler"
  */
-const isCallableInitializer = (
-  initializer: Node | undefined,
-): boolean => {
-  if (!initializer) {
-    return false;
-  }
-  return Node.isArrowFunction(initializer) || Node.isFunctionExpression(initializer);
-};
-
-/**
- * Extract variable nodes from a source file.
- */
-export const extractVariableNodes = (
+export const extractArrowFunctionNodes = (
   sourceFile: SourceFile,
   context: NodeExtractionContext,
-): VariableNode[] => {
+): FunctionNode[] => {
   const variableStatements = sourceFile.getVariableStatements();
-  const variables: VariableNode[] = [];
+  const functions: FunctionNode[] = [];
 
   // Get default export to check if any variable is default-exported
-  // e.g., `const Foo = ...; export default Foo;`
   const defaultExport = sourceFile.getExportAssignment(
     (a) => !a.isExportEquals(),
   );
@@ -36,14 +26,16 @@ export const extractVariableNodes = (
 
   for (const statement of variableStatements) {
     const declarations = statement.getDeclarations();
-    const declarationKind = statement.getDeclarationKind();
-    // Compare against VariableDeclarationKind.Const enum value
-    const isConst = declarationKind === VariableDeclarationKind.Const;
 
     for (const decl of declarations) {
-      // Skip arrow functions and function expressions - extracted as Function nodes
       const initializer = decl.getInitializer();
-      if (isCallableInitializer(initializer)) {
+
+      // Skip non-callable initializers
+      if (
+        !initializer ||
+        (!Node.isArrowFunction(initializer) &&
+          !Node.isFunctionExpression(initializer))
+      ) {
         continue;
       }
 
@@ -54,24 +46,34 @@ export const extractVariableNodes = (
       const isDefaultExported = name === defaultExportedName;
       const exported = isDirectlyExported || isDefaultExported;
 
-      // Extract type annotation
-      const typeNode = decl.getTypeNode();
-      const variableType = normalizeTypeText(typeNode?.getText());
+      // Extract parameters from the arrow function / function expression
+      const parameters = initializer.getParameters().map((param) => ({
+        name: param.getName(),
+        type: normalizeTypeText(param.getTypeNode()?.getText()),
+      }));
 
-      variables.push({
+      // Extract return type
+      const returnTypeNode = initializer.getReturnTypeNode();
+      const returnType = normalizeTypeText(returnTypeNode?.getText());
+
+      // Check if async
+      const isAsync = initializer.isAsync();
+
+      functions.push({
         id: generateNodeId(context.filePath, name),
-        type: "Variable",
+        type: "Function",
         name,
         package: context.package,
         filePath: context.filePath,
         startLine,
         endLine,
         exported,
-        variableType,
-        isConst,
+        parameters,
+        returnType,
+        async: isAsync,
       });
     }
   }
 
-  return variables;
+  return functions;
 };

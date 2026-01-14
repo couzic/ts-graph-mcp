@@ -117,7 +117,7 @@ export default LoadingSpinner;
       const spinner = nodes.find((n) => n.name === "LoadingSpinner");
 
       expect(spinner).toBeDefined();
-      expect(spinner?.type).toBe("Variable");
+      expect(spinner?.type).toBe("Function");
       expect(spinner?.exported).toBe(true);
     });
   });

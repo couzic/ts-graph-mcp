@@ -321,7 +321,7 @@ renderLoading:
     11: }
 
 LoadingWrapper:
-  type: Variable
+  type: Function
   file: libs/ui/src/components/LoadingWrapper/LoadingWrapper.tsx
   offset: 3, limit: 3
   snippet:
@@ -430,7 +430,7 @@ renderLoading --INCLUDES--> LoadingWrapper --CALLS--> formatValue
 ## Nodes
 
 LoadingWrapper:
-  type: Variable
+  type: Function
   file: libs/ui/src/components/LoadingWrapper/LoadingWrapper.tsx
   offset: 3, limit: 3
   snippet:

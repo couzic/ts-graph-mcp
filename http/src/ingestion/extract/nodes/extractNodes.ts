@@ -1,5 +1,6 @@
 import type { SourceFile } from "ts-morph";
 import type { Node } from "../../../db/Types.js";
+import { extractArrowFunctionNodes } from "./extractArrowFunctionNodes.js";
 import { extractClassNodes } from "./extractClassNodes.js";
 import { extractFileNode } from "./extractFileNode.js";
 import { extractFunctionNodes } from "./extractFunctionNodes.js";
@@ -24,6 +25,9 @@ export const extractNodes = (
 
   // Extract top-level functions
   nodes.push(...extractFunctionNodes(sourceFile, context));
+
+  // Extract arrow functions and function expressions
+  nodes.push(...extractArrowFunctionNodes(sourceFile, context));
 
   // Extract classes and their members
   const classes = extractClassNodes(sourceFile, context);

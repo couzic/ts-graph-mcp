@@ -17,6 +17,7 @@ import {
   parseEdgeRows,
 } from "../shared/parseEdgeRows.js";
 import { queryNodeInfos } from "../shared/queryNodeInfos.js";
+import { queryNodeMetadata } from "../shared/queryNodeMetadata.js";
 import type { QueryOptions } from "../shared/QueryTypes.js";
 import { resolveSymbol } from "../shared/symbolNotFound.js";
 
@@ -119,19 +120,26 @@ export function dependenciesOf(
     return combinedMessage ? `${combinedMessage}\n\n${noResults}` : noResults;
   }
 
+  // Collect all node IDs from edges
+  const nodeIds = collectNodeIds(edges);
+
   // For mermaid format, skip node loading and return graph only
   if (options.format === "mermaid") {
-    const output = formatMermaid(edges, { maxNodes: options.maxNodes });
+    const metadataByNodeId = queryNodeMetadata(db, nodeIds);
+    const output = formatMermaid(edges, {
+      maxNodes: options.maxNodes,
+      metadataByNodeId,
+    });
     return combinedMessage ? `${combinedMessage}\n\n${output}` : output;
   }
 
   // Query node information
   // When file_path was auto-resolved, include input node so agent sees which file was resolved
-  const nodeIds = collectNodeIds(edges, currentNodeId);
-  if (filePathWasResolved) {
-    nodeIds.push(nodeId);
-  }
-  const nodes = queryNodeInfos(db, nodeIds);
+  // Otherwise, exclude it from the query (exclusion happens here for MCP text output)
+  const nodeIdsToQuery = filePathWasResolved
+    ? nodeIds
+    : nodeIds.filter((id) => id !== currentNodeId);
+  const nodes = queryNodeInfos(db, nodeIdsToQuery);
 
   // Enrich with call sites BEFORE loading snippets
   // (so extractSnippet can truncate around call sites)
@@ -144,16 +152,11 @@ export function dependenciesOf(
     nodes.length,
   );
 
-  // Exclude input node from output unless file_path was auto-resolved
-  const excludeNodeIds = filePathWasResolved
-    ? new Set<string>()
-    : new Set([currentNodeId]);
-
   // Format output (pure)
+  // Exclusion already happened at query time (nodeIdsToQuery)
   const output = formatToolOutput({
     edges,
     nodes: nodesWithSnippets,
-    excludeNodeIds,
     maxNodes: options.maxNodes,
   });
 

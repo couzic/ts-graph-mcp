@@ -84,4 +84,44 @@ describe(extractVariableNodes.name, () => {
     const variables = extractVariableNodes(sourceFile, createContext());
     expect(variables[0]?.variableType).not.toMatch(/[\n\t]/);
   });
+
+  it("skips arrow functions (extracted as Function nodes instead)", () => {
+    const sourceFile = project.createSourceFile(
+      "src/test.ts",
+      `export const handler = (x: number) => x * 2;
+const helper = () => {};`,
+    );
+    const context = createContext();
+
+    const variables = extractVariableNodes(sourceFile, context);
+
+    expect(variables).toHaveLength(0);
+  });
+
+  it("skips function expressions (extracted as Function nodes instead)", () => {
+    const sourceFile = project.createSourceFile(
+      "src/test.ts",
+      `const formatter = function(value: string) { return value; };`,
+    );
+    const context = createContext();
+
+    const variables = extractVariableNodes(sourceFile, context);
+
+    expect(variables).toHaveLength(0);
+  });
+
+  it("extracts non-callable variables but skips callable ones in same statement", () => {
+    const sourceFile = project.createSourceFile(
+      "src/test.ts",
+      `const value = 42;
+const handler = () => {};
+const name = "test";`,
+    );
+    const context = createContext();
+
+    const variables = extractVariableNodes(sourceFile, context);
+
+    expect(variables).toHaveLength(2);
+    expect(variables.map((v) => v.name)).toEqual(["value", "name"]);
+  });
 });

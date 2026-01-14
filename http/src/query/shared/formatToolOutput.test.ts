@@ -34,7 +34,6 @@ describe("formatToolOutput", () => {
           ],
         },
       ],
-      excludeNodeIds: new Set(["src/a.ts:fnA", "src/c.ts:fnC"]),
     };
 
     const result = formatToolOutput(input);
@@ -62,7 +61,6 @@ fnB:
         { source: "src/a.ts:fnA", target: "src/b.ts:fnB", type: "CALLS" },
       ],
       nodes: [],
-      excludeNodeIds: new Set(["src/a.ts:fnA", "src/b.ts:fnB"]),
     };
 
     const result = formatToolOutput(input);
@@ -90,7 +88,6 @@ fnA --CALLS--> fnB`);
             locs: [{ line: 1, code: "function fnB() {}" }],
           },
         ],
-        excludeNodeIds: new Set(["src/a.ts:fnA", "src/c.ts:fnC"]),
         maxNodes: 5,
       };
 
@@ -118,7 +115,6 @@ fnA --CALLS--> fnB`);
             locs: [{ line: 1, code: "function fnB() {}" }],
           },
         ],
-        excludeNodeIds: new Set(["src/a.ts:fnA", "src/c.ts:fnC"]),
         maxNodes: 3, // Exactly 3 nodes: fnA, fnB, fnC
       };
 
@@ -136,7 +132,6 @@ fnA --CALLS--> fnB`);
           { source: "src/c.ts:fnC", target: "src/d.ts:fnD", type: "CALLS" },
         ],
         nodes: [],
-        excludeNodeIds: new Set(),
         maxNodes: 2, // Only 2 nodes allowed, but graph has 4
       };
 
@@ -157,7 +152,6 @@ fnA --CALLS--> fnB`);
           { source: "src/d.ts:fnD", target: "src/e.ts:fnE", type: "CALLS" },
         ],
         nodes: [],
-        excludeNodeIds: new Set(),
         maxNodes: 3, // Should keep A, B, C
       };
 
@@ -186,7 +180,6 @@ fnA --CALLS--> fnB`);
       const input: FormatInput = {
         edges,
         nodes: [],
-        excludeNodeIds: new Set(),
         // No maxNodes specified - should use default of 50
       };
 
@@ -230,7 +223,6 @@ fnA --CALLS--> fnB`);
       const input: FormatInput = {
         edges,
         nodes,
-        excludeNodeIds: new Set(["src/fn0.ts:fn0"]),
       };
 
       const result = formatToolOutput(input);
@@ -271,7 +263,6 @@ fnA --CALLS--> fnB`);
       const input: FormatInput = {
         edges,
         nodes,
-        excludeNodeIds: new Set(["src/fn0.ts:fn0"]),
       };
 
       const result = formatToolOutput(input);
@@ -317,7 +308,6 @@ fnA --CALLS--> fnB`);
       const input: FormatInput = {
         edges,
         nodes,
-        excludeNodeIds: new Set(["src/fn0.ts:fn0"]),
       };
 
       const result = formatToolOutput(input);

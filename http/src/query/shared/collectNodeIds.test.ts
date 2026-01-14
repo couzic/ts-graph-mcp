@@ -9,7 +9,7 @@ describe(collectNodeIds.name, () => {
       { source: "b.ts:bar", target: "c.ts:baz", type: "CALLS" },
     ];
 
-    const ids = collectNodeIds(edges, "excluded");
+    const ids = collectNodeIds(edges);
 
     expect(ids).toContain("a.ts:foo");
     expect(ids).toContain("b.ts:bar");
@@ -17,16 +17,16 @@ describe(collectNodeIds.name, () => {
     expect(ids).toHaveLength(3);
   });
 
-  it("excludes specified ID", () => {
+  it("collects all nodes without filtering", () => {
     const edges: GraphEdge[] = [
       { source: "a.ts:foo", target: "b.ts:bar", type: "CALLS" },
     ];
 
-    const ids = collectNodeIds(edges, "a.ts:foo");
+    const ids = collectNodeIds(edges);
 
-    expect(ids).not.toContain("a.ts:foo");
+    expect(ids).toContain("a.ts:foo");
     expect(ids).toContain("b.ts:bar");
-    expect(ids).toHaveLength(1);
+    expect(ids).toHaveLength(2);
   });
 
   it("deduplicates IDs appearing in multiple edges", () => {
@@ -35,13 +35,13 @@ describe(collectNodeIds.name, () => {
       { source: "a.ts:foo", target: "c.ts:baz", type: "CALLS" },
     ];
 
-    const ids = collectNodeIds(edges, "excluded");
+    const ids = collectNodeIds(edges);
 
     expect(ids.filter((id) => id === "a.ts:foo")).toHaveLength(1);
   });
 
   it("returns empty array for empty edges", () => {
-    const ids = collectNodeIds([], "any");
+    const ids = collectNodeIds([]);
     expect(ids).toEqual([]);
   });
 });
