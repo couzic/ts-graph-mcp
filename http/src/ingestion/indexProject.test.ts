@@ -269,9 +269,6 @@ export function helper(): void {
         // Verify both files were indexed
         expect(nodeExists(db, "packages/crossfile/a.ts:main")).toBe(true);
         expect(nodeExists(db, "packages/crossfile/b.ts:helper")).toBe(true);
-
-        // Verify the file node exists (for IMPORTS edge relationship)
-        expect(nodeExists(db, "packages/crossfile/a.ts")).toBe(true);
       } finally {
         if (db) {
           closeDatabase(db);

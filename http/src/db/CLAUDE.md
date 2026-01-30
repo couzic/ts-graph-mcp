@@ -7,7 +7,7 @@ Persistence layer for the TypeScript code graph. Provides read/write interfaces 
 ## Key Exports
 
 ### Types (`Types.ts`)
-- `Node` - Discriminated union of all node types (Function, Class, Method, Interface, TypeAlias, Variable, File, Property)
+- `Node` - Discriminated union of all node types (Function, Class, Method, Interface, TypeAlias, Variable)
 - `Edge` - Relationship between nodes with type-specific metadata
 - `Subgraph` - A center node with its neighbors and connecting edges
 - `Path` - Shortest path result between two nodes
@@ -59,7 +59,7 @@ This format is deterministic and human-readable.
 Node-specific properties (parameters, return types, etc.) are stored as JSON in the `properties` column. Base properties (id, type, name, module, package, filePath, etc.) have dedicated columns for efficient querying.
 
 ### Edge Metadata
-Common edge metadata (call_count, is_type_only, imported_symbols, context) stored in dedicated columns for performance. All edges have composite unique key: (source, target, type).
+Common edge metadata (call_count, call_sites, context, reference_context) stored in dedicated columns for performance. All edges have composite unique key: (source, target, type).
 
 ### Traversal Depth
 Default max depth is 100 for most traversals (1 for type usage). Recursive CTEs prevent infinite loops and cycle detection is built-in.

@@ -190,6 +190,7 @@ formatLabel:
 
 renderDashboard --CALLS--> validateThreshold --CALLS--> clamp
 renderDashboard --CALLS--> renderButton --CALLS--> formatValue
+renderDashboard --TAKES--> Config
 
 ## Nodes
 
@@ -228,6 +229,16 @@ formatValue:
     1: export function formatValue(value: number): string {
     2:   return value.toFixed(2);
     3: }
+
+Config:
+  type: Interface
+  file: modules/app/packages/shared/src/types.ts
+  offset: 3, limit: 4
+  snippet:
+    3: export interface Config {
+    4:   maxItems: number;
+    5:   threshold: number;
+    6: }
 `.trimStart(),
       );
     });
@@ -245,6 +256,7 @@ formatValue:
 ## Graph
 
 trackMetric --CALLS--> formatValue
+trackMetric --TAKES--> Config
 
 ## Nodes
 
@@ -256,6 +268,16 @@ formatValue:
     1: export function formatValue(value: number): string {
     2:   return value.toFixed(2);
     3: }
+
+Config:
+  type: Interface
+  file: modules/app/packages/shared/src/types.ts
+  offset: 3, limit: 4
+  snippet:
+    3: export interface Config {
+    4:   maxItems: number;
+    5:   threshold: number;
+    6: }
 `.trimStart(),
       );
     });

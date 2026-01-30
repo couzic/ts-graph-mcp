@@ -14,11 +14,11 @@ Parses TypeScript source code using ts-morph AST and extracts nodes (symbols) an
 - `extractFromSourceFile` - Orchestrates extraction: nodes first, then edges
 
 **Node Extraction** (`extract/nodes/`)
-- `extractNodes` - Extract all node types (File, Function, Class, Method, Interface, TypeAlias, Variable, Property)
+- `extractNodes` - Extract all node types (Function, Class, Method, Interface, TypeAlias, Variable, Property)
 - See `extract/nodes/CLAUDE.md` for detailed node extractor documentation
 
 **Edge Extraction** (`extract/edges/`)
-- `extractEdges` - Extract all edge types (CONTAINS, IMPORTS, CALLS, EXTENDS, IMPLEMENTS, USES_TYPE)
+- `extractEdges` - Extract all edge types (CALLS, EXTENDS, IMPLEMENTS, USES_TYPE, REFERENCES, INCLUDES)
 - See `extract/edges/CLAUDE.md` for detailed edge extractor documentation
 
 ### ID Generation (`generateNodeId.ts`)
@@ -36,7 +36,6 @@ Used by all extractors to normalize TypeScript type annotations (parameters, ret
 ### Node ID Format
 
 Node IDs are deterministic and hierarchical:
-- File: `src/utils.ts`
 - Function: `src/utils.ts:formatDate`
 - Method: `src/models/User.ts:User.validate`
 - Property: `src/models/User.ts:User.name`
@@ -62,12 +61,12 @@ This order maintains a clean two-pass architecture. Edge extraction uses `buildI
 
 ### Edge Types
 
-- `CONTAINS` - File to top-level symbols only (no nested members)
-- `IMPORTS` - File to file (tracks imported symbols, type-only imports)
 - `CALLS` - Function/method to function/method (tracks call count)
 - `EXTENDS` - Class/interface inheritance
 - `IMPLEMENTS` - Class implements interface
 - `USES_TYPE` - Type references in parameters, returns, properties
+- `REFERENCES` - Function passed as callback or stored
+- `INCLUDES` - JSX component usage
 
 ### Full Re-index
 

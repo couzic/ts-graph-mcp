@@ -6,7 +6,9 @@ import { watch } from "chokidar";
 import { Subject, type Subscription } from "rxjs";
 import type { ProjectConfig } from "../config/Config.schemas.js";
 import { createSqliteWriter } from "../db/sqlite/createSqliteWriter.js";
+import type { EmbeddingProvider } from "../embedding/EmbeddingTypes.js";
 import type { TsGraphLogger } from "../logging/TsGraphLogger.js";
+import type { SearchIndexWrapper } from "../search/createSearchIndex.js";
 import { bufferDebounce } from "./bufferDebounce.js";
 import { createProject } from "./createProject.js";
 import type { NodeExtractionContext } from "./extract/nodes/NodeExtractionContext.js";
@@ -49,6 +51,14 @@ export interface WatchOptions {
   // Logging
   /** Logger for watch output */
   logger: TsGraphLogger;
+
+  // Search
+  /** Search index for unified indexing (optional) */
+  searchIndex?: SearchIndexWrapper;
+  /** Embedding provider for semantic search (optional) */
+  embeddingProvider?: EmbeddingProvider;
+  /** Path to Orama index file for persistence (optional) */
+  oramaIndexPath?: string;
 
   // Callbacks
   /** Called after each batch of files is reindexed. Useful for testing. */
@@ -123,6 +133,9 @@ export const watchProject = (
     excludeDirectories = [],
     excludeFiles = [],
     logger,
+    searchIndex,
+    embeddingProvider,
+    oramaIndexPath,
     onReindex,
   } = options;
 
@@ -169,8 +182,11 @@ export const watchProject = (
       return { nodesAdded: 0, edgesAdded: 0 };
     }
 
-    // Remove old data
+    // Remove old data from both stores
     await writer.removeFileNodes(context.relativePath);
+    if (searchIndex) {
+      await searchIndex.removeByFile(context.relativePath);
+    }
 
     // Create fresh Project for accurate import resolution (workspace-aware)
     const project = createProject({
@@ -185,8 +201,11 @@ export const watchProject = (
       package: context.package,
     };
 
-    // Use shared indexFile function
-    const result = await indexFile(sourceFile, extractionContext, writer);
+    // Use shared indexFile function (writes to both DB and search index)
+    const result = await indexFile(sourceFile, extractionContext, writer, {
+      searchIndex,
+      embeddingProvider,
+    });
 
     return result;
   };
@@ -231,6 +250,11 @@ export const watchProject = (
     // Save manifest after processing batch
     saveManifest(cacheDir, manifest);
 
+    // Persist search index if any files were reindexed
+    if (searchIndex && oramaIndexPath && reindexedFiles.length > 0) {
+      await searchIndex.saveToFile(oramaIndexPath);
+    }
+
     // Notify callback if any files were reindexed
     if (onReindex && reindexedFiles.length > 0) {
       onReindex(reindexedFiles);
@@ -241,6 +265,13 @@ export const watchProject = (
   const handleUnlink = async (relativePath: string): Promise<void> => {
     try {
       await writer.removeFileNodes(relativePath);
+      if (searchIndex) {
+        await searchIndex.removeByFile(relativePath);
+        // Persist search index after deletion
+        if (oramaIndexPath) {
+          await searchIndex.saveToFile(oramaIndexPath);
+        }
+      }
       removeManifestEntry(manifest, relativePath);
       saveManifest(cacheDir, manifest);
     } catch (error) {

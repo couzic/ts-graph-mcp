@@ -1,8 +1,13 @@
+import { cpus } from "node:os";
 import { dirname, relative, resolve } from "node:path";
+import { from, lastValueFrom } from "rxjs";
+import { mergeMap, tap, toArray } from "rxjs/operators";
 import type { ProjectConfig } from "../config/Config.schemas.js";
 import type { DbWriter } from "../db/DbWriter.js";
 import type { IndexResult } from "../db/Types.js";
+import type { EmbeddingProvider } from "../embedding/EmbeddingTypes.js";
 import type { TsGraphLogger } from "../logging/TsGraphLogger.js";
+import type { SearchIndexWrapper } from "../search/createSearchIndex.js";
 import { createProject } from "./createProject.js";
 import type { EdgeExtractionContext } from "./extract/edges/EdgeExtractionContext.js";
 import { extractConfiguredPackageNames } from "./extractConfiguredPackageNames.js";
@@ -11,6 +16,9 @@ import {
   createProjectRegistry,
   type ProjectRegistry,
 } from "./ProjectRegistry.js";
+
+/** Default concurrency based on CPU cores (minimum 2) */
+const DEFAULT_CONCURRENCY = Math.max(2, cpus().length);
 
 /**
  * Options for indexing an entire project.
@@ -22,6 +30,10 @@ export interface IndexProjectOptions {
   clearFirst?: boolean;
   /** Logger for progress reporting */
   logger: TsGraphLogger;
+  /** Search index for unified indexing (optional) */
+  searchIndex?: SearchIndexWrapper;
+  /** Embedding provider for semantic search (optional) */
+  embeddingProvider?: EmbeddingProvider;
 }
 
 /**
@@ -73,6 +85,8 @@ export const indexProject = async (
         projectRegistry,
         configuredPackageNames,
         options.logger,
+        options.searchIndex,
+        options.embeddingProvider,
       );
 
       filesProcessed += result.filesProcessed;
@@ -132,6 +146,8 @@ const processPackage = async (
   projectRegistry: ProjectRegistry,
   configuredPackageNames: Set<string>,
   logger: TsGraphLogger,
+  searchIndex?: SearchIndexWrapper,
+  embeddingProvider?: EmbeddingProvider,
 ): Promise<PackageProcessResult> => {
   const errors: Array<{ file: string; message: string }> = [];
   const filesIndexed: string[] = [];
@@ -170,31 +186,58 @@ const processPackage = async (
   // Start progress tracking for this package
   logger.startProgress(sourceFiles.length, packageName);
 
-  // Process each file using shared indexFile()
-  for (const sourceFile of sourceFiles) {
-    const absolutePath = sourceFile.getFilePath();
-    const relativePath = relative(projectRoot, absolutePath);
-    const context: EdgeExtractionContext = {
-      filePath: relativePath,
-      package: packageName,
-      projectRegistry,
-    };
+  // Process files with controlled concurrency using RxJS
+  const results = await lastValueFrom(
+    from(sourceFiles).pipe(
+      mergeMap(async (sourceFile) => {
+        const absolutePath = sourceFile.getFilePath();
+        const relativePath = relative(projectRoot, absolutePath);
+        const context: EdgeExtractionContext = {
+          filePath: relativePath,
+          package: packageName,
+          projectRegistry,
+        };
 
-    try {
-      const result = await indexFile(sourceFile, context, dbWriter);
+        try {
+          const result = await indexFile(sourceFile, context, dbWriter, {
+            searchIndex,
+            embeddingProvider,
+          });
+          return {
+            success: true as const,
+            relativePath,
+            nodesAdded: result.nodesAdded,
+            edgesAdded: result.edgesAdded,
+          };
+        } catch (e) {
+          const message = `Failed to index ${relativePath}: ${(e as Error).message}`;
+          logger.error(message);
+          return {
+            success: false as const,
+            relativePath,
+            message,
+          };
+        }
+      }, DEFAULT_CONCURRENCY),
+      tap(() => {
+        filesProcessed++;
+        logger.updateProgress(filesProcessed);
+      }),
+      toArray(),
+    ),
+    { defaultValue: [] },
+  );
+
+  // Aggregate results
+  for (const result of results) {
+    if (result.success) {
       nodesAdded += result.nodesAdded;
       edgesAdded += result.edgesAdded;
-      filesProcessed++;
-      filesIndexed.push(relativePath);
-
-      // Update progress after each file
-      logger.updateProgress(filesProcessed);
-    } catch (e) {
-      const message = `Failed to index ${relativePath}: ${(e as Error).message}`;
-      logger.error(message);
+      filesIndexed.push(result.relativePath);
+    } else {
       errors.push({
-        file: relativePath,
-        message,
+        file: result.relativePath,
+        message: result.message,
       });
     }
   }

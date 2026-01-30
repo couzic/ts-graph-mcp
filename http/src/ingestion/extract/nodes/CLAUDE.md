@@ -14,25 +14,30 @@ import { extractNodes } from "./extract/nodes/extractNodes.js";
 
 | File | Node Type | Properties |
 |------|-----------|------------|
-| `extractFileNode.ts` | `File` | `extension` |
 | `extractFunctionNodes.ts` | `Function` | `parameters[]`, `returnType`, `async` |
+| `extractArrowFunctionNodes.ts` | `Function` | Arrow functions assigned to variables |
+| `extractObjectLiteralMethodNodes.ts` | `Function` | Methods in object literals (`const obj = { method() {} }`) |
 | `extractClassNodes.ts` | `Class` | `extends`, `implements[]` |
 | `extractMethodNodes.ts` | `Method` | `parameters[]`, `returnType`, `async`, `visibility`, `static` |
 | `extractInterfaceNodes.ts` | `Interface` | `extends[]` |
 | `extractTypeAliasNodes.ts` | `TypeAlias` | `aliasedType` |
-| `extractVariableNodes.ts` | `Variable` | `variableType`, `isConst` |
-| `extractPropertyNodes.ts` | `Property` | `propertyType`, `optional`, `readonly` |
+| `extractVariableNodes.ts` | `Variable` | `isConst` |
+
+**Notes:**
+- Properties are intentionally NOT extracted. They add noise to search results and slow down indexing without providing useful graph traversal paths. Property types are captured via `HAS_PROPERTY` edges instead.
+- Object literal methods use qualified IDs: `file.ts:objectName.methodName`
 
 ## Extraction Order
 
 The `extractNodes` orchestrator processes in this order:
 
-1. **File node** - Always first
-2. **Functions** - Top-level functions
-3. **Classes** - Then their methods and properties
-4. **Interfaces** - Then their properties
+1. **Functions** - Top-level functions
+2. **Arrow functions** - Arrow functions assigned to variables
+3. **Classes** - Then their methods
+4. **Interfaces** - Interface declarations only
 5. **Type aliases** - Top-level type definitions
 6. **Variables** - Top-level variable declarations
+7. **Object literal methods** - Methods inside object literals
 
 ## Context Interface
 
@@ -53,36 +58,13 @@ All extractors use `generateNodeId()` from `generateNodeId.ts`:
 
 - Top-level symbols: `generateNodeId(filePath, name)` → `src/utils.ts:formatDate`
 - Class members: `generateNodeId(filePath, className, name)` → `src/models/User.ts:User.save`
-- Interface members: same pattern as class members
 
 ### Type Text Normalization
 
 All extractors use `normalizeTypeText()` for type annotations:
 
 - Collapses multiline types to single line
-- Used for: parameters, return types, extends/implements, variable types, property types
-
-### Member Extraction Pattern
-
-Class and interface members are extracted **separately** from their parent:
-
-```typescript
-// In extractNodes.ts
-const classes = extractClassNodes(sourceFile, context);
-for (const classNode of classes) {
-  nodes.push(classNode);
-  const classDecl = sourceFile.getClasses().find(c => c.getName() === classNode.name);
-  if (classDecl) {
-    nodes.push(...extractMethodNodes(classDecl, context));
-    nodes.push(...extractPropertyNodes(classDecl, context));
-  }
-}
-```
-
-This design:
-- Keeps each extractor focused on one node type
-- Allows reuse of `extractPropertyNodes` for both classes and interfaces
-- Produces flat node array (no nested structure)
+- Used for: parameters, return types, extends/implements, variable types
 
 ### Method Visibility
 
@@ -95,7 +77,7 @@ This design:
 
 Each extractor sets `exported` appropriately:
 - Top-level symbols: `isExported()` from ts-morph
-- Class/interface members: always `false` (not directly exportable)
+- Class methods: always `false` (not directly exportable)
 
 ## Utilities
 
@@ -107,14 +89,14 @@ Type definition for context passed to all extractors.
 
 ## Test Coverage
 
-Each extractor has colocated tests (61 tests total):
-- `extractFileNode.test.ts` - File node extraction
+Each extractor has colocated tests:
 - `extractFunctionNodes.test.ts` - Function extraction with async, parameters, return types
+- `extractArrowFunctionNodes.test.ts` - Arrow function extraction
+- `extractObjectLiteralMethodNodes.test.ts` - Object literal method extraction
 - `extractClassNodes.test.ts` - Class extraction with extends, implements
 - `extractMethodNodes.test.ts` - Method visibility, static, async
 - `extractInterfaceNodes.test.ts` - Interface extends
 - `extractTypeAliasNodes.test.ts` - Type alias extraction
-- `extractVariableNodes.test.ts` - Variable types, const detection
-- `extractPropertyNodes.test.ts` - Property extraction from classes and interfaces
+- `extractVariableNodes.test.ts` - Variable const detection
 - `extractNodes.test.ts` - Integration test for full extraction
 - `normalizeTypeText.test.ts` - Whitespace normalization edge cases

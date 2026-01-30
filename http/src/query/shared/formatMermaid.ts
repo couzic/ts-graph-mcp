@@ -1,4 +1,4 @@
-import type { NodeType } from "../../db/Types.js";
+import type { NodeType } from "@ts-graph/shared";
 import { buildDisplayNames } from "./buildDisplayNames.js";
 import { extractFilePath } from "./extractFilePath.js";
 import { extractSymbol } from "./extractSymbol.js";

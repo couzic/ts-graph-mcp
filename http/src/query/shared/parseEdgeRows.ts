@@ -1,4 +1,5 @@
-import type { CallSiteRange, EdgeType } from "../../db/Types.js";
+import type { EdgeType } from "@ts-graph/shared";
+import type { CallSiteRange } from "../../db/Types.js";
 
 /**
  * Raw edge row from SQLite with call sites as JSON string.

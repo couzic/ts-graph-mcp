@@ -1,24 +1,40 @@
-// Node Types
-export type NodeType =
-  | "Function"
-  | "Class"
-  | "Method"
-  | "Interface"
-  | "TypeAlias"
-  | "Variable"
-  | "File"
-  | "Property";
+export const NODE_TYPES = [
+  "Function",
+  "Class",
+  "Method",
+  "Interface",
+  "TypeAlias",
+  "Variable"
+] as const
 
-// Edge Types
-export type EdgeType =
-  | "CALLS"
-  | "IMPORTS"
-  | "CONTAINS"
-  | "IMPLEMENTS"
-  | "EXTENDS"
-  | "USES_TYPE"
-  | "REFERENCES"
-  | "INCLUDES";
+export type NodeType = typeof NODE_TYPES[number];
+
+export const RUNTIME_EDGE_TYPES = [
+  "CALLS",
+  "REFERENCES",
+  "USES_TYPE",
+] as const
+
+export const COMPILE_TIME_EDGE_TYPES = [
+  "EXTENDS",
+  "INCLUDES",
+  "IMPLEMENTS",
+  "TAKES",
+  "RETURNS",
+  "HAS_TYPE",
+  "HAS_PROPERTY",
+  "DERIVES_FROM",
+  "ALIAS_FOR",
+] as const
+
+export const EDGE_TYPES = [
+  ...RUNTIME_EDGE_TYPES,
+  ...COMPILE_TIME_EDGE_TYPES,
+] as const
+
+export type RuntimeEdgeType = typeof RUNTIME_EDGE_TYPES[number];
+export type CompileTimeEdgeType = typeof COMPILE_TIME_EDGE_TYPES[number];
+export type EdgeType = typeof EDGE_TYPES[number];
 
 // Call Site Range (line numbers where a call occurs)
 export interface CallSiteRange {
@@ -94,18 +110,6 @@ export interface VariableNode extends BaseNode {
   isConst?: boolean;
 }
 
-export interface FileNode extends BaseNode {
-  type: "File";
-  extension?: string;
-}
-
-export interface PropertyNode extends BaseNode {
-  type: "Property";
-  propertyType?: string;
-  optional?: boolean;
-  readonly?: boolean;
-}
-
 export type Node =
   | FunctionNode
   | ClassNode
@@ -113,8 +117,6 @@ export type Node =
   | InterfaceNode
   | TypeAliasNode
   | VariableNode
-  | FileNode
-  | PropertyNode;
 
 // Edge
 export interface Edge {

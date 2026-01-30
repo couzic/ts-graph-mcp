@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import type { NodeType } from "../../db/Types.js";
 import { formatMermaid } from "./formatMermaid.js";
 import type { GraphEdge } from "./GraphTypes.js";
 import type { NodeMetadata } from "./queryNodeMetadata.js";

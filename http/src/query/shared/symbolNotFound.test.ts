@@ -426,6 +426,42 @@ describe("resolveSymbol", () => {
     }
   });
 
+  it("resolves method within specified file when same method name exists in multiple files", async () => {
+    // This tests the fix for the disambiguation bug:
+    // When filePath is provided and exact match fails (because node ID is Class.method),
+    // it should search within that specific file first, not globally.
+
+    // File A has User.save
+    const fileA = "src/user.ts";
+    const sourceA = project.createSourceFile(
+      fileA,
+      `export class User {
+        save() { return true; }
+      }`,
+    );
+    await writer.addNodes(extractNodes(sourceA, createContext(fileA)));
+
+    // File B also has a save method (Order.save)
+    const fileB = "src/order.ts";
+    const sourceB = project.createSourceFile(
+      fileB,
+      `export class Order {
+        save() { return true; }
+      }`,
+    );
+    await writer.addNodes(extractNodes(sourceB, createContext(fileB)));
+
+    // When resolving "save" with fileA specified, should find User.save in fileA
+    // even though there are multiple "save" methods globally
+    const result = resolveSymbol(db, fileA, "save");
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.nodeId).toBe("src/user.ts:User.save");
+      expect(result.message).toContain("User.save");
+    }
+  });
+
   it("sets filePathWasResolved to false when file_path is provided", async () => {
     const filePath = "src/utils.ts";
     const sourceFile = project.createSourceFile(

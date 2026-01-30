@@ -42,7 +42,7 @@ describe("web-app multi-package E2E tests", () => {
   });
 
   describe("dependenciesOf", () => {
-    it("finds cross-package CALLS from backend to shared", () => {
+    it("finds cross-package dependencies from backend to shared", () => {
       const output = dependenciesOf(
         db,
         projectRoot,
@@ -54,7 +54,8 @@ describe("web-app multi-package E2E tests", () => {
         `
 ## Graph
 
-getUser --CALLS--> createUser
+getUser --CALLS--> createUser --RETURNS--> User
+getUser --RETURNS--> User
 
 ## Nodes
 
@@ -71,11 +72,23 @@ createUser:
     23:     createdAt: new Date(),
     24:   };
     25: }
+
+User:
+  type: Interface
+  file: shared/src/common.ts
+  offset: 6, limit: 6
+  snippet:
+    6: export interface User {
+    7:   id: string;
+    8:   name: string;
+    9:   email: string;
+    10:   createdAt: Date;
+    11: }
 `.trimStart(),
       );
     });
 
-    it("returns empty for shared function with no outgoing calls", () => {
+    it("finds type dependencies for function with no calls", () => {
       const output = dependenciesOf(
         db,
         projectRoot,
@@ -83,7 +96,27 @@ createUser:
         "createUser",
       );
 
-      expect(output).toBe(`No dependencies found.`);
+      expect(output).toBe(
+        `
+## Graph
+
+createUser --RETURNS--> User
+
+## Nodes
+
+User:
+  type: Interface
+  file: shared/src/common.ts
+  offset: 6, limit: 6
+  snippet:
+    6: export interface User {
+    7:   id: string;
+    8:   name: string;
+    9:   email: string;
+    10:   createdAt: Date;
+    11: }
+`.trimStart(),
+      );
     });
   });
 

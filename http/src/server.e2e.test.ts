@@ -3,6 +3,7 @@ import {
   mkdirSync,
   mkdtempSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -33,6 +34,11 @@ describe("HTTP server file watching E2E", () => {
     // Create test project structure
     mkdirSync(join(TEST_DIR, "src"), { recursive: true });
     mkdirSync(join(TEST_DIR, ".ts-graph-mcp"), { recursive: true });
+
+    // Symlink models from repo root to avoid re-downloading (~300MB)
+    const repoRoot = join(import.meta.dirname, "..", "..");
+    const repoModelsDir = join(repoRoot, ".ts-graph-mcp", "models");
+    symlinkSync(repoModelsDir, join(TEST_DIR, ".ts-graph-mcp", "models"));
 
     writeFileSync(
       join(TEST_DIR, "tsconfig.json"),

@@ -1,4 +1,4 @@
-import type { NodeType } from "../../db/Types.js";
+import type { NodeType } from "@ts-graph/shared";
 
 export type DisplayNameContext = {
   typeByNodeId: Map<string, NodeType>;

@@ -1259,4 +1259,33 @@ export function Page() {
       });
     });
   });
+
+  describe("built-in method calls on imported constants", () => {
+    it("does not create CALLS edge when calling built-in method on imported array", () => {
+      const project = createProject();
+      project.createSourceFile(
+        "constants.ts",
+        `export const EDGE_TYPES = ["CALLS", "INCLUDES"];`,
+      );
+      const sourceFile = project.createSourceFile(
+        "test.ts",
+        `
+import { EDGE_TYPES } from './constants';
+export function buildQuery() {
+  const placeholders = EDGE_TYPES.map(() => "?").join(", ");
+  return placeholders;
+}
+        `,
+      );
+
+      const edges = extractCallEdges(sourceFile, defaultContext);
+
+      // Should NOT have a CALLS edge to EDGE_TYPES
+      // .map() is a built-in Array method, not a call to EDGE_TYPES
+      const callsToEdgeTypes = edges.filter((e) =>
+        e.target.endsWith(":EDGE_TYPES"),
+      );
+      expect(callsToEdgeTypes).toHaveLength(0);
+    });
+  });
 });

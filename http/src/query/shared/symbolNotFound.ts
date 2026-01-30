@@ -1,5 +1,5 @@
+import type { NodeType } from "@ts-graph/shared";
 import type Database from "better-sqlite3";
-import type { NodeType } from "../../db/Types.js";
 import { levenshteinDistance } from "./levenshteinDistance.js";
 
 interface SymbolInFile {
@@ -25,6 +25,74 @@ interface SymbolMatch {
 export type SymbolResolution =
   | { success: true; nodeId: string; message?: string; filePathWasResolved?: boolean }
   | { success: false; error: string };
+
+/**
+ * Find all symbols matching the given name within a specific file.
+ * Searches for exact matches and method matches (*.symbol).
+ */
+const findSymbolMatchesInFile = (
+  db: Database.Database,
+  symbol: string,
+  filePath: string,
+): SymbolMatch[] => {
+  const rows = db
+    .prepare<
+      [string, string, string, string],
+      { id: string; name: string; file_path: string; type: NodeType }
+    >(
+      `SELECT id, name, file_path, type FROM nodes
+       WHERE file_path = ?
+         AND (LOWER(name) = LOWER(?)
+              OR LOWER(name) LIKE '%.' || LOWER(?)
+              OR LOWER(SUBSTR(id, INSTR(id, ':') + 1)) = LOWER(?))
+       LIMIT 10`,
+    )
+    .all(filePath, symbol, symbol, symbol);
+
+  return rows.map((r) => {
+    const colonIndex = r.id.indexOf(":");
+    const symbolFromId = colonIndex >= 0 ? r.id.slice(colonIndex + 1) : r.name;
+    return {
+      nodeId: r.id,
+      name: symbolFromId,
+      filePath: r.file_path,
+      type: r.type,
+    };
+  });
+};
+
+/**
+ * Find all symbols matching the given name.
+ * Searches for exact matches, method matches (*.symbol), and symbol path matches.
+ */
+const findSymbolMatches = (
+  db: Database.Database,
+  symbol: string,
+): SymbolMatch[] => {
+  const rows = db
+    .prepare<
+      [string, string, string],
+      { id: string; name: string; file_path: string; type: NodeType }
+    >(
+      `SELECT id, name, file_path, type FROM nodes
+       WHERE (LOWER(name) = LOWER(?)
+              OR LOWER(name) LIKE '%.' || LOWER(?)
+              OR LOWER(SUBSTR(id, INSTR(id, ':') + 1)) = LOWER(?))
+       LIMIT 10`,
+    )
+    .all(symbol, symbol, symbol);
+
+  return rows.map((r) => {
+    const colonIndex = r.id.indexOf(":");
+    const symbolFromId = colonIndex >= 0 ? r.id.slice(colonIndex + 1) : r.name;
+    return {
+      nodeId: r.id,
+      name: symbolFromId,
+      filePath: r.file_path,
+      type: r.type,
+    };
+  });
+};
 
 /**
  * Attempt to resolve a symbol, including method name auto-resolution.
@@ -64,6 +132,26 @@ export const resolveSymbol = (
     if (exactMatch) {
       return { success: true, nodeId };
     }
+
+    // Exact match failed, but we have a file path - search within that file first
+    const matchesInFile = findSymbolMatchesInFile(db, symbol, filePath);
+    if (matchesInFile.length === 1) {
+      const match = matchesInFile[0]!;
+      const message =
+        match.name === symbol
+          ? `Found '${symbol}' in ${match.filePath}`
+          : `Found '${symbol}' as ${match.name} in ${match.filePath}`;
+      return { success: true, nodeId: match.nodeId, message };
+    }
+    if (matchesInFile.length > 1) {
+      // Multiple matches within the same file - disambiguation
+      const lines = [`Multiple symbols named '${symbol}' found in ${filePath}:`];
+      for (const match of matchesInFile) {
+        lines.push(`  - ${match.name}`);
+      }
+      return { success: false, error: lines.join("\n") };
+    }
+    // No matches in specified file - fall through to global search
   }
 
   // Search for matches across codebase
@@ -92,46 +180,6 @@ export const resolveSymbol = (
     lines.push(`  - ${match.name} (${match.filePath})`);
   }
   return { success: false, error: lines.join("\n") };
-};
-
-/**
- * Find all symbols matching the given name.
- * Searches for exact matches, method matches (*.symbol), and symbol path matches.
- */
-const findSymbolMatches = (
-  db: Database.Database,
-  symbol: string,
-): SymbolMatch[] => {
-  // Search for:
-  // 1. Exact name match
-  // 2. Method match (name ends with .symbol)
-  // 3. Symbol path match (extract from ID: "file:ClassName.method" -> "ClassName.method")
-  const rows = db
-    .prepare<
-      [string, string, string],
-      { id: string; name: string; file_path: string; type: NodeType }
-    >(
-      `SELECT id, name, file_path, type FROM nodes
-       WHERE (LOWER(name) = LOWER(?)
-              OR LOWER(name) LIKE '%.' || LOWER(?)
-              OR LOWER(SUBSTR(id, INSTR(id, ':') + 1)) = LOWER(?))
-       AND type != 'File'
-       LIMIT 10`,
-    )
-    .all(symbol, symbol, symbol);
-
-  return rows.map((r) => {
-    // Extract full symbol name from nodeId (format: filePath:symbolPath)
-    // e.g., "src/entity.ts:User.getSituations" → "User.getSituations"
-    const colonIndex = r.id.indexOf(":");
-    const symbolFromId = colonIndex >= 0 ? r.id.slice(colonIndex + 1) : r.name;
-    return {
-      nodeId: r.id,
-      name: symbolFromId,
-      filePath: r.file_path,
-      type: r.type,
-    };
-  });
 };
 
 /**
@@ -207,7 +255,7 @@ const getSymbolsInFile = (
 ): SymbolInFile[] => {
   const rows = db
     .prepare<[string], { name: string; type: NodeType }>(
-      "SELECT name, type FROM nodes WHERE file_path = ? AND type != 'File' ORDER BY start_line LIMIT 5",
+      "SELECT name, type FROM nodes WHERE file_path = ? ORDER BY start_line LIMIT 5",
     )
     .all(filePath);
   return rows;

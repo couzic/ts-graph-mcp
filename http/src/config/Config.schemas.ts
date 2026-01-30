@@ -69,6 +69,20 @@ export const ServerConfigSchema = z.object({
   host: z.string().optional(),
 });
 
+export const EmbeddingConfigSchema = z.object({
+  /** Embedding model preset (default: 'nomic-embed') */
+  preset: z.enum(["qwen3-0.6b", "qwen3-4b", "jina-code", "nomic-embed"]).optional(),
+  /** Or explicit model configuration: */
+  /** Hugging Face repo path */
+  repo: z.string().optional(),
+  /** GGUF filename */
+  filename: z.string().optional(),
+  /** Query prefix for search queries */
+  queryPrefix: z.string().optional(),
+  /** Document prefix for indexing */
+  documentPrefix: z.string().optional(),
+});
+
 /** Project configuration schema */
 export const ProjectConfigSchema = z.object({
   /** Packages in the project */
@@ -79,9 +93,12 @@ export const ProjectConfigSchema = z.object({
   watch: WatchConfigSchema.optional(),
   /** HTTP server configuration */
   server: ServerConfigSchema.optional(),
+  /** Embedding configuration for semantic search */
+  embedding: EmbeddingConfigSchema.optional(),
 });
 
 // --- Inferred Types ---
 
 export type ProjectConfig = z.infer<typeof ProjectConfigSchema>;
 export type WatchConfig = z.infer<typeof WatchConfigSchema>;
+export type EmbeddingConfig = z.infer<typeof EmbeddingConfigSchema>;

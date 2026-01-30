@@ -4,7 +4,7 @@ import {
   formatDisambiguationMessage,
 } from "../shared/classMethodFallback.js";
 import { collectNodeIds } from "../shared/collectNodeIds.js";
-import { EDGE_TYPES, MAX_DEPTH } from "../shared/constants.js";
+import { MAX_DEPTH } from "../shared/constants.js";
 import { formatMermaid } from "../shared/formatMermaid.js";
 import {
   enrichNodesWithCallSites,
@@ -20,6 +20,7 @@ import { queryNodeInfos } from "../shared/queryNodeInfos.js";
 import { queryNodeMetadata } from "../shared/queryNodeMetadata.js";
 import type { QueryOptions } from "../shared/QueryTypes.js";
 import { resolveSymbol } from "../shared/symbolNotFound.js";
+import { EDGE_TYPES } from "@ts-graph/shared";
 
 /**
  * Query all reverse dependencies (callers/dependents) of a target node.

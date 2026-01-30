@@ -6,7 +6,7 @@ import {
   appActions,
   createAppVertexConfig,
 } from "./appVertexConfig.js";
-import { SymbolOption } from "./SymbolOption.js";
+import { GraphEndpoint, SymbolOption, symbolToEndpoint } from "./SymbolOption.js";
 import { Subject } from "rxjs";
 
 describe("appVertexConfig", () => {
@@ -14,24 +14,21 @@ describe("appVertexConfig", () => {
   let vertex: Vertex<ReturnType<typeof createAppVertexConfig>>;
   let receivedHealth$: Subject<HealthResponse>;
   let receivedSymbols$: Subject<SymbolOption[]>;
-  let receivedDependencies$: Subject<string>;
-  let receivedDependents$: Subject<string>;
-  let receivedPaths$: Subject<string>;
+  let receivedSearch$: Subject<string>;
+  let receivedTopic$: Subject<string>;
 
   beforeEach(() => {
     vi.useFakeTimers();
     receivedHealth$ = new Subject<HealthResponse>();
     receivedSymbols$ = new Subject<SymbolOption[]>();
-    receivedDependencies$ = new Subject<string>();
-    receivedDependents$ = new Subject<string>();
-    receivedPaths$ = new Subject<string>();
+    receivedSearch$ = new Subject<string>();
+    receivedTopic$ = new Subject<string>();
     const vertexConfig = createAppVertexConfig({
       apiService: () => ({
         getHealth: () => receivedHealth$,
         searchSymbols: () => receivedSymbols$,
-        getDependencies: () => receivedDependencies$,
-        getDependents: () => receivedDependents$,
-        getPathsBetween: () => receivedPaths$,
+        searchGraph: () => receivedSearch$,
+        searchByTopic: () => receivedTopic$,
       }),
     });
     graph = createGraph({
@@ -57,7 +54,7 @@ describe("appVertexConfig", () => {
     });
   });
 
-  describe("startSymbolOptions loader", () => {
+  describe("fromSymbolOptions loader", () => {
     const symbolA: SymbolOption = {
       file_path: "src/a.ts",
       symbol: "funcA",
@@ -65,32 +62,28 @@ describe("appVertexConfig", () => {
     };
 
     it("becomes loaded after debounce on startup", () => {
-      // Emit health so the health field is loaded
       receivedHealth$.next({ status: "ok", ready: true, indexed_files: 0 });
 
-      // Field starts in "loading" state due to debounceTime
       expect(vertex.currentLoadableState.status).toBe("loading");
 
-      // After debounce, field becomes loaded with empty array
       vi.advanceTimersByTime(300);
       expect(vertex.currentLoadableState.status).toBe("loaded");
-      expect(vertex.currentState.startSymbolOptions).toEqual([]);
+      expect(vertex.currentState.fromSymbolOptions).toEqual([]);
     });
 
     it("returns empty array when no history and query is less than 2 characters", () => {
-      graph.dispatch(appActions.setStartSearchQuery("a"));
+      graph.dispatch(appActions.setFromSearchQuery("a"));
       vi.advanceTimersByTime(300);
 
-      expect(vertex.currentState.startSymbolOptions).toEqual([]);
+      expect(vertex.currentState.fromSymbolOptions).toEqual([]);
     });
 
-    it("filters out selected startNode from options", () => {
-      graph.dispatch(appActions.setStartNode(symbolA));
-      graph.dispatch(appActions.setStartSearchQuery("a"));
+    it("filters out selected fromEndpoint from options", () => {
+      graph.dispatch(appActions.setFromEndpoint(symbolToEndpoint(symbolA)));
+      graph.dispatch(appActions.setFromSearchQuery("a"));
       vi.advanceTimersByTime(300);
 
-      // symbolA is selected as startNode, so it's filtered out
-      expect(vertex.currentState.startSymbolOptions).toEqual([]);
+      expect(vertex.currentState.fromSymbolOptions).toEqual([]);
     });
 
     it("shows unselected history items as options", () => {
@@ -99,13 +92,12 @@ describe("appVertexConfig", () => {
         symbol: "funcB",
         type: "Function",
       };
-      graph.dispatch(appActions.setStartNode(symbolA));
-      graph.dispatch(appActions.setEndNode(symbolB));
-      graph.dispatch(appActions.setStartSearchQuery("a"));
+      graph.dispatch(appActions.setFromEndpoint(symbolToEndpoint(symbolA)));
+      graph.dispatch(appActions.setToEndpoint(symbolToEndpoint(symbolB)));
+      graph.dispatch(appActions.setFromSearchQuery("a"));
       vi.advanceTimersByTime(300);
 
-      // Both are in history, but both are filtered out (A is startNode, B is endNode)
-      expect(vertex.currentState.startSymbolOptions).toEqual([]);
+      expect(vertex.currentState.fromSymbolOptions).toEqual([]);
     });
 
     it("shows history items that are not selected in either dropdown", () => {
@@ -119,18 +111,15 @@ describe("appVertexConfig", () => {
         symbol: "funcC",
         type: "Function",
       };
-      // Build history: C, B, A
-      graph.dispatch(appActions.setStartNode(symbolA));
-      graph.dispatch(appActions.setStartNode(symbolB));
-      graph.dispatch(appActions.setStartNode(symbolC));
-      // Now select A as start and B as end
-      graph.dispatch(appActions.setStartNode(symbolA));
-      graph.dispatch(appActions.setEndNode(symbolB));
-      graph.dispatch(appActions.setStartSearchQuery("x"));
+      graph.dispatch(appActions.setFromEndpoint(symbolToEndpoint(symbolA)));
+      graph.dispatch(appActions.setFromEndpoint(symbolToEndpoint(symbolB)));
+      graph.dispatch(appActions.setFromEndpoint(symbolToEndpoint(symbolC)));
+      graph.dispatch(appActions.setFromEndpoint(symbolToEndpoint(symbolA)));
+      graph.dispatch(appActions.setToEndpoint(symbolToEndpoint(symbolB)));
+      graph.dispatch(appActions.setFromSearchQuery("x"));
       vi.advanceTimersByTime(300);
 
-      // History is [B, A, C], filtering out A (startNode) and B (endNode) leaves [C]
-      expect(vertex.currentState.startSymbolOptions).toEqual([symbolC]);
+      expect(vertex.currentState.fromSymbolOptions).toEqual([symbolC]);
     });
 
     it("fetches symbols when query has 2+ characters", () => {
@@ -138,11 +127,11 @@ describe("appVertexConfig", () => {
         { file_path: "src/test.ts", symbol: "test", type: "Function" },
       ];
 
-      graph.dispatch(appActions.setStartSearchQuery("te"));
+      graph.dispatch(appActions.setFromSearchQuery("te"));
       vi.advanceTimersByTime(300);
       receivedSymbols$.next(symbols);
 
-      expect(vertex.currentState.startSymbolOptions).toEqual(symbols);
+      expect(vertex.currentState.fromSymbolOptions).toEqual(symbols);
     });
 
     it("debounces rapid input changes", () => {
@@ -150,17 +139,17 @@ describe("appVertexConfig", () => {
         { file_path: "src/test.ts", symbol: "test", type: "Function" },
       ];
 
-      graph.dispatch(appActions.setStartSearchQuery("te"));
-      graph.dispatch(appActions.setStartSearchQuery("tes"));
-      graph.dispatch(appActions.setStartSearchQuery("test"));
+      graph.dispatch(appActions.setFromSearchQuery("te"));
+      graph.dispatch(appActions.setFromSearchQuery("tes"));
+      graph.dispatch(appActions.setFromSearchQuery("test"));
       vi.advanceTimersByTime(300);
       receivedSymbols$.next(symbols);
 
-      expect(vertex.currentState.startSymbolOptions).toEqual(symbols);
+      expect(vertex.currentState.fromSymbolOptions).toEqual(symbols);
     });
   });
 
-  describe("endSymbolOptions loader", () => {
+  describe("toSymbolOptions loader", () => {
     const symbolA: SymbolOption = {
       file_path: "src/a.ts",
       symbol: "funcA",
@@ -173,19 +162,18 @@ describe("appVertexConfig", () => {
     };
 
     it("returns empty array when no history and query is less than 2 characters", () => {
-      graph.dispatch(appActions.setEndSearchQuery("x"));
+      graph.dispatch(appActions.setToSearchQuery("x"));
       vi.advanceTimersByTime(300);
 
-      expect(vertex.currentState.endSymbolOptions).toEqual([]);
+      expect(vertex.currentState.toSymbolOptions).toEqual([]);
     });
 
-    it("filters out selected endNode from options", () => {
-      graph.dispatch(appActions.setEndNode(symbolB));
-      graph.dispatch(appActions.setEndSearchQuery("x"));
+    it("filters out selected toEndpoint from options", () => {
+      graph.dispatch(appActions.setToEndpoint(symbolToEndpoint(symbolB)));
+      graph.dispatch(appActions.setToSearchQuery("x"));
       vi.advanceTimersByTime(300);
 
-      // symbolB is selected as endNode, so it's filtered out
-      expect(vertex.currentState.endSymbolOptions).toEqual([]);
+      expect(vertex.currentState.toSymbolOptions).toEqual([]);
     });
 
     it("shows history items not selected in either dropdown", () => {
@@ -194,18 +182,15 @@ describe("appVertexConfig", () => {
         symbol: "funcC",
         type: "Function",
       };
-      // Build history
-      graph.dispatch(appActions.setStartNode(symbolA));
-      graph.dispatch(appActions.setEndNode(symbolB));
-      graph.dispatch(appActions.setStartNode(symbolC));
-      // Select A as start and B as end
-      graph.dispatch(appActions.setStartNode(symbolA));
-      graph.dispatch(appActions.setEndNode(symbolB));
-      graph.dispatch(appActions.setEndSearchQuery("x"));
+      graph.dispatch(appActions.setFromEndpoint(symbolToEndpoint(symbolA)));
+      graph.dispatch(appActions.setToEndpoint(symbolToEndpoint(symbolB)));
+      graph.dispatch(appActions.setFromEndpoint(symbolToEndpoint(symbolC)));
+      graph.dispatch(appActions.setFromEndpoint(symbolToEndpoint(symbolA)));
+      graph.dispatch(appActions.setToEndpoint(symbolToEndpoint(symbolB)));
+      graph.dispatch(appActions.setToSearchQuery("x"));
       vi.advanceTimersByTime(300);
 
-      // History contains A, B, C. A is startNode, B is endNode, so only C remains
-      expect(vertex.currentState.endSymbolOptions).toEqual([symbolC]);
+      expect(vertex.currentState.toSymbolOptions).toEqual([symbolC]);
     });
 
     it("fetches symbols when query has 2+ characters", () => {
@@ -213,152 +198,166 @@ describe("appVertexConfig", () => {
         { file_path: "src/foo.ts", symbol: "foo", type: "Function" },
       ];
 
-      graph.dispatch(appActions.setEndSearchQuery("fo"));
+      graph.dispatch(appActions.setToSearchQuery("fo"));
       vi.advanceTimersByTime(300);
       receivedSymbols$.next(symbols);
 
-      expect(vertex.currentState.endSymbolOptions).toEqual(symbols);
+      expect(vertex.currentState.toSymbolOptions).toEqual(symbols);
     });
   });
 
   describe("queryResult loader", () => {
-    const startNode: SymbolOption = {
+    const fromEndpoint: GraphEndpoint = {
+      kind: "symbol",
       file_path: "src/start.ts",
       symbol: "start",
       type: "Function",
     };
-    const endNode: SymbolOption = {
+    const toEndpoint: GraphEndpoint = {
+      kind: "symbol",
       file_path: "src/end.ts",
       symbol: "end",
       type: "Function",
     };
 
-    it("returns null when no node is selected", () => {
+    it("returns null when no endpoint or topic is specified", () => {
       vi.advanceTimersByTime(200);
 
       expect(vertex.currentState.queryResult).toBeNull();
     });
 
-    it("fetches dependencies when only startNode is selected", () => {
+    it("fetches dependencies when only fromEndpoint is selected", () => {
       const dependenciesResult = "## Graph\nstart --CALLS--> dep1";
 
-      graph.dispatch(appActions.setStartNode(startNode));
+      graph.dispatch(appActions.setFromEndpoint(fromEndpoint));
       vi.advanceTimersByTime(200);
-      receivedDependencies$.next(dependenciesResult);
+      receivedSearch$.next(dependenciesResult);
 
       expect(vertex.currentState.queryResult).toEqual(dependenciesResult);
     });
 
-    it("fetches dependents when only endNode is selected", () => {
+    it("fetches dependents when only toEndpoint is selected", () => {
       const dependentsResult = "## Graph\ncaller --CALLS--> end";
 
-      graph.dispatch(appActions.setEndNode(endNode));
+      graph.dispatch(appActions.setToEndpoint(toEndpoint));
       vi.advanceTimersByTime(200);
-      receivedDependents$.next(dependentsResult);
+      receivedSearch$.next(dependentsResult);
 
       expect(vertex.currentState.queryResult).toEqual(dependentsResult);
     });
 
-    it("fetches pathsBetween when both startNode and endNode are selected", () => {
+    it("fetches pathsBetween when both fromEndpoint and toEndpoint are selected", () => {
       const pathsResult = "## Graph\nstart --CALLS--> middle --CALLS--> end";
 
-      graph.dispatch(appActions.setStartNode(startNode));
-      graph.dispatch(appActions.setEndNode(endNode));
+      graph.dispatch(appActions.setFromEndpoint(fromEndpoint));
+      graph.dispatch(appActions.setToEndpoint(toEndpoint));
       vi.advanceTimersByTime(200);
-      receivedPaths$.next(pathsResult);
+      receivedSearch$.next(pathsResult);
 
       expect(vertex.currentState.queryResult).toEqual(pathsResult);
     });
 
-    it("returns null when both nodes are cleared", () => {
-      graph.dispatch(appActions.setStartNode(startNode));
+    it("returns null when endpoints are cleared", () => {
+      graph.dispatch(appActions.setFromEndpoint(fromEndpoint));
       vi.advanceTimersByTime(200);
-      receivedDependencies$.next("some result");
+      receivedSearch$.next("some result");
 
-      graph.dispatch(appActions.clearStartNode());
+      graph.dispatch(appActions.clearFromEndpoint());
       vi.advanceTimersByTime(200);
 
       expect(vertex.currentState.queryResult).toBeNull();
     });
 
-    it("switches to dependencies when endNode is cleared", () => {
+    it("switches to dependencies when toEndpoint is cleared", () => {
       const pathsResult = "## Graph\nstart --CALLS--> end";
       const dependenciesResult = "## Graph\nstart --CALLS--> dep1";
 
-      graph.dispatch(appActions.setStartNode(startNode));
-      graph.dispatch(appActions.setEndNode(endNode));
+      graph.dispatch(appActions.setFromEndpoint(fromEndpoint));
+      graph.dispatch(appActions.setToEndpoint(toEndpoint));
       vi.advanceTimersByTime(200);
-      receivedPaths$.next(pathsResult);
+      receivedSearch$.next(pathsResult);
 
-      graph.dispatch(appActions.clearEndNode());
+      graph.dispatch(appActions.clearToEndpoint());
       vi.advanceTimersByTime(200);
-      receivedDependencies$.next(dependenciesResult);
+      receivedSearch$.next(dependenciesResult);
 
       expect(vertex.currentState.queryResult).toEqual(dependenciesResult);
     });
 
-    it("switches to dependents when startNode is cleared", () => {
+    it("switches to dependents when fromEndpoint is cleared", () => {
       const pathsResult = "## Graph\nstart --CALLS--> end";
       const dependentsResult = "## Graph\ncaller --CALLS--> end";
 
-      graph.dispatch(appActions.setStartNode(startNode));
-      graph.dispatch(appActions.setEndNode(endNode));
+      graph.dispatch(appActions.setFromEndpoint(fromEndpoint));
+      graph.dispatch(appActions.setToEndpoint(toEndpoint));
       vi.advanceTimersByTime(200);
-      receivedPaths$.next(pathsResult);
+      receivedSearch$.next(pathsResult);
 
-      graph.dispatch(appActions.clearStartNode());
+      graph.dispatch(appActions.clearFromEndpoint());
       vi.advanceTimersByTime(200);
-      receivedDependents$.next(dependentsResult);
+      receivedSearch$.next(dependentsResult);
 
       expect(vertex.currentState.queryResult).toEqual(dependentsResult);
     });
+
+    it("fetches semantic search when only topic is specified", () => {
+      const topicResult = "## Symbols matching 'auth'";
+
+      graph.dispatch(appActions.setTopic("auth"));
+      vi.advanceTimersByTime(200);
+      receivedTopic$.next(topicResult);
+
+      expect(vertex.currentState.queryResult).toEqual(topicResult);
+    });
   });
 
-  describe("swapNodes action", () => {
-    const nodeA: SymbolOption = {
+  describe("swapEndpoints action", () => {
+    const nodeA: GraphEndpoint = {
+      kind: "symbol",
       file_path: "src/a.ts",
       symbol: "funcA",
       type: "Function",
     };
-    const nodeB: SymbolOption = {
+    const nodeB: GraphEndpoint = {
+      kind: "symbol",
       file_path: "src/b.ts",
       symbol: "funcB",
       type: "Function",
     };
 
-    it("swaps startNode and endNode when both are selected", () => {
-      graph.dispatch(appActions.setStartNode(nodeA));
-      graph.dispatch(appActions.setEndNode(nodeB));
+    it("swaps fromEndpoint and toEndpoint when both are selected", () => {
+      graph.dispatch(appActions.setFromEndpoint(nodeA));
+      graph.dispatch(appActions.setToEndpoint(nodeB));
 
-      graph.dispatch(appActions.swapNodes());
+      graph.dispatch(appActions.swapEndpoints());
 
-      expect(vertex.currentState.startNode).toEqual(nodeB);
-      expect(vertex.currentState.endNode).toEqual(nodeA);
+      expect(vertex.currentState.fromEndpoint).toEqual(nodeB);
+      expect(vertex.currentState.toEndpoint).toEqual(nodeA);
     });
 
-    it("moves startNode to endNode when only startNode is selected", () => {
-      graph.dispatch(appActions.setStartNode(nodeA));
+    it("moves fromEndpoint to toEndpoint when only fromEndpoint is selected", () => {
+      graph.dispatch(appActions.setFromEndpoint(nodeA));
 
-      graph.dispatch(appActions.swapNodes());
+      graph.dispatch(appActions.swapEndpoints());
 
-      expect(vertex.currentState.startNode).toBeNull();
-      expect(vertex.currentState.endNode).toEqual(nodeA);
+      expect(vertex.currentState.fromEndpoint).toBeNull();
+      expect(vertex.currentState.toEndpoint).toEqual(nodeA);
     });
 
-    it("moves endNode to startNode when only endNode is selected", () => {
-      graph.dispatch(appActions.setEndNode(nodeB));
+    it("moves toEndpoint to fromEndpoint when only toEndpoint is selected", () => {
+      graph.dispatch(appActions.setToEndpoint(nodeB));
 
-      graph.dispatch(appActions.swapNodes());
+      graph.dispatch(appActions.swapEndpoints());
 
-      expect(vertex.currentState.startNode).toEqual(nodeB);
-      expect(vertex.currentState.endNode).toBeNull();
+      expect(vertex.currentState.fromEndpoint).toEqual(nodeB);
+      expect(vertex.currentState.toEndpoint).toBeNull();
     });
 
-    it("does nothing when neither node is selected", () => {
-      graph.dispatch(appActions.swapNodes());
+    it("does nothing when neither endpoint is selected", () => {
+      graph.dispatch(appActions.swapEndpoints());
 
-      expect(vertex.currentState.startNode).toBeNull();
-      expect(vertex.currentState.endNode).toBeNull();
+      expect(vertex.currentState.fromEndpoint).toBeNull();
+      expect(vertex.currentState.toEndpoint).toBeNull();
     });
   });
 
@@ -378,33 +377,34 @@ describe("appVertexConfig", () => {
       expect(vertex.currentState.selectionHistory).toEqual([]);
     });
 
-    it("adds startNode to history when selected", () => {
-      graph.dispatch(appActions.setStartNode(symbolA));
+    it("adds symbol endpoint to history when selected", () => {
+      graph.dispatch(appActions.setFromEndpoint(symbolToEndpoint(symbolA)));
       expect(vertex.currentState.selectionHistory).toEqual([symbolA]);
     });
 
-    it("adds endNode to history when selected", () => {
-      graph.dispatch(appActions.setEndNode(symbolB));
+    it("adds toEndpoint symbol to history when selected", () => {
+      graph.dispatch(appActions.setToEndpoint(symbolToEndpoint(symbolB)));
       expect(vertex.currentState.selectionHistory).toEqual([symbolB]);
     });
 
     it("moves re-selected symbol to front", () => {
-      graph.dispatch(appActions.setStartNode(symbolA));
-      graph.dispatch(appActions.setEndNode(symbolB));
-      graph.dispatch(appActions.setStartNode(symbolA));
+      graph.dispatch(appActions.setFromEndpoint(symbolToEndpoint(symbolA)));
+      graph.dispatch(appActions.setToEndpoint(symbolToEndpoint(symbolB)));
+      graph.dispatch(appActions.setFromEndpoint(symbolToEndpoint(symbolA)));
       expect(vertex.currentState.selectionHistory).toEqual([symbolA, symbolB]);
     });
 
     it("adds new selections to the front", () => {
-      graph.dispatch(appActions.setStartNode(symbolA));
-      graph.dispatch(appActions.setEndNode(symbolB));
+      graph.dispatch(appActions.setFromEndpoint(symbolToEndpoint(symbolA)));
+      graph.dispatch(appActions.setToEndpoint(symbolToEndpoint(symbolB)));
       expect(vertex.currentState.selectionHistory).toEqual([symbolB, symbolA]);
     });
 
     it("limits history to 12 items", () => {
       for (let i = 0; i < 14; i++) {
         graph.dispatch(
-          appActions.setStartNode({
+          appActions.setFromEndpoint({
+            kind: "symbol",
             file_path: `src/${i}.ts`,
             symbol: `func${i}`,
             type: "Function",
@@ -418,7 +418,12 @@ describe("appVertexConfig", () => {
     });
 
     it("does not add null selections to history", () => {
-      graph.dispatch(appActions.setStartNode(null));
+      graph.dispatch(appActions.setFromEndpoint(null));
+      expect(vertex.currentState.selectionHistory).toEqual([]);
+    });
+
+    it("does not add query endpoints to history", () => {
+      graph.dispatch(appActions.setFromEndpoint({ kind: "query", query: "user auth" }));
       expect(vertex.currentState.selectionHistory).toEqual([]);
     });
   });

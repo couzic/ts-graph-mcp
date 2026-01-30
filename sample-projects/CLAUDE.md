@@ -30,10 +30,10 @@ Sample projects exist for **two purposes only**:
 
 ### What E2E Tests Must Do
 
-E2E tests call **actual tool functions** from `http/src/query/*/`:
+E2E tests call **internal query functions** from `http/src/query/*/`. These are the same functions that the MCP `searchGraph` tool uses internally:
 
 ```typescript
-// ✅ CORRECT — Testing actual MCP tool logic
+// ✅ CORRECT — Testing internal query functions (used by searchGraph)
 import { dependenciesOf } from "../../http/src/query/dependencies-of/dependenciesOf.js";
 import { dependentsOf } from "../../http/src/query/dependents-of/dependentsOf.js";
 import { pathsBetween } from "../../http/src/query/paths-between/pathsBetween.js";
@@ -49,10 +49,10 @@ import { queryEdges } from "../../http/src/db/queryEdges.js";  // NO!
 - `openDatabase()`, `initializeSchema()`, `createSqliteWriter()` — DB setup
 - `indexProject()` — Index the sample project
 
-**Test assertions** (the actual E2E tests):
-- `dependenciesOf(db, projectRoot, filePath, symbol)` — From `http/src/query/dependencies-of/`
-- `dependentsOf(db, projectRoot, filePath, symbol)` — From `http/src/query/dependents-of/`
-- `pathsBetween(db, projectRoot, from, to)` — From `http/src/query/paths-between/`
+**Test assertions** (internal query functions):
+- `dependenciesOf(db, projectRoot, filePath, symbol)` — Forward traversal
+- `dependentsOf(db, projectRoot, filePath, symbol)` — Backward traversal
+- `pathsBetween(db, projectRoot, from, to)` — Path finding
 
 ### Forbidden in E2E Tests
 
@@ -149,14 +149,14 @@ step02:
 
 **Current E2E coverage:**
 
-| Tool | Covered By | Status |
-|------|-----------|--------|
-| `dependenciesOf` | call-chain | ✅ |
-| `dependentsOf` | call-chain | ✅ |
-| `pathsBetween` | call-chain | ✅ |
+| Query Type | Internal Function | Covered By | Status |
+|------------|-------------------|-----------|--------|
+| Forward traversal | `dependenciesOf` | call-chain | ✅ |
+| Backward traversal | `dependentsOf` | call-chain | ✅ |
+| Path finding | `pathsBetween` | call-chain | ✅ |
 
 **Benchmark coverage:**
-- `call-chain` — all 3 tools (forward deps, reverse deps, path finding)
+- `call-chain` — forward deps, reverse deps, path finding
 - `layered-api` — path finding, deep call traversal
 - `monorepo` — cross-package analysis
 
@@ -216,11 +216,11 @@ sample-project/
 
 ### Current Benchmarks
 
-| Project | Prompts | Tools Covered |
-|---------|---------|---------------|
-| `call-chain` | P1-P3 | `dependenciesOf`, `dependentsOf`, `pathsBetween` |
-| `layered-api` | P1-P4 | `dependenciesOf`, `pathsBetween` (+ negative test) |
-| `monorepo` | P1-P5 | `dependenciesOf`, `dependentsOf`, `pathsBetween` |
+| Project | Prompts | Query Types Covered |
+|---------|---------|---------------------|
+| `call-chain` | P1-P3 | forward, backward, path finding |
+| `layered-api` | P1-P4 | forward, path finding (+ negative test) |
+| `monorepo` | P1-P5 | forward, backward, path finding |
 
 ### Sample Results (monorepo)
 
@@ -269,7 +269,7 @@ sample-project/
        name: "Test prompt",
        prompt: "What does function X do?",
        expectedContains: ["expected", "keywords"],
-       expectedTool: "dependenciesOf",
+       expectedTool: "searchGraph",
      },
    ];
    ```
@@ -288,15 +288,15 @@ sample-project/
 
 **call-chain example:**
 - WITHOUT MCP: Claude reads 5 files sequentially to trace call chain
-- WITH MCP: Single `dependenciesOf(entry.ts, entry)` → instant answer with full chain
+- WITH MCP: Single `searchGraph({ from: { symbol: "entry" } })` → instant answer with full chain
 
 **layered-api example:**
 - WITHOUT MCP: Claude traces imports through 5 layers, reads multiple files
-- WITH MCP: `pathsBetween` shows the exact path through layers instantly
+- WITH MCP: `searchGraph({ from, to })` shows the exact path through layers instantly
 
 **monorepo example:**
 - WITHOUT MCP: Claude must navigate 6 packages to trace dependencies
-- WITH MCP: `dependentsOf` instantly finds all callers, `dependenciesOf` shows all dependencies
+- WITH MCP: `searchGraph` instantly finds all callers or shows all dependencies
 
 ## Tool Output Design
 

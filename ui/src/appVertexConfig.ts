@@ -3,72 +3,84 @@ import {
   debounceTime,
   distinctUntilChanged,
   interval,
-  map,
   of,
   startWith,
   switchMap,
 } from "rxjs";
 import { configureRootVertex } from "verdux";
 import { ApiService, createApiService } from "./ApiService.js";
-import { SymbolOption } from "./SymbolOption.js";
+import { GraphEndpoint, SymbolOption } from "./SymbolOption.js";
 
 
 export type OutputFormat = "mcp" | "mermaid" | "md";
 export type MermaidDirection = "LR" | "TD";
 
 type AppState = {
-  startNode: SymbolOption | null;
-  endNode: SymbolOption | null;
+  fromEndpoint: GraphEndpoint | null;
+  toEndpoint: GraphEndpoint | null;
+  topic: string;
   outputFormat: OutputFormat;
   mermaidDirection: MermaidDirection;
   maxNodes: number;
-  startSearchQuery: string;
-  endSearchQuery: string;
+  fromSearchQuery: string;
+  toSearchQuery: string;
   selectionHistory: SymbolOption[];
 };
 
-const addToHistory = (state: AppState, option: SymbolOption) => {
+const addToHistory = (state: AppState, endpoint: GraphEndpoint) => {
+  if (endpoint.kind !== "symbol") { return; }
+  const symbolOption: SymbolOption = {
+    file_path: endpoint.file_path,
+    symbol: endpoint.symbol,
+    type: endpoint.type,
+  };
   const filtered = state.selectionHistory.filter(
-    (h) => h.file_path !== option.file_path || h.symbol !== option.symbol
+    (h) => h.file_path !== endpoint.file_path || h.symbol !== endpoint.symbol
   );
-  state.selectionHistory = [option, ...filtered].slice(0, 12);
+  state.selectionHistory = [symbolOption, ...filtered].slice(0, 12);
 };
 
 const filterOutSelected = (
   history: SymbolOption[],
-  startNode: SymbolOption | null,
-  endNode: SymbolOption | null
+  fromEndpoint: GraphEndpoint | null,
+  toEndpoint: GraphEndpoint | null
 ): SymbolOption[] =>
   history.filter(
     (h) =>
-      !(startNode && h.file_path === startNode.file_path && h.symbol === startNode.symbol) &&
-      !(endNode && h.file_path === endNode.file_path && h.symbol === endNode.symbol)
+      !(fromEndpoint && fromEndpoint.kind === "symbol" && h.file_path === fromEndpoint.file_path && h.symbol === fromEndpoint.symbol) &&
+      !(toEndpoint && toEndpoint.kind === "symbol" && h.file_path === toEndpoint.file_path && h.symbol === toEndpoint.symbol)
   );
+
+const initialState: AppState = {
+  fromEndpoint: null,
+  toEndpoint: null,
+  topic: "",
+  outputFormat: "mcp",
+  mermaidDirection: "LR",
+  maxNodes: 50,
+  fromSearchQuery: "",
+  toSearchQuery: "",
+  selectionHistory: [],
+};
 
 const appSlice = createSlice({
   name: "app",
-  initialState: {
-    startNode: null,
-    endNode: null,
-    outputFormat: "mcp",
-    mermaidDirection: "LR",
-    maxNodes: 50,
-    startSearchQuery: "",
-    endSearchQuery: "",
-    selectionHistory: [],
-  } as AppState,
+  initialState,
   reducers: {
-    setStartNode: (state, action: PayloadAction<SymbolOption | null>) => {
-      state.startNode = action.payload;
+    setFromEndpoint: (state, action: PayloadAction<GraphEndpoint | null>) => {
+      state.fromEndpoint = action.payload;
       if (action.payload) {
         addToHistory(state, action.payload);
       }
     },
-    setEndNode: (state, action: PayloadAction<SymbolOption | null>) => {
-      state.endNode = action.payload;
+    setToEndpoint: (state, action: PayloadAction<GraphEndpoint | null>) => {
+      state.toEndpoint = action.payload;
       if (action.payload) {
         addToHistory(state, action.payload);
       }
+    },
+    setTopic: (state, action: PayloadAction<string>) => {
+      state.topic = action.payload;
     },
     setOutputFormat: (state, action: PayloadAction<OutputFormat>) => {
       state.outputFormat = action.payload;
@@ -79,22 +91,22 @@ const appSlice = createSlice({
     setMaxNodes: (state, action: PayloadAction<number>) => {
       state.maxNodes = action.payload;
     },
-    setStartSearchQuery: (state, action: PayloadAction<string>) => {
-      state.startSearchQuery = action.payload;
+    setFromSearchQuery: (state, action: PayloadAction<string>) => {
+      state.fromSearchQuery = action.payload;
     },
-    setEndSearchQuery: (state, action: PayloadAction<string>) => {
-      state.endSearchQuery = action.payload;
+    setToSearchQuery: (state, action: PayloadAction<string>) => {
+      state.toSearchQuery = action.payload;
     },
-    clearStartNode: (state) => {
-      state.startNode = null;
+    clearFromEndpoint: (state) => {
+      state.fromEndpoint = null;
     },
-    clearEndNode: (state) => {
-      state.endNode = null;
+    clearToEndpoint: (state) => {
+      state.toEndpoint = null;
     },
-    swapNodes: (state) => {
-      const temp = state.startNode;
-      state.startNode = state.endNode;
-      state.endNode = temp;
+    swapEndpoints: (state) => {
+      const temp = state.fromEndpoint;
+      state.fromEndpoint = state.toEndpoint;
+      state.toEndpoint = temp;
     },
   },
 });
@@ -113,77 +125,64 @@ const buildVertexConfig = (dependencies: { apiService: () => ApiService }) =>
           switchMap(() => apiService.getHealth())
         ),
       })
-      .loadFromFields$(["startSearchQuery", "selectionHistory", "startNode", "endNode"], {
-        startSymbolOptions: (fields$) =>
+      .loadFromFields$(["fromSearchQuery", "selectionHistory", "fromEndpoint", "toEndpoint"], {
+        fromSymbolOptions: (fields$) =>
           fields$.pipe(
             debounceTime(200),
             distinctUntilChanged(
               (prev, curr) =>
-                prev.startSearchQuery === curr.startSearchQuery &&
+                prev.fromSearchQuery === curr.fromSearchQuery &&
                 prev.selectionHistory === curr.selectionHistory &&
-                prev.startNode === curr.startNode &&
-                prev.endNode === curr.endNode
+                prev.fromEndpoint === curr.fromEndpoint &&
+                prev.toEndpoint === curr.toEndpoint
             ),
-            switchMap(({ startSearchQuery, selectionHistory, startNode, endNode }) => {
-              if (startSearchQuery.length < 2) {
-                return of(filterOutSelected(selectionHistory, startNode, endNode));
+            switchMap(({ fromSearchQuery, selectionHistory, fromEndpoint, toEndpoint }) => {
+              if (fromSearchQuery.length < 2) {
+                return of(filterOutSelected(selectionHistory, fromEndpoint, toEndpoint));
               }
-              return apiService.searchSymbols(startSearchQuery);
+              return apiService.searchSymbols(fromSearchQuery);
             })
           ),
       })
-      .loadFromFields$(["endSearchQuery", "selectionHistory", "startNode", "endNode"], {
-        endSymbolOptions: (fields$) =>
+      .loadFromFields$(["toSearchQuery", "selectionHistory", "fromEndpoint", "toEndpoint"], {
+        toSymbolOptions: (fields$) =>
           fields$.pipe(
             debounceTime(200),
             distinctUntilChanged(
               (prev, curr) =>
-                prev.endSearchQuery === curr.endSearchQuery &&
+                prev.toSearchQuery === curr.toSearchQuery &&
                 prev.selectionHistory === curr.selectionHistory &&
-                prev.startNode === curr.startNode &&
-                prev.endNode === curr.endNode
+                prev.fromEndpoint === curr.fromEndpoint &&
+                prev.toEndpoint === curr.toEndpoint
             ),
-            switchMap(({ endSearchQuery, selectionHistory, startNode, endNode }) => {
-              if (endSearchQuery.length < 2) {
-                return of(filterOutSelected(selectionHistory, startNode, endNode));
+            switchMap(({ toSearchQuery, selectionHistory, fromEndpoint, toEndpoint }) => {
+              if (toSearchQuery.length < 2) {
+                return of(filterOutSelected(selectionHistory, fromEndpoint, toEndpoint));
               }
-              return apiService.searchSymbols(endSearchQuery);
+              return apiService.searchSymbols(toSearchQuery);
             })
           ),
       })
-      .loadFromFields$(["startNode", "endNode", "outputFormat", "maxNodes"], {
+      .loadFromFields$(["fromEndpoint", "toEndpoint", "topic", "maxNodes"], {
         queryResult: (fields$) =>
           fields$.pipe(
             debounceTime(100),
-            switchMap(({ startNode, endNode, outputFormat, maxNodes }) => {
-              // START only → dependenciesOf (what does this call?)
-              if (startNode && !endNode) {
-                return apiService.getDependencies(
-                  startNode.file_path,
-                  startNode.symbol,
-                  outputFormat,
-                  maxNodes
-                );
+            switchMap(({ fromEndpoint, toEndpoint, topic, maxNodes }) => {
+              // Topic only → semantic search
+              if (topic.trim() && !fromEndpoint && !toEndpoint) {
+                return apiService.searchByTopic(topic, maxNodes);
               }
-              // END only → dependentsOf (who calls this?)
-              if (!startNode && endNode) {
-                return apiService.getDependents(
-                  endNode.file_path,
-                  endNode.symbol,
-                  outputFormat,
-                  maxNodes
-                );
+              // FROM only → dependenciesOf (what does this call?)
+              if (fromEndpoint && !toEndpoint) {
+                return apiService.searchGraph({ from: fromEndpoint, maxNodes });
+              }
+              // TO only → dependentsOf (who calls this?)
+              if (!fromEndpoint && toEndpoint) {
+                return apiService.searchGraph({ to: toEndpoint, maxNodes });
               }
               // Both → pathsBetween
-              if (startNode && endNode) {
-                return apiService.getPathsBetween(
-                  startNode.file_path,
-                  startNode.symbol,
-                  endNode.file_path,
-                  endNode.symbol,
-                  outputFormat,
-                  maxNodes
-                );
+              if (fromEndpoint && toEndpoint) {
+                return apiService.searchGraph({ from: fromEndpoint, to: toEndpoint, maxNodes });
               }
               // Neither selected
               return of(null);

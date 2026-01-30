@@ -188,15 +188,9 @@ const resolveCallTarget = (
           absolutePath.includes("/node_modules/");
 
         if (isBuiltIn) {
-          // Not in our project - fallback to symbolMap lookup
-          const baseText = expression.getExpression().getText();
-          const baseName = baseText.split(".")[0] ?? baseText;
-          const resolvedName = aliasMap.get(baseName) ?? baseName;
-          const targetId = symbolMap.get(resolvedName);
-
-          if (targetId) {
-            return { targetId, symbolName: resolvedName };
-          }
+          // Built-in method call (Array.map, String.split, etc.)
+          // Don't create a CALLS edge - the method belongs to the built-in type,
+          // not to the imported variable that holds the data.
           return undefined;
         }
 

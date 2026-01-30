@@ -23,11 +23,46 @@ export const getCacheDir = (projectRoot: string): string => {
 };
 
 /**
+ * Get the SQLite directory path.
+ *
+ * @param cacheDir - The cache directory
+ * @returns Absolute path to .ts-graph-mcp/sqlite/
+ */
+export const getSqliteDir = (cacheDir: string): string => {
+  const sqliteDir = join(cacheDir, "sqlite");
+  mkdirSync(sqliteDir, { recursive: true });
+  return sqliteDir;
+};
+
+/**
+ * Get the Orama directory path.
+ *
+ * @param cacheDir - The cache directory
+ * @returns Absolute path to .ts-graph-mcp/orama/
+ */
+export const getOramaDir = (cacheDir: string): string => {
+  const oramaDir = join(cacheDir, "orama");
+  mkdirSync(oramaDir, { recursive: true });
+  return oramaDir;
+};
+
+/**
  * Get the default database path for a project.
  *
  * @param projectRoot - The project root directory
- * @returns Absolute path to graph.db
+ * @returns Absolute path to .ts-graph-mcp/sqlite/graph.db
  */
 export const getDefaultDbPath = (projectRoot: string): string => {
-  return join(getCacheDir(projectRoot), "graph.db");
+  const cacheDir = getCacheDir(projectRoot);
+  return join(getSqliteDir(cacheDir), "graph.db");
+};
+
+/**
+ * Get the default Orama index path for a project.
+ *
+ * @param cacheDir - The cache directory
+ * @returns Absolute path to .ts-graph-mcp/orama/index.json
+ */
+export const getOramaIndexPath = (cacheDir: string): string => {
+  return join(getOramaDir(cacheDir), "index.json");
 };
