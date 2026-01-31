@@ -30,6 +30,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const indexAndOpenDb = async (
   projectRoot: string,
   cacheDir: string,
+  modelName: string,
   forceReindex: boolean,
   logger: TsGraphLogger,
   searchIndex: SearchIndexWrapper,
@@ -71,6 +72,8 @@ const indexAndOpenDb = async (
     const writer = createSqliteWriter(db);
     const result = await indexProject(configResult.config, writer, {
       projectRoot,
+      cacheDir,
+      modelName,
       clearFirst: forceReindex,
       logger,
       searchIndex,
@@ -244,6 +247,7 @@ export const startHttpServer = async (
   const { db, indexedFiles, manifest, config } = await indexAndOpenDb(
     projectRoot,
     cacheDir,
+    presetName,
     shouldReindex,
     logger,
     searchIndex,

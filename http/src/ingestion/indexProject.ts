@@ -5,12 +5,17 @@ import { mergeMap, tap, toArray } from "rxjs/operators";
 import type { ProjectConfig } from "../config/Config.schemas.js";
 import type { DbWriter } from "../db/DbWriter.js";
 import type { IndexResult } from "../db/Types.js";
+import {
+  type EmbeddingCacheConnection,
+  openEmbeddingCache,
+} from "../embedding/embeddingCache.js";
 import type { EmbeddingProvider } from "../embedding/EmbeddingTypes.js";
 import type { TsGraphLogger } from "../logging/TsGraphLogger.js";
 import type { SearchIndexWrapper } from "../search/createSearchIndex.js";
 import { createProject } from "./createProject.js";
 import type { EdgeExtractionContext } from "./extract/edges/EdgeExtractionContext.js";
 import { extractConfiguredPackageNames } from "./extractConfiguredPackageNames.js";
+import type { EmbeddingCache } from "./indexFile.js";
 import { indexFile } from "./indexFile.js";
 import {
   createProjectRegistry,
@@ -26,6 +31,10 @@ const DEFAULT_CONCURRENCY = Math.max(2, cpus().length);
 export interface IndexProjectOptions {
   /** Project root directory (for resolving relative paths) */
   projectRoot: string;
+  /** Cache directory (for embedding cache, required when using embeddingProvider) */
+  cacheDir?: string;
+  /** Embedding model name (for cache file naming, required when using embeddingProvider) */
+  modelName?: string;
   /** Clear database before indexing */
   clearFirst?: boolean;
   /** Logger for progress reporting */
@@ -67,6 +76,13 @@ export const indexProject = async (
     await dbWriter.clearAll();
   }
 
+  // Open embedding cache connection (only when cacheDir and modelName are provided)
+  const { cacheDir, modelName } = options;
+  const embeddingCache =
+    cacheDir !== undefined && modelName !== undefined
+      ? openEmbeddingCache(cacheDir, modelName)
+      : undefined;
+
   // Create project registry for cross-package resolution
   const projectRegistry = createProjectRegistry(config, options.projectRoot);
   const configuredPackageNames = extractConfiguredPackageNames(
@@ -87,6 +103,7 @@ export const indexProject = async (
         options.logger,
         options.searchIndex,
         options.embeddingProvider,
+        embeddingCache,
       );
 
       filesProcessed += result.filesProcessed;
@@ -103,6 +120,11 @@ export const indexProject = async (
         message: `Failed to process package: ${(e as Error).message}`,
       });
     }
+  }
+
+  // Close embedding cache connection
+  if (embeddingCache !== undefined) {
+    embeddingCache.close();
   }
 
   return {
@@ -146,8 +168,9 @@ const processPackage = async (
   projectRegistry: ProjectRegistry,
   configuredPackageNames: Set<string>,
   logger: TsGraphLogger,
-  searchIndex?: SearchIndexWrapper,
-  embeddingProvider?: EmbeddingProvider,
+  searchIndex: SearchIndexWrapper | undefined,
+  embeddingProvider: EmbeddingProvider | undefined,
+  embeddingCache: EmbeddingCache | undefined,
 ): Promise<PackageProcessResult> => {
   const errors: Array<{ file: string; message: string }> = [];
   const filesIndexed: string[] = [];
@@ -202,6 +225,7 @@ const processPackage = async (
           const result = await indexFile(sourceFile, context, dbWriter, {
             searchIndex,
             embeddingProvider,
+            embeddingCache,
           });
           return {
             success: true as const,

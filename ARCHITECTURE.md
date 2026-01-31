@@ -268,6 +268,15 @@ Streaming architecture — processes one file at a time:
 
 Memory efficient: O(1) per file, scales to any codebase size.
 
+### Embedding Parallelism
+
+Embedding generation uses a pool of `LlamaEmbeddingContext` instances in
+CPU-only mode. GPU (Vulkan) has a global lock that serializes all operations;
+CPU-only enables true parallelism.
+
+Default: 4 contexts × 4 threads = 16 total threads (~1.5x speedup on 16-core
+machine).
+
 ### Cross-File Resolution
 
 Edge extractors use `buildImportMap` to resolve cross-file references:

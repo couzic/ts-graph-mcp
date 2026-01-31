@@ -1,3 +1,4 @@
+import { cpus } from "node:os";
 import {
   getLlama,
   LlamaLogLevel,
@@ -26,11 +27,19 @@ export interface CreateEmbeddingProviderOptions {
   onProgress?: DownloadProgress;
 }
 
+const DEFAULT_POOL_SIZE = 4;
+
+interface PooledContext {
+  context: LlamaEmbeddingContext;
+  busy: boolean;
+}
+
 /**
- * Create an embedding provider using node-llama-cpp.
+ * Create an embedding provider using node-llama-cpp with context pooling.
  *
- * Handles model download, loading, and embedding generation.
- * The provider is lazy-loaded (model loads on first use).
+ * Uses CPU-only mode with multiple embedding contexts for parallel processing.
+ * Vulkan GPU has a global lock that prevents parallelism, so CPU mode is faster
+ * for batch embedding generation.
  *
  * @example
  * const provider = await createEmbeddingProvider({
@@ -43,6 +52,7 @@ export const createEmbeddingProvider = async (
 ): Promise<EmbeddingProvider> => {
   const config = options.config ?? {};
   const modelsDir = options.modelsDir ?? ".ts-graph-mcp/models";
+  const poolSize = config.poolSize ?? DEFAULT_POOL_SIZE;
 
   // Resolve preset or use explicit config
   const preset = config.preset ?? DEFAULT_PRESET;
@@ -61,26 +71,61 @@ export const createEmbeddingProvider = async (
 
   let llama: Llama | null = null;
   let model: LlamaModel | null = null;
-  let embeddingContext: LlamaEmbeddingContext | null = null;
+  let contextPool: PooledContext[] = [];
   let ready = false;
 
+  // Queue for callers waiting for an available context
+  const waitQueue: Array<(ctx: LlamaEmbeddingContext) => void> = [];
+
   /**
-   * Initialize the embedding model (lazy).
+   * Acquire an idle context from the pool, or wait if all are busy.
+   */
+  const acquireContext = (): Promise<LlamaEmbeddingContext> => {
+    const idle = contextPool.find((pc) => !pc.busy);
+    if (idle) {
+      idle.busy = true;
+      return Promise.resolve(idle.context);
+    }
+    return new Promise((resolve) => {
+      waitQueue.push(resolve);
+    });
+  };
+
+  /**
+   * Release a context back to the pool.
+   */
+  const releaseContext = (context: LlamaEmbeddingContext): void => {
+    const pooledCtx = contextPool.find((pc) => pc.context === context);
+    if (!pooledCtx) {
+      return;
+    }
+
+    const next = waitQueue.shift();
+    if (next) {
+      // Direct handoff to waiting caller, context stays busy
+      next(pooledCtx.context);
+    } else {
+      pooledCtx.busy = false;
+    }
+  };
+
+  /**
+   * Initialize the embedding model and context pool (lazy).
    */
   const initialize = async (): Promise<void> => {
     if (ready) {
       return;
     }
 
-    // Get or create Llama instance with suppressed logging
-    // This prevents llama.cpp from writing to stderr and interfering with progress display
+    // Use CPU-only mode to enable parallel embedding generation.
+    // Vulkan GPU has a global lock that serializes all operations.
     llama = await getLlama({
       logLevel: LlamaLogLevel.error,
-      logger: () => {}, // No-op logger to suppress all output
+      logger: () => {},
+      gpu: false,
     });
 
     // Resolve model file (downloads if needed)
-    // Use hf: URI scheme for Hugging Face repos
     const modelUri = `hf:${repo}/${filename}`;
     const modelPath = await resolveModelFile(modelUri, {
       directory: modelsDir,
@@ -91,14 +136,48 @@ export const createEmbeddingProvider = async (
         : undefined,
     });
 
-    // Load model
-    // Disable Direct I/O to use mmap instead (Direct I/O fails on some systems)
+    // Load model with mmap (Direct I/O fails on some systems)
     model = await llama.loadModel({ modelPath, useDirectIo: false });
 
-    // Create embedding context
-    embeddingContext = await model.createEmbeddingContext();
+    // Create pool of embedding contexts with distributed threads
+    const numCpus = cpus().length;
+    const threadsPerContext = Math.max(1, Math.floor(numCpus / poolSize));
 
-    ready = true;
+    const createdContexts: LlamaEmbeddingContext[] = [];
+    try {
+      for (let i = 0; i < poolSize; i++) {
+        const context = await model.createEmbeddingContext({
+          threads: threadsPerContext,
+        });
+        createdContexts.push(context);
+      }
+      contextPool = createdContexts.map((ctx) => ({ context: ctx, busy: false }));
+      ready = true;
+    } catch (e) {
+      // Cleanup on partial failure
+      for (const ctx of createdContexts) {
+        await ctx.dispose();
+      }
+      throw e;
+    }
+  };
+
+  /**
+   * Generate embedding using a pooled context.
+   */
+  const embedWithPool = async (
+    text: string,
+    prefix: string,
+  ): Promise<number[]> => {
+    await initialize();
+    const context = await acquireContext();
+    try {
+      const input = prefix ? `${prefix}${text}` : text;
+      const embedding = await context.getEmbeddingFor(input);
+      return [...embedding.vector];
+    } finally {
+      releaseContext(context);
+    }
   };
 
   return {
@@ -109,30 +188,21 @@ export const createEmbeddingProvider = async (
     initialize,
 
     async embedQuery(text: string): Promise<number[]> {
-      await initialize();
-      if (!embeddingContext) {
-        throw new Error("Embedding context not initialized");
-      }
-      const input = queryPrefix ? `${queryPrefix}${text}` : text;
-      const embedding = await embeddingContext.getEmbeddingFor(input);
-      return [...embedding.vector];
+      return embedWithPool(text, queryPrefix);
     },
 
     async embedDocument(text: string): Promise<number[]> {
-      await initialize();
-      if (!embeddingContext) {
-        throw new Error("Embedding context not initialized");
-      }
-      const input = documentPrefix ? `${documentPrefix}${text}` : text;
-      const embedding = await embeddingContext.getEmbeddingFor(input);
-      return [...embedding.vector];
+      return embedWithPool(text, documentPrefix);
     },
 
     async dispose(): Promise<void> {
-      if (embeddingContext) {
-        await embeddingContext.dispose();
-        embeddingContext = null;
+      // Dispose all contexts in the pool
+      for (const pc of contextPool) {
+        await pc.context.dispose();
       }
+      contextPool = [];
+      waitQueue.length = 0;
+
       if (model) {
         await model.dispose();
         model = null;

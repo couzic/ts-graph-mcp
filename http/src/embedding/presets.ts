@@ -31,7 +31,7 @@ export const EMBEDDING_PRESETS: Record<string, EmbeddingModelPreset> = {
    * Jina Code v2 - specialized for code embedding.
    * Smaller model optimized for code search.
    */
-  "jina-code": {
+  "jina-embeddings-v2-base-code": {
     repo: "jinaai/jina-embeddings-v2-base-code",
     filename: "jina-embeddings-v2-base-code-Q8_0.gguf",
     dimensions: 768,
@@ -43,7 +43,7 @@ export const EMBEDDING_PRESETS: Record<string, EmbeddingModelPreset> = {
    * Nomic Embed Text v1.5 - general purpose embedding.
    * Good quality with reasonable size.
    */
-  "nomic-embed": {
+  "nomic-embed-text-v1.5": {
     repo: "nomic-ai/nomic-embed-text-v1.5-GGUF",
     filename: "nomic-embed-text-v1.5.Q8_0.gguf",
     dimensions: 768,
@@ -55,4 +55,4 @@ export const EMBEDDING_PRESETS: Record<string, EmbeddingModelPreset> = {
 /**
  * Default preset to use when none specified.
  */
-export const DEFAULT_PRESET = "nomic-embed";
+export const DEFAULT_PRESET = "nomic-embed-text-v1.5";

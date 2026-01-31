@@ -1,6 +1,10 @@
 import type { SourceFile } from "ts-morph";
 import type { DbWriter } from "../db/DbWriter.js";
 import type { Node } from "../db/Types.js";
+import {
+  computeContentHash,
+  type EmbeddingCacheConnection,
+} from "../embedding/embeddingCache.js";
 import type { EmbeddingProvider } from "../embedding/EmbeddingTypes.js";
 import type { SearchIndexWrapper } from "../search/createSearchIndex.js";
 import type { SearchDocument } from "../search/SearchTypes.js";
@@ -70,6 +74,11 @@ export interface IndexFileResult {
 }
 
 /**
+ * Embedding cache connection for looking up and storing embeddings.
+ */
+export type EmbeddingCache = EmbeddingCacheConnection;
+
+/**
  * Options for indexing a single file.
  */
 export interface IndexFileOptions {
@@ -77,6 +86,8 @@ export interface IndexFileOptions {
   searchIndex?: SearchIndexWrapper;
   /** Embedding provider for semantic search (optional) */
   embeddingProvider?: EmbeddingProvider;
+  /** Embedding cache for avoiding regeneration (optional) */
+  embeddingCache?: EmbeddingCache;
 }
 
 /**
@@ -123,12 +134,24 @@ export const indexFile = async (
       }));
 
       // Generate embeddings in parallel (if provider available)
+      // Uses cache to avoid regenerating embeddings for unchanged content
       let embeddings: Array<number[] | undefined>;
       if (embeddingProvider) {
+        const { embeddingCache } = options;
         embeddings = await Promise.all(
-          nodeSnippets.map(({ node, snippet }) =>
-            embeddingProvider.embedDocument(prepareEmbeddingContent(node, snippet)),
-          ),
+          nodeSnippets.map(async ({ node, snippet }) => {
+            const content = prepareEmbeddingContent(node, snippet);
+            const hash = computeContentHash(content);
+
+            const cached = embeddingCache?.get(hash);
+            if (cached) {
+              return cached;
+            }
+
+            const vector = await embeddingProvider.embedDocument(content);
+            embeddingCache?.set(hash, vector);
+            return vector;
+          }),
         );
       } else {
         embeddings = nodeSnippets.map(() => undefined);

@@ -70,8 +70,8 @@ export const ServerConfigSchema = z.object({
 });
 
 export const EmbeddingConfigSchema = z.object({
-  /** Embedding model preset (default: 'nomic-embed') */
-  preset: z.enum(["qwen3-0.6b", "qwen3-4b", "jina-code", "nomic-embed"]).optional(),
+  /** Embedding model preset (default: 'nomic-embed-text-v1.5') */
+  preset: z.enum(["qwen3-0.6b", "qwen3-4b", "jina-embeddings-v2-base-code", "nomic-embed-text-v1.5"]).optional(),
   /** Or explicit model configuration: */
   /** Hugging Face repo path */
   repo: z.string().optional(),
