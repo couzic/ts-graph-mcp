@@ -82,7 +82,7 @@ searchGraph(db, projectRoot, {
 type GraphEndpoint = {
   query?: string,    // Lexical + semantic search (can return multiple nodes)
   symbol?: string,   // Exact symbol name (single node)
-  file_path?: string // Optional file constraint
+  file_path?: string // Include when known to avoid disambiguation
 }
 ```
 

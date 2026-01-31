@@ -1,14 +1,15 @@
 # Architecture
 
-ts-graph is an MCP server that extracts TypeScript code structure into a queryable graph database.
+ts-graph is an MCP server that extracts TypeScript code structure into a
+queryable graph database.
 
 ## Overview
 
 Single package with two modes:
 
-| Command | Mode | Purpose |
-|---------|------|---------|
-| `npx ts-graph-mcp` | HTTP server | Indexing + HTTP API + Web UI |
+| Command                  | Mode        | Purpose                          |
+| ------------------------ | ----------- | -------------------------------- |
+| `npx ts-graph-mcp`       | HTTP server | Indexing + HTTP API + Web UI     |
 | `npx ts-graph-mcp --mcp` | MCP wrapper | Stdio MCP server for Claude Code |
 
 The MCP wrapper expects the HTTP server to be running separately.
@@ -95,7 +96,8 @@ ts-graph-mcp/
 - `http/` and `mcp/` are parallel — both are "servers", named by protocol
 - `shared/` contains types/interfaces used by all packages
 - `ui/` is a React SPA with its own Vite build
-- Only root `ts-graph-mcp` is published; internal packages use `@ts-graph/*` imports
+- Only root `ts-graph-mcp` is published; internal packages use `@ts-graph/*`
+  imports
 
 ## Server Discovery
 
@@ -104,7 +106,8 @@ The MCP wrapper finds the HTTP server using this priority:
 1. **Config file:** `ts-graph-mcp.config.json` → `server.port` (required)
 2. **Environment variable:** `TS_GRAPH_URL` (optional override)
 
-The port must be configured in `ts-graph-mcp.config.json`. There is no default port.
+The port must be configured in `ts-graph-mcp.config.json`. There is no default
+port.
 
 ## HTTP API
 
@@ -146,6 +149,7 @@ Content-Type: application/json
 ```
 
 Query patterns:
+
 - `{ from: { symbol } }` — Forward traversal (dependencies)
 - `{ to: { symbol } }` — Backward traversal (dependents)
 - `{ from, to }` — Path finding
@@ -155,40 +159,46 @@ Query patterns:
 
 See `http/src/db/Types.ts` for node and edge type definitions.
 
-**Node ID format**: `{filePath}:{symbolPath}` — e.g., `src/utils.ts:formatDate`, `src/models/User.ts:User.save`
+**Node ID format**: `{filePath}:{symbolPath}` — e.g., `src/utils.ts:formatDate`,
+`src/models/User.ts:User.save`
 
 ### Edge Types
 
-| Edge | Description |
-|------|-------------|
-| `CALLS` | Direct function/method invocation |
-| `INCLUDES` | JSX component usage (`<Component />`) |
-| `EXTENDS` | Class/interface inheritance |
-| `IMPLEMENTS` | Class implements interface |
-| `TAKES` | Function/method parameter type |
-| `RETURNS` | Function/method return type |
-| `HAS_TYPE` | Variable type annotation |
-| `HAS_PROPERTY` | Class/interface/object property type |
+| Edge           | Description                                 |
+| -------------- | ------------------------------------------- |
+| `CALLS`        | Direct function/method invocation           |
+| `INCLUDES`     | JSX component usage (`<Component />`)       |
+| `EXTENDS`      | Class/interface inheritance                 |
+| `IMPLEMENTS`   | Class implements interface                  |
+| `TAKES`        | Function/method parameter type              |
+| `RETURNS`      | Function/method return type                 |
+| `HAS_TYPE`     | Variable type annotation                    |
+| `HAS_PROPERTY` | Class/interface/object property type        |
 | `DERIVES_FROM` | Type alias composition (intersection/union) |
-| `ALIAS_FOR` | Direct type alias |
-| `REFERENCES` | Function passed as callback or stored |
+| `ALIAS_FOR`    | Direct type alias                           |
+| `REFERENCES`   | Function passed as callback or stored       |
 
 ### Type Signature Edge Design
 
 Type edges capture data flow and polymorphism:
+
 - **Generics**: Extract inner type only (`Promise<User>` → edge to `User`)
-- **Unions**: Multiple edges (`User | Admin` → edges to both, skip `null`/`undefined`)
+- **Unions**: Multiple edges (`User | Admin` → edges to both, skip
+  `null`/`undefined`)
 - **Primitives**: Skipped (`string`, `number`, `boolean`, etc.)
-- **Built-ins**: Skipped (`Array`, `Promise`, `Map`, etc.) — inner types extracted
+- **Built-ins**: Skipped (`Array`, `Promise`, `Map`, etc.) — inner types
+  extracted
 
 ### Transparent Re-exports
 
-**Re-exports are completely invisible in the graph.** No nodes, no edges, nothing.
+**Re-exports are completely invisible in the graph.** No nodes, no edges,
+nothing.
 
 When file X imports from a barrel file and calls a function:
+
 ```typescript
 // X.ts
-import { formatValue } from './index';  // barrel re-exports from helper.ts
+import { formatValue } from "./index"; // barrel re-exports from helper.ts
 formatValue();
 ```
 
@@ -197,11 +207,13 @@ The graph shows: `X.ts --CALLS--> src/utils/helper.ts:formatValue`
 **NOT:** `X.ts --CALLS--> src/index.ts:...` (barrel file is invisible)
 
 This is achieved at **indexing time**:
+
 - `buildImportMap.ts` follows re-export chains using `followAliasChain()`
 - Edges point directly to actual definitions
 - Barrel files with only re-exports have no symbol nodes
 
-No query-time resolution needed. The graph only contains actual code definitions.
+No query-time resolution needed. The graph only contains actual code
+definitions.
 
 ## Data Flow
 
@@ -259,14 +271,17 @@ Memory efficient: O(1) per file, scales to any codebase size.
 ### Cross-File Resolution
 
 Edge extractors use `buildImportMap` to resolve cross-file references:
-- ts-morph resolves import paths (handles tsconfig `paths` aliases like `@shared/*`)
+
+- ts-morph resolves import paths (handles tsconfig `paths` aliases like
+  `@shared/*`)
 - Workspace map resolves cross-package imports in monorepos
 - Import map constructs target IDs: `{targetPath}:{symbolName}`
 - No need to validate target exists — queries use JOINs to filter dangling edges
 
 ### Workspace Resolution
 
-For monorepos with multiple packages, ts-graph builds a **workspace map** at project creation time that maps package names directly to source entry files:
+For monorepos with multiple packages, ts-graph builds a **workspace map** at
+project creation time that maps package names directly to source entry files:
 
 ```
 "@libs/toolkit" → "/path/to/libs/toolkit/src/index.ts"
@@ -275,21 +290,26 @@ For monorepos with multiple packages, ts-graph builds a **workspace map** at pro
 
 **Why not use package manager resolution (PnP, node_modules)?**
 
-Package managers resolve to compiled output (`dist/index.js`). This tool analyzes **source code** — it should never require `dist/` folders to exist.
+Package managers resolve to compiled output (`dist/index.js`). This tool
+analyzes **source code** — it should never require `dist/` folders to exist.
 
 **How it works** (`buildWorkspaceMap.ts`):
+
 1. Parse root `package.json` workspaces field (supports globs like `libs/*`)
 2. For each package, read its `package.json` to get the npm package name
 3. Infer source entry from `main` + tsconfig `outDir`/`rootDir` mapping
 4. Build map: `packageName → absoluteSourcePath`
 
 **Resolution order** in `createProject.ts`:
+
 1. Check workspace map for exact package name match
-2. Fall back to standard TypeScript resolution (relative imports, external packages)
+2. Fall back to standard TypeScript resolution (relative imports, external
+   packages)
 
 ### No Foreign Key Constraints
 
 The schema omits FK constraints intentionally:
+
 1. Queries JOIN with nodes table, automatically filtering dangling edges
 2. Backend-agnostic (graph databases don't use FK constraints)
 3. Enables parallel indexing of packages
@@ -298,25 +318,30 @@ The schema omits FK constraints intentionally:
 
 One unified tool for all graph queries:
 
-| Query Pattern | Input | Question |
-|---------------|-------|----------|
-| Forward traversal | `{ from: { symbol } }` | "What does this depend on?" |
-| Backward traversal | `{ to: { symbol } }` | "Who depends on this?" |
-| Path finding | `{ from, to }` | "How does A reach B?" |
-| Semantic search | `{ topic }` | "Find code related to X" |
+| Query Pattern      | Input                  | Question                    |
+| ------------------ | ---------------------- | --------------------------- |
+| Forward traversal  | `{ from: { symbol } }` | "What does this depend on?" |
+| Backward traversal | `{ to: { symbol } }`   | "Who depends on this?"      |
+| Path finding       | `{ from, to }`         | "How does A reach B?"       |
+| Semantic search    | `{ topic }`            | "Find code related to X"    |
 
-See [`http/src/query/CLAUDE.md`](http/src/query/CLAUDE.md) for implementation details.
+See [`http/src/query/CLAUDE.md`](http/src/query/CLAUDE.md) for implementation
+details.
 
 ### Parameters
 
 **`from` / `to`** (GraphEndpoint): Each can specify:
+
 - `symbol` — Exact symbol name
 - `query` — Natural language (uses semantic search)
-- `file_path` — Optional file constraint
+- `file_path` — Include when known to avoid disambiguation
 
-**`topic`** (optional): Semantic filter for domain/concern (e.g., "validation", "authentication").
+**`topic`** (optional): Semantic filter for domain/concern (e.g., "validation",
+"authentication").
 
-**`max_nodes`** (optional, default: 50): Controls output size. Output adapts based on node count:
+**`max_nodes`** (optional, default: 50): Controls output size. Output adapts
+based on node count:
+
 - **1-30 nodes**: Full output with snippets
 - **31-50 nodes**: Metadata only (snippets omitted to reduce noise)
 - **51+ nodes**: Graph truncated, Nodes section skipped entirely
@@ -324,6 +349,7 @@ See [`http/src/query/CLAUDE.md`](http/src/query/CLAUDE.md) for implementation de
 ### Symbol Resolution
 
 When a symbol isn't found at the exact path:
+
 1. **Method name matching** — Searches for method names across all classes
 2. **Single match** — Auto-resolves and proceeds (output shows resolved name)
 3. **Multiple matches** — Returns disambiguation list with file paths
@@ -349,33 +375,41 @@ fnB:
 
 ### Design Philosophy
 
-**Lean definitions.** Tool definitions appear in every conversation (fixed token cost), so keep them as concise as possible yet providing all the crucial information and making sure the AI agent will call them when it's the efficient solution.
+**Lean definitions.** Tool definitions appear in every conversation (fixed token
+cost), so keep them as concise as possible yet providing all the crucial
+information and making sure the AI agent will call them when it's the efficient
+solution.
 
 ## LSP Overlap
 
 Claude Code has a built-in LSP tool. Use each for its strengths:
 
-| LSP | ts-graph |
-|-----|----------|
-| Real-time, no indexing lag | Pre-indexed, instant complex queries |
-| Point-to-point (definition, direct refs) | Transitive (callers of callers) |
-| Single function context | Path finding (A → B) |
+| LSP                                      | ts-graph                             |
+| ---------------------------------------- | ------------------------------------ |
+| Real-time, no indexing lag               | Pre-indexed, instant complex queries |
+| Point-to-point (definition, direct refs) | Transitive (callers of callers)      |
+| Single function context                  | Path finding (A → B)                 |
 
 ## File Watching
 
 The server automatically reindexes files on save:
 
-1. **Startup sync** — Compares manifest (mtime/size) with filesystem, reindexes stale/new files
-2. **Runtime watcher** — Chokidar watches for changes, debounces rapid saves (300ms default)
-3. **tsconfig validation** — Only files in tsconfig compilation are indexed (not just any `.ts` file)
+1. **Startup sync** — Compares manifest (mtime/size) with filesystem, reindexes
+   stale/new files
+2. **Runtime watcher** — Chokidar watches for changes, debounces rapid saves
+   (300ms default)
+3. **tsconfig validation** — Only files in tsconfig compilation are indexed (not
+   just any `.ts` file)
 
 **Key files:**
+
 - `http/src/ingestion/watchProject.ts` — Chokidar watcher with debouncing
 - `http/src/ingestion/syncOnStartup.ts` — Manifest-based startup sync
 - `http/src/ingestion/manifest.ts` — Tracks indexed files (mtime/size)
 - `http/src/ingestion/indexFile.ts` — Shared extraction function
 
-Watch options can be read from `tsconfig.json` `watchOptions` as defaults. See README for configuration reference.
+Watch options can be read from `tsconfig.json` `watchOptions` as defaults. See
+README for configuration reference.
 
 ## Web UI
 
@@ -397,16 +431,20 @@ Single-page application served at the root URL.
 
 ### Behavior
 
-| Selection | Query | Display |
-|-----------|-------|---------|
-| 0 nodes | — | Empty / instructions |
-| 1 node (START only) | dependentsOf | Who depends on this? |
+| Selection             | Query        | Display                   |
+| --------------------- | ------------ | ------------------------- |
+| 0 nodes               | —            | Empty / instructions      |
+| 1 node (START only)   | dependentsOf | Who depends on this?      |
 | 2 nodes (START + END) | pathsBetween | How does START reach END? |
 
 Both select inputs use fuzzy search against `/api/symbols?q=...` endpoint.
 
 ## Limitations
 
-1. **SQLite only** — Query logic uses direct SQL. DbWriter interface exists for writes only.
-2. **No config watching** — Changes to tsconfig.json or package.json workspaces require server restart.
-3. **Base package imports only** — Workspace resolution handles `@libs/toolkit` but not subpath imports like `@libs/toolkit/helpers` (would require `exports` field parsing).
+1. **SQLite only** — Query logic uses direct SQL. DbWriter interface exists for
+   writes only.
+2. **No config watching** — Changes to tsconfig.json or package.json workspaces
+   require server restart.
+3. **Base package imports only** — Workspace resolution handles `@libs/toolkit`
+   but not subpath imports like `@libs/toolkit/helpers` (would require `exports`
+   field parsing).

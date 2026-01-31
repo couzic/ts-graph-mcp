@@ -95,6 +95,7 @@ Examples:
 - { from: { symbol: "handleRequest" } } → what does handleRequest call?
 - { to: { symbol: "saveUser" } } → who calls saveUser?
 - { from: { symbol: "A" }, to: { symbol: "B" } } → how does A reach B?
+- { from: { symbol: "A", file_path: "path/to/A.ts" } } → precise lookup (avoids disambiguation)
 - { topic: "validation" } → find symbols related to validation
 
 Edge types in output: CALLS, REFERENCES, EXTENDS, IMPLEMENTS, INCLUDES`,
@@ -103,12 +104,12 @@ Edge types in output: CALLS, REFERENCES, EXTENDS, IMPLEMENTS, INCLUDES`,
         from: z.object({
           query: z.string().optional().describe("Lexical + semantic search (can return multiple nodes)"),
           symbol: z.string().optional().describe("Exact symbol name (single node)"),
-          file_path: z.string().optional().describe("File path filter"),
+          file_path: z.string().optional().describe("Include when known to avoid disambiguation"),
         }).optional().describe("Start node(s) - what does this depend on?"),
         to: z.object({
           query: z.string().optional().describe("Lexical + semantic search (can return multiple nodes)"),
           symbol: z.string().optional().describe("Exact symbol name (single node)"),
-          file_path: z.string().optional().describe("File path filter"),
+          file_path: z.string().optional().describe("Include when known to avoid disambiguation"),
         }).optional().describe("End node(s) - what depends on this?"),
         max_nodes: z.number().optional().describe("Maximum nodes in output (default: 50)"),
       },
