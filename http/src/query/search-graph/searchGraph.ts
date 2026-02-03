@@ -301,7 +301,9 @@ export const searchGraph = async (
   // For now, use first match from each (path finding with multiple endpoints is complex)
   // (topic filtering for paths not yet implemented)
   if (fromResolved.length > 0 && toResolved.length > 0) {
+    // biome-ignore lint/style/noNonNullAssertion: length checked above
     const from = fromResolved[0]!;
+    // biome-ignore lint/style/noNonNullAssertion: length checked above
     const to = toResolved[0]!;
     return pathsBetween(
       db,
@@ -318,6 +320,7 @@ export const searchGraph = async (
     // If topic is provided AND search index is available, filter by topic
     if (input.topic && searchIndex) {
       // For now, use single endpoint for topic filtering
+      // biome-ignore lint/style/noNonNullAssertion: length checked above
       const from = fromResolved[0]!;
       return traverseWithTopicFilter(
         db,
@@ -343,6 +346,7 @@ export const searchGraph = async (
     }
 
     // Single endpoint: standard traversal
+    // biome-ignore lint/style/noNonNullAssertion: length checked above
     const from = fromResolved[0]!;
     return dependenciesOf(db, projectRoot, from.file_path, from.symbol, {
       ...options,
@@ -356,6 +360,7 @@ export const searchGraph = async (
     // If topic is provided AND search index is available, filter by topic
     if (input.topic && searchIndex) {
       // For now, use single endpoint for topic filtering
+      // biome-ignore lint/style/noNonNullAssertion: length checked above
       const to = toResolved[0]!;
       return traverseWithTopicFilter(
         db,
@@ -376,6 +381,7 @@ export const searchGraph = async (
     }
 
     // Single endpoint: standard traversal
+    // biome-ignore lint/style/noNonNullAssertion: length checked above
     const to = toResolved[0]!;
     return dependentsOf(db, projectRoot, to.file_path, to.symbol, {
       ...options,

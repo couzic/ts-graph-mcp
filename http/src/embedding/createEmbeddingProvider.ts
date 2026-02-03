@@ -131,7 +131,7 @@ export const createEmbeddingProvider = async (
       directory: modelsDir,
       onProgress: options.onProgress
         ? ({ downloadedSize, totalSize }) => {
-            options.onProgress!(downloadedSize, totalSize);
+            options.onProgress?.(downloadedSize, totalSize);
           }
         : undefined,
     });

@@ -25,7 +25,7 @@ const extractSourceSnippet = (sourceText: string, node: Node): string => {
   const snippet = lines.slice(startIdx, endIdx).join("\n");
 
   if (node.endLine > startIdx + MAX_SOURCE_LINES) {
-    return snippet + "\n// ... truncated";
+    return `${snippet}\n// ... truncated`;
   }
   return snippet;
 };

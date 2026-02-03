@@ -55,7 +55,9 @@ describe("indexFile", () => {
   });
 
   afterEach(() => {
-    project.getSourceFiles().forEach((sf) => project.removeSourceFile(sf));
+    project.getSourceFiles().forEach((sf) => {
+      project.removeSourceFile(sf);
+    });
   });
 
   it("extracts nodes and edges from source file", async () => {

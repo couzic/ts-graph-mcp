@@ -105,7 +105,7 @@ describe("HTTP server file watching E2E", () => {
     const symbols = (await response.json()) as Array<{ symbol: string }>;
 
     assert(symbols.length === 1, `Expected 1 symbol, got ${symbols.length}`);
-    expect(symbols[0]!.symbol).toBe("entry");
+    expect(symbols[0]?.symbol).toBe("entry");
   });
 
   it("detects file changes and reindexes new symbols", async () => {
@@ -129,7 +129,7 @@ export function newFunction(): number { return 42; }
 
     // This will FAIL if the server doesn't start the watcher
     assert(symbols.length === 1, `Expected 1 symbol, got ${symbols.length}`);
-    expect(symbols[0]!.symbol).toBe("newFunction");
+    expect(symbols[0]?.symbol).toBe("newFunction");
   });
 
   it("detects new file creation", async () => {
@@ -148,6 +148,6 @@ export function newFunction(): number { return 42; }
 
     // This will FAIL if the server doesn't start the watcher
     assert(symbols.length === 1, `Expected 1 symbol, got ${symbols.length}`);
-    expect(symbols[0]!.symbol).toBe("brandNew");
+    expect(symbols[0]?.symbol).toBe("brandNew");
   });
 });

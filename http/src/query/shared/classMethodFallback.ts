@@ -105,6 +105,7 @@ export const attemptClassMethodFallback = (
   const methodsWithDeps = methods.filter((m) => m.hasDependencies);
 
   if (methodsWithDeps.length === 1) {
+    // biome-ignore lint/style/noNonNullAssertion: length checked above
     const method = methodsWithDeps[0]!;
     return {
       type: "single-method",

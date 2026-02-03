@@ -35,11 +35,11 @@ const writeTsconfig = (
   const filePath = join(tempDir, relativePath, "tsconfig.json");
   const compilerOptions: Record<string, string> = {};
   if (options.outDir !== undefined) {
-    // biome-ignore lint/complexity/useLiteralKeys: TS requires bracket notation for index signatures
+    // biome-ignore lint/complexity/useLiteralKeys: index signature
     compilerOptions["outDir"] = options.outDir;
   }
   if (options.rootDir !== undefined) {
-    // biome-ignore lint/complexity/useLiteralKeys: TS requires bracket notation for index signatures
+    // biome-ignore lint/complexity/useLiteralKeys: index signature
     compilerOptions["rootDir"] = options.rootDir;
   }
   const content = { compilerOptions };

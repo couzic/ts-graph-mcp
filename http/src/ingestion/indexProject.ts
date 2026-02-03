@@ -6,10 +6,7 @@ import type { ProjectConfig } from "../config/Config.schemas.js";
 import type { DbWriter } from "../db/DbWriter.js";
 import type { IndexResult } from "../db/Types.js";
 import type { EmbeddingProvider } from "../embedding/EmbeddingTypes.js";
-import {
-  type EmbeddingCacheConnection,
-  openEmbeddingCache,
-} from "../embedding/embeddingCache.js";
+import { openEmbeddingCache } from "../embedding/embeddingCache.js";
 import type { TsGraphLogger } from "../logging/TsGraphLogger.js";
 import type { SearchIndexWrapper } from "../search/createSearchIndex.js";
 import { createProject } from "./createProject.js";

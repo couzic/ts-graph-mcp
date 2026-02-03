@@ -320,6 +320,7 @@ export const startHttpServer = async (
 
   // API routes
   app.get("/api/symbols", (req, res) => {
+    // biome-ignore lint/complexity/useLiteralKeys: index signature
     const query = req.query["q"] as string | undefined;
     if (!query || query.length < 1) {
       res.json([]);

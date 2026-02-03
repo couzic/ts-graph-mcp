@@ -261,9 +261,11 @@ describe(createSearchIndex.name, () => {
       const loaded = await loadSearchIndexFromFile(INDEX_PATH);
 
       expect(loaded).not.toBeNull();
+      // biome-ignore lint/style/noNonNullAssertion: asserted not null above
       const results = await loaded!.search("validate");
       expect(results).toHaveLength(1);
-      expect(results[0]?.symbol).toBe("validateCart");
+      // biome-ignore lint/style/noNonNullAssertion: length asserted above
+      expect(results[0]!.symbol).toBe("validateCart");
     });
 
     it("returns null when file does not exist", async () => {
@@ -284,11 +286,14 @@ describe(createSearchIndex.name, () => {
       expect(loaded).not.toBeNull();
 
       // Remove by file should work correctly (relies on docsByFile tracking)
+      // biome-ignore lint/style/noNonNullAssertion: asserted not null above
       await loaded!.removeByFile("src/utils.ts");
 
+      // biome-ignore lint/style/noNonNullAssertion: asserted not null above
       const results = await loaded!.search("fn");
       expect(results).toHaveLength(1);
-      expect(results[0]?.file).toBe("src/other.ts");
+      // biome-ignore lint/style/noNonNullAssertion: length asserted above
+      expect(results[0]!.file).toBe("src/other.ts");
     });
 
     it("saves and loads vector index", async () => {
@@ -307,16 +312,18 @@ describe(createSearchIndex.name, () => {
       });
 
       expect(loaded).not.toBeNull();
-      expect(loaded!.supportsVectors).toBe(true);
+      expect(loaded?.supportsVectors).toBe(true);
 
       const queryVector = mockEmbed("validateCart", DIMS);
+      // biome-ignore lint/style/noNonNullAssertion: asserted not null above
       const results = await loaded!.search("", {
         mode: "vector",
         vector: queryVector,
       });
 
       expect(results.length).toBeGreaterThan(0);
-      expect(results[0]?.symbol).toBe("validateCart");
+      // biome-ignore lint/style/noNonNullAssertion: length asserted above
+      expect(results[0]!.symbol).toBe("validateCart");
     });
 
     it("returns null for corrupted file", async () => {

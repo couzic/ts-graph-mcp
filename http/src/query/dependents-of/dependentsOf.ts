@@ -94,12 +94,14 @@ export function dependentsOf(
 
     if (fallback.type === "single-method") {
       // Auto-resolve to the single method with dependents
+      // biome-ignore lint/style/noNonNullAssertion: split after includes check
       const className = symbol.includes(".") ? symbol.split(".")[0]! : symbol;
       fallbackMessage = `Resolved '${className}' to ${className}.${fallback.methodName}`;
       currentNodeId = fallback.methodId;
       edges = queryDependentEdges(db, currentNodeId);
     } else if (fallback.type === "multiple-methods") {
       // Return disambiguation message
+      // biome-ignore lint/style/noNonNullAssertion: split after includes check
       const className = symbol.includes(".") ? symbol.split(".")[0]! : symbol;
       const disambiguation = formatDisambiguationMessage(
         className,

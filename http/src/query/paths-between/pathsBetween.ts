@@ -65,11 +65,11 @@ export function pathsBetween(
   const fromFallback = attemptClassMethodFallback(db, fromId);
   if (fromFallback.type === "multiple-methods") {
     const className = from.symbol.includes(".")
-      ? from.symbol.split(".")[0]!
+      ? (from.symbol.split(".")[0] ?? from.symbol)
       : from.symbol;
     const prefix =
       resolutionMessages.length > 0
-        ? resolutionMessages.join("\n") + "\n\n"
+        ? `${resolutionMessages.join("\n")}\n\n`
         : "";
     return (
       prefix + formatDisambiguationMessage(className, fromFallback.methods)
@@ -77,7 +77,7 @@ export function pathsBetween(
   }
   if (fromFallback.type === "single-method") {
     const className = from.symbol.includes(".")
-      ? from.symbol.split(".")[0]!
+      ? (from.symbol.split(".")[0] ?? from.symbol)
       : from.symbol;
     resolutionMessages.push(
       `Resolved '${className}' to ${className}.${fromFallback.methodName}`,
@@ -89,17 +89,17 @@ export function pathsBetween(
   const toFallback = attemptClassMethodFallback(db, toId);
   if (toFallback.type === "multiple-methods") {
     const className = to.symbol.includes(".")
-      ? to.symbol.split(".")[0]!
+      ? (to.symbol.split(".")[0] ?? to.symbol)
       : to.symbol;
     const prefix =
       resolutionMessages.length > 0
-        ? resolutionMessages.join("\n") + "\n\n"
+        ? `${resolutionMessages.join("\n")}\n\n`
         : "";
     return prefix + formatDisambiguationMessage(className, toFallback.methods);
   }
   if (toFallback.type === "single-method") {
     const className = to.symbol.includes(".")
-      ? to.symbol.split(".")[0]!
+      ? (to.symbol.split(".")[0] ?? to.symbol)
       : to.symbol;
     resolutionMessages.push(
       `Resolved '${className}' to ${className}.${toFallback.methodName}`,
@@ -108,13 +108,11 @@ export function pathsBetween(
   }
 
   const resolutionPrefix =
-    resolutionMessages.length > 0 ? resolutionMessages.join("\n") + "\n\n" : "";
+    resolutionMessages.length > 0 ? `${resolutionMessages.join("\n")}\n\n` : "";
 
   // Same-node check
   if (fromId === toId) {
-    return (
-      resolutionPrefix + "Invalid query: source and target are the same symbol."
-    );
+    return `${resolutionPrefix}Invalid query: source and target are the same symbol.`;
   }
 
   // Try forward path (from → to)
@@ -126,12 +124,12 @@ export function pathsBetween(
   }
 
   if (paths.length === 0) {
-    return resolutionPrefix + "No path found.";
+    return `${resolutionPrefix}No path found.`;
   }
 
   const path = paths[0];
   if (!path) {
-    return resolutionPrefix + "No path found.";
+    return `${resolutionPrefix}No path found.`;
   }
 
   // Convert path edges to EdgeWithCallSites format

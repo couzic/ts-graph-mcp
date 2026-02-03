@@ -101,7 +101,7 @@ export const formatMermaid = (
     nodeIdMap.set(nodeId, `${sanitized}_${idCounter++}`);
   }
 
-  const lines: string[] = [truncationComment + "graph LR"];
+  const lines: string[] = [`${truncationComment}graph LR`];
 
   // Determine grouping strategy: package (if multiple) or file (fallback)
   const uniquePackages = new Set<string>();

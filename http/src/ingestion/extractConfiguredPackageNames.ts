@@ -36,7 +36,7 @@ export const extractConfiguredPackageNames = (
     try {
       const content = readFileSync(packageJsonPath, "utf-8");
       const packageJson = JSON.parse(content) as Record<string, unknown>;
-      // biome-ignore lint/complexity/useLiteralKeys: TS requires bracket notation for index signatures
+      // biome-ignore lint/complexity/useLiteralKeys: index signature
       const name = packageJson["name"];
       if (typeof name === "string" && name.length > 0) {
         result.add(name);

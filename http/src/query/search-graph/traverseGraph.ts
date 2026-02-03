@@ -137,6 +137,7 @@ export const queryDependencies = (
     const fallback = attemptClassMethodFallback(db, nodeId);
 
     if (fallback.type === "single-method") {
+      // biome-ignore lint/style/noNonNullAssertion: split after includes check
       const className = symbol.includes(".") ? symbol.split(".")[0]! : symbol;
       const fallbackMessage = `Resolved '${className}' to ${className}.${fallback.methodName}`;
       message = message ? `${message}\n\n${fallbackMessage}` : fallbackMessage;
@@ -180,6 +181,7 @@ export const queryDependents = (
     const fallback = attemptClassMethodFallback(db, nodeId);
 
     if (fallback.type === "single-method") {
+      // biome-ignore lint/style/noNonNullAssertion: split after includes check
       const className = symbol.includes(".") ? symbol.split(".")[0]! : symbol;
       const fallbackMessage = `Resolved '${className}' to ${className}.${fallback.methodName}`;
       message = message ? `${message}\n\n${fallbackMessage}` : fallbackMessage;

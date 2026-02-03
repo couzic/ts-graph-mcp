@@ -64,9 +64,9 @@ const extractLOCsAroundCallSites = (
   // Fill small gaps (≤ SMALL_GAP_THRESHOLD lines) between kept ranges
   const sortedLines = [...keepSet].sort((a, b) => a - b);
   for (let i = 1; i < sortedLines.length; i++) {
-    // biome-ignore lint/style/noNonNullAssertion: Unit tested
+    // biome-ignore lint/style/noNonNullAssertion: bounds checked by loop
     const prevLine = sortedLines[i - 1]!;
-    // biome-ignore lint/style/noNonNullAssertion: Unit tested
+    // biome-ignore lint/style/noNonNullAssertion: bounds checked by loop
     const currLine = sortedLines[i]!;
     const gap = currLine - prevLine - 1;
     if (gap > 0 && gap <= SMALL_GAP_THRESHOLD) {

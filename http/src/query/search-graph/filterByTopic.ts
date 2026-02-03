@@ -125,6 +125,7 @@ export const filterEdgesToTopicRelevant = <
     const queue = [nodeId];
 
     while (queue.length > 0) {
+      // biome-ignore lint/style/noNonNullAssertion: length checked above
       const current = queue.shift()!;
       if (visited.has(current)) {
         continue;

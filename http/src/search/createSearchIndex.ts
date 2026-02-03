@@ -106,7 +106,7 @@ const buildWrapper = <T extends TextOnlyIndex | VectorIndex>(
         symbol: doc.symbol,
         file: doc.file,
         nodeType: doc.nodeType,
-        content: preprocessForBM25(doc.symbol) + " " + doc.content,
+        content: `${preprocessForBM25(doc.symbol)} ${doc.content}`,
       };
 
       if (supportsVectors && doc.embedding) {
@@ -127,7 +127,7 @@ const buildWrapper = <T extends TextOnlyIndex | VectorIndex>(
           symbol: doc.symbol,
           file: doc.file,
           nodeType: doc.nodeType,
-          content: preprocessForBM25(doc.symbol) + " " + doc.content,
+          content: `${preprocessForBM25(doc.symbol)} ${doc.content}`,
           embedding: doc.embedding ?? [],
         }));
         await insertMultiple(db as VectorIndex, prepared);
@@ -137,7 +137,7 @@ const buildWrapper = <T extends TextOnlyIndex | VectorIndex>(
           symbol: doc.symbol,
           file: doc.file,
           nodeType: doc.nodeType,
-          content: preprocessForBM25(doc.symbol) + " " + doc.content,
+          content: `${preprocessForBM25(doc.symbol)} ${doc.content}`,
         }));
         await insertMultiple(db as TextOnlyIndex, prepared);
       }
@@ -169,9 +169,11 @@ const buildWrapper = <T extends TextOnlyIndex | VectorIndex>(
 
       const where: Record<string, string | string[]> = {};
       if (options?.nodeTypes && options.nodeTypes.length > 0) {
+        // biome-ignore lint/complexity/useLiteralKeys: index signature
         where["nodeType"] = options.nodeTypes;
       }
       if (options?.filePattern) {
+        // biome-ignore lint/complexity/useLiteralKeys: index signature
         where["file"] = options.filePattern;
       }
 

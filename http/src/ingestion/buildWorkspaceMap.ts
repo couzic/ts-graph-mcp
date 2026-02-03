@@ -92,7 +92,7 @@ const processPackageDirectory = (
     return;
   }
 
-  // biome-ignore lint/complexity/useLiteralKeys: TS requires bracket notation for index signatures
+  // biome-ignore lint/complexity/useLiteralKeys: index signature
   const packageName = packageJson["name"];
   if (typeof packageName !== "string" || packageName.length === 0) {
     return;
@@ -127,7 +127,7 @@ const parsePackageJson = (path: string): Record<string, unknown> | null => {
  * Handles both array format and object format with "packages" field.
  */
 const extractWorkspaces = (packageJson: Record<string, unknown>): string[] => {
-  // biome-ignore lint/complexity/useLiteralKeys: TS requires bracket notation for index signatures
+  // biome-ignore lint/complexity/useLiteralKeys: index signature
   const workspaces = packageJson["workspaces"];
 
   // Array format: "workspaces": ["libs/*", "packages/*"]
@@ -137,7 +137,7 @@ const extractWorkspaces = (packageJson: Record<string, unknown>): string[] => {
 
   // Object format: "workspaces": { "packages": ["libs/*"] }
   if (typeof workspaces === "object" && workspaces !== null) {
-    // biome-ignore lint/complexity/useLiteralKeys: TS requires bracket notation for index signatures
+    // biome-ignore lint/complexity/useLiteralKeys: index signature
     const packages = (workspaces as Record<string, unknown>)["packages"];
     if (Array.isArray(packages)) {
       return packages.filter((p): p is string => typeof p === "string");
@@ -265,7 +265,7 @@ const findSourceEntry = (packageDir: string): string | null => {
     return null;
   }
 
-  // biome-ignore lint/complexity/useLiteralKeys: TS requires bracket notation for index signatures
+  // biome-ignore lint/complexity/useLiteralKeys: index signature
   const main = packageJson["main"];
   if (typeof main !== "string") {
     return null;
@@ -360,16 +360,16 @@ const parseTsconfig = (
   try {
     const content = readFileSync(path, "utf-8");
     const parsed = JSON.parse(content) as Record<string, unknown>;
-    // biome-ignore lint/complexity/useLiteralKeys: TS requires bracket notation for index signatures
+    // biome-ignore lint/complexity/useLiteralKeys: index signature
     const compilerOptions = parsed["compilerOptions"] as
       | Record<string, unknown>
       | undefined;
     if (!compilerOptions) {
       return {};
     }
-    // biome-ignore lint/complexity/useLiteralKeys: TS requires bracket notation for index signatures
+    // biome-ignore lint/complexity/useLiteralKeys: index signature
     const outDir = compilerOptions["outDir"];
-    // biome-ignore lint/complexity/useLiteralKeys: TS requires bracket notation for index signatures
+    // biome-ignore lint/complexity/useLiteralKeys: index signature
     const rootDir = compilerOptions["rootDir"];
     return {
       outDir: typeof outDir === "string" ? outDir : undefined,

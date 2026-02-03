@@ -196,13 +196,14 @@ export function calculateTotal(prices: number[]): number {
     expect(loadedSearchIndex).not.toBeNull();
 
     // Step 4: Verify search works on loaded index (no populateSearchIndex needed!)
+    // biome-ignore lint/style/noNonNullAssertion: asserted not null above
     const loadedResults = await loadedSearchIndex!.search("validate");
     expect(loadedResults.length).toBeGreaterThan(0);
     expect(loadedResults.map((r) => r.symbol)).toContain("validateCart");
 
     // Step 5: Verify file tracking is preserved
-    await loadedSearchIndex!.removeByFile("src/cart.ts");
-    const afterRemoval = await loadedSearchIndex!.search("validate");
+    await loadedSearchIndex?.removeByFile("src/cart.ts");
+    const afterRemoval = await loadedSearchIndex?.search("validate");
     expect(afterRemoval).toHaveLength(0);
   });
 
@@ -282,6 +283,7 @@ export function parseDate(str: string): Date {
       projectRoot: TEST_DIR,
       cacheDir: CACHE_DIR,
       logger: silentLogger,
+      // biome-ignore lint/style/noNonNullAssertion: asserted not null above
       searchIndex: loadedSearchIndex!,
     });
 
@@ -289,6 +291,7 @@ export function parseDate(str: string): Date {
     expect(syncResult.staleCount).toBe(1);
 
     // Step 5: Verify new function is searchable
+    // biome-ignore lint/style/noNonNullAssertion: asserted not null above
     const results = await loadedSearchIndex!.search("parse");
     expect(results.length).toBeGreaterThan(0);
     expect(results.map((r) => r.symbol)).toContain("parseDate");

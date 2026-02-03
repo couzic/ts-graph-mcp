@@ -111,9 +111,13 @@ describe("embeddingCache", () => {
         assert(retrieved !== undefined);
         expect(retrieved).toHaveLength(768);
         // Float32 has limited precision, spot check a few values
+        // biome-ignore lint/style/noNonNullAssertion: length asserted above
         expect(retrieved[0]!).toBeCloseTo(0, 5);
+        // biome-ignore lint/style/noNonNullAssertion: length asserted above
         expect(retrieved[100]!).toBeCloseTo(0.1, 5);
+        // biome-ignore lint/style/noNonNullAssertion: length asserted above
         expect(retrieved[500]!).toBeCloseTo(0.5, 5);
+        // biome-ignore lint/style/noNonNullAssertion: length asserted above
         expect(retrieved[767]!).toBeCloseTo(0.767, 5);
       } finally {
         cache.close();
@@ -135,10 +139,10 @@ describe("embeddingCache", () => {
         expect(vec1).toHaveLength(4);
         expect(vec2).toHaveLength(4);
         // Float32 precision check
-        expect(vec1![0]).toBeCloseTo(0.1, 5);
-        expect(vec1![3]).toBeCloseTo(0.4, 5);
-        expect(vec2![0]).toBeCloseTo(0.5, 5);
-        expect(vec2![3]).toBeCloseTo(0.8, 5);
+        expect(vec1?.[0]).toBeCloseTo(0.1, 5);
+        expect(vec1?.[3]).toBeCloseTo(0.4, 5);
+        expect(vec2?.[0]).toBeCloseTo(0.5, 5);
+        expect(vec2?.[3]).toBeCloseTo(0.8, 5);
       } finally {
         cache2.close();
       }

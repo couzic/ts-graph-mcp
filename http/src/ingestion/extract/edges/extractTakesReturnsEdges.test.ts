@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import { Project } from "ts-morph";
 import { describe, expect, it } from "vitest";
 import { extractTakesReturnsEdges } from "./extractTakesReturnsEdges.js";

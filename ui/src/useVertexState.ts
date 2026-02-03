@@ -8,8 +8,11 @@ import type { VertexInstance } from "verdux";
  * @example
  * const { health } = useVertexState(healthVertex, ["health"]);
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const useVertexState = <T extends Record<string, any>>(
+export const useVertexState = <
+  // biome-ignore lint/suspicious/noExplicitAny: generic utility requires any
+  T extends Record<string, any>,
+>(
+  // biome-ignore lint/suspicious/noExplicitAny: generic utility requires any
   vertex: VertexInstance<any, any>,
   fields: (keyof T)[],
 ): T => {
@@ -19,7 +22,7 @@ export const useVertexState = <T extends Record<string, any>>(
         vertex.pick(fields as string[]),
         (state: { status: string }) => state.status === "loaded",
       ),
-    [vertex, ...fields],
+    [vertex, ...fields, fields],
   );
   const loadableState = useObservableSuspense(resource);
   if (loadableState.status !== "loaded") {

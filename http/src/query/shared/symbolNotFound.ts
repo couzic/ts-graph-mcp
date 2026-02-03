@@ -144,6 +144,7 @@ export const resolveSymbol = (
       .all(filePath, symbol);
 
     if (exactMatches.length === 1) {
+      // biome-ignore lint/style/noNonNullAssertion: length checked above
       const matchedId = exactMatches[0]!.id;
       // Check if the symbol path in the ID matches exactly what the user searched for
       // ID format: {path}:{type}:{symbolPath}
@@ -174,6 +175,7 @@ export const resolveSymbol = (
     // No exact match - search within that file for method matches (e.g., Class.method)
     const matchesInFile = findSymbolMatchesInFile(db, symbol, filePath);
     if (matchesInFile.length === 1) {
+      // biome-ignore lint/style/noNonNullAssertion: length checked above
       const match = matchesInFile[0]!;
       // Show message because we resolved to a different symbol name
       const message = `Found '${symbol}' as ${match.name} in ${match.filePath}`;
@@ -203,6 +205,7 @@ export const resolveSymbol = (
   }
 
   if (matches.length === 1) {
+    // biome-ignore lint/style/noNonNullAssertion: length checked above
     const match = matches[0]!;
     const filePathWasResolved = !filePath;
     // Check if the symbol in the ID matches exactly what was searched
