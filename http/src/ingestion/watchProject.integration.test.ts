@@ -249,6 +249,7 @@ export function newHelper(): string { return deepHelper(); }
     expect(reindexCalls[0]).toContain("src/rapid.ts");
 
     // Also verify the file is correctly indexed
+    // Exact match (file_path + symbol name) returns clean output without resolution message
     const output = dependenciesOf(db, TEST_DIR, "src/rapid.ts", "rapid");
     expect(output).toBe("No dependencies found.");
   });

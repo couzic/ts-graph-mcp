@@ -1,4 +1,5 @@
-import type { CallSiteRange, EdgeType, NodeType } from "../../db/Types.js";
+import type { EdgeType, NodeType } from "@ts-graph/shared";
+import type { CallSiteRange } from "../../db/Types.js";
 
 /**
  * A line of code with its line number.

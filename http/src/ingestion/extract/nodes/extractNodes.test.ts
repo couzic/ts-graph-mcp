@@ -1,6 +1,6 @@
+import type { NodeType } from "@ts-graph/shared";
 import { Project } from "ts-morph";
 import { beforeEach, describe, expect, it } from "vitest";
-import type { NodeType } from "../../../db/Types.js";
 import { extractNodes } from "./extractNodes.js";
 import type { NodeExtractionContext } from "./NodeExtractionContext.js";
 
@@ -52,9 +52,9 @@ export function createUser(name: string): User {
 
     const nodes = extractNodes(sourceFile, context);
 
-    // Should extract: File, Variable, TypeAlias, Interface, Class, Function
-    // Plus: Interface properties (2), Class properties (2), Class method (1)
-    expect(nodes.length).toBeGreaterThan(8);
+    // Should extract: Variable, TypeAlias, Interface, Class, Function, Method
+    // Properties are intentionally NOT extracted (they add noise to search and slow indexing)
+    expect(nodes.length).toBe(6);
 
     const nodesByType = nodes.reduce(
       (acc, node) => {
@@ -64,27 +64,24 @@ export function createUser(name: string): User {
       {} as Record<NodeType, number>,
     );
 
-    expect(nodesByType.File).toBe(1);
     expect(nodesByType.Variable).toBe(1);
     expect(nodesByType.TypeAlias).toBe(1);
     expect(nodesByType.Interface).toBe(1);
     expect(nodesByType.Class).toBe(1);
     expect(nodesByType.Function).toBe(1);
-    expect(nodesByType.Property).toBe(4); // 2 interface + 2 class
     expect(nodesByType.Method).toBe(1);
   });
 
-  it("extracts file node even for empty file", () => {
+  it("returns empty for empty file", () => {
     const sourceFile = project.createSourceFile("src/empty.ts", "");
     const context = createContext("src/empty.ts");
 
     const nodes = extractNodes(sourceFile, context);
 
-    expect(nodes).toHaveLength(1);
-    expect(nodes[0]?.type).toBe("File");
+    expect(nodes).toHaveLength(0);
   });
 
-  it("handles file with only comments", () => {
+  it("returns empty for file with only comments", () => {
     const sourceFile = project.createSourceFile(
       "src/comments.ts",
       `
@@ -96,8 +93,7 @@ export function createUser(name: string): User {
 
     const nodes = extractNodes(sourceFile, context);
 
-    expect(nodes).toHaveLength(1);
-    expect(nodes[0]?.type).toBe("File");
+    expect(nodes).toHaveLength(0);
   });
 
   describe("default exports", () => {

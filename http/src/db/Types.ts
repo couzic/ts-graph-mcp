@@ -1,24 +1,4 @@
-// Node Types
-export type NodeType =
-  | "Function"
-  | "Class"
-  | "Method"
-  | "Interface"
-  | "TypeAlias"
-  | "Variable"
-  | "File"
-  | "Property";
-
-// Edge Types
-export type EdgeType =
-  | "CALLS"
-  | "IMPORTS"
-  | "CONTAINS"
-  | "IMPLEMENTS"
-  | "EXTENDS"
-  | "USES_TYPE"
-  | "REFERENCES"
-  | "INCLUDES";
+import type { EdgeType, NodeType } from "@ts-graph/shared";
 
 // Call Site Range (line numbers where a call occurs)
 export interface CallSiteRange {
@@ -90,20 +70,9 @@ export interface TypeAliasNode extends BaseNode {
 
 export interface VariableNode extends BaseNode {
   type: "Variable";
+  /** @deprecated Use HAS_TYPE edge instead */
   variableType?: string;
   isConst?: boolean;
-}
-
-export interface FileNode extends BaseNode {
-  type: "File";
-  extension?: string;
-}
-
-export interface PropertyNode extends BaseNode {
-  type: "Property";
-  propertyType?: string;
-  optional?: boolean;
-  readonly?: boolean;
 }
 
 export type Node =
@@ -112,9 +81,7 @@ export type Node =
   | MethodNode
   | InterfaceNode
   | TypeAliasNode
-  | VariableNode
-  | FileNode
-  | PropertyNode;
+  | VariableNode;
 
 // Edge
 export interface Edge {
@@ -133,11 +100,8 @@ export interface Edge {
   callCount?: number;
   callSites?: CallSiteRange[]; // Line ranges where calls occur
 
-  // IMPORTS edges
-  isTypeOnly?: boolean;
-  importedSymbols?: string[];
-
   // USES_TYPE edges
+  /** @deprecated USES_TYPE context replaced by specific edge types (TAKES, RETURNS, HAS_TYPE, HAS_PROPERTY) */
   context?: "parameter" | "return" | "property" | "variable";
 
   // REFERENCES edges

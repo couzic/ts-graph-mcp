@@ -32,7 +32,7 @@ export const extractClassNodes = (
         : undefined;
 
     return {
-      id: generateNodeId(context.filePath, name),
+      id: generateNodeId(context.filePath, "Class", name),
       type: "Class",
       name,
       package: context.package,

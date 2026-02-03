@@ -2,8 +2,12 @@ export type Provider = {
   id: string;
   name: string;
   isDefault: boolean;
+  enabled: boolean;
 };
 
+/**
+ * Database repository for persisting provider entities.
+ */
 export class ProviderRepository {
   private providers: Provider[] = [];
 

@@ -1,16 +1,29 @@
+import { cpus } from "node:os";
 import { dirname, relative, resolve } from "node:path";
+import { from, lastValueFrom } from "rxjs";
+import { mergeMap, tap, toArray } from "rxjs/operators";
 import type { ProjectConfig } from "../config/Config.schemas.js";
 import type { DbWriter } from "../db/DbWriter.js";
 import type { IndexResult } from "../db/Types.js";
+import type { EmbeddingProvider } from "../embedding/EmbeddingTypes.js";
+import {
+  type EmbeddingCacheConnection,
+  openEmbeddingCache,
+} from "../embedding/embeddingCache.js";
 import type { TsGraphLogger } from "../logging/TsGraphLogger.js";
+import type { SearchIndexWrapper } from "../search/createSearchIndex.js";
 import { createProject } from "./createProject.js";
 import type { EdgeExtractionContext } from "./extract/edges/EdgeExtractionContext.js";
 import { extractConfiguredPackageNames } from "./extractConfiguredPackageNames.js";
+import type { EmbeddingCache } from "./indexFile.js";
 import { indexFile } from "./indexFile.js";
 import {
   createProjectRegistry,
   type ProjectRegistry,
 } from "./ProjectRegistry.js";
+
+/** Default concurrency based on CPU cores (minimum 2) */
+const DEFAULT_CONCURRENCY = Math.max(2, cpus().length);
 
 /**
  * Options for indexing an entire project.
@@ -18,10 +31,18 @@ import {
 export interface IndexProjectOptions {
   /** Project root directory (for resolving relative paths) */
   projectRoot: string;
+  /** Cache directory (for embedding cache, required when using embeddingProvider) */
+  cacheDir?: string;
+  /** Embedding model name (for cache file naming, required when using embeddingProvider) */
+  modelName?: string;
   /** Clear database before indexing */
   clearFirst?: boolean;
   /** Logger for progress reporting */
   logger: TsGraphLogger;
+  /** Search index for unified indexing (optional) */
+  searchIndex?: SearchIndexWrapper;
+  /** Embedding provider for semantic search (optional) */
+  embeddingProvider?: EmbeddingProvider;
 }
 
 /**
@@ -55,6 +76,13 @@ export const indexProject = async (
     await dbWriter.clearAll();
   }
 
+  // Open embedding cache connection (only when cacheDir and modelName are provided)
+  const { cacheDir, modelName } = options;
+  const embeddingCache =
+    cacheDir !== undefined && modelName !== undefined
+      ? openEmbeddingCache(cacheDir, modelName)
+      : undefined;
+
   // Create project registry for cross-package resolution
   const projectRegistry = createProjectRegistry(config, options.projectRoot);
   const configuredPackageNames = extractConfiguredPackageNames(
@@ -73,6 +101,9 @@ export const indexProject = async (
         projectRegistry,
         configuredPackageNames,
         options.logger,
+        options.searchIndex,
+        options.embeddingProvider,
+        embeddingCache,
       );
 
       filesProcessed += result.filesProcessed;
@@ -89,6 +120,11 @@ export const indexProject = async (
         message: `Failed to process package: ${(e as Error).message}`,
       });
     }
+  }
+
+  // Close embedding cache connection
+  if (embeddingCache !== undefined) {
+    embeddingCache.close();
   }
 
   return {
@@ -132,6 +168,9 @@ const processPackage = async (
   projectRegistry: ProjectRegistry,
   configuredPackageNames: Set<string>,
   logger: TsGraphLogger,
+  searchIndex: SearchIndexWrapper | undefined,
+  embeddingProvider: EmbeddingProvider | undefined,
+  embeddingCache: EmbeddingCache | undefined,
 ): Promise<PackageProcessResult> => {
   const errors: Array<{ file: string; message: string }> = [];
   const filesIndexed: string[] = [];
@@ -170,31 +209,59 @@ const processPackage = async (
   // Start progress tracking for this package
   logger.startProgress(sourceFiles.length, packageName);
 
-  // Process each file using shared indexFile()
-  for (const sourceFile of sourceFiles) {
-    const absolutePath = sourceFile.getFilePath();
-    const relativePath = relative(projectRoot, absolutePath);
-    const context: EdgeExtractionContext = {
-      filePath: relativePath,
-      package: packageName,
-      projectRegistry,
-    };
+  // Process files with controlled concurrency using RxJS
+  const results = await lastValueFrom(
+    from(sourceFiles).pipe(
+      mergeMap(async (sourceFile) => {
+        const absolutePath = sourceFile.getFilePath();
+        const relativePath = relative(projectRoot, absolutePath);
+        const context: EdgeExtractionContext = {
+          filePath: relativePath,
+          package: packageName,
+          projectRegistry,
+        };
 
-    try {
-      const result = await indexFile(sourceFile, context, dbWriter);
+        try {
+          const result = await indexFile(sourceFile, context, dbWriter, {
+            searchIndex,
+            embeddingProvider,
+            embeddingCache,
+          });
+          return {
+            success: true as const,
+            relativePath,
+            nodesAdded: result.nodesAdded,
+            edgesAdded: result.edgesAdded,
+          };
+        } catch (e) {
+          const message = `Failed to index ${relativePath}: ${(e as Error).message}`;
+          logger.error(message);
+          return {
+            success: false as const,
+            relativePath,
+            message,
+          };
+        }
+      }, DEFAULT_CONCURRENCY),
+      tap(() => {
+        filesProcessed++;
+        logger.updateProgress(filesProcessed);
+      }),
+      toArray(),
+    ),
+    { defaultValue: [] },
+  );
+
+  // Aggregate results
+  for (const result of results) {
+    if (result.success) {
       nodesAdded += result.nodesAdded;
       edgesAdded += result.edgesAdded;
-      filesProcessed++;
-      filesIndexed.push(relativePath);
-
-      // Update progress after each file
-      logger.updateProgress(filesProcessed);
-    } catch (e) {
-      const message = `Failed to index ${relativePath}: ${(e as Error).message}`;
-      logger.error(message);
+      filesIndexed.push(result.relativePath);
+    } else {
       errors.push({
-        file: relativePath,
-        message,
+        file: result.relativePath,
+        message: result.message,
       });
     }
   }

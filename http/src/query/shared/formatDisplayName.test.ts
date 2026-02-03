@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { formatDisplayName, type DisplayNameContext } from "./formatDisplayName.js";
+import {
+  type DisplayNameContext,
+  formatDisplayName,
+} from "./formatDisplayName.js";
 
 describe("formatDisplayName", () => {
   const emptyContext: DisplayNameContext = {
@@ -11,10 +14,14 @@ describe("formatDisplayName", () => {
     it("adds parentheses to Function type", () => {
       const context: DisplayNameContext = {
         ...emptyContext,
-        typeByNodeId: new Map([["src/api.ts:handler", "Function"]]),
+        typeByNodeId: new Map([["src/api.ts:Function:handler", "Function"]]),
       };
 
-      const result = formatDisplayName("src/api.ts:handler", "handler", context);
+      const result = formatDisplayName(
+        "src/api.ts:Function:handler",
+        "handler",
+        context,
+      );
 
       expect(result).toBe("handler()");
     });
@@ -22,11 +29,11 @@ describe("formatDisplayName", () => {
     it("adds parentheses to Method type", () => {
       const context: DisplayNameContext = {
         ...emptyContext,
-        typeByNodeId: new Map([["src/User.ts:User.save", "Method"]]),
+        typeByNodeId: new Map([["src/User.ts:Method:User.save", "Method"]]),
       };
 
       const result = formatDisplayName(
-        "src/User.ts:User.save",
+        "src/User.ts:Method:User.save",
         "User.save",
         context,
       );
@@ -39,10 +46,14 @@ describe("formatDisplayName", () => {
     it("does not add parentheses to Variable type", () => {
       const context: DisplayNameContext = {
         ...emptyContext,
-        typeByNodeId: new Map([["src/config.ts:config", "Variable"]]),
+        typeByNodeId: new Map([["src/config.ts:Variable:config", "Variable"]]),
       };
 
-      const result = formatDisplayName("src/config.ts:config", "config", context);
+      const result = formatDisplayName(
+        "src/config.ts:Variable:config",
+        "config",
+        context,
+      );
 
       expect(result).toBe("config");
     });
@@ -52,12 +63,12 @@ describe("formatDisplayName", () => {
     it("wraps INCLUDES target with HTML-escaped angle brackets", () => {
       const context: DisplayNameContext = {
         ...emptyContext,
-        typeByNodeId: new Map([["src/Button.tsx:Button", "Function"]]),
-        includesTargets: new Set(["src/Button.tsx:Button"]),
+        typeByNodeId: new Map([["src/Button.tsx:Function:Button", "Function"]]),
+        includesTargets: new Set(["src/Button.tsx:Function:Button"]),
       };
 
       const result = formatDisplayName(
-        "src/Button.tsx:Button",
+        "src/Button.tsx:Function:Button",
         "Button",
         context,
       );
@@ -68,11 +79,15 @@ describe("formatDisplayName", () => {
     it("component takes precedence over function parentheses", () => {
       const context: DisplayNameContext = {
         ...emptyContext,
-        typeByNodeId: new Map([["src/App.tsx:App", "Function"]]),
-        includesTargets: new Set(["src/App.tsx:App"]),
+        typeByNodeId: new Map([["src/App.tsx:Function:App", "Function"]]),
+        includesTargets: new Set(["src/App.tsx:Function:App"]),
       };
 
-      const result = formatDisplayName("src/App.tsx:App", "App", context);
+      const result = formatDisplayName(
+        "src/App.tsx:Function:App",
+        "App",
+        context,
+      );
 
       expect(result).toBe("&lt;App&gt;");
     });
@@ -82,10 +97,14 @@ describe("formatDisplayName", () => {
     it("Class type unchanged", () => {
       const context: DisplayNameContext = {
         ...emptyContext,
-        typeByNodeId: new Map([["src/User.ts:User", "Class"]]),
+        typeByNodeId: new Map([["src/User.ts:Class:User", "Class"]]),
       };
 
-      const result = formatDisplayName("src/User.ts:User", "User", context);
+      const result = formatDisplayName(
+        "src/User.ts:Class:User",
+        "User",
+        context,
+      );
 
       expect(result).toBe("User");
     });
@@ -93,10 +112,14 @@ describe("formatDisplayName", () => {
     it("Interface type unchanged", () => {
       const context: DisplayNameContext = {
         ...emptyContext,
-        typeByNodeId: new Map([["src/types.ts:Config", "Interface"]]),
+        typeByNodeId: new Map([["src/types.ts:Interface:Config", "Interface"]]),
       };
 
-      const result = formatDisplayName("src/types.ts:Config", "Config", context);
+      const result = formatDisplayName(
+        "src/types.ts:Interface:Config",
+        "Config",
+        context,
+      );
 
       expect(result).toBe("Config");
     });
@@ -104,10 +127,14 @@ describe("formatDisplayName", () => {
     it("TypeAlias type unchanged", () => {
       const context: DisplayNameContext = {
         ...emptyContext,
-        typeByNodeId: new Map([["src/types.ts:UserId", "TypeAlias"]]),
+        typeByNodeId: new Map([["src/types.ts:TypeAlias:UserId", "TypeAlias"]]),
       };
 
-      const result = formatDisplayName("src/types.ts:UserId", "UserId", context);
+      const result = formatDisplayName(
+        "src/types.ts:TypeAlias:UserId",
+        "UserId",
+        context,
+      );
 
       expect(result).toBe("UserId");
     });
@@ -116,7 +143,7 @@ describe("formatDisplayName", () => {
   describe("fallback behavior", () => {
     it("returns name unchanged when no type info available", () => {
       const result = formatDisplayName(
-        "src/unknown.ts:unknown",
+        "src/unknown.ts:Function:unknown",
         "unknown",
         emptyContext,
       );

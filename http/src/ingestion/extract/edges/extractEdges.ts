@@ -2,11 +2,12 @@ import type { SourceFile } from "ts-morph";
 import type { Edge } from "../../../db/Types.js";
 import type { EdgeExtractionContext } from "./EdgeExtractionContext.js";
 import { extractCallEdges } from "./extractCallEdges.js";
-import { extractContainsEdges } from "./extractContainsEdges.js";
-import { extractImportEdges } from "./extractImportEdges.js";
+import { extractHasPropertyEdges } from "./extractHasPropertyEdges.js";
+import { extractHasTypeEdges } from "./extractHasTypeEdges.js";
 import { extractInheritanceEdges } from "./extractInheritanceEdges.js";
 import { extractReferenceEdges } from "./extractReferenceEdges.js";
-import { extractTypeUsageEdges } from "./extractTypeUsageEdges.js";
+import { extractTakesReturnsEdges } from "./extractTakesReturnsEdges.js";
+import { extractTypeAliasEdges } from "./extractTypeAliasEdges.js";
 
 export type { EdgeExtractionContext };
 
@@ -22,12 +23,15 @@ export const extractEdges = (
 ): Edge[] => {
   const edges: Edge[] = [];
 
-  edges.push(...extractContainsEdges(sourceFile, context));
-  edges.push(...extractImportEdges(sourceFile, context));
   edges.push(...extractCallEdges(sourceFile, context));
   edges.push(...extractInheritanceEdges(sourceFile, context));
-  edges.push(...extractTypeUsageEdges(sourceFile, context));
   edges.push(...extractReferenceEdges(sourceFile, context));
+
+  // Type signature edges (new)
+  edges.push(...extractTakesReturnsEdges(sourceFile, context));
+  edges.push(...extractHasTypeEdges(sourceFile, context));
+  edges.push(...extractHasPropertyEdges(sourceFile, context));
+  edges.push(...extractTypeAliasEdges(sourceFile, context));
 
   return edges;
 };

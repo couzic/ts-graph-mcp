@@ -34,8 +34,6 @@ CREATE TABLE IF NOT EXISTS edges (
   type TEXT NOT NULL,
   call_count INTEGER,
   call_sites TEXT,
-  is_type_only INTEGER,
-  imported_symbols TEXT,
   context TEXT,
   reference_context TEXT,
   PRIMARY KEY (source, target, type)

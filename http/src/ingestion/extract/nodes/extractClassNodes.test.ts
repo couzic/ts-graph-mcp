@@ -28,7 +28,7 @@ describe(extractClassNodes.name, () => {
 
     expect(classes).toHaveLength(1);
     expect(classes[0]).toMatchObject({
-      id: "src/test.ts:User",
+      id: "src/test.ts:Class:User",
       type: "Class",
       name: "User",
       package: "myapp",

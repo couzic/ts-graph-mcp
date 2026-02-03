@@ -28,7 +28,7 @@ describe(extractArrowFunctionNodes.name, () => {
 
     expect(functions).toHaveLength(1);
     expect(functions[0]).toMatchObject({
-      id: "src/test.ts:handler",
+      id: "src/test.ts:Function:handler",
       type: "Function",
       name: "handler",
       package: "myapp",
@@ -72,7 +72,7 @@ describe(extractArrowFunctionNodes.name, () => {
 
     expect(functions).toHaveLength(1);
     expect(functions[0]).toMatchObject({
-      id: "src/test.ts:formatter",
+      id: "src/test.ts:Function:formatter",
       type: "Function",
       name: "formatter",
       parameters: [{ name: "value", type: "string" }],

@@ -1,5 +1,5 @@
+import type { NodeType } from "@ts-graph/shared";
 import type Database from "better-sqlite3";
-import type { NodeType } from "../../db/Types.js";
 import type { NodeInfo } from "./GraphTypes.js";
 
 /**

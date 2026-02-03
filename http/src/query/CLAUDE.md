@@ -1,18 +1,101 @@
-# MCP Tools Module
+# Query Module
 
-This module contains the MCP tool implementations for ts-graph.
+This module contains the graph query implementations for ts-graph.
+
+## Core Principle
+
+**ALWAYS RETURN A GRAPH.** This is a GraphRAG tool. The AI agent calling
+`searchGraph()` expects to receive a graph. Every query pattern returns the same
+output format: a graph with nodes and edges.
+
+## Architecture
+
+```
+query/
+├── search-graph/           # Unified search tool (MCP-exposed)
+│   ├── searchGraph.ts      # Main entry point
+│   └── SearchGraphTypes.ts # Input/output types
+├── dependencies-of/        # Forward traversal (internal)
+│   └── dependenciesOf.ts
+├── dependents-of/          # Backward traversal (internal)
+│   └── dependentsOf.ts
+├── paths-between/          # Path finding (internal)
+│   ├── pathsBetween.ts
+│   └── query.ts
+└── shared/                 # Formatting and utilities
+```
 
 ## Design Philosophy
 
-**GPS for code.** All tools answer one question: "Find paths through the code graph with constraints."
+**One MCP tool: `searchGraph`.** All graph queries go through a unified
+interface.
 
-| Constraint | Tool | Question |
-|------------|------|----------|
-| Start only | `dependenciesOf` | "What does this symbol depend on?" |
-| End only | `dependentsOf` | "Who depends on this symbol?" |
-| Both | `pathsBetween` | "How are A and B connected?" |
+### Endpoint Types
 
-**Same question, same output.** All tools return the same format:
+| Parameter          | Purpose                                                 |
+| ------------------ | ------------------------------------------------------- |
+| `from: { symbol }` | Exact start node                                        |
+| `from: { query }`  | Lexical + semantic search → multiple start nodes        |
+| `to: { symbol }`   | Exact end node                                          |
+| `to: { query }`    | Lexical + semantic search → multiple end nodes          |
+| `topic`            | Filter applied to whole graph → focus on relevant nodes |
+
+**`query` vs `symbol`:**
+
+- `symbol` = exact match, single node
+- `query` = lexical + semantic search, can return multiple nodes
+
+**`topic` vs `query`:**
+
+- `topic` = filter applied to the traversal results (focus attention)
+- `query` = find start/end nodes for traversal
+
+### Query Patterns
+
+| Query Pattern            | Input                  | Question                                   |
+| ------------------------ | ---------------------- | ------------------------------------------ |
+| Forward traversal        | `{ from: { symbol } }` | "What does this depend on?"                |
+| Backward traversal       | `{ to: { symbol } }`   | "Who depends on this?"                     |
+| Path finding             | `{ from, to }`         | "How does A reach B?"                      |
+| Loose search + traversal | `{ from: { query } }`  | "Find X and show dependencies"             |
+| Topic filter             | `{ topic }`            | "Focus on code related to X"               |
+| Filtered traversal       | `{ topic, from }`      | "What X-related code does this depend on?" |
+
+**Note:** Topic filtering for path finding (`{ topic, from, to }`) is not yet
+implemented.
+
+**Internal functions.** The `dependenciesOf`, `dependentsOf`, and `pathsBetween`
+functions are internal implementations called by `searchGraph`. They're also
+used directly by e2e tests.
+
+## searchGraph API
+
+```typescript
+searchGraph(db, projectRoot, {
+  // At least one required:
+  topic?: string,           // Filter to focus on relevant nodes
+  from?: GraphEndpoint,     // Start node(s)
+  to?: GraphEndpoint,       // End node(s)
+  max_nodes?: number        // Output limit (default: 50)
+}, options)
+
+type GraphEndpoint = {
+  query?: string,    // Lexical + semantic search (can return multiple nodes)
+  symbol?: string,   // Exact symbol name (single node)
+  file_path?: string // Include when known to avoid disambiguation
+}
+```
+
+**Resolution priority:**
+
+1. If `from` + `to` both provided → path finding
+2. If only `from` provided → forward traversal (show dependencies)
+3. If only `to` provided → backward traversal (show dependents)
+4. If `topic` provided → filter results to topic-relevant nodes
+
+## Output Format
+
+All queries return the same format:
 
 ```
 ## Graph
@@ -22,101 +105,41 @@ entry --CALLS--> step02 --CALLS--> step03
 ## Nodes
 
 step02:
+  type: Function
   file: src/step02.ts
   offset: 3, limit: 3
   snippet:
     3: export function step02(): string {
-    4:   return step03() + "-02";
+  > 4:   return step03() + "-02";
     5: }
 ```
 
-## Tool Structure
-
-```
-src/tools/<tool-name>/
-  handler.ts   - MCP tool definition and execute function
-  <tool>.ts    - Core function implementation
-```
-
-Shared formatting code lives in `src/tools/shared/`.
-
-## MCP Tools Reference
-
-### `dependenciesOf(file_path, symbol)`
-
-Find all code that a symbol depends on (forward dependencies).
-
-| Parameter | Required | Description |
-|-----------|----------|-------------|
-| `file_path` | ✓ | File containing the symbol (e.g., `"src/utils.ts"`) |
-| `symbol` | ✓ | Symbol name (e.g., `"formatDate"`, `"User.save"`) |
-
-**Returns:** Graph + Nodes sections showing all dependencies.
-**Empty case:** `No dependencies found.`
-
-### `dependentsOf(file_path, symbol)`
-
-Find all code that depends on a symbol (reverse dependencies).
-
-| Parameter | Required | Description |
-|-----------|----------|-------------|
-| `file_path` | ✓ | File containing the symbol |
-| `symbol` | ✓ | Symbol name |
-
-**Returns:** Graph + Nodes sections showing all dependents.
-**Empty case:** `No dependents found.`
-
-### `pathsBetween(from, to)`
-
-Find how two symbols connect through the code graph.
-
-| Parameter | Required | Description |
-|-----------|----------|-------------|
-| `from` | ✓ | Source: `{ file_path, symbol }` |
-| `to` | ✓ | Target: `{ file_path, symbol }` |
-
-**Bidirectional:** Finds the path regardless of which direction you specify. The arrows show actual direction.
-
-**Returns:** Graph + Nodes sections showing the path.
-**Error cases:**
-- Same symbol: `Invalid query: source and target are the same symbol.`
-- No connection: `No path found.`
-
-## Symbol Lookup Errors
-
-All tools provide rich error messages when a symbol is not found:
-
-| Case | Message |
-|------|---------|
-| File not indexed | `File 'X' is not indexed.` + locations if symbol exists elsewhere |
-| Symbol not in file | `Symbol 'X' not found at Y.` + available symbols in file (sorted by similarity) |
-| Wrong file | `Symbol 'X' not found at Y.` + files where symbol exists (sorted by similarity) |
-
-Implementation: `src/tools/shared/symbolNotFound.ts`
-
-## Output Format
-
 ### Graph Section
 
-- **Chain compaction**: Linear chains on one line (`A --CALLS--> B --CALLS--> C`)
+- **Chain compaction**: Linear chains on one line
+  (`A --CALLS--> B --CALLS--> C`)
 - **Branch splitting**: Multiple outgoing edges start new lines
-- **Edge types**: `--CALLS-->`, `--REFERENCES-->`, `--EXTENDS-->`, `--IMPLEMENTS-->`
-- **Disambiguation**: When names collide, uses `#N` suffix (`formatDate#1`, `formatDate#2`)
+- **Edge types**: `--CALLS-->`, `--REFERENCES-->`, `--EXTENDS-->`,
+  `--IMPLEMENTS-->`
 
 ### Nodes Section
 
 - **Discovered nodes only**: Query inputs are excluded
 - **Read tool compatible**: Includes `offset` and `limit`
-- **Snippets**: Included when ≤15 nodes, omitted otherwise
-- **Format**: `name: file, offset, limit, snippet`
+- **Snippets**: Included when ≤30 nodes, omitted for 31-50 nodes
 
-## Edge Types Traversed
+## Edge Types
 
-All tools traverse the same edges:
-
-| Edge | Meaning |
-|------|---------|
-| CALLS | Direct function invocation |
-| REFERENCES | Function passed as callback/stored |
-| EXTENDS | Class inheritance |
-| IMPLEMENTS | Interface implementation |
+| Edge         | Meaning                                     | Category |
+| ------------ | ------------------------------------------- | -------- |
+| CALLS        | Direct function invocation                  | Runtime  |
+| REFERENCES   | Function passed as callback/stored          | Runtime  |
+| INCLUDES     | JSX component usage                         | Runtime  |
+| EXTENDS      | Class inheritance                           | Both     |
+| IMPLEMENTS   | Interface implementation                    | Types    |
+| TAKES        | Function/method parameter type              | Types    |
+| RETURNS      | Function/method return type                 | Types    |
+| HAS_TYPE     | Variable type annotation                    | Types    |
+| HAS_PROPERTY | Class/interface/object property type        | Types    |
+| DERIVES_FROM | Type alias composition (intersection/union) | Types    |
+| ALIAS_FOR    | Direct type alias                           | Types    |

@@ -50,9 +50,7 @@ export const runFullIndex = async (
       console.error("[ts-graph] Database not found. Indexing project...");
 
       if (configResult.source === "explicit") {
-        console.error(
-          `[ts-graph] Using config: ${configResult.configPath}`,
-        );
+        console.error(`[ts-graph] Using config: ${configResult.configPath}`);
       } else {
         console.error(
           "[ts-graph] No config file found. Auto-detected tsconfig.json.",

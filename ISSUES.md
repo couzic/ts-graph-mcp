@@ -4,9 +4,11 @@
 
 **Impact:** Medium (incorrect graph traversal)
 
-**Problem:** Edge extractor creates edges to targets that the node extractor doesn't create nodes for. This causes silent graph truncation.
+**Problem:** Edge extractor creates edges to targets that the node extractor
+doesn't create nodes for. This causes silent graph truncation.
 
 **Example:**
+
 ```typescript
 // Factory function with inline methods
 export const createService = () => ({
@@ -19,19 +21,56 @@ service.doSomething();  // Edge created to "doSomething" - but no node exists
 ```
 
 **Current behavior:**
-1. Edge extractor sees `service.doSomething()`, creates edge targeting `doSomething`
+
+1. Edge extractor sees `service.doSomething()`, creates edge targeting
+   `doSomething`
 2. Node extractor doesn't create node (inline arrow function in object literal)
 3. Query JOINs with nodes table, silently filters out the dangling edge
 4. Graph stops at `service` with no indication something is missing
 
-**Root cause:** Edge extractor and node extractor have inconsistent definitions of "what is a symbol". Edge extractor creates edges to anything that looks callable. Node extractor only creates nodes for explicit declarations.
+**Root cause:** Edge extractor and node extractor have inconsistent definitions
+of "what is a symbol". Edge extractor creates edges to anything that looks
+callable. Node extractor only creates nodes for explicit declarations.
 
-**Fix approach:** Edge extractor should validate that target would produce a valid node before creating an edge. This requires:
-1. Define explicit rules for "what is a node" (functions, classes, methods, etc.)
+**Fix approach:** Edge extractor should validate that target would produce a
+valid node before creating an edge. This requires:
+
+1. Define explicit rules for "what is a node" (functions, classes, methods,
+   etc.)
 2. Edge extractor checks target against these rules before creating edge
 3. If target wouldn't be a node, skip edge creation (or log warning)
 
-**Workaround:** Use classes instead of factory functions when graph traversal is needed.
+**Workaround:** Use classes instead of factory functions when graph traversal is
+needed.
+
+---
+
+## Branded Types Not Enforced
+
+**Impact:** Low (type safety)
+
+**Problem:** `FilePath`, `SymbolName`, and `NodeId` in `shared/src/index.ts` are
+defined as `string` aliases, providing no compile-time distinction between them.
+
+**Goal:** Use literal string branded types to prevent mixing up these values:
+
+```typescript
+export type FilePath = "FilePath";
+export type SymbolName = "SymbolName";
+export type NodeId = `${FilePath}:${NodeType}:${SymbolName}`;
+```
+
+**Current state:** Types are `string` aliases. The branded type definitions are
+preserved in TODO comments.
+
+**Blocked by:** 156 call sites in extractors and tests pass raw strings to
+`generateNodeId()`. Each needs explicit casting or a helper function.
+
+**Fix approach:**
+
+1. Create a helper: `asFilePath(path: string): FilePath`
+2. Update all `generateNodeId()` call sites to use the helper
+3. Restore branded type definitions
 
 ---
 
@@ -50,20 +89,22 @@ tool calls, but may fall back to Read/Grep in longer sessions.
 - "trace through the code"
 - "analyze logic"
 
-**Current state:** Tool descriptions in `mcp/src/wrapper.ts` include trigger phrases.
+**Current state:** Tool description in `mcp/src/wrapper.ts` includes trigger
+phrases.
 
 **Next steps:**
 
 - Run benchmarks to validate trigger phrases work in longer sessions
 - If issues persist, investigate context window / attention patterns
 
-**Full catalog of phrases to support:**
+**Phrase patterns for `searchGraph`:**
 
-| Tool             | Phrase Patterns                                                                                                                    |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `dependenciesOf` | "what happens when X runs", "follow the call chain", "step through X", "walk through X", "execution flow"                          |
-| `dependentsOf`   | "who calls X", "what depends on X", "impact of changing X", "what would break", "find all usages", "callers of X", "refactoring X" |
-| `pathsBetween`   | "how does A reach B", "path between A and B", "connection between", "how does A use B", "flow from A to B"                         |
+| Query Type                   | Phrase Patterns                                                                               |
+| ---------------------------- | --------------------------------------------------------------------------------------------- |
+| Forward traversal (`from`)   | "what happens when X runs", "follow the call chain", "step through X", "execution flow"       |
+| Backward traversal (`to`)    | "who calls X", "what depends on X", "impact of changing X", "find all usages", "callers of X" |
+| Path finding (`from` + `to`) | "how does A reach B", "path between A and B", "connection between", "flow from A to B"        |
+| Semantic search (`topic`)    | "find code related to", "where do we handle", "show me the authentication flow"               |
 
 ---
 
@@ -71,18 +112,36 @@ tool calls, but may fall back to Read/Grep in longer sessions.
 
 ---
 
+### Benchmark Build Compiles UI Unnecessarily
+
+**Impact:** Low (developer experience)
+
+**Problem:** Running benchmarks triggers UI compilation, which is not needed for
+benchmark execution and adds unnecessary build time.
+
+**Fix approach:** Create a separate build script or configuration that excludes
+UI compilation when running benchmarks only.
+
+---
+
 ### Inconsistent Logging
 
 **Impact:** Low (maintainability)
 
-**Problem:** Some modules use direct `console.log`/`console.error` calls instead of the injected `Logger`. This makes it impossible to fully silence output during tests.
+**Problem:** Some modules use direct `console.log`/`console.error` calls instead
+of the injected `Logger`. This makes it impossible to fully silence output
+during tests.
 
 **Current state:**
+
 - `http/src/server.ts` uses injected `Logger`
-- `http/src/ingestion/watchProject.ts` uses its own `silent` flag with direct `console.error`
+- `http/src/ingestion/watchProject.ts` uses its own `silent` flag with direct
+  `console.error`
 - Other modules may have direct console calls
 
-**Fix approach:** Audit codebase for direct console calls and delegate to the logger where appropriate. Consider whether `watchProject` should also accept an injected logger instead of a `silent` boolean.
+**Fix approach:** Audit codebase for direct console calls and delegate to the
+logger where appropriate. Consider whether `watchProject` should also accept an
+injected logger instead of a `silent` boolean.
 
 ---
 
@@ -188,16 +247,24 @@ output includes truncation indicators when applicable.
 
 **Impact:** Low (performance optimization)
 
-**Problem:** The `nodes` table stores `name` (short name like `errors`) but not the fully qualified symbol path (like `IndexResult.errors`). To get the full path, we extract it from the node ID using `SUBSTR(id, INSTR(id, ':') + 1)`.
+**Problem:** The `nodes` table stores `name` (short name like `errors`) but not
+the fully qualified symbol path (like `IndexResult.errors`). To get the full
+path, we extract it from the node ID using `SUBSTR(id, INSTR(id, ':') + 1)`.
 
 **Example:**
+
 - Node ID: `http/src/db/Types.ts:IndexResult.errors`
 - `name` column: `errors`
 - Needed for symbol resolution: `IndexResult.errors`
 
-**Current workaround:** Both `findSymbolMatches()` in `symbolNotFound.ts` and `/api/symbols` endpoint use `SUBSTR(id, INSTR(id, ':') + 1)` to extract the symbol path at query time. This works correctly but computes the value on every query.
+**Current workaround:** Both `findSymbolMatches()` in `symbolNotFound.ts` and
+`/api/symbols` endpoint use `SUBSTR(id, INSTR(id, ':') + 1)` to extract the
+symbol path at query time. This works correctly but computes the value on every
+query.
 
-**Future optimization:** Add a `symbol_path` column to the nodes table that stores the fully qualified name (`ClassName.methodName`). This would:
+**Future optimization:** Add a `symbol_path` column to the nodes table that
+stores the fully qualified name (`ClassName.methodName`). This would:
+
 1. Simplify queries (no string manipulation)
 2. Enable proper indexing for symbol lookups
 3. Make the data model more explicit
@@ -237,59 +304,21 @@ acceptable for typical codebases.
 
 1. `http/src/db/Types.ts` — `EdgeType` union type (source of truth for all edge
    types)
-2. `http/src/query/shared/constants.ts` — `EDGE_TYPES` array (subset used by
-   traversal tools)
-
-```typescript
-// Types.ts
-export type EdgeType =
-  | "CALLS"
-  | "IMPORTS"
-  | "CONTAINS"
-  | "IMPLEMENTS"
-  | "EXTENDS"
-  | "USES_TYPE"
-  | "REFERENCES"
-  | "INCLUDES";
-
-// constants.ts
-export const EDGE_TYPES = [
-  "CALLS",
-  "INCLUDES",
-  "REFERENCES",
-  "EXTENDS",
-  "IMPLEMENTS",
-];
-```
+2. `http/src/query/shared/constants.ts` — `EDGE_TYPES` array (used by traversal)
 
 No compile-time check ensures `EDGE_TYPES` values are valid `EdgeType` members.
 
 **Fix approach:**
 
-Option 1 — Type-safe array in constants.ts:
+Type-safe array in constants.ts:
 
 ```typescript
 import { EdgeType } from "../../db/Types.js";
 export const EDGE_TYPES: EdgeType[] = [
   "CALLS",
   "INCLUDES",
-  "REFERENCES",
-  "EXTENDS",
-  "IMPLEMENTS",
+  // ...
 ];
-```
-
-Option 2 — Derive type from array (if array should be source of truth):
-
-```typescript
-export const EDGE_TYPES = [
-  "CALLS",
-  "INCLUDES",
-  "REFERENCES",
-  "EXTENDS",
-  "IMPLEMENTS",
-] as const;
-export type TraversalEdgeType = typeof EDGE_TYPES[number];
 ```
 
 ---
@@ -436,14 +465,15 @@ const close = async (): Promise<void> => {
 
 **Impact:** Low (UX)
 
-**Problem:** When both `from` and `to` symbols fail to resolve in `pathsBetween`,
-only the first error is shown. The user doesn't know if both symbols are invalid.
+**Problem:** When both `from` and `to` symbols fail to resolve in
+`pathsBetween`, only the first error is shown. The user doesn't know if both
+symbols are invalid.
 
 ```typescript
 // pathsBetween.ts
 const fromResolution = resolveSymbol(db, from.file_path, from.symbol);
 if (!fromResolution.success) {
-  return fromResolution.error;  // Stops here, toResolution never attempted
+  return fromResolution.error; // Stops here, toResolution never attempted
 }
 
 const toResolution = resolveSymbol(db, to.file_path, to.symbol);
@@ -453,6 +483,7 @@ if (!toResolution.success) {
 ```
 
 **Example:**
+
 ```typescript
 // User calls with two invalid symbols:
 pathsBetween({ from: "a.ts:invalidA", to: "b.ts:invalidB" })

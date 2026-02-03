@@ -38,16 +38,12 @@ export const createUser = (name: string): User => {
 
     const edges = extractEdges(sourceFile, defaultContext);
 
-    // Should contain IMPORTS edges
-    const importEdges = edges.filter((e) => e.type === "IMPORTS");
-    expect(importEdges.length).toBeGreaterThan(0);
+    // Should contain RETURNS edges (from getUser and createUser)
+    const returnsEdges = edges.filter((e) => e.type === "RETURNS");
+    expect(returnsEdges.length).toBeGreaterThan(0);
 
-    // Should contain CONTAINS edges (File contains User, UserService, createUser)
-    const containsEdges = edges.filter((e) => e.type === "CONTAINS");
-    expect(containsEdges.length).toBe(3);
-
-    // Should contain USES_TYPE edges
-    const usesTypeEdges = edges.filter((e) => e.type === "USES_TYPE");
-    expect(usesTypeEdges.length).toBeGreaterThan(0);
+    // Should contain HAS_PROPERTY edges (from UserService.config)
+    const hasPropertyEdges = edges.filter((e) => e.type === "HAS_PROPERTY");
+    expect(hasPropertyEdges.length).toBeGreaterThan(0);
   });
 });

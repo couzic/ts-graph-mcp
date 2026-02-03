@@ -1,55 +1,40 @@
-import type { OutputFormat } from "@ts-graph/shared";
+import { existsSync } from "node:fs";
+import path, { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import type Database from "better-sqlite3";
 import express from "express";
-import { existsSync } from "node:fs";
-import { join } from "node:path";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import type { ProjectConfig } from "./config/Config.schemas.js";
-import { getCacheDir } from "./config/getCacheDir.js";
 import { loadConfigOrDetect } from "./config/configLoader.utils.js";
+import {
+  getCacheDir,
+  getOramaIndexPath,
+  getSqliteDir,
+} from "./config/getCacheDir.js";
 import { createSqliteWriter } from "./db/sqlite/createSqliteWriter.js";
 import { openDatabase } from "./db/sqlite/sqliteConnection.utils.js";
+import { createEmbeddingProvider } from "./embedding/createEmbeddingProvider.js";
+import type { EmbeddingProvider } from "./embedding/EmbeddingTypes.js";
+import { DEFAULT_PRESET, EMBEDDING_PRESETS } from "./embedding/presets.js";
 import { indexProject } from "./ingestion/indexProject.js";
-import { type IndexManifest, loadManifest, populateManifest, saveManifest } from "./ingestion/manifest.js";
+import {
+  type IndexManifest,
+  loadManifest,
+  populateManifest,
+  saveManifest,
+} from "./ingestion/manifest.js";
 import { syncOnStartup } from "./ingestion/syncOnStartup.js";
 import { type WatchHandle, watchProject } from "./ingestion/watchProject.js";
 import { consoleLogger } from "./logging/ConsoleTsGraphLogger.js";
 import type { TsGraphLogger } from "./logging/TsGraphLogger.js";
-import { dependenciesOf } from "./query/dependencies-of/dependenciesOf.js";
-import { dependentsOf } from "./query/dependents-of/dependentsOf.js";
-import { pathsBetween } from "./query/paths-between/pathsBetween.js";
+import { searchGraph } from "./query/search-graph/searchGraph.js";
+import {
+  createSearchIndex,
+  loadSearchIndexFromFile,
+  type SearchIndexWrapper,
+} from "./search/createSearchIndex.js";
+import { populateSearchIndex } from "./search/populateSearchIndex.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-/**
- * Parse max_nodes query parameter.
- * Returns undefined if not provided or invalid.
- */
-const parseMaxNodes = (value: unknown): number | undefined => {
-  if (typeof value !== "string") {
-    return undefined;
-  }
-  const parsed = parseInt(value, 10);
-  if (isNaN(parsed) || parsed <= 0) {
-    return undefined;
-  }
-  return parsed;
-};
-
-/**
- * Parse output format query parameter.
- * Returns undefined for invalid values (defaults to MCP format in query functions).
- */
-const parseOutputFormat = (value: unknown): OutputFormat | undefined => {
-  if (typeof value !== "string") {
-    return undefined;
-  }
-  if (value === "mcp" || value === "mermaid" || value === "md") {
-    return value;
-  }
-  return undefined;
-};
 
 /**
  * Index the project and return the open database connection.
@@ -57,8 +42,13 @@ const parseOutputFormat = (value: unknown): OutputFormat | undefined => {
 const indexAndOpenDb = async (
   projectRoot: string,
   cacheDir: string,
+  modelName: string,
   forceReindex: boolean,
   logger: TsGraphLogger,
+  searchIndex: SearchIndexWrapper,
+  oramaIndexPath: string,
+  searchIndexLoadedFromFile: boolean,
+  embeddingProvider?: EmbeddingProvider,
 ): Promise<{
   db: Database.Database;
   indexedFiles: number;
@@ -67,7 +57,7 @@ const indexAndOpenDb = async (
 }> => {
   logger.info(`Cache: ${cacheDir}`);
   logger.info(`Project root: ${projectRoot}`);
-  const dbPath = join(cacheDir, "graph.db");
+  const dbPath = join(getSqliteDir(cacheDir), "graph.db");
   const dbExists = existsSync(dbPath);
   const db = openDatabase({ path: dbPath });
 
@@ -75,7 +65,12 @@ const indexAndOpenDb = async (
 
   if (!configResult) {
     logger.warn("No config file or tsconfig.json found. Nothing to index.");
-    return { db, indexedFiles: 0, manifest: { version: 1, files: {} }, config: null };
+    return {
+      db,
+      indexedFiles: 0,
+      manifest: { version: 1, files: {} },
+      config: null,
+    };
   }
 
   if (forceReindex || !dbExists) {
@@ -94,8 +89,12 @@ const indexAndOpenDb = async (
     const writer = createSqliteWriter(db);
     const result = await indexProject(configResult.config, writer, {
       projectRoot,
+      cacheDir,
+      modelName,
       clearFirst: forceReindex,
       logger,
+      searchIndex,
+      embeddingProvider,
     });
 
     logger.success(
@@ -113,18 +112,27 @@ const indexAndOpenDb = async (
     populateManifest(manifest, result.filesIndexed, projectRoot);
     saveManifest(cacheDir, manifest);
 
-    return { db, indexedFiles: result.filesProcessed, manifest, config: configResult.config };
+    // Persist search index to disk
+    await searchIndex.saveToFile(oramaIndexPath);
+
+    return {
+      db,
+      indexedFiles: result.filesProcessed,
+      manifest,
+      config: configResult.config,
+    };
   }
 
   logger.info("Using existing database. Checking for file changes...");
 
   const manifest = loadManifest(cacheDir);
-  const syncResult = await syncOnStartup(
-    db,
-    configResult.config,
-    manifest,
-    { projectRoot, cacheDir, logger },
-  );
+  const syncResult = await syncOnStartup(db, configResult.config, manifest, {
+    projectRoot,
+    cacheDir,
+    logger,
+    searchIndex,
+    embeddingProvider,
+  });
 
   const totalChanges =
     syncResult.staleCount + syncResult.deletedCount + syncResult.addedCount;
@@ -143,9 +151,21 @@ const indexAndOpenDb = async (
     }
   }
 
+  // If search index wasn't loaded from file, populate from DB
+  if (!searchIndexLoadedFromFile) {
+    await populateSearchIndex(db, searchIndex);
+    // Save the newly populated search index
+    await searchIndex.saveToFile(oramaIndexPath);
+  } else if (totalChanges > 0) {
+    // Search index was loaded, but files changed - save updated index
+    await searchIndex.saveToFile(oramaIndexPath);
+  }
+
   // Get actual file count from database
   const countResult = db
-    .prepare<[], { count: number }>("SELECT COUNT(DISTINCT file_path) as count FROM nodes")
+    .prepare<[], { count: number }>(
+      "SELECT COUNT(DISTINCT file_path) as count FROM nodes",
+    )
     .get();
   const indexedFiles = countResult?.count ?? 0;
 
@@ -188,16 +208,85 @@ export const startHttpServer = async (
   const projectRoot = process.cwd();
   const cacheDir = getCacheDir(projectRoot);
 
-  // Index project and keep DB open
+  // Load config early to get embedding settings
+  const configResult = loadConfigOrDetect(projectRoot);
+  const embeddingConfig = configResult?.config?.embedding;
+
+  // Create embedding provider (always enabled, uses default preset if not configured)
+  const presetName = embeddingConfig?.preset ?? DEFAULT_PRESET;
+  const preset = EMBEDDING_PRESETS[presetName];
+
+  if (!preset) {
+    logger.error(`Unknown embedding preset: ${presetName}`);
+    process.exit(1);
+  }
+
+  const vectorDimensions = preset.dimensions;
+  logger.info(
+    `Semantic search: ${presetName} (${vectorDimensions} dimensions)`,
+  );
+
+  let downloadComplete = false;
+  const embeddingProvider = await createEmbeddingProvider({
+    config: {
+      preset: presetName,
+      repo: embeddingConfig?.repo,
+      filename: embeddingConfig?.filename,
+      queryPrefix: embeddingConfig?.queryPrefix,
+      documentPrefix: embeddingConfig?.documentPrefix,
+    },
+    modelsDir: join(cacheDir, "models"),
+    onProgress: (downloaded, total) => {
+      if (downloadComplete) {
+        return;
+      }
+      const percent = Math.round((downloaded / total) * 100);
+      process.stdout.write(`\rDownloading model: ${percent}%`);
+      if (downloaded === total) {
+        process.stdout.write("\n");
+        downloadComplete = true;
+      }
+    },
+  });
+
+  // Initialize embedding provider (downloads model if needed) before indexing
+  await embeddingProvider.initialize();
+
+  // Try to load persisted search index, or create fresh
+  const oramaIndexPath = getOramaIndexPath(cacheDir);
+  let searchIndex: SearchIndexWrapper;
+  let searchIndexLoadedFromFile = false;
+
+  if (!shouldReindex) {
+    const loaded = await loadSearchIndexFromFile(oramaIndexPath, {
+      vectorDimensions,
+    });
+    if (loaded) {
+      logger.info("Loaded search index from disk");
+      searchIndex = loaded;
+      searchIndexLoadedFromFile = true;
+    } else {
+      searchIndex = await createSearchIndex({ vectorDimensions });
+    }
+  } else {
+    searchIndex = await createSearchIndex({ vectorDimensions });
+  }
+
+  // Index project and keep DB open (unified: SQLite + search index)
   const { db, indexedFiles, manifest, config } = await indexAndOpenDb(
     projectRoot,
     cacheDir,
+    presetName,
     shouldReindex,
     logger,
+    searchIndex,
+    oramaIndexPath,
+    searchIndexLoadedFromFile,
+    embeddingProvider,
   );
 
   // Track indexed files count (updated after sync)
-  let currentIndexedFiles = indexedFiles;
+  const currentIndexedFiles = indexedFiles;
 
   // Start file watcher if we have a valid config
   let watchHandle: WatchHandle | null = null;
@@ -206,6 +295,9 @@ export const startHttpServer = async (
       projectRoot,
       cacheDir,
       logger,
+      searchIndex,
+      embeddingProvider,
+      oramaIndexPath,
       ...config.watch,
     });
     await watchHandle.ready;
@@ -234,74 +326,42 @@ export const startHttpServer = async (
       return;
     }
 
-    // Search symbols by name OR symbol path (case-insensitive prefix match)
-    // This allows finding methods by class name (e.g., "User" finds "User.getSituations")
+    // Search symbols by name (case-insensitive prefix match)
     const results = db
-      .prepare<[string, string], { file_path: string; symbol: string; type: string }>(
-        `SELECT file_path,
-                SUBSTR(id, INSTR(id, ':') + 1) as symbol,
-                type
+      .prepare<[string], { file_path: string; symbol: string; type: string }>(
+        `SELECT file_path, name as symbol, type
          FROM nodes
-         WHERE (name LIKE ? || '%' COLLATE NOCASE
-                OR SUBSTR(id, INSTR(id, ':') + 1) LIKE ? || '%' COLLATE NOCASE)
-         AND type != 'File'
+         WHERE name LIKE ? || '%' COLLATE NOCASE
          ORDER BY name
          LIMIT 50`,
       )
-      .all(query, query);
+      .all(query);
 
     res.json(results);
   });
 
-  app.get("/api/graph/dependencies", (req, res) => {
-    const filePath = req.query["file"] as string | undefined;
-    const symbol = req.query["symbol"] as string | undefined;
-    const maxNodes = parseMaxNodes(req.query["max_nodes"]);
-    const format = parseOutputFormat(req.query["output"]);
+  // Graph search endpoint
+  app.use(express.json());
+  app.post("/api/graph/search", async (req, res) => {
+    const { topic, from, to, max_nodes } = req.body as {
+      topic?: string;
+      from?: { query?: string; symbol?: string; file_path?: string };
+      to?: { query?: string; symbol?: string; file_path?: string };
+      max_nodes?: number;
+    };
 
-    if (!symbol) {
-      res.status(400).send("Missing required parameter: symbol");
+    if (!topic && !from && !to) {
+      res
+        .status(400)
+        .send("At least one of 'topic', 'from', or 'to' is required");
       return;
     }
 
-    const result = dependenciesOf(db, projectRoot, filePath, symbol, { maxNodes, format });
-    res.type("text/plain").send(result);
-  });
-
-  app.get("/api/graph/dependents", (req, res) => {
-    const filePath = req.query["file"] as string | undefined;
-    const symbol = req.query["symbol"] as string | undefined;
-    const maxNodes = parseMaxNodes(req.query["max_nodes"]);
-    const format = parseOutputFormat(req.query["output"]);
-
-    if (!symbol) {
-      res.status(400).send("Missing required parameter: symbol");
-      return;
-    }
-
-    const result = dependentsOf(db, projectRoot, filePath, symbol, { maxNodes, format });
-    res.type("text/plain").send(result);
-  });
-
-  app.get("/api/graph/paths", (req, res) => {
-    const fromFile = req.query["from_file"] as string | undefined;
-    const fromSymbol = req.query["from_symbol"] as string | undefined;
-    const toFile = req.query["to_file"] as string | undefined;
-    const toSymbol = req.query["to_symbol"] as string | undefined;
-    const maxNodes = parseMaxNodes(req.query["max_nodes"]);
-    const format = parseOutputFormat(req.query["output"]);
-
-    if (!fromSymbol || !toSymbol) {
-      res.status(400).send("Missing required parameters: from_symbol, to_symbol");
-      return;
-    }
-
-    const result = pathsBetween(
+    const result = await searchGraph(
       db,
       projectRoot,
-      { file_path: fromFile, symbol: fromSymbol },
-      { file_path: toFile, symbol: toSymbol },
-      { maxNodes, format },
+      { topic, from, to, max_nodes },
+      { searchIndex, embeddingProvider },
     );
     res.type("text/plain").send(result);
   });
@@ -314,7 +374,9 @@ export const startHttpServer = async (
   // Get port from config (required)
   const port = config?.server?.port;
   if (!port) {
-    logger.error("No port configured. Add server.port to ts-graph-mcp.config.json");
+    logger.error(
+      "No port configured. Add server.port to ts-graph-mcp.config.json",
+    );
     process.exit(1);
   }
 
@@ -326,6 +388,9 @@ export const startHttpServer = async (
   const close = async (): Promise<void> => {
     if (watchHandle) {
       await watchHandle.close();
+    }
+    if (embeddingProvider) {
+      await embeddingProvider.dispose();
     }
     return new Promise((resolve) => {
       server.close(() => {

@@ -59,6 +59,7 @@ describe("record-dispatch E2E tests", () => {
 ## Graph
 
 formatErrorMessage --REFERENCES--> formatMessageByAccessLevel --REFERENCES--> formatCustomerError
+formatErrorMessage --TAKES--> AccessLevel
 formatMessageByAccessLevel --REFERENCES--> formatAdminError
 
 ## Nodes
@@ -84,6 +85,13 @@ formatCustomerError:
     1: export function formatCustomerError(error: Error): string {
     2:   return \`Sorry, something went wrong: \${error.message}\`;
     3: }
+
+AccessLevel:
+  type: TypeAlias
+  file: src/record-dispatch/formatErrorMessage.ts
+  offset: 18, limit: 1
+  snippet:
+    18: export type AccessLevel = "customer" | "admin";
 
 formatAdminError:
   type: Function

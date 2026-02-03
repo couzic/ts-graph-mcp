@@ -1,15 +1,23 @@
 # ts-graph-mcp
 
-A TypeScript code graph tool that extracts code structure into a queryable database, with MCP integration for AI coding agents.
+A TypeScript code graph tool that extracts code structure into a queryable
+database, with MCP integration for AI coding agents.
 
 ## What It Does
 
-ts-graph parses TypeScript source code using AST analysis and builds a graph database of your codebase structure. The graph captures code symbols (functions, classes, interfaces, types, variables) and their relationships (calls, imports, type usage, inheritance).
+ts-graph parses TypeScript source code using AST analysis and builds a graph
+database of your codebase structure. The graph captures code symbols (functions,
+classes, interfaces, types, variables) and their relationships (calls, imports,
+type usage, inheritance).
 
-AI agents can query the graph through 3 MCP tools to:
+**Semantic search included.** On first run, ts-graph downloads an embedding
+model (~300MB) and generates embeddings for all symbols. AI agents can search by
+concept ("user validation", "database queries") not just exact symbol names.
 
+AI agents query the graph through the `searchGraph` MCP tool to:
+
+- Find code by concept (semantic search)
 - Traverse call graphs (who calls this? what does this call?)
-- Analyze code impact (what breaks if I change this?)
 - Find paths between symbols
 
 ## Quick Start
@@ -73,58 +81,49 @@ Or manually in `.mcp.json`:
 
 **Note:** Start the HTTP server first. The MCP wrapper connects to it.
 
-## MCP Tools
+## MCP Tool: searchGraph
 
-All tools use `symbol` to reference code elements. The `file_path` parameter is optional — when omitted, the tool searches across all packages.
+Unified search combining semantic search with graph traversal.
 
-### dependenciesOf
-
-Find all code that a symbol depends on (forward dependencies).
+### Query Patterns
 
 ```typescript
-// What does handleRequest call?
-{ file_path: "src/api.ts", symbol: "handleRequest" }
+// Find code by concept (semantic search)
+{ topic: "user authentication" }
 
-// Or without file_path (auto-resolves if unique)
-{ symbol: "handleRequest" }
+// What does handleRequest call? (forward traversal)
+{ from: { symbol: "handleRequest" } }
+
+// Who calls saveUser? (backward traversal)
+{ to: { symbol: "saveUser" } }
+
+// How does A reach B? (path finding)
+{ from: { symbol: "handleRequest" }, to: { symbol: "saveUser" } }
+
+// Semantic endpoint resolution
+{ from: { query: "user input handling" }, to: { symbol: "Database.save" } }
 ```
-
-### dependentsOf
-
-Find all code that depends on a symbol (reverse dependencies).
-
-```typescript
-// Who calls saveUser?
-{ file_path: "src/db/user.ts", symbol: "saveUser" }
-```
-
-### pathsBetween
-
-Find how two symbols connect through the code graph.
-
-```typescript
-// How does handleRequest reach saveData?
-{
-  from: { file_path: "src/api.ts", symbol: "handleRequest" },
-  to: { file_path: "src/db.ts", symbol: "saveData" }
-}
-```
-
-### Symbol Resolution
-
-- **Method names** work without class prefix: `save` resolves to `UserService.save` if unique
-- **Multiple matches** return a disambiguation list with file paths
-- **Single match** auto-resolves and proceeds
 
 ### Parameters
 
-| Parameter | Required | Description |
-|-----------|----------|-------------|
-| `symbol` | Yes | Symbol name (function, class, method, etc.) |
-| `file_path` | No | File containing the symbol. Auto-resolves if unique. |
-| `max_nodes` | No | Output limit (default: 50). Larger graphs truncate. |
+| Parameter   | Required | Description                                                        |
+| ----------- | -------- | ------------------------------------------------------------------ |
+| `topic`     | No*      | Semantic search for a concept (standalone mode)                    |
+| `from`      | No*      | Start point: `{ symbol }` or `{ query }` with optional `file_path` |
+| `to`        | No*      | End point: `{ symbol }` or `{ query }` with optional `file_path`   |
+| `max_nodes` | No       | Output limit (default: 50)                                         |
+
+*At least one of `topic`, `from`, or `to` is required. Currently `topic` only
+works in standalone mode — it is not combined with `from`/`to` traversals.
 
 ### Example Output
+
+```
+## Symbols matching "validation" (semantic search)
+
+validateInput (Function) - src/validation.ts [score: 0.847]
+checkUserData (Function) - src/user.ts [score: 0.721]
+```
 
 ```
 ## Graph
@@ -141,15 +140,6 @@ validate:
     10: export function validate(data: Input) {
   > 11:   return saveUser(data);
     12: }
-
-saveUser:
-  type: Function
-  file: src/db/user.ts
-  offset: 3, limit: 4
-  snippet:
-    3: export function saveUser(data: Input) {
-    4:   return db.insert(data);
-    5: }
 ```
 
 ## CLI Options
@@ -164,39 +154,51 @@ ts-graph-mcp --reindex    # Force clean reindex
 
 ### Required
 
-| Field | Description |
-|-------|-------------|
-| `packages` | Array of `{ name, tsconfig }` |
+| Field         | Description                   |
+| ------------- | ----------------------------- |
+| `packages`    | Array of `{ name, tsconfig }` |
 | `server.port` | HTTP server port (no default) |
 
 ### Optional
 
-| Field | Description | Default |
-|-------|-------------|---------|
-| `storage.type` | Database type | `"sqlite"` |
-| `storage.path` | Database file path | `.ts-graph-mcp/graph.db` |
-| `watch.debounce` | Enable debouncing | `true` |
-| `watch.debounceInterval` | Debounce delay (ms) | `300` |
-| `watch.polling` | Use polling (for Docker/WSL2) | `false` |
-| `watch.pollingInterval` | Polling interval (ms) | `1000` |
-| `watch.excludeDirectories` | Directories to skip | `[]` |
-| `watch.silent` | Suppress reindex logs | `false` |
+| Field                      | Description                   | Default                   |
+| -------------------------- | ----------------------------- | ------------------------- |
+| `embedding.preset`         | Embedding model               | `"nomic-embed-text-v1.5"` |
+| `storage.type`             | Database type                 | `"sqlite"`                |
+| `storage.path`             | Database file path            | `.ts-graph-mcp/graph.db`  |
+| `watch.debounce`           | Enable debouncing             | `true`                    |
+| `watch.debounceInterval`   | Debounce delay (ms)           | `300`                     |
+| `watch.polling`            | Use polling (for Docker/WSL2) | `false`                   |
+| `watch.pollingInterval`    | Polling interval (ms)         | `1000`                    |
+| `watch.excludeDirectories` | Directories to skip           | `[]`                      |
+| `watch.silent`             | Suppress reindex logs         | `false`                   |
+
+### Embedding Models
+
+| Preset                         | Size   | Dimensions | Notes                           |
+| ------------------------------ | ------ | ---------- | ------------------------------- |
+| `nomic-embed-text-v1.5`        | ~300MB | 768        | Default, fast and effective     |
+| `qwen3-0.6b`                   | ~650MB | 1024       | Higher quality, slower          |
+| `qwen3-4b`                     | ~4GB   | 2560       | Highest quality, needs more RAM |
+| `jina-embeddings-v2-base-code` | ~300MB | 768        | Optimized for code              |
 
 Add `.ts-graph-mcp/` to your `.gitignore`.
 
 ### Yarn PnP Support
 
-ts-graph works with Yarn 4 PnP monorepos. When `.pnp.cjs` is detected, module resolution uses Yarn's PnP API.
+ts-graph works with Yarn 4 PnP monorepos. When `.pnp.cjs` is detected, module
+resolution uses Yarn's PnP API.
 
 Requirements:
+
 - Use base package imports (`@libs/utils`, not `@libs/utils/date`)
 - Declare dependencies with `workspace:*` protocol
 
 ## Supported Types
 
-**Nodes:** Function, Class, Method, Interface, TypeAlias, Variable, File, Property
+**Nodes:** Function, Class, Method, Interface, TypeAlias, Variable, Property
 
-**Edges:** CALLS, IMPORTS, CONTAINS, IMPLEMENTS, EXTENDS, USES_TYPE, REFERENCES, INCLUDES
+**Edges:** CALLS, IMPLEMENTS, EXTENDS, USES_TYPE, REFERENCES, INCLUDES
 
 ## Development
 
@@ -221,13 +223,16 @@ ts-graph-mcp/
 
 This package uses `better-sqlite3`, which requires compilation tools:
 
-1. Install [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) with "Desktop development with C++"
+1. Install
+   [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+   with "Desktop development with C++"
 2. Install Python 3.x
 3. Use Node.js LTS
 
 ## Contributing
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for technical internals and [CLAUDE.md](CLAUDE.md) for code style guidelines.
+See [ARCHITECTURE.md](ARCHITECTURE.md) for technical internals and
+[CLAUDE.md](CLAUDE.md) for code style guidelines.
 
 ## License
 

@@ -267,11 +267,12 @@ export function helper(): void {
         expect(result.filesProcessed).toBe(2);
 
         // Verify both files were indexed
-        expect(nodeExists(db, "packages/crossfile/a.ts:main")).toBe(true);
-        expect(nodeExists(db, "packages/crossfile/b.ts:helper")).toBe(true);
-
-        // Verify the file node exists (for IMPORTS edge relationship)
-        expect(nodeExists(db, "packages/crossfile/a.ts")).toBe(true);
+        expect(nodeExists(db, "packages/crossfile/a.ts:Function:main")).toBe(
+          true,
+        );
+        expect(nodeExists(db, "packages/crossfile/b.ts:Function:helper")).toBe(
+          true,
+        );
       } finally {
         if (db) {
           closeDatabase(db);
@@ -420,10 +421,10 @@ export function formatDate(date: Date): string {
         expect(result.filesProcessed).toBeGreaterThanOrEqual(2);
 
         // Verify both packages were indexed
-        expect(nodeExists(db, "packages/core/app.ts:main")).toBe(true);
-        expect(nodeExists(db, "packages/utils/format.ts:formatDate")).toBe(
-          true,
-        );
+        expect(nodeExists(db, "packages/core/app.ts:Function:main")).toBe(true);
+        expect(
+          nodeExists(db, "packages/utils/format.ts:Function:formatDate"),
+        ).toBe(true);
       } finally {
         if (db) {
           closeDatabase(db);

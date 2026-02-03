@@ -29,12 +29,9 @@ export function greet(name: string): string {
 
     const result = extractFromSourceFile(sourceFile, context);
 
-    // Should have file node + function node
-    expect(result.nodes.length).toBeGreaterThanOrEqual(2);
-
-    // Should have CONTAINS edge (file -> function)
-    const containsEdges = result.edges.filter((e) => e.type === "CONTAINS");
-    expect(containsEdges.length).toBeGreaterThanOrEqual(1);
+    // Should have function node
+    expect(result.nodes.length).toBeGreaterThanOrEqual(1);
+    expect(result.nodes.some((n) => n.type === "Function")).toBe(true);
   });
 
   it("extracts class with methods and properties", () => {
@@ -64,14 +61,12 @@ export class User {
 
     const result = extractFromSourceFile(sourceFile, context);
 
-    // Should have: file, class, 2 properties, constructor, greet method
+    // Should have: class, constructor, greet method (properties are not extracted)
     const classNodes = result.nodes.filter((n) => n.type === "Class");
     const methodNodes = result.nodes.filter((n) => n.type === "Method");
-    const propertyNodes = result.nodes.filter((n) => n.type === "Property");
 
     expect(classNodes).toHaveLength(1);
     expect(methodNodes.length).toBeGreaterThanOrEqual(1); // At least greet
-    expect(propertyNodes).toHaveLength(2);
   });
 
   it("extracts function calls", () => {
@@ -156,12 +151,13 @@ export function getUser(id: number): User {
 
     const result = extractFromSourceFile(sourceFile, context);
 
-    const usesTypeEdges = result.edges.filter((e) => e.type === "USES_TYPE");
-    expect(usesTypeEdges.length).toBeGreaterThanOrEqual(1);
+    // RETURNS edges replace USES_TYPE with context="return"
+    const returnsEdges = result.edges.filter((e) => e.type === "RETURNS");
+    expect(returnsEdges.length).toBeGreaterThanOrEqual(1);
 
-    // Should have return type usage
-    const returnUsage = usesTypeEdges.find((e) => e.context === "return");
-    expect(returnUsage).toBeDefined();
+    // Should have return type edge to User
+    const returnToUser = returnsEdges.find((e) => e.target.endsWith(":User"));
+    expect(returnToUser).toBeDefined();
   });
 
   it("returns stats in extraction result", () => {
@@ -229,21 +225,24 @@ export const DEFAULT_ID: ServiceId = 'default';
 
     const result = extractFromSourceFile(sourceFile, context);
 
-    // Check node types present
+    // Check node types present (properties are not extracted)
     const nodeTypes = new Set(result.nodes.map((n) => n.type));
-    expect(nodeTypes.has("File")).toBe(true);
     expect(nodeTypes.has("Class")).toBe(true);
     expect(nodeTypes.has("Interface")).toBe(true);
     expect(nodeTypes.has("TypeAlias")).toBe(true);
     expect(nodeTypes.has("Function")).toBe(true);
     expect(nodeTypes.has("Method")).toBe(true);
-    expect(nodeTypes.has("Property")).toBe(true);
     expect(nodeTypes.has("Variable")).toBe(true);
 
     // Check edge types present
     const edgeTypes = new Set(result.edges.map((e) => e.type));
-    expect(edgeTypes.has("CONTAINS")).toBe(true);
     expect(edgeTypes.has("IMPLEMENTS")).toBe(true);
-    expect(edgeTypes.has("USES_TYPE")).toBe(true);
+    // New type signature edges replace USES_TYPE
+    expect(
+      edgeTypes.has("TAKES") ||
+        edgeTypes.has("RETURNS") ||
+        edgeTypes.has("HAS_TYPE") ||
+        edgeTypes.has("HAS_PROPERTY"),
+    ).toBe(true);
   });
 });

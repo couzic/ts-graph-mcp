@@ -4,6 +4,9 @@ export type AuditEntry = {
   details: string;
 };
 
+/**
+ * Database repository for persisting audit log entries.
+ */
 export class AuditRepository {
   private entries: AuditEntry[] = [];
 

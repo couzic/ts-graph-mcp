@@ -30,12 +30,15 @@ import { extractEdges } from "./extract/edges/extractEdges.js";
 
 | File | Edge Type | Description |
 |------|-----------|-------------|
-| `extractContainsEdges.ts` | `CONTAINS` | File → top-level symbols |
-| `extractImportEdges.ts` | `IMPORTS` | File → file (tracks symbols, type-only) |
 | `extractCallEdges.ts` | `CALLS` | Function/method → function/method (tracks count) |
 | `extractInheritanceEdges.ts` | `EXTENDS` | Class/interface → parent |
 | `extractInheritanceEdges.ts` | `IMPLEMENTS` | Class → interface |
-| `extractTypeUsageEdges.ts` | `USES_TYPE` | Symbol → type (tracks context) |
+| `extractTakesReturnsEdges.ts` | `TAKES` | Function/method → parameter type |
+| `extractTakesReturnsEdges.ts` | `RETURNS` | Function/method → return type |
+| `extractHasTypeEdges.ts` | `HAS_TYPE` | Variable → its type |
+| `extractHasPropertyEdges.ts` | `HAS_PROPERTY` | Class/interface/object → property type |
+| `extractTypeAliasEdges.ts` | `DERIVES_FROM` | Type alias → base type (intersection/union) |
+| `extractTypeAliasEdges.ts` | `ALIAS_FOR` | Type alias → aliased type (direct alias) |
 | `extractReferenceEdges.ts` | `REFERENCES` | Symbol → symbol (function passed/stored, tracks referenceContext) |
 
 ## Extraction Order
@@ -55,29 +58,23 @@ interface EdgeExtractionContext {
 
 ## Key Implementation Details
 
-### CONTAINS Edges
-- Only creates edges for top-level symbols (no nested members)
-- Identifies top-level by checking symbol path has no dots
-- Extracts directly from AST (no nodes array needed)
-
-### IMPORTS Edges
-- Skips external modules (those not starting with `.` or `/`)
-- Resolves relative paths to target file using ts-morph
-- Tracks `importedSymbols` and `isTypeOnly`
-- Extracts directly from AST (no nodes array needed)
-
 ### CALLS Edges
 - Uses `buildImportMap` to resolve cross-file calls (no global nodes array needed)
 - Builds local symbol map from current file's AST
 - Counts multiple calls to same target (`callCount`)
 - Handles arrow functions, regular functions, and methods
 
-### Type Usage Edges
-- Uses `buildImportMap` to resolve cross-file type references (no global nodes array needed)
-- Extracts from function parameters, return types
-- Extracts from variable and property type annotations
-- Filters built-in types (String, Array, Promise, etc.)
-- Tracks context: `"parameter"` | `"return"` | `"variable"` | `"property"`
+### Type Signature Edges (TAKES/RETURNS/HAS_TYPE/HAS_PROPERTY/DERIVES_FROM/ALIAS_FOR)
+- **TAKES**: Extracts from function/method parameter types
+- **RETURNS**: Extracts from function/method return types
+- **HAS_TYPE**: Extracts from variable type annotations
+- **HAS_PROPERTY**: Extracts from class/interface/object literal property types
+- **DERIVES_FROM**: Extracts from type alias intersection/union composition
+- **ALIAS_FOR**: Extracts from direct type aliases
+- All use `buildImportMap` to resolve cross-file type references
+- Filter built-in types (String, Array, Promise, Partial, etc.)
+- Extract inner types from generic wrappers (e.g., `Promise<User>` → edge to `User`)
+- Handle union types with multiple edges (e.g., `User | Admin` → edges to both)
 
 ### REFERENCES Edges
 - Captures when functions are **passed or stored** (not directly invoked)
@@ -121,10 +118,11 @@ MathUtils.multiply(a, b);  // resolves to actual definition
 ## Test Coverage
 
 Each extractor has colocated tests:
-- `extractContainsEdges.test.ts` - 2 tests
-- `extractImportEdges.test.ts` - 4 tests
-- `extractCallEdges.test.ts` - 4 tests
-- `extractInheritanceEdges.test.ts` - 9 tests
-- `extractTypeUsageEdges.test.ts` - 5 tests
-- `extractReferenceEdges.test.ts` - 13 tests
-- `extractEdges.test.ts` - 1 integration test
+- `extractCallEdges.test.ts` - Call edge extraction
+- `extractInheritanceEdges.test.ts` - EXTENDS/IMPLEMENTS edges
+- `extractTakesReturnsEdges.test.ts` - TAKES/RETURNS edges
+- `extractHasTypeEdges.test.ts` - HAS_TYPE edges
+- `extractHasPropertyEdges.test.ts` - HAS_PROPERTY edges
+- `extractTypeAliasEdges.test.ts` - DERIVES_FROM/ALIAS_FOR edges
+- `extractReferenceEdges.test.ts` - Function reference edges
+- `extractEdges.test.ts` - Integration test

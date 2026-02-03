@@ -26,7 +26,7 @@ describe(extractVariableNodes.name, () => {
 
     expect(variables).toHaveLength(1);
     expect(variables[0]).toMatchObject({
-      id: "src/test.ts:API_KEY",
+      id: "src/test.ts:Variable:API_KEY",
       type: "Variable",
       name: "API_KEY",
       package: "myapp",

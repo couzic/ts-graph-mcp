@@ -38,7 +38,7 @@ describe(extractMethodNodes.name, () => {
 
     expect(methods).toHaveLength(1);
     expect(methods[0]).toMatchObject({
-      id: "src/test.ts:User.validate",
+      id: "src/test.ts:Method:User.validate",
       type: "Method",
       name: "validate",
       package: "myapp",

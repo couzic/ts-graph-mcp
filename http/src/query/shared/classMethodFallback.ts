@@ -1,6 +1,5 @@
+import { EDGE_TYPES } from "@ts-graph/shared";
 import type Database from "better-sqlite3";
-import type { NodeType } from "../../db/Types.js";
-import { EDGE_TYPES } from "../shared/constants.js";
 
 interface ClassMethodInfo {
   id: string;
@@ -20,10 +19,7 @@ interface MethodRow {
 /**
  * Check if a node is a Class type.
  */
-export const isClassNode = (
-  db: Database.Database,
-  nodeId: string,
-): boolean => {
+export const isClassNode = (db: Database.Database, nodeId: string): boolean => {
   const sql = `SELECT type FROM nodes WHERE id = ?`;
   const row = db.prepare<[string], NodeTypeRow>(sql).get(nodeId);
   return row?.type === "Class";
@@ -32,13 +28,21 @@ export const isClassNode = (
 /**
  * Find all methods of a class and check if they have dependencies.
  *
- * Methods are identified by their ID pattern: `{filePath}:{className}.{methodName}`
+ * Class IDs use format: `{filePath}:Class:{className}`
+ * Method IDs use format: `{filePath}:Method:{className}.{methodName}`
  */
 export const findClassMethods = (
   db: Database.Database,
   classNodeId: string,
 ): ClassMethodInfo[] => {
-  const methodIdPrefix = `${classNodeId}.`;
+  // Parse class node ID: {filePath}:Class:{className}
+  const lastColonIdx = classNodeId.lastIndexOf(":");
+  const secondLastColonIdx = classNodeId.lastIndexOf(":", lastColonIdx - 1);
+  const filePath = classNodeId.slice(0, secondLastColonIdx);
+  const className = classNodeId.slice(lastColonIdx + 1);
+
+  // Method IDs: {filePath}:Method:{className}.{methodName}
+  const methodIdPrefix = `${filePath}:Method:${className}.`;
 
   const methodsSql = `
     SELECT id, name FROM nodes

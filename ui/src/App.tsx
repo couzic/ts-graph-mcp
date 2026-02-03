@@ -4,9 +4,9 @@ import { useVertexState } from "./useVertexState.js";
 import { SymbolSelect } from "./SymbolSelect.js";
 import { OutputTabs } from "./OutputTabs.js";
 import { QueryResults } from "./QueryResults.js";
-import { SymbolOption } from "./SymbolOption.js";
+import { SymbolOption, GraphEndpoint } from "./SymbolOption.js";
 
-type SymbolOptionsField = "startSymbolOptions" | "endSymbolOptions";
+type SymbolOptionsField = "fromSymbolOptions" | "toSymbolOptions";
 
 const EMPTY_SYMBOL_OPTIONS: SymbolOption[] = [];
 
@@ -60,48 +60,51 @@ const HealthBadge = () => {
 };
 
 const MainContent = () => {
-  // Subscribe to sync slice state only - these never suspend
-  const { startNode, endNode, outputFormat, mermaidDirection, maxNodes, startSearchQuery, endSearchQuery } =
+  const { fromEndpoint, toEndpoint, topic, outputFormat, mermaidDirection, maxNodes, fromSearchQuery, toSearchQuery } =
     useVertexState(appVertex, [
-      "startNode",
-      "endNode",
+      "fromEndpoint",
+      "toEndpoint",
+      "topic",
       "outputFormat",
       "mermaidDirection",
       "maxNodes",
-      "startSearchQuery",
-      "endSearchQuery",
+      "fromSearchQuery",
+      "toSearchQuery",
     ]);
 
-  // Symbol options are handled separately to avoid suspending on every keystroke
-  const startSymbolOptions = useSymbolOptions("startSymbolOptions");
-  const endSymbolOptions = useSymbolOptions("endSymbolOptions");
+  const fromSymbolOptions = useSymbolOptions("fromSymbolOptions");
+  const toSymbolOptions = useSymbolOptions("toSymbolOptions");
 
-  const handleStartSearchChange = (query: string) => {
-    graph.dispatch(appActions.setStartSearchQuery(query));
+  const handleFromSearchChange = (query: string) => {
+    graph.dispatch(appActions.setFromSearchQuery(query));
   };
 
-  const handleEndSearchChange = (query: string) => {
-    graph.dispatch(appActions.setEndSearchQuery(query));
+  const handleToSearchChange = (query: string) => {
+    graph.dispatch(appActions.setToSearchQuery(query));
   };
 
-  const handleStartSelect = (option: SymbolOption | null) => {
-    graph.dispatch(appActions.setStartNode(option));
+  const handleFromSelect = (endpoint: GraphEndpoint | null) => {
+    graph.dispatch(appActions.setFromEndpoint(endpoint));
   };
 
-  const handleEndSelect = (option: SymbolOption | null) => {
-    graph.dispatch(appActions.setEndNode(option));
+  const handleToSelect = (endpoint: GraphEndpoint | null) => {
+    graph.dispatch(appActions.setToEndpoint(endpoint));
   };
 
-  const handleClearStart = () => {
-    graph.dispatch(appActions.clearStartNode());
+  const handleClearFrom = () => {
+    graph.dispatch(appActions.clearFromEndpoint());
   };
 
-  const handleClearEnd = () => {
-    graph.dispatch(appActions.clearEndNode());
+  const handleClearTo = () => {
+    graph.dispatch(appActions.clearToEndpoint());
   };
 
   const handleSwap = () => {
-    graph.dispatch(appActions.swapNodes());
+    graph.dispatch(appActions.swapEndpoints());
+  };
+
+  const handleTopicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    graph.dispatch(appActions.setTopic(e.target.value));
   };
 
   const handleFormatChange = (format: OutputFormat) => {
@@ -118,32 +121,43 @@ const MainContent = () => {
 
   return (
     <main style={mainStyle}>
+      <section style={topicSectionStyle}>
+        <label style={topicLabelStyle}>Topic (semantic search)</label>
+        <input
+          type="text"
+          value={topic}
+          onChange={handleTopicChange}
+          placeholder="e.g., user authentication, validation, database queries..."
+          style={topicInputStyle}
+        />
+      </section>
+
       <section style={selectorsStyle}>
         <SymbolSelect
-          label="START node"
-          value={startNode}
-          options={startSymbolOptions}
-          searchQuery={startSearchQuery}
-          onSearchChange={handleStartSearchChange}
-          onSelect={handleStartSelect}
-          onClear={handleClearStart}
+          label="FROM"
+          value={fromEndpoint}
+          options={fromSymbolOptions}
+          searchQuery={fromSearchQuery}
+          onSearchChange={handleFromSearchChange}
+          onSelect={handleFromSelect}
+          onClear={handleClearFrom}
         />
         <button
           style={swapButtonStyle}
           onClick={handleSwap}
-          disabled={startNode === null && endNode === null}
-          title="Swap START and END nodes"
+          disabled={fromEndpoint === null && toEndpoint === null}
+          title="Swap FROM and TO"
         >
           ⇄
         </button>
         <SymbolSelect
-          label="END node"
-          value={endNode}
-          options={endSymbolOptions}
-          searchQuery={endSearchQuery}
-          onSearchChange={handleEndSearchChange}
-          onSelect={handleEndSelect}
-          onClear={handleClearEnd}
+          label="TO"
+          value={toEndpoint}
+          options={toSymbolOptions}
+          searchQuery={toSearchQuery}
+          onSearchChange={handleToSearchChange}
+          onSelect={handleToSelect}
+          onClear={handleClearTo}
         />
       </section>
 
@@ -166,8 +180,9 @@ const MainContent = () => {
           <ResultsContent
             outputFormat={outputFormat}
             mermaidDirection={mermaidDirection}
-            hasStartNode={startNode !== null}
-            hasEndNode={endNode !== null}
+            hasFromEndpoint={fromEndpoint !== null}
+            hasToEndpoint={toEndpoint !== null}
+            hasTopic={topic.trim().length > 0}
           />
         </Suspense>
       </section>
@@ -182,19 +197,21 @@ const ResultsLoading = () => (
 type ResultsContentProps = {
   outputFormat: OutputFormat;
   mermaidDirection: MermaidDirection;
-  hasStartNode: boolean;
-  hasEndNode: boolean;
+  hasFromEndpoint: boolean;
+  hasToEndpoint: boolean;
+  hasTopic: boolean;
 };
 
-const ResultsContent = ({ outputFormat, mermaidDirection, hasStartNode, hasEndNode }: ResultsContentProps) => {
+const ResultsContent = ({ outputFormat, mermaidDirection, hasFromEndpoint, hasToEndpoint, hasTopic }: ResultsContentProps) => {
   const { queryResult } = useVertexState(appVertex, ["queryResult"]);
   return (
     <QueryResults
       result={queryResult}
       format={outputFormat}
       mermaidDirection={mermaidDirection}
-      hasStartNode={hasStartNode}
-      hasEndNode={hasEndNode}
+      hasFromEndpoint={hasFromEndpoint}
+      hasToEndpoint={hasToEndpoint}
+      hasTopic={hasTopic}
     />
   );
 };
@@ -271,6 +288,28 @@ const mainStyle: React.CSSProperties = {
   flex: 1,
   gap: "1rem",
   minHeight: 0,
+};
+
+const topicSectionStyle: React.CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "0.25rem",
+};
+
+const topicLabelStyle: React.CSSProperties = {
+  fontSize: "0.875rem",
+  color: "#888",
+  fontWeight: 500,
+};
+
+const topicInputStyle: React.CSSProperties = {
+  padding: "0.5rem 0.75rem",
+  fontSize: "0.875rem",
+  backgroundColor: "#2a2a2a",
+  border: "1px solid #444",
+  borderRadius: "4px",
+  color: "#fff",
+  outline: "none",
 };
 
 const selectorsStyle: React.CSSProperties = {

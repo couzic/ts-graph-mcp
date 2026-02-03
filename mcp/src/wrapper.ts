@@ -35,14 +35,19 @@ const loadPort = async (): Promise<number> => {
 };
 
 /**
- * Make HTTP request to the server.
+ * Make HTTP POST request to the server.
  */
-const httpRequest = async (
+const httpPostRequest = async (
   port: number,
   path: string,
+  body: unknown,
 ): Promise<{ ok: boolean; text: string }> => {
   try {
-    const response = await fetch(`http://localhost:${port}${path}`);
+    const response = await fetch(`http://localhost:${port}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
     const text = await response.text();
     return { ok: response.ok, text };
   } catch {
@@ -75,113 +80,89 @@ export const startMcpWrapper = async () => {
     version: getVersion(),
   });
 
-  // Register dependenciesOf tool
+  // Register searchGraph tool (unified semantic + graph search)
   server.registerTool(
-    "dependenciesOf",
+    "searchGraph",
     {
-      description:
-        "Find all code that a symbol depends on (forward dependencies). Answers: 'What does this call?' 'What happens when X runs?'",
+      description: `Search the code graph by concept or symbol. Returns a subgraph showing how code connects.
+
+TRIGGERS: "analyze behavior", "trace calls", "what does X call", "who calls X", "debug", "bug", "call chain", "execution flow"
+
+When to use:
+- Analyzing function behavior or tracing execution flow
+- Understanding what a function does by examining its call chain
+- Investigating bugs that span multiple files
+- Finding all callers of a function
+
+IMPORTANT: Use this tool FIRST before reading files to trace dependencies. When you see an import and think "I need to read that file to trace the call chain" — use this tool instead. One query shows the entire chain with code snippets.
+
+Parameters:
+- topic: Filter to focus on relevant nodes
+- from: Start node(s) - what does this depend on?
+- to: End node(s) - what depends on this?
+
+Examples:
+- { from: { symbol: "handleRequest" } } → what does handleRequest call?
+- { to: { symbol: "saveUser" } } → who calls saveUser?
+- { from: { symbol: "A" }, to: { symbol: "B" } } → how does A reach B?
+- { from: { symbol: "A", file_path: "path/to/A.ts" } } → precise lookup (avoids disambiguation)
+- { topic: "validation" } → find symbols related to validation
+
+Edge types in output: CALLS, REFERENCES, EXTENDS, IMPLEMENTS, INCLUDES`,
       inputSchema: {
-        file_path: z
+        topic: z
           .string()
           .optional()
-          .describe("File path containing the symbol (e.g., 'src/utils.ts'). Optional — omit to search across all files."),
-        symbol: z
-          .string()
-          .describe("Symbol name (e.g., 'formatDate', 'User.save')"),
+          .describe(
+            "Semantic filter (natural language, e.g., 'cart validation')",
+          ),
+        from: z
+          .object({
+            query: z
+              .string()
+              .optional()
+              .describe(
+                "Lexical + semantic search (can return multiple nodes)",
+              ),
+            symbol: z
+              .string()
+              .optional()
+              .describe("Exact symbol name (single node)"),
+            file_path: z
+              .string()
+              .optional()
+              .describe("Include when known to avoid disambiguation"),
+          })
+          .optional()
+          .describe("Start node(s) - what does this depend on?"),
+        to: z
+          .object({
+            query: z
+              .string()
+              .optional()
+              .describe(
+                "Lexical + semantic search (can return multiple nodes)",
+              ),
+            symbol: z
+              .string()
+              .optional()
+              .describe("Exact symbol name (single node)"),
+            file_path: z
+              .string()
+              .optional()
+              .describe("Include when known to avoid disambiguation"),
+          })
+          .optional()
+          .describe("End node(s) - what depends on this?"),
         max_nodes: z
           .number()
           .optional()
-          .describe("Maximum nodes to include in output (default: 50). When exceeded, shows graph only without node details."),
+          .describe("Maximum nodes in output (default: 50)"),
       },
     },
-    async ({ file_path, symbol, max_nodes }) => {
-      let path = `/api/graph/dependencies?symbol=${encodeURIComponent(symbol)}`;
-      if (file_path) {
-        path += `&file=${encodeURIComponent(file_path)}`;
-      }
-      if (max_nodes !== undefined) {
-        path += `&max_nodes=${max_nodes}`;
-      }
-      const result = await httpRequest(port, path);
-
-      return {
-        content: [{ type: "text", text: result.text }],
-        isError: !result.ok,
-      };
-    },
-  );
-
-  // Register dependentsOf tool
-  server.registerTool(
-    "dependentsOf",
-    {
-      description:
-        "Find all code that depends on a symbol (reverse dependencies). Answers: 'Who calls this?' 'What would break if I changed this?'",
-      inputSchema: {
-        file_path: z
-          .string()
-          .optional()
-          .describe("File path containing the symbol (e.g., 'src/utils.ts'). Optional — omit to search across all files."),
-        symbol: z
-          .string()
-          .describe("Symbol name (e.g., 'formatDate', 'User.save')"),
-        max_nodes: z
-          .number()
-          .optional()
-          .describe("Maximum nodes to include in output (default: 50). When exceeded, shows graph only without node details."),
-      },
-    },
-    async ({ file_path, symbol, max_nodes }) => {
-      let path = `/api/graph/dependents?symbol=${encodeURIComponent(symbol)}`;
-      if (file_path) {
-        path += `&file=${encodeURIComponent(file_path)}`;
-      }
-      if (max_nodes !== undefined) {
-        path += `&max_nodes=${max_nodes}`;
-      }
-      const result = await httpRequest(port, path);
-
-      return {
-        content: [{ type: "text", text: result.text }],
-        isError: !result.ok,
-      };
-    },
-  );
-
-  // Register pathsBetween tool
-  server.registerTool(
-    "pathsBetween",
-    {
-      description:
-        "Find how two symbols connect through the code graph. Answers: 'How does A reach B?' 'What's the path between these symbols?'",
-      inputSchema: {
-        from: z.object({
-          file_path: z.string().optional().describe("File path (e.g., 'src/api/handler.ts'). Optional — omit to search across all files."),
-          symbol: z.string().describe("Symbol name (e.g., 'handleRequest')"),
-        }),
-        to: z.object({
-          file_path: z.string().optional().describe("File path (e.g., 'src/db/queries.ts'). Optional — omit to search across all files."),
-          symbol: z.string().describe("Symbol name (e.g., 'executeQuery')"),
-        }),
-        max_nodes: z
-          .number()
-          .optional()
-          .describe("Maximum nodes to include in output (default: 50). When exceeded, shows graph only without node details."),
-      },
-    },
-    async ({ from, to, max_nodes }) => {
-      let path = `/api/graph/paths?from_symbol=${encodeURIComponent(from.symbol)}&to_symbol=${encodeURIComponent(to.symbol)}`;
-      if (from.file_path) {
-        path += `&from_file=${encodeURIComponent(from.file_path)}`;
-      }
-      if (to.file_path) {
-        path += `&to_file=${encodeURIComponent(to.file_path)}`;
-      }
-      if (max_nodes !== undefined) {
-        path += `&max_nodes=${max_nodes}`;
-      }
-      const result = await httpRequest(port, path);
+    async ({ topic, from, to, max_nodes }) => {
+      const body = { topic, from, to, max_nodes };
+      const result = await httpPostRequest(port, "/api/graph/search", body);
 
       return {
         content: [{ type: "text", text: result.text }],

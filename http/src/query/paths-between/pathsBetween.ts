@@ -10,9 +10,9 @@ import {
   formatToolOutput,
 } from "../shared/formatToolOutput.js";
 import { loadNodeSnippets } from "../shared/loadNodeSnippets.js";
+import type { QueryOptions } from "../shared/QueryTypes.js";
 import { queryNodeInfos } from "../shared/queryNodeInfos.js";
 import { queryNodeMetadata } from "../shared/queryNodeMetadata.js";
-import type { QueryOptions } from "../shared/QueryTypes.js";
 import { resolveSymbol } from "../shared/symbolNotFound.js";
 import { queryPath } from "./query.js";
 
@@ -71,7 +71,9 @@ export function pathsBetween(
       resolutionMessages.length > 0
         ? resolutionMessages.join("\n") + "\n\n"
         : "";
-    return prefix + formatDisambiguationMessage(className, fromFallback.methods);
+    return (
+      prefix + formatDisambiguationMessage(className, fromFallback.methods)
+    );
   }
   if (fromFallback.type === "single-method") {
     const className = from.symbol.includes(".")
@@ -106,13 +108,13 @@ export function pathsBetween(
   }
 
   const resolutionPrefix =
-    resolutionMessages.length > 0
-      ? resolutionMessages.join("\n") + "\n\n"
-      : "";
+    resolutionMessages.length > 0 ? resolutionMessages.join("\n") + "\n\n" : "";
 
   // Same-node check
   if (fromId === toId) {
-    return resolutionPrefix + "Invalid query: source and target are the same symbol.";
+    return (
+      resolutionPrefix + "Invalid query: source and target are the same symbol."
+    );
   }
 
   // Try forward path (from → to)

@@ -1,33 +1,37 @@
 import type { MermaidDirection, OutputFormat } from "./graph.js";
+import { mcpToMermaid } from "./mcpToMermaid.js";
 import { MermaidRenderer } from "./MermaidRenderer.js";
 
 type QueryResultsProps = {
   result: string | null;
   format: OutputFormat;
   mermaidDirection: MermaidDirection;
-  hasStartNode: boolean;
-  hasEndNode: boolean;
+  hasFromEndpoint: boolean;
+  hasToEndpoint: boolean;
+  hasTopic: boolean;
 };
 
 const queryTypeBySelection: Record<string, string> = {
-  "start-": "dependenciesOf",
-  "-end": "dependentsOf",
-  "start-end": "pathsBetween",
+  "from-": "dependenciesOf",
+  "-to": "dependentsOf",
+  "from-to": "pathsBetween",
+  "topic": "semanticSearch",
 };
 
 export const QueryResults = ({
   result,
   format,
   mermaidDirection,
-  hasStartNode,
-  hasEndNode,
+  hasFromEndpoint,
+  hasToEndpoint,
+  hasTopic,
 }: QueryResultsProps) => {
-  if (!hasStartNode && !hasEndNode) {
+  if (!hasFromEndpoint && !hasToEndpoint && !hasTopic) {
     return (
       <div style={emptyStateStyle}>
-        <p>Select a START node to query its dependencies.</p>
+        <p>Enter a topic for semantic search.</p>
         <p style={hintStyle}>
-          Or select an END node to query its dependents.
+          Or select FROM to query its dependencies, TO to query its dependents.
         </p>
       </div>
     );
@@ -41,7 +45,12 @@ export const QueryResults = ({
     );
   }
 
-  const queryTypeKey = `${hasStartNode ? "start" : ""}-${hasEndNode ? "end" : ""}`;
+  let queryTypeKey: string;
+  if (hasTopic && !hasFromEndpoint && !hasToEndpoint) {
+    queryTypeKey = "topic";
+  } else {
+    queryTypeKey = `${hasFromEndpoint ? "from" : ""}-${hasToEndpoint ? "to" : ""}`;
+  }
   const queryType = queryTypeBySelection[queryTypeKey];
 
   return (
@@ -51,7 +60,7 @@ export const QueryResults = ({
         <span style={formatBadgeStyle}>{format.toUpperCase()}</span>
       </div>
       {format === "mermaid" ? (
-        <MermaidRenderer syntax={result} direction={mermaidDirection} />
+        <MermaidRenderer syntax={mcpToMermaid(result)} direction={mermaidDirection} />
       ) : (
         <pre style={resultStyle}>{result}</pre>
       )}

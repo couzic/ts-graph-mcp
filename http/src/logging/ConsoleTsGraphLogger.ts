@@ -2,12 +2,14 @@ import chalk from "chalk";
 import type { TsGraphLogger } from "./TsGraphLogger.js";
 
 const PREFIX = chalk.dim("[ts-graph]");
-const CLEAR_LINE = "\x1b[2K\r";
+const MOVE_UP = "\x1b[1A"; // Move cursor up one line
+const CLEAR_LINE = "\x1b[2K\r"; // Clear entire line and return to column 0
 
 /**
  * Terminal-based logger with colors and in-place progress updates.
  *
  * - Progress updates overwrite the current line (in-place)
+ * - Uses cursor-up movement to handle external stderr interference
  * - Completed packages print permanent lines
  * - All output goes to stderr
  */
@@ -18,14 +20,21 @@ export const createConsoleTsGraphLogger = (): TsGraphLogger => {
 
   const clearProgress = (): void => {
     if (isProgressActive) {
-      process.stderr.write(CLEAR_LINE);
+      // Move up to the progress line and clear it
+      process.stderr.write(`${MOVE_UP}${CLEAR_LINE}`);
       isProgressActive = false;
     }
   };
 
   const writeProgress = (current: number): void => {
     const progressText = `${PREFIX} ${chalk.cyan("→")} Indexing ${currentPackage}... ${current}/${currentTotal} files`;
-    process.stderr.write(`${CLEAR_LINE}${progressText}`);
+    if (isProgressActive) {
+      // Move up to previous progress line, clear it, write new progress, then newline
+      process.stderr.write(`${MOVE_UP}${CLEAR_LINE}${progressText}\n`);
+    } else {
+      // First progress write - just write and newline
+      process.stderr.write(`${progressText}\n`);
+    }
     isProgressActive = true;
   };
 

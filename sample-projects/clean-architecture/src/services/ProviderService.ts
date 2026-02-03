@@ -1,10 +1,12 @@
 import type { ProviderRepository } from "../repositories/ProviderRepository.js";
+import type { AuditService } from "./AuditService.js";
 import type { ConfigService } from "./ConfigService.js";
 
 export class ProviderService {
   constructor(
     private repository: ProviderRepository,
     private configService: ConfigService,
+    private auditService: AuditService,
   ) {}
 
   setAsDefault(providerId: string): boolean {
@@ -24,6 +26,10 @@ export class ProviderService {
     // Set new default
     this.repository.save({ ...provider, isDefault: true });
     this.configService.setDefaultProviderId(providerId);
+    this.auditService.log(
+      "SET_DEFAULT_PROVIDER",
+      `Provider ${providerId} set as default`,
+    );
     return true;
   }
 

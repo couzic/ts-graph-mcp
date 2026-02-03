@@ -23,7 +23,7 @@ export const extractTypeAliasNodes = (
     const aliasedType = normalizeTypeText(typeNode?.getText());
 
     return {
-      id: generateNodeId(context.filePath, name),
+      id: generateNodeId(context.filePath, "TypeAlias", name),
       type: "TypeAlias",
       name,
       package: context.package,

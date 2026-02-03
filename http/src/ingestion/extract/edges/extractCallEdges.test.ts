@@ -26,9 +26,9 @@ export const calculate = (x: number, y: number): number => add(x, y);
 
     expect(edges).toHaveLength(1);
     expect(edges[0]).toEqual({
-      source: generateNodeId("test.ts", "calculate"),
+      source: generateNodeId("test.ts", "Function", "calculate"),
       type: "CALLS",
-      target: generateNodeId("test.ts", "add"),
+      target: generateNodeId("test.ts", "Function", "add"),
       callCount: 1,
       callSites: [{ start: 3, end: 3 }],
     });
@@ -52,9 +52,9 @@ export const doWork = () => {
 
     expect(edges).toHaveLength(1);
     expect(edges[0]).toEqual({
-      source: generateNodeId("test.ts", "doWork"),
+      source: generateNodeId("test.ts", "Function", "doWork"),
       type: "CALLS",
-      target: generateNodeId("test.ts", "log"),
+      target: generateNodeId("test.ts", "Function", "log"),
       callCount: 3,
       callSites: [
         { start: 4, end: 4 },
@@ -85,9 +85,9 @@ export class User {
 
     expect(edges).toHaveLength(1);
     expect(edges[0]).toEqual({
-      source: generateNodeId("test.ts", "User", "isValid"),
+      source: generateNodeId("test.ts", "Method", "User.isValid"),
       type: "CALLS",
-      target: generateNodeId("test.ts", "validate"),
+      target: generateNodeId("test.ts", "Function", "validate"),
       callCount: 1,
       callSites: [{ start: 8, end: 8 }],
     });
@@ -127,9 +127,9 @@ export const processEvent = (timestamp: Date): string => {
 
     expect(edges).toHaveLength(1);
     expect(edges[0]).toEqual({
-      source: generateNodeId("handler.ts", "processEvent"),
+      source: generateNodeId("handler.ts", "Function", "processEvent"),
       type: "CALLS",
-      target: generateNodeId("utils.ts", "formatDate"),
+      target: generateNodeId("utils.ts", "Function", "formatDate"),
       callCount: 1,
       callSites: [{ start: 5, end: 5 }],
     });
@@ -154,9 +154,9 @@ export const caller = (): string => {
 
     expect(edges).toHaveLength(1);
     expect(edges[0]).toEqual({
-      source: generateNodeId("test.ts", "caller"),
+      source: generateNodeId("test.ts", "Function", "caller"),
       type: "CALLS",
-      target: generateNodeId("test.ts", "target"),
+      target: generateNodeId("test.ts", "Function", "target"),
       callCount: 1,
       callSites: [{ start: 6, end: 6 }],
     });
@@ -193,7 +193,7 @@ export const display = (n: number) => formatValue(n);
 
     expect(edges).toHaveLength(1);
     // Edge should point to actual definition, NOT barrel file
-    expect(edges[0]?.target).toBe("utils/helper.ts:formatValue");
+    expect(edges[0]?.target).toBe("utils/helper.ts:Function:formatValue");
   });
 
   it("resolves calls through nested barrel files", () => {
@@ -230,7 +230,7 @@ export const sum = () => add(1, 2);
 
     expect(edges).toHaveLength(1);
     // Should resolve through both barrels to actual definition
-    expect(edges[0]?.target).toBe("lib/core/math.ts:add");
+    expect(edges[0]?.target).toBe("lib/core/math.ts:Function:add");
   });
 
   it("extracts CALLS edges from function to method (same file)", () => {
@@ -255,9 +255,9 @@ export function handleRequest() {
 
     expect(edges).toHaveLength(1);
     expect(edges[0]).toEqual({
-      source: generateNodeId("test.ts", "handleRequest"),
+      source: generateNodeId("test.ts", "Function", "handleRequest"),
       type: "CALLS",
-      target: generateNodeId("test.ts", "UserService", "save"),
+      target: generateNodeId("test.ts", "Method", "UserService.save"),
       callCount: 1,
       callSites: [{ start: 10, end: 10 }],
     });
@@ -298,9 +298,13 @@ export function handleRequest() {
 
     expect(edges).toHaveLength(1);
     expect(edges[0]).toEqual({
-      source: generateNodeId("src/handler.ts", "handleRequest"),
+      source: generateNodeId("src/handler.ts", "Function", "handleRequest"),
       type: "CALLS",
-      target: generateNodeId("src/UserService.ts", "UserService", "save"),
+      target: generateNodeId(
+        "src/UserService.ts",
+        "Method",
+        "UserService.save",
+      ),
       callCount: 1,
       callSites: [{ start: 6, end: 6 }],
     });
@@ -329,9 +333,9 @@ export class UserService {
 
     expect(edges).toHaveLength(1);
     expect(edges[0]).toEqual({
-      source: generateNodeId("test.ts", "UserService", "save"),
+      source: generateNodeId("test.ts", "Method", "UserService.save"),
       type: "CALLS",
-      target: generateNodeId("test.ts", "UserService", "validate"),
+      target: generateNodeId("test.ts", "Method", "UserService.validate"),
       callCount: 1,
       callSites: [{ start: 8, end: 8 }],
     });
@@ -377,9 +381,13 @@ export class UserService {
 
     expect(edges).toHaveLength(1);
     expect(edges[0]).toEqual({
-      source: generateNodeId("src/UserService.ts", "UserService", "save"),
+      source: generateNodeId(
+        "src/UserService.ts",
+        "Method",
+        "UserService.save",
+      ),
       type: "CALLS",
-      target: generateNodeId("src/Validator.ts", "Validator", "check"),
+      target: generateNodeId("src/Validator.ts", "Method", "Validator.check"),
       callCount: 1,
       callSites: [{ start: 8, end: 8 }],
     });
@@ -406,9 +414,9 @@ export function handleRequest() {
 
     expect(edges).toHaveLength(1);
     expect(edges[0]).toEqual({
-      source: generateNodeId("test.ts", "handleRequest"),
+      source: generateNodeId("test.ts", "Function", "handleRequest"),
       type: "CALLS",
-      target: generateNodeId("test.ts", "UserService", "create"),
+      target: generateNodeId("test.ts", "Method", "UserService.create"),
       callCount: 1,
       callSites: [{ start: 9, end: 9 }],
     });
@@ -446,9 +454,13 @@ export function handleRequest() {
 
     expect(edges).toHaveLength(1);
     expect(edges[0]).toEqual({
-      source: generateNodeId("src/handler.ts", "handleRequest"),
+      source: generateNodeId("src/handler.ts", "Function", "handleRequest"),
       type: "CALLS",
-      target: generateNodeId("src/UserService.ts", "UserService", "create"),
+      target: generateNodeId(
+        "src/UserService.ts",
+        "Method",
+        "UserService.create",
+      ),
       callCount: 1,
       callSites: [{ start: 5, end: 5 }],
     });
@@ -483,9 +495,15 @@ export function handleRequest() {
     // Should find: handleRequest -> getBuilder, handleRequest -> setValue, handleRequest -> build
     expect(edges).toHaveLength(3);
     const targets = edges.map((e) => e.target);
-    expect(targets).toContain(generateNodeId("test.ts", "getBuilder"));
-    expect(targets).toContain(generateNodeId("test.ts", "Builder", "setValue"));
-    expect(targets).toContain(generateNodeId("test.ts", "Builder", "build"));
+    expect(targets).toContain(
+      generateNodeId("test.ts", "Function", "getBuilder"),
+    );
+    expect(targets).toContain(
+      generateNodeId("test.ts", "Method", "Builder.setValue"),
+    );
+    expect(targets).toContain(
+      generateNodeId("test.ts", "Method", "Builder.build"),
+    );
   });
 
   it("extracts CALLS edges when method is destructured from object", () => {
@@ -512,7 +530,7 @@ export function handleRequest() {
     // Destructured method call - should this resolve to UserService.save?
     expect(edges).toHaveLength(1);
     expect(edges[0]?.target).toBe(
-      generateNodeId("test.ts", "UserService", "save"),
+      generateNodeId("test.ts", "Method", "UserService.save"),
     );
   });
 
@@ -541,7 +559,7 @@ export function handleRequest() {
     // Call to inherited method - should point to BaseService.save where it's defined
     expect(edges).toHaveLength(1);
     expect(edges[0]?.target).toBe(
-      generateNodeId("test.ts", "BaseService", "save"),
+      generateNodeId("test.ts", "Method", "BaseService.save"),
     );
   });
 
@@ -574,7 +592,7 @@ export function handleRequest() {
     // Call to overridden method - should point to UserService.save (the override)
     expect(edges).toHaveLength(1);
     expect(edges[0]?.target).toBe(
-      generateNodeId("test.ts", "UserService", "save"),
+      generateNodeId("test.ts", "Method", "UserService.save"),
     );
   });
 
@@ -601,7 +619,7 @@ export function handleRequest() {
     // Arrow function property - should this be tracked as UserService.save?
     expect(edges).toHaveLength(1);
     expect(edges[0]?.target).toBe(
-      generateNodeId("test.ts", "UserService", "save"),
+      generateNodeId("test.ts", "Function", "UserService.save"),
     );
   });
 
@@ -648,7 +666,7 @@ export function handleRequest() {
     // Call to inherited method from different file
     expect(edges).toHaveLength(1);
     expect(edges[0]?.target).toBe(
-      generateNodeId("src/BaseService.ts", "BaseService", "save"),
+      generateNodeId("src/BaseService.ts", "Method", "BaseService.save"),
     );
   });
 
@@ -677,10 +695,10 @@ export class UserService extends BaseService {
     // super.save() should point to BaseService.save
     expect(edges).toHaveLength(1);
     expect(edges[0]?.source).toBe(
-      generateNodeId("test.ts", "UserService", "save"),
+      generateNodeId("test.ts", "Method", "UserService.save"),
     );
     expect(edges[0]?.target).toBe(
-      generateNodeId("test.ts", "BaseService", "save"),
+      generateNodeId("test.ts", "Method", "BaseService.save"),
     );
   });
 
@@ -705,7 +723,7 @@ export function handleRequest(service: UserService | null) {
 
     expect(edges).toHaveLength(1);
     expect(edges[0]?.target).toBe(
-      generateNodeId("test.ts", "UserService", "save"),
+      generateNodeId("test.ts", "Method", "UserService.save"),
     );
   });
 
@@ -731,7 +749,7 @@ export function validate(config: Config) {
     // Calling the result of a getter - should this track the getter?
     expect(edges).toHaveLength(1);
     expect(edges[0]?.target).toBe(
-      generateNodeId("test.ts", "Config", "validator"),
+      generateNodeId("test.ts", "Method", "Config.validator"),
     );
   });
 
@@ -756,9 +774,9 @@ export class UserService {
 
     expect(edges).toHaveLength(1);
     expect(edges[0]).toMatchObject({
-      source: "test.ts:UserService.constructor",
+      source: "test.ts:Class:UserService",
       type: "CALLS",
-      target: "test.ts:initialize",
+      target: "test.ts:Function:initialize",
     });
   });
 
@@ -816,7 +834,7 @@ export class Config {
     expect(edges[0]).toMatchObject({
       source: "test.ts:Config.value:get",
       type: "CALLS",
-      target: "test.ts:validate",
+      target: "test.ts:Function:validate",
     });
   });
 
@@ -845,7 +863,7 @@ export class Config {
     expect(edges[0]).toMatchObject({
       source: "test.ts:Config.value:set",
       type: "CALLS",
-      target: "test.ts:validate",
+      target: "test.ts:Function:validate",
     });
   });
 
@@ -870,9 +888,9 @@ export class Handler {
 
     expect(edges).toHaveLength(1);
     expect(edges[0]).toMatchObject({
-      source: "test.ts:Handler.handleClick",
+      source: "test.ts:Class:Handler",
       type: "CALLS",
-      target: "test.ts:log",
+      target: "test.ts:Function:log",
     });
   });
 
@@ -895,9 +913,9 @@ export class Service {
 
     expect(edges).toHaveLength(1);
     expect(edges[0]).toMatchObject({
-      source: "test.ts:Service.logger",
+      source: "test.ts:Class:Service",
       type: "CALLS",
-      target: "test.ts:getLogger",
+      target: "test.ts:Function:getLogger",
     });
   });
 
@@ -924,7 +942,7 @@ export class Config {
     expect(edges[0]).toMatchObject({
       source: "test.ts:Config.static",
       type: "CALLS",
-      target: "test.ts:initialize",
+      target: "test.ts:Function:initialize",
     });
   });
 
@@ -949,9 +967,9 @@ export const MyClass = class {
 
     expect(edges).toHaveLength(1);
     expect(edges[0]).toMatchObject({
-      source: "test.ts:MyClass.method",
+      source: "test.ts:Method:MyClass.method",
       type: "CALLS",
-      target: "test.ts:helper",
+      target: "test.ts:Function:helper",
     });
   });
 
@@ -974,9 +992,9 @@ export function process(value: string = getDefault()): string {
 
     expect(edges).toHaveLength(1);
     expect(edges[0]).toMatchObject({
-      source: "test.ts:process",
+      source: "test.ts:Function:process",
       type: "CALLS",
-      target: "test.ts:getDefault",
+      target: "test.ts:Function:getDefault",
     });
   });
 
@@ -1015,7 +1033,7 @@ export function calculate(a: number, b: number) {
 
     expect(edges).toHaveLength(1);
     // Should resolve to actual function, not namespace
-    expect(edges[0]?.target).toBe("math/operations.ts:multiply");
+    expect(edges[0]?.target).toBe("math/operations.ts:Function:multiply");
   });
 
   describe("cross-package namespace resolution with path aliases", () => {
@@ -1091,9 +1109,9 @@ export function calculate(a: number, b: number) {
       });
 
       expect(edges).toHaveLength(1);
-      // Should resolve through cross-package resolution to actual function
+      // Cross-package resolution resolves through the path alias to the actual function
       expect(edges[0]?.target).toBe(
-        "libs/packageA/src/math/operations.ts:multiply",
+        "libs/packageA/src/math/operations.ts:Function:multiply",
       );
     });
 
@@ -1158,8 +1176,9 @@ export function calculate(a: number, b: number) {
       });
 
       expect(edges).toHaveLength(1);
+      // Cross-package resolution resolves through the path alias to the actual function
       expect(edges[0]?.target).toBe(
-        "libs/packageA/src/math/operations.ts:multiply",
+        "libs/packageA/src/math/operations.ts:Function:multiply",
       );
     });
   });
@@ -1195,9 +1214,9 @@ export function renderLoading(value: number) {
 
       expect(edges).toHaveLength(1);
       expect(edges[0]).toMatchObject({
-        source: "test.tsx:renderLoading",
+        source: "test.tsx:Function:renderLoading",
         type: "INCLUDES",
-        target: "test.tsx:LoadingWrapper",
+        target: "test.tsx:Function:LoadingWrapper",
       });
     });
 
@@ -1221,9 +1240,9 @@ export function Button() {
 
       expect(edges).toHaveLength(1);
       expect(edges[0]).toMatchObject({
-        source: "test.tsx:Button",
+        source: "test.tsx:Function:Button",
         type: "INCLUDES",
-        target: "test.tsx:Icon",
+        target: "test.tsx:Function:Icon",
       });
     });
 
@@ -1253,10 +1272,39 @@ export function Page() {
 
       expect(edges).toHaveLength(1);
       expect(edges[0]).toMatchObject({
-        source: "test.tsx:Page",
+        source: "test.tsx:Function:Page",
         type: "INCLUDES",
-        target: "components/Loading.tsx:Loading",
+        target: "components/Loading.tsx:Function:Loading",
       });
+    });
+  });
+
+  describe("built-in method calls on imported constants", () => {
+    it("does not create CALLS edge when calling built-in method on imported array", () => {
+      const project = createProject();
+      project.createSourceFile(
+        "constants.ts",
+        `export const EDGE_TYPES = ["CALLS", "INCLUDES"];`,
+      );
+      const sourceFile = project.createSourceFile(
+        "test.ts",
+        `
+import { EDGE_TYPES } from './constants';
+export function buildQuery() {
+  const placeholders = EDGE_TYPES.map(() => "?").join(", ");
+  return placeholders;
+}
+        `,
+      );
+
+      const edges = extractCallEdges(sourceFile, defaultContext);
+
+      // Should NOT have a CALLS edge to EDGE_TYPES
+      // .map() is a built-in Array method, not a call to EDGE_TYPES
+      const callsToEdgeTypes = edges.filter((e) =>
+        e.target.endsWith(":EDGE_TYPES"),
+      );
+      expect(callsToEdgeTypes).toHaveLength(0);
     });
   });
 });

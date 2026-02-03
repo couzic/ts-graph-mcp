@@ -2,7 +2,9 @@ import { dirname, join, relative } from "node:path";
 import type Database from "better-sqlite3";
 import type { ProjectConfig } from "../config/Config.schemas.js";
 import { createSqliteWriter } from "../db/sqlite/createSqliteWriter.js";
+import type { EmbeddingProvider } from "../embedding/EmbeddingTypes.js";
 import type { TsGraphLogger } from "../logging/TsGraphLogger.js";
+import type { SearchIndexWrapper } from "../search/createSearchIndex.js";
 import { createProject } from "./createProject.js";
 import type { NodeExtractionContext } from "./extract/nodes/NodeExtractionContext.js";
 import { extractConfiguredPackageNames } from "./extractConfiguredPackageNames.js";
@@ -101,6 +103,8 @@ export const syncOnStartup = async (
     projectRoot: string;
     cacheDir: string;
     logger: TsGraphLogger;
+    searchIndex?: SearchIndexWrapper;
+    embeddingProvider?: EmbeddingProvider;
   },
 ): Promise<SyncOnStartupResult> => {
   const startTime = Date.now();
@@ -131,6 +135,9 @@ export const syncOnStartup = async (
   for (const relativePath of deleted) {
     try {
       await writer.removeFileNodes(relativePath);
+      if (options.searchIndex) {
+        await options.searchIndex.removeByFile(relativePath);
+      }
       delete manifest.files[relativePath];
     } catch (error) {
       errors.push({
@@ -181,8 +188,11 @@ export const syncOnStartup = async (
       const absolutePath = join(options.projectRoot, relativePath);
 
       try {
-        // Remove old data
+        // Remove old data from both stores
         await writer.removeFileNodes(relativePath);
+        if (options.searchIndex) {
+          await options.searchIndex.removeByFile(relativePath);
+        }
 
         // Add and parse file
         const sourceFile = project.addSourceFileAtPath(absolutePath);
@@ -192,8 +202,11 @@ export const syncOnStartup = async (
           package: context.package,
         };
 
-        // Use shared indexFile function
-        const result = await indexFile(sourceFile, extractionContext, writer);
+        // Use shared indexFile function (writes to both DB and search index)
+        const result = await indexFile(sourceFile, extractionContext, writer, {
+          searchIndex: options.searchIndex,
+          embeddingProvider: options.embeddingProvider,
+        });
         filesReindexed++;
         nodesAdded += result.nodesAdded;
 

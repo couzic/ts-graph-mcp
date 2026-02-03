@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import type { NodeType } from "../../db/Types.js";
 import { formatMermaid } from "./formatMermaid.js";
 import type { GraphEdge } from "./GraphTypes.js";
 import type { NodeMetadata } from "./queryNodeMetadata.js";
@@ -16,7 +15,11 @@ describe("formatMermaid", () => {
 
   it("skips subgraph for single symbol (self-referencing edge)", () => {
     const edges: GraphEdge[] = [
-      { source: "src/a.ts:fnA", target: "src/a.ts:fnA", type: "CALLS" },
+      {
+        source: "src/a.ts:Function:fnA",
+        target: "src/a.ts:Function:fnA",
+        type: "CALLS",
+      },
     ];
 
     const result = formatMermaid(edges);
@@ -30,7 +33,11 @@ describe("formatMermaid", () => {
 
   it("skips subgraphs when each file has single symbol", () => {
     const edges: GraphEdge[] = [
-      { source: "src/a.ts:fnA", target: "src/b.ts:fnB", type: "CALLS" },
+      {
+        source: "src/a.ts:Function:fnA",
+        target: "src/b.ts:Function:fnB",
+        type: "CALLS",
+      },
     ];
 
     const result = formatMermaid(edges);
@@ -45,8 +52,16 @@ describe("formatMermaid", () => {
 
   it("skips subgraphs for chain when each file has single symbol", () => {
     const edges: GraphEdge[] = [
-      { source: "src/a.ts:fnA", target: "src/b.ts:fnB", type: "CALLS" },
-      { source: "src/b.ts:fnB", target: "src/c.ts:fnC", type: "CALLS" },
+      {
+        source: "src/a.ts:Function:fnA",
+        target: "src/b.ts:Function:fnB",
+        type: "CALLS",
+      },
+      {
+        source: "src/b.ts:Function:fnB",
+        target: "src/c.ts:Function:fnC",
+        type: "CALLS",
+      },
     ];
 
     const result = formatMermaid(edges);
@@ -63,8 +78,16 @@ describe("formatMermaid", () => {
 
   it("uses subgraph only for files with multiple symbols", () => {
     const edges: GraphEdge[] = [
-      { source: "src/a.ts:fnA", target: "src/a.ts:fnB", type: "CALLS" },
-      { source: "src/a.ts:fnB", target: "src/b.ts:fnC", type: "CALLS" },
+      {
+        source: "src/a.ts:Function:fnA",
+        target: "src/a.ts:Function:fnB",
+        type: "CALLS",
+      },
+      {
+        source: "src/a.ts:Function:fnB",
+        target: "src/b.ts:Function:fnC",
+        type: "CALLS",
+      },
     ];
 
     const result = formatMermaid(edges);
@@ -85,8 +108,16 @@ describe("formatMermaid", () => {
 
   it("formats different edge types without subgraphs for single-symbol files", () => {
     const edges: GraphEdge[] = [
-      { source: "src/a.ts:fnA", target: "src/b.ts:fnB", type: "CALLS" },
-      { source: "src/a.ts:fnA", target: "src/c.ts:fnC", type: "REFERENCES" },
+      {
+        source: "src/a.ts:Function:fnA",
+        target: "src/b.ts:Function:fnB",
+        type: "CALLS",
+      },
+      {
+        source: "src/a.ts:Function:fnA",
+        target: "src/c.ts:Function:fnC",
+        type: "REFERENCES",
+      },
     ];
 
     const result = formatMermaid(edges);
@@ -104,8 +135,8 @@ describe("formatMermaid", () => {
   it("handles method names with dot notation without subgraphs", () => {
     const edges: GraphEdge[] = [
       {
-        source: "src/service.ts:UserService.save",
-        target: "src/db.ts:db.insert",
+        source: "src/service.ts:Method:UserService.save",
+        target: "src/db.ts:Method:db.insert",
         type: "CALLS",
       },
     ];
@@ -123,13 +154,27 @@ describe("formatMermaid", () => {
   describe("package grouping", () => {
     it("groups by package when multiple packages present", () => {
       const edges: GraphEdge[] = [
-        { source: "src/api.ts:handler", target: "shared/utils.ts:format", type: "CALLS" },
-        { source: "shared/utils.ts:format", target: "shared/helpers.ts:helper", type: "CALLS" },
+        {
+          source: "src/api.ts:Function:handler",
+          target: "shared/utils.ts:Function:format",
+          type: "CALLS",
+        },
+        {
+          source: "shared/utils.ts:Function:format",
+          target: "shared/helpers.ts:Function:helper",
+          type: "CALLS",
+        },
       ];
       const metadataByNodeId = new Map<string, NodeMetadata>([
-        ["src/api.ts:handler", { package: "http", type: "Function" }],
-        ["shared/utils.ts:format", { package: "shared", type: "Function" }],
-        ["shared/helpers.ts:helper", { package: "shared", type: "Function" }],
+        ["src/api.ts:Function:handler", { package: "http", type: "Function" }],
+        [
+          "shared/utils.ts:Function:format",
+          { package: "shared", type: "Function" },
+        ],
+        [
+          "shared/helpers.ts:Function:helper",
+          { package: "shared", type: "Function" },
+        ],
       ]);
 
       const result = formatMermaid(edges, { metadataByNodeId });
@@ -146,11 +191,18 @@ describe("formatMermaid", () => {
 
     it("falls back to file grouping when single package", () => {
       const edges: GraphEdge[] = [
-        { source: "src/api.ts:handler", target: "src/service.ts:process", type: "CALLS" },
+        {
+          source: "src/api.ts:Function:handler",
+          target: "src/service.ts:Function:process",
+          type: "CALLS",
+        },
       ];
       const metadataByNodeId = new Map<string, NodeMetadata>([
-        ["src/api.ts:handler", { package: "http", type: "Function" }],
-        ["src/service.ts:process", { package: "http", type: "Function" }],
+        ["src/api.ts:Function:handler", { package: "http", type: "Function" }],
+        [
+          "src/service.ts:Function:process",
+          { package: "http", type: "Function" },
+        ],
       ]);
 
       const result = formatMermaid(edges, { metadataByNodeId });
@@ -164,7 +216,11 @@ describe("formatMermaid", () => {
 
     it("falls back to file grouping when no metadata provided", () => {
       const edges: GraphEdge[] = [
-        { source: "src/a.ts:fnA", target: "src/b.ts:fnB", type: "CALLS" },
+        {
+          source: "src/a.ts:Function:fnA",
+          target: "src/b.ts:Function:fnB",
+          type: "CALLS",
+        },
       ];
 
       const result = formatMermaid(edges);
@@ -177,13 +233,27 @@ describe("formatMermaid", () => {
 
     it("groups multiple nodes from same package together", () => {
       const edges: GraphEdge[] = [
-        { source: "http/api.ts:handler", target: "http/service.ts:process", type: "CALLS" },
-        { source: "http/service.ts:process", target: "shared/utils.ts:format", type: "CALLS" },
+        {
+          source: "http/api.ts:Function:handler",
+          target: "http/service.ts:Function:process",
+          type: "CALLS",
+        },
+        {
+          source: "http/service.ts:Function:process",
+          target: "shared/utils.ts:Function:format",
+          type: "CALLS",
+        },
       ];
       const metadataByNodeId = new Map<string, NodeMetadata>([
-        ["http/api.ts:handler", { package: "http", type: "Function" }],
-        ["http/service.ts:process", { package: "http", type: "Function" }],
-        ["shared/utils.ts:format", { package: "shared", type: "Function" }],
+        ["http/api.ts:Function:handler", { package: "http", type: "Function" }],
+        [
+          "http/service.ts:Function:process",
+          { package: "http", type: "Function" },
+        ],
+        [
+          "shared/utils.ts:Function:format",
+          { package: "shared", type: "Function" },
+        ],
       ]);
 
       const result = formatMermaid(edges, { metadataByNodeId });
@@ -202,10 +272,26 @@ describe("formatMermaid", () => {
     it("truncates graph when node count exceeds maxNodes", () => {
       // Create a chain: A -> B -> C -> D -> E (5 nodes)
       const edges: GraphEdge[] = [
-        { source: "src/a.ts:fnA", target: "src/b.ts:fnB", type: "CALLS" },
-        { source: "src/b.ts:fnB", target: "src/c.ts:fnC", type: "CALLS" },
-        { source: "src/c.ts:fnC", target: "src/d.ts:fnD", type: "CALLS" },
-        { source: "src/d.ts:fnD", target: "src/e.ts:fnE", type: "CALLS" },
+        {
+          source: "src/a.ts:Function:fnA",
+          target: "src/b.ts:Function:fnB",
+          type: "CALLS",
+        },
+        {
+          source: "src/b.ts:Function:fnB",
+          target: "src/c.ts:Function:fnC",
+          type: "CALLS",
+        },
+        {
+          source: "src/c.ts:Function:fnC",
+          target: "src/d.ts:Function:fnD",
+          type: "CALLS",
+        },
+        {
+          source: "src/d.ts:Function:fnD",
+          target: "src/e.ts:Function:fnE",
+          type: "CALLS",
+        },
       ];
 
       const result = formatMermaid(edges, { maxNodes: 3 });
@@ -224,8 +310,16 @@ describe("formatMermaid", () => {
 
     it("does not truncate when node count is within maxNodes", () => {
       const edges: GraphEdge[] = [
-        { source: "src/a.ts:fnA", target: "src/b.ts:fnB", type: "CALLS" },
-        { source: "src/b.ts:fnB", target: "src/c.ts:fnC", type: "CALLS" },
+        {
+          source: "src/a.ts:Function:fnA",
+          target: "src/b.ts:Function:fnB",
+          type: "CALLS",
+        },
+        {
+          source: "src/b.ts:Function:fnB",
+          target: "src/c.ts:Function:fnC",
+          type: "CALLS",
+        },
       ];
 
       const result = formatMermaid(edges, { maxNodes: 10 });
@@ -242,11 +336,15 @@ describe("formatMermaid", () => {
   describe("type-aware display names", () => {
     it("adds parentheses to Function nodes", () => {
       const edges: GraphEdge[] = [
-        { source: "src/a.ts:fnA", target: "src/b.ts:fnB", type: "CALLS" },
+        {
+          source: "src/a.ts:Function:fnA",
+          target: "src/b.ts:Function:fnB",
+          type: "CALLS",
+        },
       ];
       const metadataByNodeId = new Map<string, NodeMetadata>([
-        ["src/a.ts:fnA", { package: "test", type: "Function" }],
-        ["src/b.ts:fnB", { package: "test", type: "Function" }],
+        ["src/a.ts:Function:fnA", { package: "test", type: "Function" }],
+        ["src/b.ts:Function:fnB", { package: "test", type: "Function" }],
       ]);
 
       const result = formatMermaid(edges, { metadataByNodeId });
@@ -258,14 +356,14 @@ describe("formatMermaid", () => {
     it("adds parentheses to Method nodes", () => {
       const edges: GraphEdge[] = [
         {
-          source: "src/User.ts:User.save",
-          target: "src/db.ts:db.insert",
+          source: "src/User.ts:Method:User.save",
+          target: "src/db.ts:Method:db.insert",
           type: "CALLS",
         },
       ];
       const metadataByNodeId = new Map<string, NodeMetadata>([
-        ["src/User.ts:User.save", { package: "test", type: "Method" }],
-        ["src/db.ts:db.insert", { package: "test", type: "Method" }],
+        ["src/User.ts:Method:User.save", { package: "test", type: "Method" }],
+        ["src/db.ts:Method:db.insert", { package: "test", type: "Method" }],
       ]);
 
       const result = formatMermaid(edges, { metadataByNodeId });
@@ -276,11 +374,18 @@ describe("formatMermaid", () => {
 
     it("escapes angle brackets as HTML entities for React components", () => {
       const edges: GraphEdge[] = [
-        { source: "src/App.tsx:App", target: "src/Button.tsx:Button", type: "INCLUDES" },
+        {
+          source: "src/App.tsx:Function:App",
+          target: "src/Button.tsx:Function:Button",
+          type: "INCLUDES",
+        },
       ];
       const metadataByNodeId = new Map<string, NodeMetadata>([
-        ["src/App.tsx:App", { package: "test", type: "Function" }],
-        ["src/Button.tsx:Button", { package: "test", type: "Function" }],
+        ["src/App.tsx:Function:App", { package: "test", type: "Function" }],
+        [
+          "src/Button.tsx:Function:Button",
+          { package: "test", type: "Function" },
+        ],
       ]);
 
       const result = formatMermaid(edges, { metadataByNodeId });
@@ -293,11 +398,18 @@ describe("formatMermaid", () => {
 
     it("leaves Variable nodes unchanged (arrow functions are now Function type)", () => {
       const edges: GraphEdge[] = [
-        { source: "src/a.ts:fnA", target: "src/config.ts:config", type: "REFERENCES" },
+        {
+          source: "src/a.ts:Function:fnA",
+          target: "src/config.ts:Variable:config",
+          type: "REFERENCES",
+        },
       ];
       const metadataByNodeId = new Map<string, NodeMetadata>([
-        ["src/a.ts:fnA", { package: "test", type: "Function" }],
-        ["src/config.ts:config", { package: "test", type: "Variable" }],
+        ["src/a.ts:Function:fnA", { package: "test", type: "Function" }],
+        [
+          "src/config.ts:Variable:config",
+          { package: "test", type: "Variable" },
+        ],
       ]);
 
       const result = formatMermaid(edges, { metadataByNodeId });
@@ -309,11 +421,15 @@ describe("formatMermaid", () => {
 
     it("leaves Class nodes unchanged", () => {
       const edges: GraphEdge[] = [
-        { source: "src/a.ts:fnA", target: "src/User.ts:User", type: "REFERENCES" },
+        {
+          source: "src/a.ts:Function:fnA",
+          target: "src/User.ts:Class:User",
+          type: "REFERENCES",
+        },
       ];
       const metadataByNodeId = new Map<string, NodeMetadata>([
-        ["src/a.ts:fnA", { package: "test", type: "Function" }],
-        ["src/User.ts:User", { package: "test", type: "Class" }],
+        ["src/a.ts:Function:fnA", { package: "test", type: "Function" }],
+        ["src/User.ts:Class:User", { package: "test", type: "Class" }],
       ]);
 
       const result = formatMermaid(edges, { metadataByNodeId });
@@ -325,11 +441,18 @@ describe("formatMermaid", () => {
 
     it("leaves Interface nodes unchanged", () => {
       const edges: GraphEdge[] = [
-        { source: "src/a.ts:fnA", target: "src/types.ts:Config", type: "REFERENCES" },
+        {
+          source: "src/a.ts:Function:fnA",
+          target: "src/types.ts:Interface:Config",
+          type: "REFERENCES",
+        },
       ];
       const metadataByNodeId = new Map<string, NodeMetadata>([
-        ["src/a.ts:fnA", { package: "test", type: "Function" }],
-        ["src/types.ts:Config", { package: "test", type: "Interface" }],
+        ["src/a.ts:Function:fnA", { package: "test", type: "Function" }],
+        [
+          "src/types.ts:Interface:Config",
+          { package: "test", type: "Interface" },
+        ],
       ]);
 
       const result = formatMermaid(edges, { metadataByNodeId });
@@ -341,7 +464,11 @@ describe("formatMermaid", () => {
 
     it("works without metadata (backwards compatible)", () => {
       const edges: GraphEdge[] = [
-        { source: "src/a.ts:fnA", target: "src/b.ts:fnB", type: "CALLS" },
+        {
+          source: "src/a.ts:Function:fnA",
+          target: "src/b.ts:Function:fnB",
+          type: "CALLS",
+        },
       ];
 
       const result = formatMermaid(edges);

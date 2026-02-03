@@ -1,3 +1,4 @@
+import type { NodeType } from "@ts-graph/shared";
 import type { SourceFile } from "ts-morph";
 import type { Edge } from "../../../db/Types.js";
 import { generateNodeId } from "../../generateNodeId.js";
@@ -32,13 +33,18 @@ export const extractInheritanceEdges = (
     const className = classDecl.getName();
     if (!className) continue;
 
-    const sourceId = generateNodeId(context.filePath, className);
+    const sourceId = generateNodeId(context.filePath, "Class", className);
 
     // EXTENDS edges (class to class)
     const extendsExpr = classDecl.getExtends();
     if (extendsExpr) {
       const parentName = extendsExpr.getExpression().getText();
-      const targetId = resolveSymbol(symbolMap, context.filePath, parentName);
+      const targetId = resolveSymbol(
+        symbolMap,
+        context.filePath,
+        parentName,
+        "Class",
+      );
       edges.push({
         source: sourceId,
         target: targetId,
@@ -54,6 +60,7 @@ export const extractInheritanceEdges = (
         symbolMap,
         context.filePath,
         interfaceName,
+        "Interface",
       );
       edges.push({
         source: sourceId,
@@ -67,13 +74,22 @@ export const extractInheritanceEdges = (
   const interfaces = sourceFile.getInterfaces();
   for (const interfaceDecl of interfaces) {
     const interfaceName = interfaceDecl.getName();
-    const sourceId = generateNodeId(context.filePath, interfaceName);
+    const sourceId = generateNodeId(
+      context.filePath,
+      "Interface",
+      interfaceName,
+    );
 
     // EXTENDS edges (interface to interface)
     const extendsExprs = interfaceDecl.getExtends();
     for (const extendsExpr of extendsExprs) {
       const parentName = extendsExpr.getExpression().getText();
-      const targetId = resolveSymbol(symbolMap, context.filePath, parentName);
+      const targetId = resolveSymbol(
+        symbolMap,
+        context.filePath,
+        parentName,
+        "Interface",
+      );
       edges.push({
         source: sourceId,
         target: targetId,
@@ -123,14 +139,14 @@ const addLocalSymbols = (
   for (const classDecl of sourceFile.getClasses()) {
     const className = classDecl.getName();
     if (className) {
-      map.set(className, `${filePath}:${className}`);
+      map.set(className, generateNodeId(filePath, "Class", className));
     }
   }
 
   // Interfaces
   for (const iface of sourceFile.getInterfaces()) {
     const name = iface.getName();
-    map.set(name, `${filePath}:${name}`);
+    map.set(name, generateNodeId(filePath, "Interface", name));
   }
 };
 
@@ -142,6 +158,10 @@ const resolveSymbol = (
   symbolMap: SymbolMap,
   filePath: string,
   symbolName: string,
+  fallbackType: NodeType,
 ): string => {
-  return symbolMap.get(symbolName) ?? generateNodeId(filePath, symbolName);
+  return (
+    symbolMap.get(symbolName) ??
+    generateNodeId(filePath, fallbackType, symbolName)
+  );
 };
