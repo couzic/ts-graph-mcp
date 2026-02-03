@@ -31,8 +31,8 @@ export class User implements Nameable {
 
     expect(edges).toHaveLength(1);
     expect(edges[0]).toEqual({
-      source: generateNodeId("test.ts", "User"),
-      target: generateNodeId("test.ts", "Nameable"),
+      source: generateNodeId("test.ts", "Class", "User"),
+      target: generateNodeId("test.ts", "Interface", "Nameable"),
       type: "IMPLEMENTS",
     });
   });
@@ -56,8 +56,8 @@ export class Dog extends Animal {
 
     expect(edges).toHaveLength(1);
     expect(edges[0]).toEqual({
-      source: generateNodeId("test.ts", "Dog"),
-      target: generateNodeId("test.ts", "Animal"),
+      source: generateNodeId("test.ts", "Class", "Dog"),
+      target: generateNodeId("test.ts", "Class", "Animal"),
       type: "EXTENDS",
     });
   });
@@ -81,8 +81,8 @@ export interface User extends Named {
 
     expect(edges).toHaveLength(1);
     expect(edges[0]).toEqual({
-      source: generateNodeId("test.ts", "User"),
-      target: generateNodeId("test.ts", "Named"),
+      source: generateNodeId("test.ts", "Interface", "User"),
+      target: generateNodeId("test.ts", "Interface", "Named"),
       type: "EXTENDS",
     });
   });
@@ -106,13 +106,13 @@ export class C implements A, B {
 
     expect(edges).toHaveLength(2);
     expect(edges).toContainEqual({
-      source: generateNodeId("test.ts", "C"),
-      target: generateNodeId("test.ts", "A"),
+      source: generateNodeId("test.ts", "Class", "C"),
+      target: generateNodeId("test.ts", "Interface", "A"),
       type: "IMPLEMENTS",
     });
     expect(edges).toContainEqual({
-      source: generateNodeId("test.ts", "C"),
-      target: generateNodeId("test.ts", "B"),
+      source: generateNodeId("test.ts", "Class", "C"),
+      target: generateNodeId("test.ts", "Interface", "B"),
       type: "IMPLEMENTS",
     });
   });
@@ -135,13 +135,13 @@ export interface C extends A, B {
 
     expect(edges).toHaveLength(2);
     expect(edges).toContainEqual({
-      source: generateNodeId("test.ts", "C"),
-      target: generateNodeId("test.ts", "A"),
+      source: generateNodeId("test.ts", "Interface", "C"),
+      target: generateNodeId("test.ts", "Interface", "A"),
       type: "EXTENDS",
     });
     expect(edges).toContainEqual({
-      source: generateNodeId("test.ts", "C"),
-      target: generateNodeId("test.ts", "B"),
+      source: generateNodeId("test.ts", "Interface", "C"),
+      target: generateNodeId("test.ts", "Interface", "B"),
       type: "EXTENDS",
     });
   });
@@ -177,8 +177,8 @@ export class Dog extends Animal {
 
       expect(edges).toHaveLength(1);
       expect(edges[0]).toEqual({
-        source: generateNodeId("derived.ts", "Dog"),
-        target: generateNodeId("base.ts", "Animal"),
+        source: generateNodeId("derived.ts", "Class", "Dog"),
+        target: generateNodeId("base.ts", "Class", "Animal"),
         type: "EXTENDS",
       });
     });
@@ -215,8 +215,8 @@ export class User implements Serializable {
 
       expect(edges).toHaveLength(1);
       expect(edges[0]).toEqual({
-        source: generateNodeId("user.ts", "User"),
-        target: generateNodeId("interfaces.ts", "Serializable"),
+        source: generateNodeId("user.ts", "Class", "User"),
+        target: generateNodeId("interfaces.ts", "Interface", "Serializable"),
         type: "IMPLEMENTS",
       });
     });
@@ -251,8 +251,8 @@ export interface User extends Entity {
 
       expect(edges).toHaveLength(1);
       expect(edges[0]).toEqual({
-        source: generateNodeId("user-types.ts", "User"),
-        target: generateNodeId("base-types.ts", "Entity"),
+        source: generateNodeId("user-types.ts", "Interface", "User"),
+        target: generateNodeId("base-types.ts", "Interface", "Entity"),
         type: "EXTENDS",
       });
     });
@@ -292,13 +292,13 @@ export class Entity implements Named, Timestamped {
 
       expect(edges).toHaveLength(2);
       expect(edges).toContainEqual({
-        source: generateNodeId("models.ts", "Entity"),
-        target: generateNodeId("models.ts", "Named"),
+        source: generateNodeId("models.ts", "Class", "Entity"),
+        target: generateNodeId("models.ts", "Interface", "Named"),
         type: "IMPLEMENTS",
       });
       expect(edges).toContainEqual({
-        source: generateNodeId("models.ts", "Entity"),
-        target: generateNodeId("mixins.ts", "Timestamped"),
+        source: generateNodeId("models.ts", "Class", "Entity"),
+        target: generateNodeId("mixins.ts", "Interface", "Timestamped"),
         type: "IMPLEMENTS",
       });
     });

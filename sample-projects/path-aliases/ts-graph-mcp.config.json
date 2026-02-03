@@ -1,7 +1,5 @@
 {
-  "packages": [
-    { "name": "path-aliases", "tsconfig": "./tsconfig.json" }
-  ],
+  "packages": [{ "name": "path-aliases", "tsconfig": "./tsconfig.json" }],
   "server": {
     "port": 4001
   }

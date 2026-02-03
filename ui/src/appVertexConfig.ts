@@ -1,4 +1,4 @@
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import {
   debounceTime,
   distinctUntilChanged,
@@ -8,9 +8,8 @@ import {
   switchMap,
 } from "rxjs";
 import { configureRootVertex } from "verdux";
-import { ApiService, createApiService } from "./ApiService.js";
-import { GraphEndpoint, SymbolOption } from "./SymbolOption.js";
-
+import { type ApiService, createApiService } from "./ApiService.js";
+import type { GraphEndpoint, SymbolOption } from "./SymbolOption.js";
 
 export type OutputFormat = "mcp" | "mermaid" | "md";
 export type MermaidDirection = "LR" | "TD";
@@ -28,14 +27,16 @@ type AppState = {
 };
 
 const addToHistory = (state: AppState, endpoint: GraphEndpoint) => {
-  if (endpoint.kind !== "symbol") { return; }
+  if (endpoint.kind !== "symbol") {
+    return;
+  }
   const symbolOption: SymbolOption = {
     file_path: endpoint.file_path,
     symbol: endpoint.symbol,
     type: endpoint.type,
   };
   const filtered = state.selectionHistory.filter(
-    (h) => h.file_path !== endpoint.file_path || h.symbol !== endpoint.symbol
+    (h) => h.file_path !== endpoint.file_path || h.symbol !== endpoint.symbol,
   );
   state.selectionHistory = [symbolOption, ...filtered].slice(0, 12);
 };
@@ -43,12 +44,22 @@ const addToHistory = (state: AppState, endpoint: GraphEndpoint) => {
 const filterOutSelected = (
   history: SymbolOption[],
   fromEndpoint: GraphEndpoint | null,
-  toEndpoint: GraphEndpoint | null
+  toEndpoint: GraphEndpoint | null,
 ): SymbolOption[] =>
   history.filter(
     (h) =>
-      !(fromEndpoint && fromEndpoint.kind === "symbol" && h.file_path === fromEndpoint.file_path && h.symbol === fromEndpoint.symbol) &&
-      !(toEndpoint && toEndpoint.kind === "symbol" && h.file_path === toEndpoint.file_path && h.symbol === toEndpoint.symbol)
+      !(
+        fromEndpoint &&
+        fromEndpoint.kind === "symbol" &&
+        h.file_path === fromEndpoint.file_path &&
+        h.symbol === fromEndpoint.symbol
+      ) &&
+      !(
+        toEndpoint &&
+        toEndpoint.kind === "symbol" &&
+        h.file_path === toEndpoint.file_path &&
+        h.symbol === toEndpoint.symbol
+      ),
   );
 
 const initialState: AppState = {
@@ -122,47 +133,79 @@ const buildVertexConfig = (dependencies: { apiService: () => ApiService }) =>
       .load({
         health: interval(3000).pipe(
           startWith(0),
-          switchMap(() => apiService.getHealth())
+          switchMap(() => apiService.getHealth()),
         ),
       })
-      .loadFromFields$(["fromSearchQuery", "selectionHistory", "fromEndpoint", "toEndpoint"], {
-        fromSymbolOptions: (fields$) =>
-          fields$.pipe(
-            debounceTime(200),
-            distinctUntilChanged(
-              (prev, curr) =>
-                prev.fromSearchQuery === curr.fromSearchQuery &&
-                prev.selectionHistory === curr.selectionHistory &&
-                prev.fromEndpoint === curr.fromEndpoint &&
-                prev.toEndpoint === curr.toEndpoint
+      .loadFromFields$(
+        ["fromSearchQuery", "selectionHistory", "fromEndpoint", "toEndpoint"],
+        {
+          fromSymbolOptions: (fields$) =>
+            fields$.pipe(
+              debounceTime(200),
+              distinctUntilChanged(
+                (prev, curr) =>
+                  prev.fromSearchQuery === curr.fromSearchQuery &&
+                  prev.selectionHistory === curr.selectionHistory &&
+                  prev.fromEndpoint === curr.fromEndpoint &&
+                  prev.toEndpoint === curr.toEndpoint,
+              ),
+              switchMap(
+                ({
+                  fromSearchQuery,
+                  selectionHistory,
+                  fromEndpoint,
+                  toEndpoint,
+                }) => {
+                  if (fromSearchQuery.length < 2) {
+                    return of(
+                      filterOutSelected(
+                        selectionHistory,
+                        fromEndpoint,
+                        toEndpoint,
+                      ),
+                    );
+                  }
+                  return apiService.searchSymbols(fromSearchQuery);
+                },
+              ),
             ),
-            switchMap(({ fromSearchQuery, selectionHistory, fromEndpoint, toEndpoint }) => {
-              if (fromSearchQuery.length < 2) {
-                return of(filterOutSelected(selectionHistory, fromEndpoint, toEndpoint));
-              }
-              return apiService.searchSymbols(fromSearchQuery);
-            })
-          ),
-      })
-      .loadFromFields$(["toSearchQuery", "selectionHistory", "fromEndpoint", "toEndpoint"], {
-        toSymbolOptions: (fields$) =>
-          fields$.pipe(
-            debounceTime(200),
-            distinctUntilChanged(
-              (prev, curr) =>
-                prev.toSearchQuery === curr.toSearchQuery &&
-                prev.selectionHistory === curr.selectionHistory &&
-                prev.fromEndpoint === curr.fromEndpoint &&
-                prev.toEndpoint === curr.toEndpoint
+        },
+      )
+      .loadFromFields$(
+        ["toSearchQuery", "selectionHistory", "fromEndpoint", "toEndpoint"],
+        {
+          toSymbolOptions: (fields$) =>
+            fields$.pipe(
+              debounceTime(200),
+              distinctUntilChanged(
+                (prev, curr) =>
+                  prev.toSearchQuery === curr.toSearchQuery &&
+                  prev.selectionHistory === curr.selectionHistory &&
+                  prev.fromEndpoint === curr.fromEndpoint &&
+                  prev.toEndpoint === curr.toEndpoint,
+              ),
+              switchMap(
+                ({
+                  toSearchQuery,
+                  selectionHistory,
+                  fromEndpoint,
+                  toEndpoint,
+                }) => {
+                  if (toSearchQuery.length < 2) {
+                    return of(
+                      filterOutSelected(
+                        selectionHistory,
+                        fromEndpoint,
+                        toEndpoint,
+                      ),
+                    );
+                  }
+                  return apiService.searchSymbols(toSearchQuery);
+                },
+              ),
             ),
-            switchMap(({ toSearchQuery, selectionHistory, fromEndpoint, toEndpoint }) => {
-              if (toSearchQuery.length < 2) {
-                return of(filterOutSelected(selectionHistory, fromEndpoint, toEndpoint));
-              }
-              return apiService.searchSymbols(toSearchQuery);
-            })
-          ),
-      })
+        },
+      )
       .loadFromFields$(["fromEndpoint", "toEndpoint", "topic", "maxNodes"], {
         queryResult: (fields$) =>
           fields$.pipe(
@@ -182,13 +225,17 @@ const buildVertexConfig = (dependencies: { apiService: () => ApiService }) =>
               }
               // Both → pathsBetween
               if (fromEndpoint && toEndpoint) {
-                return apiService.searchGraph({ from: fromEndpoint, to: toEndpoint, maxNodes });
+                return apiService.searchGraph({
+                  from: fromEndpoint,
+                  to: toEndpoint,
+                  maxNodes,
+                });
               }
               // Neither selected
               return of(null);
-            })
+            }),
           ),
-      })
+      }),
   );
 
 export const appVertexConfig = buildVertexConfig({

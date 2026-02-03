@@ -60,18 +60,26 @@ export const extractHasPropertyEdges = (
   // Class properties
   for (const classDecl of sourceFile.getClasses()) {
     const className = classDecl.getName();
-    if (!className) { continue; }
-    const sourceId = generateNodeId(context.filePath, className);
+    if (!className) {
+      continue;
+    }
+    const sourceId = generateNodeId(context.filePath, "Class", className);
 
     for (const property of classDecl.getProperties()) {
       const typeNode = property.getTypeNode();
-      if (!typeNode) { continue; }
+      if (!typeNode) {
+        continue;
+      }
 
       const typeNames = extractTypeNames(typeNode);
       for (const typeName of typeNames) {
         const targetId = typeMap.get(typeName);
         if (targetId) {
-          edges.push({ source: sourceId, target: targetId, type: "HAS_PROPERTY" });
+          edges.push({
+            source: sourceId,
+            target: targetId,
+            type: "HAS_PROPERTY",
+          });
         }
       }
     }
@@ -80,17 +88,23 @@ export const extractHasPropertyEdges = (
   // Interface properties
   for (const iface of sourceFile.getInterfaces()) {
     const ifaceName = iface.getName();
-    const sourceId = generateNodeId(context.filePath, ifaceName);
+    const sourceId = generateNodeId(context.filePath, "Interface", ifaceName);
 
     for (const property of iface.getProperties()) {
       const typeNode = property.getTypeNode();
-      if (!typeNode) { continue; }
+      if (!typeNode) {
+        continue;
+      }
 
       const typeNames = extractTypeNames(typeNode);
       for (const typeName of typeNames) {
         const targetId = typeMap.get(typeName);
         if (targetId) {
-          edges.push({ source: sourceId, target: targetId, type: "HAS_PROPERTY" });
+          edges.push({
+            source: sourceId,
+            target: targetId,
+            type: "HAS_PROPERTY",
+          });
         }
       }
     }
@@ -105,7 +119,7 @@ export const extractHasPropertyEdges = (
       }
 
       const objectName = decl.getName();
-      const sourceId = generateNodeId(context.filePath, objectName);
+      const sourceId = generateNodeId(context.filePath, "Variable", objectName);
 
       for (const property of initializer.getProperties()) {
         // Skip methods (handled by TAKES/RETURNS)
@@ -162,20 +176,20 @@ const buildCombinedTypeMap = (
   // Local interfaces
   for (const iface of sourceFile.getInterfaces()) {
     const name = iface.getName();
-    map.set(name, generateNodeId(context.filePath, name));
+    map.set(name, generateNodeId(context.filePath, "Interface", name));
   }
 
   // Local type aliases
   for (const typeAlias of sourceFile.getTypeAliases()) {
     const name = typeAlias.getName();
-    map.set(name, generateNodeId(context.filePath, name));
+    map.set(name, generateNodeId(context.filePath, "TypeAlias", name));
   }
 
   // Local classes
   for (const classDecl of sourceFile.getClasses()) {
     const name = classDecl.getName();
     if (name) {
-      map.set(name, generateNodeId(context.filePath, name));
+      map.set(name, generateNodeId(context.filePath, "Class", name));
     }
   }
 

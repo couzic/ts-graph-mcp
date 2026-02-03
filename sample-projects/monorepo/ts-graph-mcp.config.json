@@ -1,11 +1,29 @@
 {
   "packages": [
-    { "name": "types", "tsconfig": "./modules/shared/packages/types/tsconfig.json" },
-    { "name": "utils", "tsconfig": "./modules/shared/packages/utils/tsconfig.json" },
-    { "name": "ui", "tsconfig": "./modules/frontend/packages/ui/tsconfig.json" },
-    { "name": "state", "tsconfig": "./modules/frontend/packages/state/tsconfig.json" },
-    { "name": "api", "tsconfig": "./modules/backend/packages/api/tsconfig.json" },
-    { "name": "services", "tsconfig": "./modules/backend/packages/services/tsconfig.json" }
+    {
+      "name": "types",
+      "tsconfig": "./modules/shared/packages/types/tsconfig.json"
+    },
+    {
+      "name": "utils",
+      "tsconfig": "./modules/shared/packages/utils/tsconfig.json"
+    },
+    {
+      "name": "ui",
+      "tsconfig": "./modules/frontend/packages/ui/tsconfig.json"
+    },
+    {
+      "name": "state",
+      "tsconfig": "./modules/frontend/packages/state/tsconfig.json"
+    },
+    {
+      "name": "api",
+      "tsconfig": "./modules/backend/packages/api/tsconfig.json"
+    },
+    {
+      "name": "services",
+      "tsconfig": "./modules/backend/packages/services/tsconfig.json"
+    }
   ],
   "server": {
     "port": 4001

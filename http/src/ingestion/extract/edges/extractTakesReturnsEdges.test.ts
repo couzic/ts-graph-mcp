@@ -1,6 +1,6 @@
 import assert from "node:assert";
-import { describe, expect, it } from "vitest";
 import { Project } from "ts-morph";
+import { describe, expect, it } from "vitest";
 import { extractTakesReturnsEdges } from "./extractTakesReturnsEdges.js";
 
 const createSourceFile = (code: string) => {
@@ -23,8 +23,8 @@ describe("extractTakesReturnsEdges", () => {
       const takesEdges = edges.filter((e) => e.type === "TAKES");
       expect(takesEdges).toHaveLength(1);
       expect(takesEdges[0]).toEqual({
-        source: "test.ts:login",
-        target: "test.ts:User",
+        source: "test.ts:Function:login",
+        target: "test.ts:Interface:User",
         type: "TAKES",
       });
     });
@@ -40,8 +40,12 @@ describe("extractTakesReturnsEdges", () => {
 
       const takesEdges = edges.filter((e) => e.type === "TAKES");
       expect(takesEdges).toHaveLength(2);
-      expect(takesEdges.map((e) => e.target)).toContain("test.ts:User");
-      expect(takesEdges.map((e) => e.target)).toContain("test.ts:Config");
+      expect(takesEdges.map((e) => e.target)).toContain(
+        "test.ts:Interface:User",
+      );
+      expect(takesEdges.map((e) => e.target)).toContain(
+        "test.ts:Interface:Config",
+      );
     });
 
     it("skips primitive parameter types", () => {
@@ -64,7 +68,7 @@ describe("extractTakesReturnsEdges", () => {
 
       const returnsEdges = edges.filter((e) => e.type === "RETURNS");
       expect(returnsEdges).toHaveLength(1);
-      expect(returnsEdges[0]?.target).toBe("test.ts:User");
+      expect(returnsEdges[0]?.target).toBe("test.ts:Interface:User");
     });
 
     it("extracts multiple edges for union types", () => {
@@ -78,8 +82,12 @@ describe("extractTakesReturnsEdges", () => {
 
       const takesEdges = edges.filter((e) => e.type === "TAKES");
       expect(takesEdges).toHaveLength(2);
-      expect(takesEdges.map((e) => e.target)).toContain("test.ts:User");
-      expect(takesEdges.map((e) => e.target)).toContain("test.ts:Admin");
+      expect(takesEdges.map((e) => e.target)).toContain(
+        "test.ts:Interface:User",
+      );
+      expect(takesEdges.map((e) => e.target)).toContain(
+        "test.ts:Interface:Admin",
+      );
     });
 
     it("skips null and undefined in unions", () => {
@@ -92,7 +100,7 @@ describe("extractTakesReturnsEdges", () => {
 
       const returnsEdges = edges.filter((e) => e.type === "RETURNS");
       expect(returnsEdges).toHaveLength(1);
-      expect(returnsEdges[0]?.target).toBe("test.ts:User");
+      expect(returnsEdges[0]?.target).toBe("test.ts:Interface:User");
     });
   });
 
@@ -108,8 +116,8 @@ describe("extractTakesReturnsEdges", () => {
       const returnsEdges = edges.filter((e) => e.type === "RETURNS");
       expect(returnsEdges).toHaveLength(1);
       expect(returnsEdges[0]).toEqual({
-        source: "test.ts:loadUser",
-        target: "test.ts:User",
+        source: "test.ts:Function:loadUser",
+        target: "test.ts:Interface:User",
         type: "RETURNS",
       });
     });
@@ -136,8 +144,12 @@ describe("extractTakesReturnsEdges", () => {
       const edges = extractTakesReturnsEdges(sourceFile, context);
 
       expect(edges).toHaveLength(2);
-      expect(edges.find((e) => e.type === "TAKES")?.target).toBe("test.ts:Input");
-      expect(edges.find((e) => e.type === "RETURNS")?.target).toBe("test.ts:Output");
+      expect(edges.find((e) => e.type === "TAKES")?.target).toBe(
+        "test.ts:Interface:Input",
+      );
+      expect(edges.find((e) => e.type === "RETURNS")?.target).toBe(
+        "test.ts:Interface:Output",
+      );
     });
   });
 
@@ -157,9 +169,9 @@ describe("extractTakesReturnsEdges", () => {
       const takesEdges = edges.filter((e) => e.type === "TAKES");
       const returnsEdges = edges.filter((e) => e.type === "RETURNS");
       expect(takesEdges).toHaveLength(1);
-      expect(takesEdges[0]?.source).toBe("test.ts:UserService.save");
+      expect(takesEdges[0]?.source).toBe("test.ts:Method:UserService.save");
       expect(returnsEdges).toHaveLength(1);
-      expect(returnsEdges[0]?.source).toBe("test.ts:UserService.save");
+      expect(returnsEdges[0]?.source).toBe("test.ts:Method:UserService.save");
     });
   });
 
@@ -178,9 +190,9 @@ describe("extractTakesReturnsEdges", () => {
       const takesEdges = edges.filter((e) => e.type === "TAKES");
       const returnsEdges = edges.filter((e) => e.type === "RETURNS");
       expect(takesEdges).toHaveLength(1);
-      expect(takesEdges[0]?.source).toBe("test.ts:userService.save");
+      expect(takesEdges[0]?.source).toBe("test.ts:Function:userService.save");
       expect(returnsEdges).toHaveLength(1);
-      expect(returnsEdges[0]?.source).toBe("test.ts:userService.load");
+      expect(returnsEdges[0]?.source).toBe("test.ts:Function:userService.load");
     });
   });
 
@@ -206,7 +218,7 @@ describe("extractTakesReturnsEdges", () => {
 
       const takesEdges = edges.filter((e) => e.type === "TAKES");
       expect(takesEdges).toHaveLength(1);
-      expect(takesEdges[0]?.target).toBe("types.ts:User");
+      expect(takesEdges[0]?.target).toBe("types.ts:Interface:User");
     });
   });
 });

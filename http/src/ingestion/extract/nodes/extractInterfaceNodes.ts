@@ -28,7 +28,7 @@ export const extractInterfaceNodes = (
         : undefined;
 
     return {
-      id: generateNodeId(context.filePath, name),
+      id: generateNodeId(context.filePath, "Interface", name),
       type: "Interface",
       name,
       package: context.package,

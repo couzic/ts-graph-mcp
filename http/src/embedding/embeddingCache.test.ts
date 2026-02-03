@@ -3,10 +3,7 @@ import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import {
-  computeContentHash,
-  openEmbeddingCache,
-} from "./embeddingCache.js";
+import { computeContentHash, openEmbeddingCache } from "./embeddingCache.js";
 
 describe("embeddingCache", () => {
   let testDir: string;
@@ -53,7 +50,9 @@ describe("embeddingCache", () => {
     it("creates database file for model", () => {
       const cache = openEmbeddingCache(testDir, "nomic-embed");
       try {
-        expect(existsSync(join(testDir, "embedding-cache", "nomic-embed.db"))).toBe(true);
+        expect(
+          existsSync(join(testDir, "embedding-cache", "nomic-embed.db")),
+        ).toBe(true);
       } finally {
         cache.close();
       }

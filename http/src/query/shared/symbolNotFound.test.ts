@@ -233,7 +233,7 @@ describe("resolveSymbol", () => {
     package: "test-pkg",
   });
 
-  it("returns success for exact match", async () => {
+  it("returns success for exact match without message", async () => {
     const filePath = "src/utils.ts";
     const sourceFile = project.createSourceFile(
       filePath,
@@ -245,7 +245,8 @@ describe("resolveSymbol", () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.nodeId).toBe("src/utils.ts:formatDate");
+      expect(result.nodeId).toBe("src/utils.ts:Function:formatDate");
+      // Exact match: no message needed (keeps output clean)
       expect(result.message).toBeUndefined();
     }
   });
@@ -265,8 +266,10 @@ describe("resolveSymbol", () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.nodeId).toBe("src/entity.ts:User.getSituations");
-      expect(result.message).toContain("Found 'getSituations' as User.getSituations in src/entity.ts");
+      expect(result.nodeId).toBe("src/entity.ts:Method:User.getSituations");
+      expect(result.message).toContain(
+        "Found 'getSituations' as Method:User.getSituations in src/entity.ts",
+      );
     }
   });
 
@@ -284,8 +287,11 @@ describe("resolveSymbol", () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.nodeId).toBe("src/dateUtils.ts:formatDate");
-      expect(result.message).toContain("Found 'formatDate' in src/dateUtils.ts");
+      expect(result.nodeId).toBe("src/dateUtils.ts:Function:formatDate");
+      // Exact symbol match uses shorter format (just path, no type prefix)
+      expect(result.message).toContain(
+        "Found 'formatDate' in src/dateUtils.ts",
+      );
     }
   });
 
@@ -313,7 +319,9 @@ describe("resolveSymbol", () => {
 
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error).toContain("Multiple symbols named 'getLines' found:");
+      expect(result.error).toContain(
+        "Multiple symbols named 'getLines' found:",
+      );
       expect(result.error).toContain("User.getLines");
       expect(result.error).toContain("Order.getLines");
     }
@@ -351,7 +359,7 @@ describe("resolveSymbol", () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.nodeId).toBe("src/entity.ts:User.GetData");
+      expect(result.nodeId).toBe("src/entity.ts:Method:User.GetData");
     }
   });
 
@@ -367,7 +375,8 @@ describe("resolveSymbol", () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.nodeId).toBe("src/utils.ts:formatDate");
+      expect(result.nodeId).toBe("src/utils.ts:Function:formatDate");
+      // Exact symbol match uses shorter format (no type prefix)
       expect(result.message).toContain("Found 'formatDate' in src/utils.ts");
       expect(result.filePathWasResolved).toBe(true);
     }
@@ -392,7 +401,9 @@ describe("resolveSymbol", () => {
 
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error).toContain("Multiple symbols named 'formatDate' found:");
+      expect(result.error).toContain(
+        "Multiple symbols named 'formatDate' found:",
+      );
       expect(result.error).toContain("src/dateA.ts");
       expect(result.error).toContain("src/dateB.ts");
     }
@@ -407,7 +418,7 @@ describe("resolveSymbol", () => {
     }
   });
 
-  it("resolves fully-qualified method name (ClassName.methodName)", async () => {
+  it("resolves fully-qualified method name without file_path", async () => {
     const filePath = "src/entity.ts";
     const sourceFile = project.createSourceFile(
       filePath,
@@ -417,12 +428,14 @@ describe("resolveSymbol", () => {
     );
     await writer.addNodes(extractNodes(sourceFile, createContext(filePath)));
 
-    // Search with fully-qualified method name (as suggested by disambiguation message)
+    // Search with fully-qualified method name without file_path
+    // Now works thanks to ID pattern matching
     const result = resolveSymbol(db, undefined, "User.getSituations");
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.nodeId).toBe("src/entity.ts:User.getSituations");
+      expect(result.nodeId).toBe("src/entity.ts:Method:User.getSituations");
+      expect(result.message).toContain("User.getSituations");
     }
   });
 
@@ -457,7 +470,7 @@ describe("resolveSymbol", () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.nodeId).toBe("src/user.ts:User.save");
+      expect(result.nodeId).toBe("src/user.ts:Method:User.save");
       expect(result.message).toContain("User.save");
     }
   });
@@ -475,7 +488,9 @@ describe("resolveSymbol", () => {
       "src/entity.ts",
       `export class User { save() {} }`,
     );
-    await writer.addNodes(extractNodes(sourceFile2, createContext("src/entity.ts")));
+    await writer.addNodes(
+      extractNodes(sourceFile2, createContext("src/entity.ts")),
+    );
 
     const result = resolveSymbol(db, "src/entity.ts", "save");
 

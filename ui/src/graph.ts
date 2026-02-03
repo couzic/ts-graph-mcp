@@ -1,10 +1,10 @@
 import { createGraph } from "verdux";
 import { appVertexConfig } from "./appVertexConfig.js";
 
-export type { SymbolOption } from "./SymbolOption.js";
-export type { OutputFormat, MermaidDirection } from "./appVertexConfig.js";
-export { appActions } from "./appVertexConfig.js";
 export type { HealthResponse } from "./ApiService.js";
+export type { MermaidDirection, OutputFormat } from "./appVertexConfig.js";
+export { appActions } from "./appVertexConfig.js";
+export type { SymbolOption } from "./SymbolOption.js";
 
 export const graph = createGraph({
   vertices: [appVertexConfig],

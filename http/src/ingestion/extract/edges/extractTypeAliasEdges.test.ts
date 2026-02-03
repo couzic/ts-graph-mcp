@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import { Project } from "ts-morph";
+import { describe, expect, it } from "vitest";
 import { extractTypeAliasEdges } from "./extractTypeAliasEdges.js";
 
 const createSourceFile = (code: string) => {
@@ -21,8 +21,8 @@ describe("extractTypeAliasEdges", () => {
 
       expect(edges).toHaveLength(1);
       expect(edges[0]).toEqual({
-        source: "test.ts:Person",
-        target: "test.ts:User",
+        source: "test.ts:TypeAlias:Person",
+        target: "test.ts:Interface:User",
         type: "ALIAS_FOR",
       });
     });
@@ -49,8 +49,8 @@ describe("extractTypeAliasEdges", () => {
 
       expect(edges).toHaveLength(1);
       expect(edges[0]).toEqual({
-        source: "test.ts:Customer",
-        target: "test.ts:User",
+        source: "test.ts:TypeAlias:Customer",
+        target: "test.ts:Interface:User",
         type: "DERIVES_FROM",
       });
     });
@@ -65,8 +65,10 @@ describe("extractTypeAliasEdges", () => {
       const edges = extractTypeAliasEdges(sourceFile, context);
 
       expect(edges).toHaveLength(2);
-      expect(edges.map((e) => e.target)).toContain("test.ts:Named");
-      expect(edges.map((e) => e.target)).toContain("test.ts:Identified");
+      expect(edges.map((e) => e.target)).toContain("test.ts:Interface:Named");
+      expect(edges.map((e) => e.target)).toContain(
+        "test.ts:Interface:Identified",
+      );
     });
   });
 
@@ -81,8 +83,8 @@ describe("extractTypeAliasEdges", () => {
       const edges = extractTypeAliasEdges(sourceFile, context);
 
       expect(edges).toHaveLength(2);
-      expect(edges.map((e) => e.target)).toContain("test.ts:Success");
-      expect(edges.map((e) => e.target)).toContain("test.ts:Failure");
+      expect(edges.map((e) => e.target)).toContain("test.ts:Interface:Success");
+      expect(edges.map((e) => e.target)).toContain("test.ts:Interface:Failure");
     });
 
     it("skips null and undefined in unions", () => {
@@ -94,7 +96,7 @@ describe("extractTypeAliasEdges", () => {
       const edges = extractTypeAliasEdges(sourceFile, context);
 
       expect(edges).toHaveLength(1);
-      expect(edges[0]?.target).toBe("test.ts:User");
+      expect(edges[0]?.target).toBe("test.ts:Interface:User");
     });
   });
 
@@ -109,7 +111,7 @@ describe("extractTypeAliasEdges", () => {
 
       // Array<User> is a generic wrapper - we extract the inner type
       expect(edges).toHaveLength(1);
-      expect(edges[0]?.target).toBe("test.ts:User");
+      expect(edges[0]?.target).toBe("test.ts:Interface:User");
       expect(edges[0]?.type).toBe("ALIAS_FOR");
     });
 
@@ -123,7 +125,7 @@ describe("extractTypeAliasEdges", () => {
 
       // Partial<User> - we extract User from inside the wrapper
       expect(edges).toHaveLength(1);
-      expect(edges[0]?.target).toBe("test.ts:User");
+      expect(edges[0]?.target).toBe("test.ts:Interface:User");
     });
   });
 
@@ -148,7 +150,7 @@ describe("extractTypeAliasEdges", () => {
       });
 
       expect(edges).toHaveLength(1);
-      expect(edges[0]?.target).toBe("types.ts:User");
+      expect(edges[0]?.target).toBe("types.ts:Interface:User");
     });
   });
 });

@@ -37,6 +37,46 @@ existing embeddings before generating new ones.
 
 ---
 
+### Markdown Documentation Indexing
+
+**Impact: High | Effort: Medium**
+
+Index `.md` files to capture documentation-code relationships.
+
+**The Problem:** Documentation and code are disconnected in the graph:
+
+- TS files can reference MD files in JSDoc
+- MD files can reference TS symbols
+- AI agents querying the graph don't see these connections
+
+**Goal:** When the AI agent calls the MCP tool, it directly sees what MD files
+are connected to code symbols.
+
+**Key insight:** Create nodes for each section in the MD file, since JSDoc can
+point to a specific section (e.g., `@see ./ARCHITECTURE.md#data-model`).
+
+**Open Questions:**
+
+1. **Scope:** Which `.md` files to index? All in repo? Only those referenced?
+   Only in configured paths?
+
+2. **Section granularity:** Index all headings or just H1/H2? Deep nesting
+   creates noise.
+
+3. **Code reference parsing:** How to detect code references in markdown?
+   Backticks are ambiguous (could be inline code, not a symbol).
+
+4. **Symbol resolution:** When MD references `` `formatDate` ``, how to resolve
+   which one if multiple exist?
+
+5. **Node types:** What to call MD file nodes and section nodes?
+
+6. **Edge types:** What relationships to capture between TS and MD?
+
+7. **CLAUDE.md files:** These describe modules. Special handling?
+
+---
+
 ### USES_TYPE Edge Cases
 
 **Impact: Low | Effort: Low**

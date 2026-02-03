@@ -1,12 +1,7 @@
-import type Database from "better-sqlite3";
 import { EDGE_TYPES, type EdgeType, type NodeType } from "@ts-graph/shared";
+import type Database from "better-sqlite3";
 import type { DbReader, PathResult } from "../DbReader.js";
-import type {
-  CallSiteRange,
-  Edge,
-  Node,
-  TraversalOptions,
-} from "../Types.js";
+import type { CallSiteRange, Edge, Node, TraversalOptions } from "../Types.js";
 
 /** Maximum traversal depth for recursive queries */
 const DEFAULT_MAX_DEPTH = 100;

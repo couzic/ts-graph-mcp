@@ -40,7 +40,7 @@ export const extractMethodNodes = (
     const returnType = normalizeTypeText(returnTypeNode?.getText());
 
     return {
-      id: generateNodeId(context.filePath, className, name),
+      id: generateNodeId(context.filePath, "Method", `${className}.${name}`),
       type: "Method",
       name,
       package: context.package,

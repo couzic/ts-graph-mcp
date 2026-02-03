@@ -57,7 +57,11 @@ export const filterNodesByTopic = async (
   threshold = DEFAULT_TOPIC_THRESHOLD,
 ): Promise<TopicFilterResult> => {
   // Search for the topic with a high limit to catch all potentially relevant nodes
-  const searchConfig = await getSearchConfig(topic, searchIndex, embeddingProvider);
+  const searchConfig = await getSearchConfig(
+    topic,
+    searchIndex,
+    embeddingProvider,
+  );
 
   const results = await searchIndex.search(topic, {
     limit: 1000, // High limit to capture all candidates

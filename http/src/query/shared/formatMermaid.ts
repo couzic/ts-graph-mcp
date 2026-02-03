@@ -3,8 +3,8 @@ import { buildDisplayNames } from "./buildDisplayNames.js";
 import { extractFilePath } from "./extractFilePath.js";
 import { extractSymbol } from "./extractSymbol.js";
 import {
-  formatDisplayName,
   type DisplayNameContext,
+  formatDisplayName,
 } from "./formatDisplayName.js";
 import { DEFAULT_MAX_NODES, truncateEdges } from "./formatToolOutput.js";
 import type { GraphEdge } from "./GraphTypes.js";
@@ -120,7 +120,8 @@ export const formatMermaid = (
   for (const nodeId of workingNodeIds) {
     let groupKey: string;
     if (usePackageGrouping && metadataByNodeId) {
-      groupKey = metadataByNodeId.get(nodeId)?.package ?? extractFilePath(nodeId);
+      groupKey =
+        metadataByNodeId.get(nodeId)?.package ?? extractFilePath(nodeId);
     } else {
       groupKey = extractFilePath(nodeId);
     }

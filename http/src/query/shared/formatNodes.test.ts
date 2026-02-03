@@ -6,7 +6,7 @@ describe(formatNodes.name, () => {
   it("formats nodes with file location and snippet", () => {
     const nodes: NodeInfo[] = [
       {
-        id: "src/a.ts:fnA",
+        id: "src/a.ts:Function:fnA",
         name: "fnA",
         type: "Function",
         filePath: "src/fnA.ts",
@@ -19,7 +19,7 @@ describe(formatNodes.name, () => {
         ],
       },
     ];
-    const displayNames = new Map([["src/a.ts:fnA", "fnA"]]);
+    const displayNames = new Map([["src/a.ts:Function:fnA", "fnA"]]);
 
     const result = formatNodes(nodes, displayNames, new Set());
 
@@ -32,13 +32,13 @@ describe(formatNodes.name, () => {
     2:   return 42;
     3: }
 `);
-    expect(result.nodeOrder).toEqual(["src/a.ts:fnA"]);
+    expect(result.nodeOrder).toEqual(["src/a.ts:Function:fnA"]);
   });
 
   it("marks call site lines with > prefix", () => {
     const nodes: NodeInfo[] = [
       {
-        id: "src/a.ts:fnA",
+        id: "src/a.ts:Function:fnA",
         name: "fnA",
         type: "Function",
         filePath: "src/fnA.ts",
@@ -52,7 +52,7 @@ describe(formatNodes.name, () => {
         callSites: [{ start: 2, end: 2 }],
       },
     ];
-    const displayNames = new Map([["src/a.ts:fnA", "fnA"]]);
+    const displayNames = new Map([["src/a.ts:Function:fnA", "fnA"]]);
 
     const result = formatNodes(nodes, displayNames, new Set());
 
@@ -62,7 +62,7 @@ describe(formatNodes.name, () => {
   it("shows gap markers between non-adjacent lines", () => {
     const nodes: NodeInfo[] = [
       {
-        id: "src/a.ts:fnA",
+        id: "src/a.ts:Function:fnA",
         name: "fnA",
         type: "Function",
         filePath: "src/fnA.ts",
@@ -74,7 +74,7 @@ describe(formatNodes.name, () => {
         ],
       },
     ];
-    const displayNames = new Map([["src/a.ts:fnA", "fnA"]]);
+    const displayNames = new Map([["src/a.ts:Function:fnA", "fnA"]]);
 
     const result = formatNodes(nodes, displayNames, new Set());
 
@@ -84,7 +84,7 @@ describe(formatNodes.name, () => {
   it("excludes nodes in excludeIds", () => {
     const nodes: NodeInfo[] = [
       {
-        id: "src/a.ts:fnA",
+        id: "src/a.ts:Function:fnA",
         name: "fnA",
         type: "Function",
         filePath: "src/fnA.ts",
@@ -92,7 +92,7 @@ describe(formatNodes.name, () => {
         endLine: 5,
       },
       {
-        id: "src/b.ts:fnB",
+        id: "src/b.ts:Function:fnB",
         name: "fnB",
         type: "Function",
         filePath: "src/fnB.ts",
@@ -101,11 +101,15 @@ describe(formatNodes.name, () => {
       },
     ];
     const displayNames = new Map([
-      ["src/a.ts:fnA", "fnA"],
-      ["src/b.ts:fnB", "fnB"],
+      ["src/a.ts:Function:fnA", "fnA"],
+      ["src/b.ts:Function:fnB", "fnB"],
     ]);
 
-    const result = formatNodes(nodes, displayNames, new Set(["src/a.ts:fnA"]));
+    const result = formatNodes(
+      nodes,
+      displayNames,
+      new Set(["src/a.ts:Function:fnA"]),
+    );
 
     expect(result.text).toContain("fnB:");
     expect(result.text).not.toContain("fnA:");
@@ -114,7 +118,7 @@ describe(formatNodes.name, () => {
   it("orders by nodeOrder when provided", () => {
     const nodes: NodeInfo[] = [
       {
-        id: "src/a.ts:fnA",
+        id: "src/a.ts:Function:fnA",
         name: "fnA",
         type: "Function",
         filePath: "src/fnA.ts",
@@ -122,7 +126,7 @@ describe(formatNodes.name, () => {
         endLine: 5,
       },
       {
-        id: "src/b.ts:fnB",
+        id: "src/b.ts:Function:fnB",
         name: "fnB",
         type: "Function",
         filePath: "src/fnB.ts",
@@ -130,7 +134,7 @@ describe(formatNodes.name, () => {
         endLine: 5,
       },
       {
-        id: "src/c.ts:fnC",
+        id: "src/c.ts:Function:fnC",
         name: "fnC",
         type: "Function",
         filePath: "src/fnC.ts",
@@ -139,25 +143,29 @@ describe(formatNodes.name, () => {
       },
     ];
     const displayNames = new Map([
-      ["src/a.ts:fnA", "fnA"],
-      ["src/b.ts:fnB", "fnB"],
-      ["src/c.ts:fnC", "fnC"],
+      ["src/a.ts:Function:fnA", "fnA"],
+      ["src/b.ts:Function:fnB", "fnB"],
+      ["src/c.ts:Function:fnC", "fnC"],
     ]);
-    const nodeOrder = ["src/c.ts:fnC", "src/a.ts:fnA", "src/b.ts:fnB"];
+    const nodeOrder = [
+      "src/c.ts:Function:fnC",
+      "src/a.ts:Function:fnA",
+      "src/b.ts:Function:fnB",
+    ];
 
     const result = formatNodes(nodes, displayNames, new Set(), nodeOrder);
 
     expect(result.nodeOrder).toEqual([
-      "src/c.ts:fnC",
-      "src/a.ts:fnA",
-      "src/b.ts:fnB",
+      "src/c.ts:Function:fnC",
+      "src/a.ts:Function:fnA",
+      "src/b.ts:Function:fnB",
     ]);
   });
 
   it("returns empty for no included nodes", () => {
     const nodes: NodeInfo[] = [
       {
-        id: "src/a.ts:fnA",
+        id: "src/a.ts:Function:fnA",
         name: "fnA",
         type: "Function",
         filePath: "src/fnA.ts",
@@ -165,9 +173,13 @@ describe(formatNodes.name, () => {
         endLine: 5,
       },
     ];
-    const displayNames = new Map([["src/a.ts:fnA", "fnA"]]);
+    const displayNames = new Map([["src/a.ts:Function:fnA", "fnA"]]);
 
-    const result = formatNodes(nodes, displayNames, new Set(["src/a.ts:fnA"]));
+    const result = formatNodes(
+      nodes,
+      displayNames,
+      new Set(["src/a.ts:Function:fnA"]),
+    );
 
     expect(result.text).toBe("");
     expect(result.nodeOrder).toEqual([]);

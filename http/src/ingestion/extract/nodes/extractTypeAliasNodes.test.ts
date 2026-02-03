@@ -26,7 +26,7 @@ describe(extractTypeAliasNodes.name, () => {
 
     expect(typeAliases).toHaveLength(1);
     expect(typeAliases[0]).toMatchObject({
-      id: "src/test.ts:UserId",
+      id: "src/test.ts:TypeAlias:UserId",
       type: "TypeAlias",
       name: "UserId",
       package: "myapp",

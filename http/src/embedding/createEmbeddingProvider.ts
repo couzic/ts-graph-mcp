@@ -1,11 +1,11 @@
 import { cpus } from "node:os";
 import {
   getLlama,
-  LlamaLogLevel,
-  resolveModelFile,
   type Llama,
   type LlamaEmbeddingContext,
+  LlamaLogLevel,
   type LlamaModel,
+  resolveModelFile,
 } from "node-llama-cpp";
 import type { EmbeddingConfig, EmbeddingProvider } from "./EmbeddingTypes.js";
 import { DEFAULT_PRESET, EMBEDDING_PRESETS } from "./presets.js";
@@ -151,7 +151,10 @@ export const createEmbeddingProvider = async (
         });
         createdContexts.push(context);
       }
-      contextPool = createdContexts.map((ctx) => ({ context: ctx, busy: false }));
+      contextPool = createdContexts.map((ctx) => ({
+        context: ctx,
+        busy: false,
+      }));
       ready = true;
     } catch (e) {
       // Cleanup on partial failure

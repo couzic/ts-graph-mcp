@@ -1,19 +1,29 @@
+// TODO: Migrate callers to use branded types, then restore:
+// export type FilePath = "FilePath";
+// export type SymbolName = "SymbolName";
+// export type NodeId = `${FilePath}:${NodeType}:${SymbolName}`;
+
+/** Type alias for file paths (relative from project root). */
+export type FilePath = string;
+
+/** Type alias for symbol names (e.g., "formatDate" or "User.save"). */
+export type SymbolName = string;
+
+/** Type alias for node IDs (format: `{path}:{type}:{symbol}`). */
+export type NodeId = string;
+
 export const NODE_TYPES = [
   "Function",
   "Class",
   "Method",
   "Interface",
   "TypeAlias",
-  "Variable"
-] as const
+  "Variable",
+] as const;
 
-export type NodeType = typeof NODE_TYPES[number];
+export type NodeType = (typeof NODE_TYPES)[number];
 
-export const RUNTIME_EDGE_TYPES = [
-  "CALLS",
-  "REFERENCES",
-  "USES_TYPE",
-] as const
+export const RUNTIME_EDGE_TYPES = ["CALLS", "REFERENCES", "USES_TYPE"] as const;
 
 export const COMPILE_TIME_EDGE_TYPES = [
   "EXTENDS",
@@ -25,16 +35,16 @@ export const COMPILE_TIME_EDGE_TYPES = [
   "HAS_PROPERTY",
   "DERIVES_FROM",
   "ALIAS_FOR",
-] as const
+] as const;
 
 export const EDGE_TYPES = [
   ...RUNTIME_EDGE_TYPES,
   ...COMPILE_TIME_EDGE_TYPES,
-] as const
+] as const;
 
-export type RuntimeEdgeType = typeof RUNTIME_EDGE_TYPES[number];
-export type CompileTimeEdgeType = typeof COMPILE_TIME_EDGE_TYPES[number];
-export type EdgeType = typeof EDGE_TYPES[number];
+export type RuntimeEdgeType = (typeof RUNTIME_EDGE_TYPES)[number];
+export type CompileTimeEdgeType = (typeof COMPILE_TIME_EDGE_TYPES)[number];
+export type EdgeType = (typeof EDGE_TYPES)[number];
 
 // Call Site Range (line numbers where a call occurs)
 export interface CallSiteRange {
@@ -47,7 +57,7 @@ export interface CallSiteRange {
 // Base Node (shared properties)
 export interface BaseNode {
   /** Unique ID: "{relativePath}:{symbolPath}" e.g., "src/utils.ts:formatDate" */
-  id: string;
+  id: NodeId;
 
   /** Node type discriminator */
   type: NodeType;
@@ -116,15 +126,15 @@ export type Node =
   | MethodNode
   | InterfaceNode
   | TypeAliasNode
-  | VariableNode
+  | VariableNode;
 
 // Edge
 export interface Edge {
   /** Source node ID */
-  source: string;
+  source: NodeId;
 
   /** Target node ID */
-  target: string;
+  target: NodeId;
 
   /** Edge type */
   type: EdgeType;

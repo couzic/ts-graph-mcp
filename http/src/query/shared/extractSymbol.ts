@@ -1,10 +1,12 @@
 /**
  * Extract symbol name from node ID.
- * "src/utils.ts:formatDate" → "formatDate"
- * "src/models/User.ts:User.save" → "User.save"
+ * "src/utils.ts:Function:formatDate" → "formatDate"
+ * "src/models/User.ts:Method:User.save" → "User.save"
  */
 export const extractSymbol = (nodeId: string): string => {
-  const colonIndex = nodeId.indexOf(":");
-  if (colonIndex === -1) return nodeId;
-  return nodeId.slice(colonIndex + 1);
+  const lastColonIndex = nodeId.lastIndexOf(":");
+  if (lastColonIndex === -1) {
+    return nodeId;
+  }
+  return nodeId.slice(lastColonIndex + 1);
 };

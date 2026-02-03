@@ -1,6 +1,6 @@
 import { map } from "rxjs";
 import { ajax } from "rxjs/ajax";
-import { GraphEndpoint, SymbolOption } from "./SymbolOption";
+import type { GraphEndpoint, SymbolOption } from "./SymbolOption";
 
 export type HealthResponse = {
   status: string;
@@ -8,9 +8,7 @@ export type HealthResponse = {
   indexed_files: number;
 };
 
-type ApiEndpoint =
-  | { symbol: string; file_path: string }
-  | { query: string };
+type ApiEndpoint = { symbol: string; file_path: string } | { query: string };
 
 const toApiEndpoint = (endpoint: GraphEndpoint): ApiEndpoint => {
   if (endpoint.kind === "symbol") {

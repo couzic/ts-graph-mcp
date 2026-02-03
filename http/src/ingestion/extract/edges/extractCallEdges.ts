@@ -1,3 +1,4 @@
+import type { NodeType } from "@ts-graph/shared";
 import {
   type ArrowFunction,
   type CallExpression,
@@ -20,6 +21,44 @@ import type { ProjectRegistry } from "../../ProjectRegistry.js";
 import { buildImportMap } from "./buildImportMap.js";
 import type { EdgeExtractionContext } from "./EdgeExtractionContext.js";
 import { followAliasChain } from "./followAliasChain.js";
+
+/**
+ * Detect the node type from a declaration.
+ */
+const getNodeTypeFromDeclaration = (declaration: TsMorphNode): NodeType => {
+  if (TsMorphNode.isFunctionDeclaration(declaration)) {
+    return "Function";
+  }
+  if (TsMorphNode.isVariableDeclaration(declaration)) {
+    const initializer = declaration.getInitializer();
+    if (
+      initializer &&
+      (TsMorphNode.isArrowFunction(initializer) ||
+        TsMorphNode.isFunctionExpression(initializer))
+    ) {
+      return "Function";
+    }
+    return "Variable";
+  }
+  if (TsMorphNode.isClassDeclaration(declaration)) {
+    return "Class";
+  }
+  if (
+    TsMorphNode.isMethodDeclaration(declaration) ||
+    TsMorphNode.isGetAccessorDeclaration(declaration) ||
+    TsMorphNode.isSetAccessorDeclaration(declaration)
+  ) {
+    return "Method";
+  }
+  if (TsMorphNode.isInterfaceDeclaration(declaration)) {
+    return "Interface";
+  }
+  if (TsMorphNode.isTypeAliasDeclaration(declaration)) {
+    return "TypeAlias";
+  }
+  // Default fallback - most calls are to functions
+  return "Function";
+};
 
 /**
  * A map from symbol names to their node IDs.
@@ -78,19 +117,20 @@ const resolveNamespaceCallCrossPackage = (
   }
 
   // The namespaceId points to the barrel file where the namespace is defined
-  // e.g., "libs/toolkit/src/index.ts:MathUtils"
-  const colonIndex = namespaceId.lastIndexOf(":");
-  if (colonIndex === -1) {
+  // Format: "{path}:{type}:{symbol}", e.g., "libs/toolkit/src/index.ts:Function:MathUtils"
+  const firstColonIndex = namespaceId.indexOf(":");
+  const lastColonIndex = namespaceId.lastIndexOf(":");
+  if (firstColonIndex === -1) {
     return undefined;
   }
 
-  const barrelRelativePath = namespaceId.substring(0, colonIndex);
+  const barrelRelativePath = namespaceId.substring(0, firstColonIndex);
   const barrelAbsolutePath = projectRoot + barrelRelativePath;
 
   // Extract the original namespace name from the symbolMap value
-  // e.g., "libs/toolkit/src/index.ts:MathUtils" -> "MathUtils"
+  // e.g., "libs/toolkit/src/index.ts:Function:MathUtils" -> "MathUtils"
   // This is needed when the import is aliased: import { MathUtils as M }
-  const originalNamespaceName = namespaceId.substring(colonIndex + 1);
+  const originalNamespaceName = namespaceId.substring(lastColonIndex + 1);
 
   // Get the correct Project context for the barrel file
   const barrelProject = projectRegistry.getProjectForFile(barrelAbsolutePath);
@@ -130,7 +170,8 @@ const resolveNamespaceCallCrossPackage = (
               if (absolutePath.startsWith(projectRoot)) {
                 const relativePath = absolutePath.slice(projectRoot.length);
                 const symbolName = actualSymbol.getName();
-                const targetId = `${relativePath}:${symbolName}`;
+                const nodeType = getNodeTypeFromDeclaration(declaration);
+                const targetId = `${relativePath}:${nodeType}:${symbolName}`;
                 return { targetId, symbolName };
               }
             }
@@ -202,6 +243,7 @@ const resolveCallTarget = (
         // Check if this is a class member - if so, include the class name
         // Handles methods, arrow function properties, and getters/setters
         let targetId: string;
+        const nodeType = getNodeTypeFromDeclaration(declaration);
         if (
           TsMorphNode.isMethodDeclaration(declaration) ||
           TsMorphNode.isPropertyDeclaration(declaration) ||
@@ -212,15 +254,15 @@ const resolveCallTarget = (
           if (TsMorphNode.isClassDeclaration(classDecl)) {
             const className = classDecl.getName();
             if (className) {
-              targetId = `${relativePath}:${className}.${symbolName}`;
+              targetId = `${relativePath}:${nodeType}:${className}.${symbolName}`;
             } else {
-              targetId = `${relativePath}:${symbolName}`;
+              targetId = `${relativePath}:${nodeType}:${symbolName}`;
             }
           } else {
-            targetId = `${relativePath}:${symbolName}`;
+            targetId = `${relativePath}:${nodeType}:${symbolName}`;
           }
         } else {
-          targetId = `${relativePath}:${symbolName}`;
+          targetId = `${relativePath}:${nodeType}:${symbolName}`;
         }
 
         return { targetId, symbolName };
@@ -322,7 +364,8 @@ const resolveJsxTarget = (
       ) {
         const relativePath = absolutePath.slice(projectRoot.length);
         const symbolName = actualSymbol.getName();
-        const targetId = `${relativePath}:${symbolName}`;
+        const nodeType = getNodeTypeFromDeclaration(declaration);
+        const targetId = `${relativePath}:${nodeType}:${symbolName}`;
         return { targetId, symbolName };
       }
     }
@@ -367,7 +410,7 @@ export const extractCallEdges = (
     const funcName = func.getName();
     if (!funcName) continue;
 
-    const callerId = generateNodeId(context.filePath, funcName);
+    const callerId = generateNodeId(context.filePath, "Function", funcName);
     extractCallsFromCallable(
       func,
       callerId,
@@ -384,7 +427,7 @@ export const extractCallEdges = (
     const initializer = variable.getInitializer();
 
     if (initializer && TsMorphNode.isArrowFunction(initializer)) {
-      const callerId = generateNodeId(context.filePath, varName);
+      const callerId = generateNodeId(context.filePath, "Function", varName);
       extractCallsFromCallable(
         initializer,
         callerId,
@@ -404,7 +447,11 @@ export const extractCallEdges = (
     const methods = classDecl.getMethods();
     for (const method of methods) {
       const methodName = method.getName();
-      const callerId = generateNodeId(context.filePath, className, methodName);
+      const callerId = generateNodeId(
+        context.filePath,
+        "Method",
+        `${className}.${methodName}`,
+      );
       extractCallsFromCallable(
         method,
         callerId,
@@ -415,14 +462,10 @@ export const extractCallEdges = (
       );
     }
 
-    // Extract calls from constructors
+    // Extract calls from constructors - attributed to the class
     const constructors = classDecl.getConstructors();
     for (const ctor of constructors) {
-      const callerId = generateNodeId(
-        context.filePath,
-        className,
-        "constructor",
-      );
+      const callerId = generateNodeId(context.filePath, "Class", className);
       extractCallsFromCallable(
         ctor,
         callerId,
@@ -463,13 +506,13 @@ export const extractCallEdges = (
 
     // Extract calls from class properties (arrow functions and initializers)
     for (const property of classDecl.getProperties()) {
-      const propName = property.getName();
       const initializer = property.getInitializer();
       if (!initializer) {
         continue;
       }
 
-      const callerId = generateNodeId(context.filePath, className, propName);
+      // Class property initializers - attributed to the class
+      const callerId = generateNodeId(context.filePath, "Class", className);
 
       if (TsMorphNode.isArrowFunction(initializer)) {
         // Arrow function property: extract calls from the arrow function body
@@ -517,7 +560,11 @@ export const extractCallEdges = (
       // Class expression - extract calls from its methods
       for (const method of initializer.getMethods()) {
         const methodName = method.getName();
-        const callerId = generateNodeId(context.filePath, varName, methodName);
+        const callerId = generateNodeId(
+          context.filePath,
+          "Method",
+          `${varName}.${methodName}`,
+        );
         extractCallsFromCallable(
           method,
           callerId,
@@ -559,7 +606,6 @@ const buildCombinedSymbolMap = (
 
 /**
  * Add symbols defined in the current file to the map.
- * Constructs IDs directly as filePath:symbolName.
  */
 const addLocalSymbols = (
   map: SymbolMap,
@@ -570,26 +616,35 @@ const addLocalSymbols = (
   for (const func of sourceFile.getFunctions()) {
     const name = func.getName();
     if (name) {
-      map.set(name, `${filePath}:${name}`);
+      map.set(name, generateNodeId(filePath, "Function", name));
     }
   }
 
   // Arrow functions and other variables
   for (const variable of sourceFile.getVariableDeclarations()) {
     const name = variable.getName();
-    map.set(name, `${filePath}:${name}`);
+    const initializer = variable.getInitializer();
+    // Arrow functions are extracted as Function nodes
+    const nodeType =
+      initializer && TsMorphNode.isArrowFunction(initializer)
+        ? "Function"
+        : "Variable";
+    map.set(name, generateNodeId(filePath, nodeType, name));
   }
 
   // Classes and their methods
   for (const classDecl of sourceFile.getClasses()) {
     const className = classDecl.getName();
     if (className) {
-      map.set(className, `${filePath}:${className}`);
+      map.set(className, generateNodeId(filePath, "Class", className));
 
       // Add methods
       for (const method of classDecl.getMethods()) {
         const methodName = method.getName();
-        map.set(methodName, `${filePath}:${className}.${methodName}`);
+        map.set(
+          methodName,
+          generateNodeId(filePath, "Method", `${className}.${methodName}`),
+        );
       }
     }
   }
@@ -597,13 +652,13 @@ const addLocalSymbols = (
   // Interfaces
   for (const iface of sourceFile.getInterfaces()) {
     const name = iface.getName();
-    map.set(name, `${filePath}:${name}`);
+    map.set(name, generateNodeId(filePath, "Interface", name));
   }
 
   // Type aliases
   for (const typeAlias of sourceFile.getTypeAliases()) {
     const name = typeAlias.getName();
-    map.set(name, `${filePath}:${name}`);
+    map.set(name, generateNodeId(filePath, "TypeAlias", name));
   }
 };
 

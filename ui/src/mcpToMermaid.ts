@@ -71,7 +71,7 @@ const sanitizeNodeId = (id: string): string => {
   // Replace dots and special chars with underscores for the ID
   // but keep the original as the display label
   if (id.includes(".") || id.includes(":") || id.includes("-")) {
-    const safeId = id.replace(/[.:\-]/g, "_");
+    const safeId = id.replace(/[.:-]/g, "_");
     return `${safeId}["${id}"]`;
   }
   return id;

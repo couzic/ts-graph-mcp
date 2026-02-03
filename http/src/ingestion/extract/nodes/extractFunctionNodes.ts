@@ -30,7 +30,7 @@ export const extractFunctionNodes = (
     const returnType = normalizeTypeText(returnTypeNode?.getText());
 
     return {
-      id: generateNodeId(context.filePath, name),
+      id: generateNodeId(context.filePath, "Function", name),
       type: "Function",
       name,
       package: context.package,

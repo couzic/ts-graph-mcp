@@ -1,30 +1,20 @@
+import type { FilePath, NodeId, NodeType, SymbolName } from "@ts-graph/shared";
 import { normalizePath } from "./normalizePath.js";
 
 /**
- * Generate a unique node ID from file path and symbol path.
+ * Generate a node ID from file path, node type, and symbol name.
  *
- * Format: `{relativePath}:{symbolPath}`
+ * Format: `{path}:{type}:{symbol}`
  *
- * Examples:
- * - `src/utils.ts:formatDate`
- * - `src/models/user.ts:User`
- * - `src/models/user.ts:User.validate`
- * - `src/math.ts:add(number,number)` (overloads)
- *
- * @param filePath - Relative file path
- * @param symbolParts - Symbol path components (class, method, etc.)
- * @returns Unique node ID
+ * @example
+ * generateNodeId("src/utils.ts", "Function", "formatDate")
+ * // => "src/utils.ts:Function:formatDate"
  */
 export const generateNodeId = (
-  filePath: string,
-  ...symbolParts: string[]
-): string => {
+  filePath: FilePath,
+  nodeType: NodeType,
+  symbolName: SymbolName,
+): NodeId => {
   const normalizedPath = normalizePath(filePath);
-
-  if (symbolParts.length === 0) {
-    return normalizedPath;
-  }
-
-  const symbolPath = symbolParts.join(".");
-  return `${normalizedPath}:${symbolPath}`;
+  return `${normalizedPath}:${nodeType}:${symbolName}`;
 };

@@ -1,27 +1,27 @@
 import { describe, expect, it } from "vitest";
-import type { GraphEdge } from "./GraphTypes.js";
 import type { FormatInput } from "./formatToolOutput.js";
 import { formatToolOutput, truncateEdges } from "./formatToolOutput.js";
+import type { GraphEdge } from "./GraphTypes.js";
 
 describe("formatToolOutput", () => {
   it("formats a simple call chain with node snippets", () => {
     const input: FormatInput = {
       edges: [
         {
-          source: "src/a.ts:fnA",
-          target: "src/b.ts:fnB",
+          source: "src/a.ts:Function:fnA",
+          target: "src/b.ts:Function:fnB",
           type: "CALLS",
         },
         {
-          source: "src/b.ts:fnB",
-          target: "src/c.ts:fnC",
+          source: "src/b.ts:Function:fnB",
+          target: "src/c.ts:Function:fnC",
           type: "CALLS",
           callSites: [{ start: 2, end: 2 }],
         },
       ],
       nodes: [
         {
-          id: "src/b.ts:fnB",
+          id: "src/b.ts:Function:fnB",
           name: "fnB",
           type: "Function",
           filePath: "src/b.ts",
@@ -58,7 +58,11 @@ fnB:
   it("supports empty nodes", () => {
     const input: FormatInput = {
       edges: [
-        { source: "src/a.ts:fnA", target: "src/b.ts:fnB", type: "CALLS" },
+        {
+          source: "src/a.ts:Function:fnA",
+          target: "src/b.ts:Function:fnB",
+          type: "CALLS",
+        },
       ],
       nodes: [],
     };
@@ -74,12 +78,20 @@ fnA --CALLS--> fnB`);
     it("shows full output when node count is under maxNodes", () => {
       const input: FormatInput = {
         edges: [
-          { source: "src/a.ts:fnA", target: "src/b.ts:fnB", type: "CALLS" },
-          { source: "src/b.ts:fnB", target: "src/c.ts:fnC", type: "CALLS" },
+          {
+            source: "src/a.ts:Function:fnA",
+            target: "src/b.ts:Function:fnB",
+            type: "CALLS",
+          },
+          {
+            source: "src/b.ts:Function:fnB",
+            target: "src/c.ts:Function:fnC",
+            type: "CALLS",
+          },
         ],
         nodes: [
           {
-            id: "src/b.ts:fnB",
+            id: "src/b.ts:Function:fnB",
             name: "fnB",
             type: "Function",
             filePath: "src/b.ts",
@@ -101,12 +113,20 @@ fnA --CALLS--> fnB`);
     it("shows full output when node count equals maxNodes", () => {
       const input: FormatInput = {
         edges: [
-          { source: "src/a.ts:fnA", target: "src/b.ts:fnB", type: "CALLS" },
-          { source: "src/b.ts:fnB", target: "src/c.ts:fnC", type: "CALLS" },
+          {
+            source: "src/a.ts:Function:fnA",
+            target: "src/b.ts:Function:fnB",
+            type: "CALLS",
+          },
+          {
+            source: "src/b.ts:Function:fnB",
+            target: "src/c.ts:Function:fnC",
+            type: "CALLS",
+          },
         ],
         nodes: [
           {
-            id: "src/b.ts:fnB",
+            id: "src/b.ts:Function:fnB",
             name: "fnB",
             type: "Function",
             filePath: "src/b.ts",
@@ -127,9 +147,21 @@ fnA --CALLS--> fnB`);
     it("skips Nodes section when node count exceeds maxNodes", () => {
       const input: FormatInput = {
         edges: [
-          { source: "src/a.ts:fnA", target: "src/b.ts:fnB", type: "CALLS" },
-          { source: "src/b.ts:fnB", target: "src/c.ts:fnC", type: "CALLS" },
-          { source: "src/c.ts:fnC", target: "src/d.ts:fnD", type: "CALLS" },
+          {
+            source: "src/a.ts:Function:fnA",
+            target: "src/b.ts:Function:fnB",
+            type: "CALLS",
+          },
+          {
+            source: "src/b.ts:Function:fnB",
+            target: "src/c.ts:Function:fnC",
+            type: "CALLS",
+          },
+          {
+            source: "src/c.ts:Function:fnC",
+            target: "src/d.ts:Function:fnD",
+            type: "CALLS",
+          },
         ],
         nodes: [],
         maxNodes: 2, // Only 2 nodes allowed, but graph has 4
@@ -139,17 +171,35 @@ fnA --CALLS--> fnB`);
 
       expect(result).toContain("## Graph");
       expect(result).not.toContain("## Nodes");
-      expect(result).toContain("(2/4 nodes displayed. Nodes section skipped. Use max_nodes param for full output.)");
+      expect(result).toContain(
+        "(2/4 nodes displayed. Nodes section skipped. Use max_nodes param for full output.)",
+      );
     });
 
     it("truncates graph to first maxNodes nodes in traversal order", () => {
       // Graph: A -> B -> C -> D -> E (5 nodes, linear chain)
       const input: FormatInput = {
         edges: [
-          { source: "src/a.ts:fnA", target: "src/b.ts:fnB", type: "CALLS" },
-          { source: "src/b.ts:fnB", target: "src/c.ts:fnC", type: "CALLS" },
-          { source: "src/c.ts:fnC", target: "src/d.ts:fnD", type: "CALLS" },
-          { source: "src/d.ts:fnD", target: "src/e.ts:fnE", type: "CALLS" },
+          {
+            source: "src/a.ts:Function:fnA",
+            target: "src/b.ts:Function:fnB",
+            type: "CALLS",
+          },
+          {
+            source: "src/b.ts:Function:fnB",
+            target: "src/c.ts:Function:fnC",
+            type: "CALLS",
+          },
+          {
+            source: "src/c.ts:Function:fnC",
+            target: "src/d.ts:Function:fnD",
+            type: "CALLS",
+          },
+          {
+            source: "src/d.ts:Function:fnD",
+            target: "src/e.ts:Function:fnE",
+            type: "CALLS",
+          },
         ],
         nodes: [],
         maxNodes: 3, // Should keep A, B, C
@@ -163,7 +213,9 @@ fnA --CALLS--> fnB`);
       // D and E should not appear in the truncated graph
       expect(result).not.toContain("fnD");
       expect(result).not.toContain("fnE");
-      expect(result).toContain("(3/5 nodes displayed. Nodes section skipped. Use max_nodes param for full output.)");
+      expect(result).toContain(
+        "(3/5 nodes displayed. Nodes section skipped. Use max_nodes param for full output.)",
+      );
     });
 
     it("uses default maxNodes of 50 when not specified", () => {
@@ -171,8 +223,8 @@ fnA --CALLS--> fnB`);
       const edges = [];
       for (let i = 0; i < 50; i++) {
         edges.push({
-          source: `src/fn${i}.ts:fn${i}`,
-          target: `src/fn${i + 1}.ts:fn${i + 1}`,
+          source: `src/fn${i}.ts:Function:fn${i}`,
+          target: `src/fn${i + 1}.ts:Function:fn${i + 1}`,
           type: "CALLS" as const,
         });
       }
@@ -187,9 +239,10 @@ fnA --CALLS--> fnB`);
 
       // 51 nodes > 50 default, so should be truncated
       expect(result).not.toContain("## Nodes");
-      expect(result).toContain("(50/51 nodes displayed. Nodes section skipped. Use max_nodes param for full output.)");
+      expect(result).toContain(
+        "(50/51 nodes displayed. Nodes section skipped. Use max_nodes param for full output.)",
+      );
     });
-
   });
 
   describe("snippet threshold", () => {
@@ -198,15 +251,15 @@ fnA --CALLS--> fnB`);
       const edges = [];
       for (let i = 0; i < 29; i++) {
         edges.push({
-          source: `src/fn${i}.ts:fn${i}`,
-          target: `src/fn${i + 1}.ts:fn${i + 1}`,
+          source: `src/fn${i}.ts:Function:fn${i}`,
+          target: `src/fn${i + 1}.ts:Function:fn${i + 1}`,
           type: "CALLS" as const,
         });
       }
 
       const nodes = [
         {
-          id: "src/fn1.ts:fn1",
+          id: "src/fn1.ts:Function:fn1",
           name: "fn1",
           type: "Function" as const,
           filePath: "src/fn1.ts",
@@ -238,15 +291,15 @@ fnA --CALLS--> fnB`);
       const edges = [];
       for (let i = 0; i < 30; i++) {
         edges.push({
-          source: `src/fn${i}.ts:fn${i}`,
-          target: `src/fn${i + 1}.ts:fn${i + 1}`,
+          source: `src/fn${i}.ts:Function:fn${i}`,
+          target: `src/fn${i + 1}.ts:Function:fn${i + 1}`,
           type: "CALLS" as const,
         });
       }
 
       const nodes = [
         {
-          id: "src/fn1.ts:fn1",
+          id: "src/fn1.ts:Function:fn1",
           name: "fn1",
           type: "Function" as const,
           filePath: "src/fn1.ts",
@@ -283,15 +336,15 @@ fnA --CALLS--> fnB`);
       const edges = [];
       for (let i = 0; i < 39; i++) {
         edges.push({
-          source: `src/fn${i}.ts:fn${i}`,
-          target: `src/fn${i + 1}.ts:fn${i + 1}`,
+          source: `src/fn${i}.ts:Function:fn${i}`,
+          target: `src/fn${i + 1}.ts:Function:fn${i + 1}`,
           type: "CALLS" as const,
         });
       }
 
       const nodes = [
         {
-          id: "src/fn1.ts:fn1",
+          id: "src/fn1.ts:Function:fn1",
           name: "fn1",
           type: "Function" as const,
           filePath: "src/fn1.ts",
@@ -324,8 +377,16 @@ fnA --CALLS--> fnB`);
 describe("truncateEdges", () => {
   it("returns all edges when node count is within maxNodes", () => {
     const edges: GraphEdge[] = [
-      { source: "src/a.ts:fnA", target: "src/b.ts:fnB", type: "CALLS" },
-      { source: "src/b.ts:fnB", target: "src/c.ts:fnC", type: "CALLS" },
+      {
+        source: "src/a.ts:Function:fnA",
+        target: "src/b.ts:Function:fnB",
+        type: "CALLS",
+      },
+      {
+        source: "src/b.ts:Function:fnB",
+        target: "src/c.ts:Function:fnC",
+        type: "CALLS",
+      },
     ];
 
     const result = truncateEdges(edges, 10);
@@ -337,18 +398,42 @@ describe("truncateEdges", () => {
   it("truncates edges to first maxNodes in traversal order", () => {
     // Chain: A -> B -> C -> D -> E
     const edges: GraphEdge[] = [
-      { source: "src/a.ts:fnA", target: "src/b.ts:fnB", type: "CALLS" },
-      { source: "src/b.ts:fnB", target: "src/c.ts:fnC", type: "CALLS" },
-      { source: "src/c.ts:fnC", target: "src/d.ts:fnD", type: "CALLS" },
-      { source: "src/d.ts:fnD", target: "src/e.ts:fnE", type: "CALLS" },
+      {
+        source: "src/a.ts:Function:fnA",
+        target: "src/b.ts:Function:fnB",
+        type: "CALLS",
+      },
+      {
+        source: "src/b.ts:Function:fnB",
+        target: "src/c.ts:Function:fnC",
+        type: "CALLS",
+      },
+      {
+        source: "src/c.ts:Function:fnC",
+        target: "src/d.ts:Function:fnD",
+        type: "CALLS",
+      },
+      {
+        source: "src/d.ts:Function:fnD",
+        target: "src/e.ts:Function:fnE",
+        type: "CALLS",
+      },
     ];
 
     const result = truncateEdges(edges, 3);
 
     // Should only include edges where BOTH nodes are in first 3 (A, B, C)
     expect(result.truncatedEdges).toEqual([
-      { source: "src/a.ts:fnA", target: "src/b.ts:fnB", type: "CALLS" },
-      { source: "src/b.ts:fnB", target: "src/c.ts:fnC", type: "CALLS" },
+      {
+        source: "src/a.ts:Function:fnA",
+        target: "src/b.ts:Function:fnB",
+        type: "CALLS",
+      },
+      {
+        source: "src/b.ts:Function:fnB",
+        target: "src/c.ts:Function:fnC",
+        type: "CALLS",
+      },
     ]);
     expect(result.totalNodeCount).toBe(5);
   });
@@ -356,9 +441,21 @@ describe("truncateEdges", () => {
   it("handles branching graphs", () => {
     // Tree: A -> B, A -> C, B -> D
     const edges: GraphEdge[] = [
-      { source: "src/a.ts:fnA", target: "src/b.ts:fnB", type: "CALLS" },
-      { source: "src/a.ts:fnA", target: "src/c.ts:fnC", type: "CALLS" },
-      { source: "src/b.ts:fnB", target: "src/d.ts:fnD", type: "CALLS" },
+      {
+        source: "src/a.ts:Function:fnA",
+        target: "src/b.ts:Function:fnB",
+        type: "CALLS",
+      },
+      {
+        source: "src/a.ts:Function:fnA",
+        target: "src/c.ts:Function:fnC",
+        type: "CALLS",
+      },
+      {
+        source: "src/b.ts:Function:fnB",
+        target: "src/d.ts:Function:fnD",
+        type: "CALLS",
+      },
     ];
 
     const result = truncateEdges(edges, 3);

@@ -1,3 +1,4 @@
+import { EDGE_TYPES } from "@ts-graph/shared";
 import type Database from "better-sqlite3";
 import {
   attemptClassMethodFallback,
@@ -16,11 +17,10 @@ import {
   type GraphEdgeWithCallSites,
   parseEdgeRows,
 } from "../shared/parseEdgeRows.js";
+import type { QueryOptions } from "../shared/QueryTypes.js";
 import { queryNodeInfos } from "../shared/queryNodeInfos.js";
 import { queryNodeMetadata } from "../shared/queryNodeMetadata.js";
-import type { QueryOptions } from "../shared/QueryTypes.js";
 import { resolveSymbol } from "../shared/symbolNotFound.js";
-import { EDGE_TYPES } from "@ts-graph/shared";
 
 /**
  * Query all forward dependencies from a source node.

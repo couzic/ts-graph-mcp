@@ -8,13 +8,13 @@ import { normalizeTypeText } from "./normalizeTypeText.js";
  * Check if a variable's initializer is a callable (arrow function or function expression).
  * These are extracted as Function nodes by extractArrowFunctionNodes instead.
  */
-const isCallableInitializer = (
-  initializer: Node | undefined,
-): boolean => {
+const isCallableInitializer = (initializer: Node | undefined): boolean => {
   if (!initializer) {
     return false;
   }
-  return Node.isArrowFunction(initializer) || Node.isFunctionExpression(initializer);
+  return (
+    Node.isArrowFunction(initializer) || Node.isFunctionExpression(initializer)
+  );
 };
 
 /**
@@ -59,7 +59,7 @@ export const extractVariableNodes = (
       const variableType = normalizeTypeText(typeNode?.getText());
 
       variables.push({
-        id: generateNodeId(context.filePath, name),
+        id: generateNodeId(context.filePath, "Variable", name),
         type: "Variable",
         name,
         package: context.package,

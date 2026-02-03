@@ -45,6 +45,35 @@ needed.
 
 ---
 
+## Branded Types Not Enforced
+
+**Impact:** Low (type safety)
+
+**Problem:** `FilePath`, `SymbolName`, and `NodeId` in `shared/src/index.ts` are
+defined as `string` aliases, providing no compile-time distinction between them.
+
+**Goal:** Use literal string branded types to prevent mixing up these values:
+
+```typescript
+export type FilePath = "FilePath";
+export type SymbolName = "SymbolName";
+export type NodeId = `${FilePath}:${NodeType}:${SymbolName}`;
+```
+
+**Current state:** Types are `string` aliases. The branded type definitions are
+preserved in TODO comments.
+
+**Blocked by:** 156 call sites in extractors and tests pass raw strings to
+`generateNodeId()`. Each needs explicit casting or a helper function.
+
+**Fix approach:**
+
+1. Create a helper: `asFilePath(path: string): FilePath`
+2. Update all `generateNodeId()` call sites to use the helper
+3. Restore branded type definitions
+
+---
+
 ## MCP Tool Discoverability
 
 ### Trigger Phrases — Validation Pending

@@ -87,24 +87,33 @@ const addLocalSymbols = (
   for (const func of sourceFile.getFunctions()) {
     const name = func.getName();
     if (name) {
-      map.set(name, `${filePath}:${name}`);
+      map.set(name, generateNodeId(filePath, "Function", name));
     }
   }
 
   // Variables (including arrow functions)
   for (const variable of sourceFile.getVariableDeclarations()) {
     const name = variable.getName();
-    map.set(name, `${filePath}:${name}`);
+    const initializer = variable.getInitializer();
+    // Arrow functions are extracted as Function nodes
+    const nodeType =
+      initializer && TsMorphNode.isArrowFunction(initializer)
+        ? "Function"
+        : "Variable";
+    map.set(name, generateNodeId(filePath, nodeType, name));
   }
 
   // Classes and their methods
   for (const classDecl of sourceFile.getClasses()) {
     const className = classDecl.getName();
     if (className) {
-      map.set(className, `${filePath}:${className}`);
+      map.set(className, generateNodeId(filePath, "Class", className));
       for (const method of classDecl.getMethods()) {
         const methodName = method.getName();
-        map.set(methodName, `${filePath}:${className}.${methodName}`);
+        map.set(
+          methodName,
+          generateNodeId(filePath, "Method", `${className}.${methodName}`),
+        );
       }
     }
   }
@@ -112,13 +121,13 @@ const addLocalSymbols = (
   // Interfaces
   for (const iface of sourceFile.getInterfaces()) {
     const name = iface.getName();
-    map.set(name, `${filePath}:${name}`);
+    map.set(name, generateNodeId(filePath, "Interface", name));
   }
 
   // Type aliases
   for (const typeAlias of sourceFile.getTypeAliases()) {
     const name = typeAlias.getName();
-    map.set(name, `${filePath}:${name}`);
+    map.set(name, generateNodeId(filePath, "TypeAlias", name));
   }
 };
 
@@ -134,7 +143,7 @@ const extractFromVariableDeclarations = (
 ): void => {
   for (const variable of sourceFile.getVariableDeclarations()) {
     const varName = variable.getName();
-    const sourceId = generateNodeId(context.filePath, varName);
+    const sourceId = generateNodeId(context.filePath, "Variable", varName);
     const initializer = variable.getInitializer();
 
     if (!initializer) continue;
@@ -227,7 +236,7 @@ const extractFromCallables = (
   for (const func of sourceFile.getFunctions()) {
     const funcName = func.getName();
     if (!funcName) continue;
-    const callerId = generateNodeId(context.filePath, funcName);
+    const callerId = generateNodeId(context.filePath, "Function", funcName);
     extractReferencesFromCallable(func, callerId, symbolMap, edges);
   }
 
@@ -236,7 +245,7 @@ const extractFromCallables = (
     const varName = variable.getName();
     const initializer = variable.getInitializer();
     if (initializer && TsMorphNode.isArrowFunction(initializer)) {
-      const callerId = generateNodeId(context.filePath, varName);
+      const callerId = generateNodeId(context.filePath, "Function", varName);
       extractReferencesFromCallable(initializer, callerId, symbolMap, edges);
     }
   }
@@ -247,7 +256,11 @@ const extractFromCallables = (
     if (!className) continue;
     for (const method of classDecl.getMethods()) {
       const methodName = method.getName();
-      const callerId = generateNodeId(context.filePath, className, methodName);
+      const callerId = generateNodeId(
+        context.filePath,
+        "Method",
+        `${className}.${methodName}`,
+      );
       extractReferencesFromCallable(method, callerId, symbolMap, edges);
     }
   }

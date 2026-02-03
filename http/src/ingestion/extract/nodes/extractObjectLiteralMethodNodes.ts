@@ -49,7 +49,11 @@ export const extractObjectLiteralMethodNodes = (
           const isAsync = property.isAsync();
 
           functions.push({
-            id: generateNodeId(context.filePath, objectName, methodName),
+            id: generateNodeId(
+              context.filePath,
+              "Function",
+              `${objectName}.${methodName}`,
+            ),
             type: "Function",
             name: methodName,
             package: context.package,
@@ -82,7 +86,11 @@ export const extractObjectLiteralMethodNodes = (
             const isAsync = propInitializer.isAsync();
 
             functions.push({
-              id: generateNodeId(context.filePath, objectName, methodName),
+              id: generateNodeId(
+                context.filePath,
+                "Function",
+                `${objectName}.${methodName}`,
+              ),
               type: "Function",
               name: methodName,
               package: context.package,

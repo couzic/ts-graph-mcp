@@ -1,25 +1,37 @@
+import { existsSync } from "node:fs";
+import path, { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import type Database from "better-sqlite3";
 import express from "express";
-import { existsSync } from "node:fs";
-import { join } from "node:path";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import type { ProjectConfig } from "./config/Config.schemas.js";
-import { getCacheDir, getOramaIndexPath, getSqliteDir } from "./config/getCacheDir.js";
 import { loadConfigOrDetect } from "./config/configLoader.utils.js";
+import {
+  getCacheDir,
+  getOramaIndexPath,
+  getSqliteDir,
+} from "./config/getCacheDir.js";
 import { createSqliteWriter } from "./db/sqlite/createSqliteWriter.js";
 import { openDatabase } from "./db/sqlite/sqliteConnection.utils.js";
 import { createEmbeddingProvider } from "./embedding/createEmbeddingProvider.js";
 import type { EmbeddingProvider } from "./embedding/EmbeddingTypes.js";
 import { DEFAULT_PRESET, EMBEDDING_PRESETS } from "./embedding/presets.js";
 import { indexProject } from "./ingestion/indexProject.js";
-import { type IndexManifest, loadManifest, populateManifest, saveManifest } from "./ingestion/manifest.js";
+import {
+  type IndexManifest,
+  loadManifest,
+  populateManifest,
+  saveManifest,
+} from "./ingestion/manifest.js";
 import { syncOnStartup } from "./ingestion/syncOnStartup.js";
 import { type WatchHandle, watchProject } from "./ingestion/watchProject.js";
 import { consoleLogger } from "./logging/ConsoleTsGraphLogger.js";
 import type { TsGraphLogger } from "./logging/TsGraphLogger.js";
 import { searchGraph } from "./query/search-graph/searchGraph.js";
-import { createSearchIndex, loadSearchIndexFromFile, type SearchIndexWrapper } from "./search/createSearchIndex.js";
+import {
+  createSearchIndex,
+  loadSearchIndexFromFile,
+  type SearchIndexWrapper,
+} from "./search/createSearchIndex.js";
 import { populateSearchIndex } from "./search/populateSearchIndex.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -53,7 +65,12 @@ const indexAndOpenDb = async (
 
   if (!configResult) {
     logger.warn("No config file or tsconfig.json found. Nothing to index.");
-    return { db, indexedFiles: 0, manifest: { version: 1, files: {} }, config: null };
+    return {
+      db,
+      indexedFiles: 0,
+      manifest: { version: 1, files: {} },
+      config: null,
+    };
   }
 
   if (forceReindex || !dbExists) {
@@ -98,18 +115,24 @@ const indexAndOpenDb = async (
     // Persist search index to disk
     await searchIndex.saveToFile(oramaIndexPath);
 
-    return { db, indexedFiles: result.filesProcessed, manifest, config: configResult.config };
+    return {
+      db,
+      indexedFiles: result.filesProcessed,
+      manifest,
+      config: configResult.config,
+    };
   }
 
   logger.info("Using existing database. Checking for file changes...");
 
   const manifest = loadManifest(cacheDir);
-  const syncResult = await syncOnStartup(
-    db,
-    configResult.config,
-    manifest,
-    { projectRoot, cacheDir, logger, searchIndex, embeddingProvider },
-  );
+  const syncResult = await syncOnStartup(db, configResult.config, manifest, {
+    projectRoot,
+    cacheDir,
+    logger,
+    searchIndex,
+    embeddingProvider,
+  });
 
   const totalChanges =
     syncResult.staleCount + syncResult.deletedCount + syncResult.addedCount;
@@ -140,7 +163,9 @@ const indexAndOpenDb = async (
 
   // Get actual file count from database
   const countResult = db
-    .prepare<[], { count: number }>("SELECT COUNT(DISTINCT file_path) as count FROM nodes")
+    .prepare<[], { count: number }>(
+      "SELECT COUNT(DISTINCT file_path) as count FROM nodes",
+    )
     .get();
   const indexedFiles = countResult?.count ?? 0;
 
@@ -197,7 +222,9 @@ export const startHttpServer = async (
   }
 
   const vectorDimensions = preset.dimensions;
-  logger.info(`Semantic search: ${presetName} (${vectorDimensions} dimensions)`);
+  logger.info(
+    `Semantic search: ${presetName} (${vectorDimensions} dimensions)`,
+  );
 
   let downloadComplete = false;
   const embeddingProvider = await createEmbeddingProvider({
@@ -231,7 +258,9 @@ export const startHttpServer = async (
   let searchIndexLoadedFromFile = false;
 
   if (!shouldReindex) {
-    const loaded = await loadSearchIndexFromFile(oramaIndexPath, { vectorDimensions });
+    const loaded = await loadSearchIndexFromFile(oramaIndexPath, {
+      vectorDimensions,
+    });
     if (loaded) {
       logger.info("Loaded search index from disk");
       searchIndex = loaded;
@@ -257,7 +286,7 @@ export const startHttpServer = async (
   );
 
   // Track indexed files count (updated after sync)
-  let currentIndexedFiles = indexedFiles;
+  const currentIndexedFiles = indexedFiles;
 
   // Start file watcher if we have a valid config
   let watchHandle: WatchHandle | null = null;
@@ -297,20 +326,16 @@ export const startHttpServer = async (
       return;
     }
 
-    // Search symbols by name OR symbol path (case-insensitive prefix match)
-    // This allows finding methods by class name (e.g., "User" finds "User.getSituations")
+    // Search symbols by name (case-insensitive prefix match)
     const results = db
-      .prepare<[string, string], { file_path: string; symbol: string; type: string }>(
-        `SELECT file_path,
-                SUBSTR(id, INSTR(id, ':') + 1) as symbol,
-                type
+      .prepare<[string], { file_path: string; symbol: string; type: string }>(
+        `SELECT file_path, name as symbol, type
          FROM nodes
-         WHERE (name LIKE ? || '%' COLLATE NOCASE
-                OR SUBSTR(id, INSTR(id, ':') + 1) LIKE ? || '%' COLLATE NOCASE)
+         WHERE name LIKE ? || '%' COLLATE NOCASE
          ORDER BY name
          LIMIT 50`,
       )
-      .all(query, query);
+      .all(query);
 
     res.json(results);
   });
@@ -326,11 +351,18 @@ export const startHttpServer = async (
     };
 
     if (!topic && !from && !to) {
-      res.status(400).send("At least one of 'topic', 'from', or 'to' is required");
+      res
+        .status(400)
+        .send("At least one of 'topic', 'from', or 'to' is required");
       return;
     }
 
-    const result = await searchGraph(db, projectRoot, { topic, from, to, max_nodes }, { searchIndex, embeddingProvider });
+    const result = await searchGraph(
+      db,
+      projectRoot,
+      { topic, from, to, max_nodes },
+      { searchIndex, embeddingProvider },
+    );
     res.type("text/plain").send(result);
   });
 
@@ -342,7 +374,9 @@ export const startHttpServer = async (
   // Get port from config (required)
   const port = config?.server?.port;
   if (!port) {
-    logger.error("No port configured. Add server.port to ts-graph-mcp.config.json");
+    logger.error(
+      "No port configured. Add server.port to ts-graph-mcp.config.json",
+    );
     process.exit(1);
   }
 

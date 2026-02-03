@@ -3,11 +3,13 @@ import { extractFilePath } from "./extractFilePath.js";
 
 describe("extractFilePath", () => {
   it("extracts file path from node ID", () => {
-    expect(extractFilePath("src/utils.ts:formatDate")).toBe("src/utils.ts");
+    expect(extractFilePath("src/utils.ts:Function:formatDate")).toBe(
+      "src/utils.ts",
+    );
   });
 
   it("handles method names", () => {
-    expect(extractFilePath("src/models/User.ts:User.save")).toBe(
+    expect(extractFilePath("src/models/User.ts:Method:User.save")).toBe(
       "src/models/User.ts",
     );
   });

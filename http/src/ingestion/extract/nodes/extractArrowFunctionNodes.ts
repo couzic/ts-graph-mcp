@@ -60,7 +60,7 @@ export const extractArrowFunctionNodes = (
       const isAsync = initializer.isAsync();
 
       functions.push({
-        id: generateNodeId(context.filePath, name),
+        id: generateNodeId(context.filePath, "Function", name),
         type: "Function",
         name,
         package: context.package,

@@ -117,6 +117,24 @@ describe("indexFile", () => {
       assert(results[0] !== undefined);
       expect(results[0].symbol).toBe("processOrder");
     });
+
+    it("handles const and type with same name (declaration merging)", async () => {
+      const sourceFile = project.createSourceFile(
+        "src/test.ts",
+        `export const DATE_FORMAT = 'ss' as const;
+export type DATE_FORMAT = typeof DATE_FORMAT;`,
+      );
+
+      await indexFile(sourceFile, context, writer, { searchIndex });
+
+      // Both the const (Variable) and type (TypeAlias) should be indexed
+      const count = await searchIndex.count();
+      expect(count).toBe(2);
+
+      expect(writer.nodes).toHaveLength(2);
+      const nodeTypes = writer.nodes.map((n) => n.type).sort();
+      expect(nodeTypes).toEqual(["TypeAlias", "Variable"]);
+    });
   });
 
   describe("embedding integration", () => {
@@ -128,7 +146,9 @@ describe("indexFile", () => {
     });
 
     it("generates embeddings when provider is present", async () => {
-      const embeddingProvider = createFakeEmbeddingProvider({ dimensions: 384 });
+      const embeddingProvider = createFakeEmbeddingProvider({
+        dimensions: 384,
+      });
       const sourceFile = project.createSourceFile(
         "src/test.ts",
         `export function calculateTotal(items: Item[]): number {
@@ -145,7 +165,8 @@ describe("indexFile", () => {
       expect(count).toBe(1);
 
       // Vector search should work
-      const queryEmbedding = await embeddingProvider.embedQuery("calculate sum");
+      const queryEmbedding =
+        await embeddingProvider.embedQuery("calculate sum");
       const results = await searchIndex.search("calculate", {
         mode: "hybrid",
         vector: queryEmbedding,
@@ -156,7 +177,9 @@ describe("indexFile", () => {
     });
 
     it("generates different embeddings for different functions", async () => {
-      const embeddingProvider = createFakeEmbeddingProvider({ dimensions: 384 });
+      const embeddingProvider = createFakeEmbeddingProvider({
+        dimensions: 384,
+      });
       const sourceFile = project.createSourceFile(
         "src/test.ts",
         `export function validateInput(input: string): boolean {
@@ -187,7 +210,9 @@ export function processData(data: Data): Result {
 }`,
       );
 
-      await indexFile(sourceFile, context, writer, { searchIndex: textOnlyIndex });
+      await indexFile(sourceFile, context, writer, {
+        searchIndex: textOnlyIndex,
+      });
 
       const count = await textOnlyIndex.count();
       expect(count).toBe(1);

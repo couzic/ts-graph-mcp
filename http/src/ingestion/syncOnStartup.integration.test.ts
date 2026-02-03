@@ -1,4 +1,10 @@
-import { existsSync, mkdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import type Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -10,7 +16,10 @@ import {
 } from "../db/sqlite/sqliteConnection.utils.js";
 import { initializeSchema } from "../db/sqlite/sqliteSchema.utils.js";
 import { silentLogger } from "../logging/SilentTsGraphLogger.js";
-import { createSearchIndex, loadSearchIndexFromFile } from "../search/createSearchIndex.js";
+import {
+  createSearchIndex,
+  loadSearchIndexFromFile,
+} from "../search/createSearchIndex.js";
 import { populateSearchIndex } from "../search/populateSearchIndex.js";
 import { indexProject } from "./indexProject.js";
 import { type IndexManifest, saveManifest } from "./manifest.js";

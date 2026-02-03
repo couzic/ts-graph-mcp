@@ -1,3 +1,4 @@
+import type { NodeType } from "@ts-graph/shared";
 import { type ImportSpecifier, Node, type SourceFile } from "ts-morph";
 import { deriveProjectRoot } from "../../deriveProjectRoot.js";
 import { normalizePath } from "../../normalizePath.js";
@@ -113,7 +114,42 @@ export const buildImportMap = (
 interface ResolvedDefinition {
   path: string;
   symbolName: string;
+  nodeType: NodeType;
 }
+
+/**
+ * Detect the node type from a declaration.
+ */
+const getNodeTypeFromDeclaration = (declaration: Node): NodeType => {
+  if (Node.isFunctionDeclaration(declaration)) {
+    return "Function";
+  }
+  if (Node.isVariableDeclaration(declaration)) {
+    const initializer = declaration.getInitializer();
+    if (
+      initializer &&
+      (Node.isArrowFunction(initializer) ||
+        Node.isFunctionExpression(initializer))
+    ) {
+      return "Function";
+    }
+    return "Variable";
+  }
+  if (Node.isClassDeclaration(declaration)) {
+    return "Class";
+  }
+  if (Node.isMethodDeclaration(declaration)) {
+    return "Method";
+  }
+  if (Node.isInterfaceDeclaration(declaration)) {
+    return "Interface";
+  }
+  if (Node.isTypeAliasDeclaration(declaration)) {
+    return "TypeAlias";
+  }
+  // Default fallback - most imports that aren't types are functions
+  return "Function";
+};
 
 /**
  * Extract the actual name from a declaration node.
@@ -167,6 +203,7 @@ const resolveSymbolDefinition = (
   return {
     path: absolutePath.slice(projectRoot.length),
     symbolName,
+    nodeType: getNodeTypeFromDeclaration(declaration),
   };
 };
 
@@ -192,7 +229,12 @@ const resolveActualDefinition = (
   fallbackSymbolName: string,
   projectRegistry?: ProjectRegistry,
 ): ResolvedDefinition => {
-  const fallback = { path: fallbackPath, symbolName: fallbackSymbolName };
+  // Default fallback - assume "Function" as most imports are functions
+  const fallback: ResolvedDefinition = {
+    path: fallbackPath,
+    symbolName: fallbackSymbolName,
+    nodeType: "Function",
+  };
   const nameNode = namedImport.getNameNode();
   const symbol = nameNode.getSymbol();
   if (!symbol) {
@@ -267,6 +309,7 @@ const resolveActualDefinition = (
     return {
       path: absolutePath.slice(projectRoot.length),
       symbolName,
+      nodeType: getNodeTypeFromDeclaration(declaration),
     };
   }
   // Declaration outside project root - use fallback (the import target path)
@@ -402,8 +445,8 @@ const addImportsToMap = (
       projectRegistry,
     );
 
-    // Construct target node ID: actualPath:symbolName
-    const targetId = `${resolved.path}:${resolved.symbolName}`;
+    // Construct target node ID: actualPath:nodeType:symbolName
+    const targetId = `${resolved.path}:${resolved.nodeType}:${resolved.symbolName}`;
     map.set(localName, targetId);
   }
 
@@ -417,14 +460,14 @@ const addImportsToMap = (
     if (symbol) {
       const resolved = resolveSymbolDefinition(symbol, projectRoot);
       if (resolved) {
-        const targetId = `${resolved.path}:${resolved.symbolName}`;
+        const targetId = `${resolved.path}:${resolved.nodeType}:${resolved.symbolName}`;
         map.set(localName, targetId);
         return;
       }
     }
 
-    // Fallback: use targetPath:default
-    const targetId = `${targetPath}:default`;
+    // Fallback: use targetPath:Function:default (assume function for default exports)
+    const targetId = `${targetPath}:Function:default`;
     map.set(localName, targetId);
   }
 

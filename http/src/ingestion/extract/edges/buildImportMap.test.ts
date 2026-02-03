@@ -27,7 +27,7 @@ describe(buildImportMap.name, () => {
 
       const map = buildImportMap(consumer, "handler.ts");
 
-      expect(map.get("formatDate")).toBe("utils.ts:formatDate");
+      expect(map.get("formatDate")).toBe("utils.ts:Function:formatDate");
     });
 
     it("resolves aliased import using local name as key", () => {
@@ -43,7 +43,7 @@ describe(buildImportMap.name, () => {
 
       const map = buildImportMap(consumer, "handler.ts");
 
-      expect(map.get("fd")).toBe("utils.ts:formatDate");
+      expect(map.get("fd")).toBe("utils.ts:Function:formatDate");
       expect(map.has("formatDate")).toBe(false);
     });
 
@@ -60,7 +60,7 @@ describe(buildImportMap.name, () => {
 
       const map = buildImportMap(consumer, "handler.ts");
 
-      expect(map.get("utils")).toBe("utils.ts:utils");
+      expect(map.get("utils")).toBe("utils.ts:Variable:utils");
     });
 
     it("resolves multiple named imports from same file", () => {
@@ -79,8 +79,8 @@ export const parseDate = (s: string) => new Date(s);
 
       const map = buildImportMap(consumer, "handler.ts");
 
-      expect(map.get("formatDate")).toBe("utils.ts:formatDate");
-      expect(map.get("parseDate")).toBe("utils.ts:parseDate");
+      expect(map.get("formatDate")).toBe("utils.ts:Function:formatDate");
+      expect(map.get("parseDate")).toBe("utils.ts:Function:parseDate");
     });
   });
 
@@ -116,7 +116,7 @@ export const parseDate = (s: string) => new Date(s);
         includeTypeImports: true,
       });
 
-      expect(map.get("User")).toBe("types.ts:User");
+      expect(map.get("User")).toBe("types.ts:Interface:User");
     });
 
     it("skips inline type-only imports by default", () => {
@@ -136,7 +136,7 @@ export const format = () => {};
       const map = buildImportMap(consumer, "handler.ts");
 
       expect(map.has("User")).toBe(false);
-      expect(map.get("format")).toBe("utils.ts:format");
+      expect(map.get("format")).toBe("utils.ts:Function:format");
     });
   });
 
@@ -158,7 +158,7 @@ export const format = () => {};
 
       const map = buildImportMap(consumer, "handler.ts");
 
-      expect(map.get("clamp")).toBe("helpers.ts:clamp");
+      expect(map.get("clamp")).toBe("helpers.ts:Function:clamp");
     });
 
     it("follows star re-export to actual definition", () => {
@@ -175,7 +175,7 @@ export const format = () => {};
 
       const map = buildImportMap(consumer, "handler.ts");
 
-      expect(map.get("clamp")).toBe("helpers.ts:clamp");
+      expect(map.get("clamp")).toBe("helpers.ts:Function:clamp");
     });
 
     it("follows default-as-named re-export to actual definition", () => {
@@ -196,7 +196,7 @@ export const format = () => {};
       const map = buildImportMap(consumer, "handler.ts");
 
       // Resolves to actual variable name, not "default"
-      expect(map.get("Component")).toBe("Component.ts:Component");
+      expect(map.get("Component")).toBe("Component.ts:Function:Component");
     });
 
     it("follows nested re-export chain through multiple barrels", () => {
@@ -220,7 +220,7 @@ export const format = () => {};
 
       const map = buildImportMap(consumer, "handler.ts");
 
-      expect(map.get("helper")).toBe("deep/helper.ts:helper");
+      expect(map.get("helper")).toBe("deep/helper.ts:Function:helper");
     });
   });
 
@@ -287,7 +287,7 @@ export const format = () => {};
 
       // Should resolve to actual definition, not barrel
       expect(map.get("Button")).toBe(
-        "libs/ui/src/components/Button/Button.ts:Button",
+        "libs/ui/src/components/Button/Button.ts:Function:Button",
       );
     });
 
@@ -314,7 +314,7 @@ export const format = () => {};
       const map = buildImportMap(consumer, "apps/App.ts", { projectRegistry });
 
       // Falls back to barrel file path since alias can't be resolved
-      expect(map.get("Button")).toBe("libs/ui/src/index.ts:Button");
+      expect(map.get("Button")).toBe("libs/ui/src/index.ts:Function:Button");
     });
   });
 
@@ -375,7 +375,7 @@ export const format = () => {};
 
     // Should resolve through star re-export to actual definition
     expect(map.get("formatDate")).toBe(
-      "libs/utils/src/helpers/format.ts:formatDate",
+      "libs/utils/src/helpers/format.ts:Function:formatDate",
     );
   });
 
@@ -398,7 +398,7 @@ export const format = () => {};
     const map = buildImportMap(consumer, "handler.ts");
 
     // Should use original name from source file, not the alias
-    expect(map.get("formatDate")).toBe("utils.ts:internalFormat");
+    expect(map.get("formatDate")).toBe("utils.ts:Function:internalFormat");
   });
 
   it("follows default import through re-export chain", () => {
@@ -420,7 +420,7 @@ export const format = () => {};
     const map = buildImportMap(consumer, "handler.ts");
 
     // Should resolve to actual definition, not barrel
-    expect(map.get("Comp")).toBe("Component.ts:Component");
+    expect(map.get("Comp")).toBe("Component.ts:Function:Component");
   });
 
   it("resolves import from directory index file", () => {
@@ -436,7 +436,7 @@ export const format = () => {};
 
     const map = buildImportMap(consumer, "handler.ts");
 
-    expect(map.get("helper")).toBe("utils/index.ts:helper");
+    expect(map.get("helper")).toBe("utils/index.ts:Function:helper");
   });
 
   it("handles namespace re-export", () => {
@@ -486,8 +486,8 @@ import { clamp } from './helpers.js';
 
       const map = buildImportMap(consumer, "handler.ts");
 
-      expect(map.get("format")).toBe("utils.ts:format");
-      expect(map.get("clamp")).toBe("helpers.ts:clamp");
+      expect(map.get("format")).toBe("utils.ts:Function:format");
+      expect(map.get("clamp")).toBe("helpers.ts:Function:clamp");
     });
 
     it("handles .js extension in import path (ESM pattern)", () => {
@@ -500,7 +500,7 @@ import { clamp } from './helpers.js';
 
       const map = buildImportMap(consumer, "handler.ts");
 
-      expect(map.get("format")).toBe("utils.ts:format");
+      expect(map.get("format")).toBe("utils.ts:Function:format");
     });
 
     it("handles anonymous default export (arrow function)", () => {
@@ -514,7 +514,7 @@ import { clamp } from './helpers.js';
       const map = buildImportMap(consumer, "handler.ts");
 
       // Anonymous exports have no symbol name, should fall back to "default"
-      expect(map.get("myFunc")).toBe("utils.ts:default");
+      expect(map.get("myFunc")).toBe("utils.ts:Function:default");
     });
 
     it("handles anonymous default export (object literal)", () => {
@@ -527,7 +527,7 @@ import { clamp } from './helpers.js';
 
       const map = buildImportMap(consumer, "handler.ts");
 
-      expect(map.get("config")).toBe("config.ts:default");
+      expect(map.get("config")).toBe("config.ts:Function:default");
     });
 
     it("handles mixed default and named imports from same file", () => {
@@ -547,8 +547,8 @@ export const helper = () => {};
 
       const map = buildImportMap(consumer, "handler.ts");
 
-      expect(map.get("utils")).toBe("utils.ts:utils");
-      expect(map.get("helper")).toBe("utils.ts:helper");
+      expect(map.get("utils")).toBe("utils.ts:Variable:utils");
+      expect(map.get("helper")).toBe("utils.ts:Function:helper");
     });
 
     it("handles named re-exported as default", () => {
@@ -567,7 +567,7 @@ export const helper = () => {};
       const map = buildImportMap(consumer, "handler.ts");
 
       // Should resolve to actual definition
-      expect(map.get("Btn")).toBe("Button.ts:Button");
+      expect(map.get("Btn")).toBe("Button.ts:Function:Button");
     });
 
     it("handles direct default export of named class", () => {
@@ -583,7 +583,7 @@ export const helper = () => {};
 
       const map = buildImportMap(consumer, "handler.ts");
 
-      expect(map.get("User")).toBe("User.ts:User");
+      expect(map.get("User")).toBe("User.ts:Class:User");
     });
 
     it("handles direct default export of named function", () => {
@@ -599,7 +599,7 @@ export const helper = () => {};
 
       const map = buildImportMap(consumer, "handler.ts");
 
-      expect(map.get("fmt")).toBe("format.ts:formatDate");
+      expect(map.get("fmt")).toBe("format.ts:Function:formatDate");
     });
 
     it("handles anonymous default class export", () => {
@@ -616,7 +616,7 @@ export const helper = () => {};
       const map = buildImportMap(consumer, "handler.ts");
 
       // Anonymous class, falls back to "default"
-      expect(map.get("User")).toBe("User.ts:default");
+      expect(map.get("User")).toBe("User.ts:Class:default");
     });
   });
 });

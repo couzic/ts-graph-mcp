@@ -86,6 +86,16 @@ export const startMcpWrapper = async () => {
     {
       description: `Search the code graph by concept or symbol. Returns a subgraph showing how code connects.
 
+TRIGGERS: "analyze behavior", "trace calls", "what does X call", "who calls X", "debug", "bug", "call chain", "execution flow"
+
+When to use:
+- Analyzing function behavior or tracing execution flow
+- Understanding what a function does by examining its call chain
+- Investigating bugs that span multiple files
+- Finding all callers of a function
+
+IMPORTANT: Use this tool FIRST before reading files to trace dependencies. When you see an import and think "I need to read that file to trace the call chain" — use this tool instead. One query shows the entire chain with code snippets.
+
 Parameters:
 - topic: Filter to focus on relevant nodes
 - from: Start node(s) - what does this depend on?
@@ -100,18 +110,54 @@ Examples:
 
 Edge types in output: CALLS, REFERENCES, EXTENDS, IMPLEMENTS, INCLUDES`,
       inputSchema: {
-        topic: z.string().optional().describe("Semantic filter (natural language, e.g., 'cart validation')"),
-        from: z.object({
-          query: z.string().optional().describe("Lexical + semantic search (can return multiple nodes)"),
-          symbol: z.string().optional().describe("Exact symbol name (single node)"),
-          file_path: z.string().optional().describe("Include when known to avoid disambiguation"),
-        }).optional().describe("Start node(s) - what does this depend on?"),
-        to: z.object({
-          query: z.string().optional().describe("Lexical + semantic search (can return multiple nodes)"),
-          symbol: z.string().optional().describe("Exact symbol name (single node)"),
-          file_path: z.string().optional().describe("Include when known to avoid disambiguation"),
-        }).optional().describe("End node(s) - what depends on this?"),
-        max_nodes: z.number().optional().describe("Maximum nodes in output (default: 50)"),
+        topic: z
+          .string()
+          .optional()
+          .describe(
+            "Semantic filter (natural language, e.g., 'cart validation')",
+          ),
+        from: z
+          .object({
+            query: z
+              .string()
+              .optional()
+              .describe(
+                "Lexical + semantic search (can return multiple nodes)",
+              ),
+            symbol: z
+              .string()
+              .optional()
+              .describe("Exact symbol name (single node)"),
+            file_path: z
+              .string()
+              .optional()
+              .describe("Include when known to avoid disambiguation"),
+          })
+          .optional()
+          .describe("Start node(s) - what does this depend on?"),
+        to: z
+          .object({
+            query: z
+              .string()
+              .optional()
+              .describe(
+                "Lexical + semantic search (can return multiple nodes)",
+              ),
+            symbol: z
+              .string()
+              .optional()
+              .describe("Exact symbol name (single node)"),
+            file_path: z
+              .string()
+              .optional()
+              .describe("Include when known to avoid disambiguation"),
+          })
+          .optional()
+          .describe("End node(s) - what depends on this?"),
+        max_nodes: z
+          .number()
+          .optional()
+          .describe("Maximum nodes in output (default: 50)"),
       },
     },
     async ({ topic, from, to, max_nodes }) => {

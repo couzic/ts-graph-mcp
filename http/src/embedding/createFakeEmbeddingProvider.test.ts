@@ -20,9 +20,7 @@ describe("createFakeEmbeddingProvider", () => {
     const provider = createFakeEmbeddingProvider({ dimensions: 100 });
     const embedding = await provider.embedDocument("test input");
 
-    const magnitude = Math.sqrt(
-      embedding.reduce((sum, v) => sum + v * v, 0),
-    );
+    const magnitude = Math.sqrt(embedding.reduce((sum, v) => sum + v * v, 0));
     expect(magnitude).toBeCloseTo(1, 5);
   });
 

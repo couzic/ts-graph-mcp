@@ -16,10 +16,7 @@ export const populateSearchIndex = async (
 ): Promise<number> => {
   // Query all nodes
   const rows = db
-    .prepare<
-      [],
-      { id: string; name: string; file_path: string; type: string }
-    >(
+    .prepare<[], { id: string; name: string; file_path: string; type: string }>(
       `SELECT id, name, file_path, type
        FROM nodes`,
     )

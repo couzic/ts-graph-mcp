@@ -68,8 +68,10 @@ export const extractTakesReturnsEdges = (
   // Regular functions
   for (const func of sourceFile.getFunctions()) {
     const funcName = func.getName();
-    if (!funcName) { continue; }
-    const sourceId = generateNodeId(context.filePath, funcName);
+    if (!funcName) {
+      continue;
+    }
+    const sourceId = generateNodeId(context.filePath, "Function", funcName);
     extractFromCallable(func, sourceId, typeMap, edges);
   }
 
@@ -77,8 +79,12 @@ export const extractTakesReturnsEdges = (
   for (const variable of sourceFile.getVariableDeclarations()) {
     const varName = variable.getName();
     const initializer = variable.getInitializer();
-    if (initializer && (Node.isArrowFunction(initializer) || Node.isFunctionExpression(initializer))) {
-      const sourceId = generateNodeId(context.filePath, varName);
+    if (
+      initializer &&
+      (Node.isArrowFunction(initializer) ||
+        Node.isFunctionExpression(initializer))
+    ) {
+      const sourceId = generateNodeId(context.filePath, "Function", varName);
       extractFromCallable(initializer, sourceId, typeMap, edges);
     }
   }
@@ -86,10 +92,16 @@ export const extractTakesReturnsEdges = (
   // Class methods
   for (const classDecl of sourceFile.getClasses()) {
     const className = classDecl.getName();
-    if (!className) { continue; }
+    if (!className) {
+      continue;
+    }
     for (const method of classDecl.getMethods()) {
       const methodName = method.getName();
-      const sourceId = generateNodeId(context.filePath, className, methodName);
+      const sourceId = generateNodeId(
+        context.filePath,
+        "Method",
+        `${className}.${methodName}`,
+      );
       extractFromCallable(method, sourceId, typeMap, edges);
     }
   }
@@ -105,14 +117,26 @@ export const extractTakesReturnsEdges = (
       for (const property of initializer.getProperties()) {
         if (Node.isMethodDeclaration(property)) {
           const methodName = property.getName();
-          const sourceId = generateNodeId(context.filePath, objectName, methodName);
+          const sourceId = generateNodeId(
+            context.filePath,
+            "Function",
+            `${objectName}.${methodName}`,
+          );
           extractFromCallable(property, sourceId, typeMap, edges);
         }
         if (Node.isPropertyAssignment(property)) {
           const propInit = property.getInitializer();
-          if (propInit && (Node.isArrowFunction(propInit) || Node.isFunctionExpression(propInit))) {
+          if (
+            propInit &&
+            (Node.isArrowFunction(propInit) ||
+              Node.isFunctionExpression(propInit))
+          ) {
             const methodName = property.getName();
-            const sourceId = generateNodeId(context.filePath, objectName, methodName);
+            const sourceId = generateNodeId(
+              context.filePath,
+              "Function",
+              `${objectName}.${methodName}`,
+            );
             extractFromCallable(propInit, sourceId, typeMap, edges);
           }
         }
@@ -135,20 +159,20 @@ const buildCombinedTypeMap = (
   // Local interfaces
   for (const iface of sourceFile.getInterfaces()) {
     const name = iface.getName();
-    map.set(name, generateNodeId(context.filePath, name));
+    map.set(name, generateNodeId(context.filePath, "Interface", name));
   }
 
   // Local type aliases
   for (const typeAlias of sourceFile.getTypeAliases()) {
     const name = typeAlias.getName();
-    map.set(name, generateNodeId(context.filePath, name));
+    map.set(name, generateNodeId(context.filePath, "TypeAlias", name));
   }
 
   // Local classes (can be used as types)
   for (const classDecl of sourceFile.getClasses()) {
     const name = classDecl.getName();
     if (name) {
-      map.set(name, generateNodeId(context.filePath, name));
+      map.set(name, generateNodeId(context.filePath, "Class", name));
     }
   }
 
@@ -168,7 +192,11 @@ const buildCombinedTypeMap = (
  * Extract TAKES/RETURNS edges from a callable.
  */
 const extractFromCallable = (
-  callable: FunctionDeclaration | ArrowFunction | FunctionExpression | MethodDeclaration,
+  callable:
+    | FunctionDeclaration
+    | ArrowFunction
+    | FunctionExpression
+    | MethodDeclaration,
   sourceId: string,
   typeMap: TypeMap,
   edges: Edge[],
@@ -209,7 +237,10 @@ const extractTypeNames = (typeNode: TypeNode): string[] => {
   return names;
 };
 
-const extractTypeNamesRecursive = (typeNode: TypeNode, names: string[]): void => {
+const extractTypeNamesRecursive = (
+  typeNode: TypeNode,
+  names: string[],
+): void => {
   // Union type: A | B
   if (Node.isUnionTypeNode(typeNode)) {
     for (const member of typeNode.getTypeNodes()) {
@@ -235,7 +266,9 @@ const extractTypeNamesRecursive = (typeNode: TypeNode, names: string[]): void =>
   // Generic type: Promise<User>, Array<User>
   if (Node.isTypeReference(typeNode)) {
     const typeName = typeNode.getTypeName();
-    const name = Node.isIdentifier(typeName) ? typeName.getText() : typeName.getText();
+    const name = Node.isIdentifier(typeName)
+      ? typeName.getText()
+      : typeName.getText();
 
     // If it's a built-in wrapper, extract inner types
     if (BUILT_IN_TYPES.has(name)) {

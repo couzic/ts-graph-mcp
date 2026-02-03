@@ -4,8 +4,8 @@ import {
   enrichNodesWithCallSites,
   formatToolOutput,
 } from "../shared/formatToolOutput.js";
-import type { GraphEdgeWithCallSites } from "../shared/parseEdgeRows.js";
 import { loadNodeSnippets } from "../shared/loadNodeSnippets.js";
+import type { GraphEdgeWithCallSites } from "../shared/parseEdgeRows.js";
 import { queryNodeInfos } from "../shared/queryNodeInfos.js";
 
 /**

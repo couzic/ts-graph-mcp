@@ -4,7 +4,11 @@ import { formatDisambiguationMessage } from "./classMethodFallback.js";
 describe(formatDisambiguationMessage.name, () => {
   it("formats single method with dependencies", () => {
     const result = formatDisambiguationMessage("MyClass", [
-      { id: "src/foo.ts:MyClass.doSomething", name: "doSomething", hasDependencies: true },
+      {
+        id: "src/foo.ts:MyClass.doSomething",
+        name: "doSomething",
+        hasDependencies: true,
+      },
     ]);
 
     expect(result).toBe(
@@ -17,7 +21,11 @@ Retry with fully qualified method name.`,
 
   it("formats single method without dependencies", () => {
     const result = formatDisambiguationMessage("MyClass", [
-      { id: "src/foo.ts:MyClass.doSomething", name: "doSomething", hasDependencies: false },
+      {
+        id: "src/foo.ts:MyClass.doSomething",
+        name: "doSomething",
+        hasDependencies: false,
+      },
     ]);
 
     expect(result).toBe(
@@ -30,9 +38,21 @@ Retry with fully qualified method name.`,
 
   it("formats multiple methods with mixed dependency status", () => {
     const result = formatDisambiguationMessage("UserService", [
-      { id: "src/user.ts:UserService.save", name: "save", hasDependencies: true },
-      { id: "src/user.ts:UserService.validate", name: "validate", hasDependencies: false },
-      { id: "src/user.ts:UserService.delete", name: "delete", hasDependencies: true },
+      {
+        id: "src/user.ts:UserService.save",
+        name: "save",
+        hasDependencies: true,
+      },
+      {
+        id: "src/user.ts:UserService.validate",
+        name: "validate",
+        hasDependencies: false,
+      },
+      {
+        id: "src/user.ts:UserService.delete",
+        name: "delete",
+        hasDependencies: true,
+      },
     ]);
 
     expect(result).toBe(

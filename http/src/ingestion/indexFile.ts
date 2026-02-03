@@ -1,11 +1,11 @@
 import type { SourceFile } from "ts-morph";
 import type { DbWriter } from "../db/DbWriter.js";
 import type { Node } from "../db/Types.js";
+import type { EmbeddingProvider } from "../embedding/EmbeddingTypes.js";
 import {
   computeContentHash,
   type EmbeddingCacheConnection,
 } from "../embedding/embeddingCache.js";
-import type { EmbeddingProvider } from "../embedding/EmbeddingTypes.js";
 import type { SearchIndexWrapper } from "../search/createSearchIndex.js";
 import type { SearchDocument } from "../search/SearchTypes.js";
 import type { EdgeExtractionContext } from "./extract/edges/EdgeExtractionContext.js";
@@ -18,10 +18,7 @@ const MAX_SOURCE_LINES = 50;
 /**
  * Extract source snippet for a node from the source file text.
  */
-const extractSourceSnippet = (
-  sourceText: string,
-  node: Node,
-): string => {
+const extractSourceSnippet = (sourceText: string, node: Node): string => {
   const lines = sourceText.split("\n");
   const startIdx = node.startLine - 1; // 1-indexed to 0-indexed
   const endIdx = Math.min(node.endLine, startIdx + MAX_SOURCE_LINES);
@@ -37,10 +34,7 @@ const extractSourceSnippet = (
  * Prepare content for embedding.
  * Includes metadata prefix and source snippet.
  */
-const prepareEmbeddingContent = (
-  node: Node,
-  sourceSnippet: string,
-): string => {
+const prepareEmbeddingContent = (node: Node, sourceSnippet: string): string => {
   return `// ${node.type}: ${node.name}
 // File: ${node.filePath}
 

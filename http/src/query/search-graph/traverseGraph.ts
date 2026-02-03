@@ -1,14 +1,14 @@
+import { EDGE_TYPES } from "@ts-graph/shared";
 import type Database from "better-sqlite3";
 import { attemptClassMethodFallback } from "../shared/classMethodFallback.js";
 import { collectNodeIds } from "../shared/collectNodeIds.js";
-import {  MAX_DEPTH } from "../shared/constants.js";
+import { MAX_DEPTH } from "../shared/constants.js";
 import {
   type EdgeRowWithCallSites,
   type GraphEdgeWithCallSites,
   parseEdgeRows,
 } from "../shared/parseEdgeRows.js";
 import { resolveSymbol } from "../shared/symbolNotFound.js";
-import { EDGE_TYPES } from "@ts-graph/shared";
 
 /**
  * Result of a raw graph traversal query.
@@ -203,12 +203,15 @@ export const queryDependents = (
 /**
  * Filter edges to keep only those where both source and target are in the allowed set.
  */
-export const filterEdgesByNodes = <T extends { source: string; target: string }>(
+export const filterEdgesByNodes = <
+  T extends { source: string; target: string },
+>(
   edges: T[],
   allowedNodeIds: Set<string>,
 ): T[] => {
   return edges.filter(
-    (edge) => allowedNodeIds.has(edge.source) && allowedNodeIds.has(edge.target),
+    (edge) =>
+      allowedNodeIds.has(edge.source) && allowedNodeIds.has(edge.target),
   );
 };
 

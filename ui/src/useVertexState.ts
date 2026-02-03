@@ -11,15 +11,15 @@ import type { VertexInstance } from "verdux";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const useVertexState = <T extends Record<string, any>>(
   vertex: VertexInstance<any, any>,
-  fields: (keyof T)[]
+  fields: (keyof T)[],
 ): T => {
   const resource = useMemo(
     () =>
       new ObservableResource(
         vertex.pick(fields as string[]),
-        (state: { status: string }) => state.status === "loaded"
+        (state: { status: string }) => state.status === "loaded",
       ),
-    [vertex, ...fields]
+    [vertex, ...fields],
   );
   const loadableState = useObservableSuspense(resource);
   if (loadableState.status !== "loaded") {

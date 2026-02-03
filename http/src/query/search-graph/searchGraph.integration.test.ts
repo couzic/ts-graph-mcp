@@ -8,13 +8,16 @@ import {
 import { initializeSchema } from "../../db/sqlite/sqliteSchema.utils.js";
 import type { Edge, FunctionNode } from "../../db/Types.js";
 import { createFakeEmbeddingProvider } from "../../embedding/createFakeEmbeddingProvider.js";
-import { createSearchIndex, type SearchIndexWrapper } from "../../search/createSearchIndex.js";
+import {
+  createSearchIndex,
+  type SearchIndexWrapper,
+} from "../../search/createSearchIndex.js";
 import { populateSearchIndex } from "../../search/populateSearchIndex.js";
 import type { SearchDocument } from "../../search/SearchTypes.js";
 import { searchGraph } from "./searchGraph.js";
 
 const fn = (name: string, file = "src/test.ts"): FunctionNode => ({
-  id: `${file}:${name}`,
+  id: `${file}:Function:${name}`,
   type: "Function",
   name,
   package: "main",
@@ -134,7 +137,10 @@ describe(searchGraph.name, () => {
       ]);
       // Add edge between validation functions
       await writer.addEdges([
-        calls("src/test.ts:validateInput", "src/test.ts:validateOutput"),
+        calls(
+          "src/test.ts:Function:validateInput",
+          "src/test.ts:Function:validateOutput",
+        ),
       ]);
 
       await populateSearchIndex(db, searchIndex);
@@ -156,10 +162,7 @@ describe(searchGraph.name, () => {
 
     it("returns flat list when topic symbols have no connections", async () => {
       const writer = createSqliteWriter(db);
-      await writer.addNodes([
-        fn("validateInput"),
-        fn("validateOutput"),
-      ]);
+      await writer.addNodes([fn("validateInput"), fn("validateOutput")]);
       // No edges between them
 
       await populateSearchIndex(db, searchIndex);
@@ -410,12 +413,11 @@ describe(searchGraph.name, () => {
     });
 
     it("indicates semantic search mode when embedding provider available", async () => {
-      const embeddingProvider = createFakeEmbeddingProvider({ dimensions: VECTOR_DIMS });
+      const embeddingProvider = createFakeEmbeddingProvider({
+        dimensions: VECTOR_DIMS,
+      });
       const writer = createSqliteWriter(db);
-      await writer.addNodes([
-        fn("calculateTax"),
-        fn("computeDiscount"),
-      ]);
+      await writer.addNodes([fn("calculateTax"), fn("computeDiscount")]);
 
       // Add documents with embeddings
       const docs: SearchDocument[] = [
@@ -425,7 +427,9 @@ describe(searchGraph.name, () => {
           file: "src/test.ts",
           nodeType: "Function",
           content: "calculate tax for order",
-          embedding: await embeddingProvider.embedDocument("calculate tax for order"),
+          embedding: await embeddingProvider.embedDocument(
+            "calculate tax for order",
+          ),
         },
         {
           id: "src/test.ts:computeDiscount",
@@ -433,7 +437,9 @@ describe(searchGraph.name, () => {
           file: "src/test.ts",
           nodeType: "Function",
           content: "compute discount percentage",
-          embedding: await embeddingProvider.embedDocument("compute discount percentage"),
+          embedding: await embeddingProvider.embedDocument(
+            "compute discount percentage",
+          ),
         },
       ];
       await searchIndex.addBatch(docs);
@@ -451,7 +457,9 @@ describe(searchGraph.name, () => {
     });
 
     it("falls back to keyword search without embedding provider", async () => {
-      const embeddingProvider = createFakeEmbeddingProvider({ dimensions: VECTOR_DIMS });
+      const embeddingProvider = createFakeEmbeddingProvider({
+        dimensions: VECTOR_DIMS,
+      });
       const writer = createSqliteWriter(db);
       await writer.addNodes([fn("validateInput")]);
 
@@ -462,7 +470,9 @@ describe(searchGraph.name, () => {
           file: "src/test.ts",
           nodeType: "Function",
           content: "validate user input",
-          embedding: await embeddingProvider.embedDocument("validate user input"),
+          embedding: await embeddingProvider.embedDocument(
+            "validate user input",
+          ),
         },
       ];
       await searchIndex.addBatch(docs);
@@ -480,7 +490,9 @@ describe(searchGraph.name, () => {
     });
 
     it("uses hybrid search for from.query resolution", async () => {
-      const embeddingProvider = createFakeEmbeddingProvider({ dimensions: VECTOR_DIMS });
+      const embeddingProvider = createFakeEmbeddingProvider({
+        dimensions: VECTOR_DIMS,
+      });
       const writer = createSqliteWriter(db);
       const nodeA = fn("processUserData");
       const nodeB = fn("saveToStorage");
@@ -495,7 +507,9 @@ describe(searchGraph.name, () => {
           file: nodeA.filePath,
           nodeType: "Function",
           content: "process user data and transform",
-          embedding: await embeddingProvider.embedDocument("process user data and transform"),
+          embedding: await embeddingProvider.embedDocument(
+            "process user data and transform",
+          ),
         },
         {
           id: nodeB.id,
@@ -503,7 +517,9 @@ describe(searchGraph.name, () => {
           file: nodeB.filePath,
           nodeType: "Function",
           content: "save data to storage layer",
-          embedding: await embeddingProvider.embedDocument("save data to storage layer"),
+          embedding: await embeddingProvider.embedDocument(
+            "save data to storage layer",
+          ),
         },
       ];
       await searchIndex.addBatch(docs);

@@ -28,7 +28,7 @@ describe(extractInterfaceNodes.name, () => {
 
     expect(interfaces).toHaveLength(1);
     expect(interfaces[0]).toMatchObject({
-      id: "src/test.ts:User",
+      id: "src/test.ts:Interface:User",
       type: "Interface",
       name: "User",
       package: "myapp",

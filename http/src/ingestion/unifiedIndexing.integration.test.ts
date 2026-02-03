@@ -57,7 +57,9 @@ describe("Unified Indexing", () => {
 export function parseDate(s: string): Date { return new Date(s); }`,
       );
 
-      const project = new Project({ tsConfigFilePath: join(pkgDir, "tsconfig.json") });
+      const project = new Project({
+        tsConfigFilePath: join(pkgDir, "tsconfig.json"),
+      });
       const sourceFile = project.getSourceFileOrThrow(join(pkgDir, "utils.ts"));
 
       const writer = createSqliteWriter(db);
@@ -95,7 +97,9 @@ export function parseDate(s: string): Date { return new Date(s); }`,
       );
       writeFileSync(join(pkgDir, "app.ts"), "export const app = true;");
 
-      const project = new Project({ tsConfigFilePath: join(pkgDir, "tsconfig.json") });
+      const project = new Project({
+        tsConfigFilePath: join(pkgDir, "tsconfig.json"),
+      });
       const sourceFile = project.getSourceFileOrThrow(join(pkgDir, "app.ts"));
 
       const writer = createSqliteWriter(db);
@@ -174,7 +178,8 @@ describe("Unified Indexing - Watch Mode", () => {
 
   let db: Database.Database;
 
-  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+  const sleep = (ms: number) =>
+    new Promise((resolve) => setTimeout(resolve, ms));
 
   beforeEach(() => {
     mkdirSync(join(WATCH_TEST_DIR, "src"), { recursive: true });

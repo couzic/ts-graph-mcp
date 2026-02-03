@@ -75,7 +75,7 @@ export const extractHasTypeEdges = (
       continue;
     }
 
-    const sourceId = generateNodeId(context.filePath, varName);
+    const sourceId = generateNodeId(context.filePath, "Variable", varName);
     const typeNames = extractTypeNames(typeNode);
 
     for (const typeName of typeNames) {
@@ -101,20 +101,20 @@ const buildCombinedTypeMap = (
   // Local interfaces
   for (const iface of sourceFile.getInterfaces()) {
     const name = iface.getName();
-    map.set(name, generateNodeId(context.filePath, name));
+    map.set(name, generateNodeId(context.filePath, "Interface", name));
   }
 
   // Local type aliases
   for (const typeAlias of sourceFile.getTypeAliases()) {
     const name = typeAlias.getName();
-    map.set(name, generateNodeId(context.filePath, name));
+    map.set(name, generateNodeId(context.filePath, "TypeAlias", name));
   }
 
   // Local classes
   for (const classDecl of sourceFile.getClasses()) {
     const name = classDecl.getName();
     if (name) {
-      map.set(name, generateNodeId(context.filePath, name));
+      map.set(name, generateNodeId(context.filePath, "Class", name));
     }
   }
 

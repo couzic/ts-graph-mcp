@@ -1,17 +1,17 @@
-import type { NodeType } from "@ts-graph/shared";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import {
   count,
   create,
   insert,
   insertMultiple,
   load,
+  type Orama,
+  type RawData,
   remove,
   save,
   search,
-  type Orama,
-  type RawData,
 } from "@orama/orama";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import type { NodeType } from "@ts-graph/shared";
 import type {
   SearchDocument,
   SearchMode,

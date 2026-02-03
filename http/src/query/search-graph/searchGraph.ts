@@ -5,6 +5,7 @@ import type { SearchMode } from "../../search/SearchTypes.js";
 import { dependenciesOf } from "../dependencies-of/dependenciesOf.js";
 import { dependentsOf } from "../dependents-of/dependentsOf.js";
 import { pathsBetween } from "../paths-between/pathsBetween.js";
+import type { GraphEdgeWithCallSites } from "../shared/parseEdgeRows.js";
 import type { QueryOptions } from "../shared/QueryTypes.js";
 import {
   filterEdgesToTopicRelevant,
@@ -12,7 +13,6 @@ import {
 } from "./filterByTopic.js";
 import { formatFilteredTraversal } from "./formatFilteredTraversal.js";
 import type { GraphEndpoint, SearchGraphInput } from "./SearchGraphTypes.js";
-import type { GraphEdgeWithCallSites } from "../shared/parseEdgeRows.js";
 import {
   queryDependencies,
   queryDependents,
@@ -126,8 +126,11 @@ const queryMultipleFromEndpoints = (
   }
 
   // Deduplicate edges
-  const edgeKey = (e: GraphEdgeWithCallSites) => `${e.source}->${e.target}:${e.type}`;
-  const uniqueEdges = [...new Map(allEdges.map((e) => [edgeKey(e), e])).values()];
+  const edgeKey = (e: GraphEdgeWithCallSites) =>
+    `${e.source}->${e.target}:${e.type}`;
+  const uniqueEdges = [
+    ...new Map(allEdges.map((e) => [edgeKey(e), e])).values(),
+  ];
 
   if (uniqueEdges.length === 0) {
     return "No dependencies found for matching symbols.";
@@ -163,8 +166,11 @@ const queryMultipleToEndpoints = (
   }
 
   // Deduplicate edges
-  const edgeKey = (e: GraphEdgeWithCallSites) => `${e.source}->${e.target}:${e.type}`;
-  const uniqueEdges = [...new Map(allEdges.map((e) => [edgeKey(e), e])).values()];
+  const edgeKey = (e: GraphEdgeWithCallSites) =>
+    `${e.source}->${e.target}:${e.type}`;
+  const uniqueEdges = [
+    ...new Map(allEdges.map((e) => [edgeKey(e), e])).values(),
+  ];
 
   if (uniqueEdges.length === 0) {
     return "No dependents found for matching symbols.";
@@ -280,8 +286,16 @@ export const searchGraph = async (
 
   // Resolve endpoints (exact symbol or lexical + semantic search)
   // Returns arrays: symbol = single result, query = multiple results
-  const fromResolved = await resolveEndpoint(input.from, searchIndex, embeddingProvider);
-  const toResolved = await resolveEndpoint(input.to, searchIndex, embeddingProvider);
+  const fromResolved = await resolveEndpoint(
+    input.from,
+    searchIndex,
+    embeddingProvider,
+  );
+  const toResolved = await resolveEndpoint(
+    input.to,
+    searchIndex,
+    embeddingProvider,
+  );
 
   // Case 1: Both from and to resolved → path finding
   // For now, use first match from each (path finding with multiple endpoints is complex)
@@ -330,13 +344,10 @@ export const searchGraph = async (
 
     // Single endpoint: standard traversal
     const from = fromResolved[0]!;
-    return dependenciesOf(
-      db,
-      projectRoot,
-      from.file_path,
-      from.symbol,
-      { ...options, maxNodes },
-    );
+    return dependenciesOf(db, projectRoot, from.file_path, from.symbol, {
+      ...options,
+      maxNodes,
+    });
   }
 
   // Case 3: Only to resolved → backward traversal (dependents)
@@ -361,23 +372,15 @@ export const searchGraph = async (
 
     // Multiple to endpoints: query dependents for each, merge results
     if (toResolved.length > 1 && input.to?.query) {
-      return queryMultipleToEndpoints(
-        db,
-        projectRoot,
-        toResolved,
-        maxNodes,
-      );
+      return queryMultipleToEndpoints(db, projectRoot, toResolved, maxNodes);
     }
 
     // Single endpoint: standard traversal
     const to = toResolved[0]!;
-    return dependentsOf(
-      db,
-      projectRoot,
-      to.file_path,
-      to.symbol,
-      { ...options, maxNodes },
-    );
+    return dependentsOf(db, projectRoot, to.file_path, to.symbol, {
+      ...options,
+      maxNodes,
+    });
   }
 
   // Case 4: Semantic search (topic only, or query-based from/to without search index)
@@ -409,9 +412,11 @@ export const searchGraph = async (
 
     // If no edges found, return as flat list (isolated symbols)
     if (edges.length === 0) {
-      const searchModeLabel = searchConfig.mode === "hybrid" ? "semantic" : "keyword";
+      const searchModeLabel =
+        searchConfig.mode === "hybrid" ? "semantic" : "keyword";
       const lines = results.map(
-        (r) => `${r.symbol} (${r.nodeType}) - ${r.file} [score: ${r.score.toFixed(3)}]`,
+        (r) =>
+          `${r.symbol} (${r.nodeType}) - ${r.file} [score: ${r.score.toFixed(3)}]`,
       );
       return `## Symbols matching "${input.topic}" (${searchModeLabel} search)\n\nNo connections found between symbols.\n\n${lines.join("\n")}`;
     }

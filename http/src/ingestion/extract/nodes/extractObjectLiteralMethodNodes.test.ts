@@ -1,6 +1,6 @@
 import assert from "node:assert";
-import { describe, expect, it } from "vitest";
 import { Project } from "ts-morph";
+import { describe, expect, it } from "vitest";
 import { extractObjectLiteralMethodNodes } from "./extractObjectLiteralMethodNodes.js";
 
 const createSourceFile = (code: string) => {
@@ -25,7 +25,7 @@ describe("extractObjectLiteralMethodNodes", () => {
     expect(nodes).toHaveLength(1);
     const [method] = nodes;
     assert(method !== undefined);
-    expect(method.id).toBe("test.ts:userService.login");
+    expect(method.id).toBe("test.ts:Function:userService.login");
     expect(method.name).toBe("login");
     expect(method.type).toBe("Function");
     expect(method.parameters).toEqual([{ name: "user", type: "User" }]);
@@ -45,8 +45,8 @@ describe("extractObjectLiteralMethodNodes", () => {
     expect(nodes).toHaveLength(2);
     expect(nodes.map((n) => n.name)).toEqual(["get", "post"]);
     expect(nodes.map((n) => n.id)).toEqual([
-      "test.ts:api.get",
-      "test.ts:api.post",
+      "test.ts:Function:api.get",
+      "test.ts:Function:api.post",
     ]);
   });
 
@@ -77,7 +77,7 @@ describe("extractObjectLiteralMethodNodes", () => {
     expect(nodes).toHaveLength(1);
     const [method] = nodes;
     assert(method !== undefined);
-    expect(method.id).toBe("test.ts:utils.format");
+    expect(method.id).toBe("test.ts:Function:utils.format");
     expect(method.name).toBe("format");
     expect(method.parameters).toEqual([{ name: "value", type: "string" }]);
     expect(method.returnType).toBe("string");
@@ -127,8 +127,12 @@ describe("extractObjectLiteralMethodNodes", () => {
     const nodes = extractObjectLiteralMethodNodes(sourceFile, context);
 
     expect(nodes).toHaveLength(2);
-    const exportedMethod = nodes.find((n) => n.id === "test.ts:exported.method");
-    const notExportedMethod = nodes.find((n) => n.id === "test.ts:notExported.method");
+    const exportedMethod = nodes.find(
+      (n) => n.id === "test.ts:Function:exported.method",
+    );
+    const notExportedMethod = nodes.find(
+      (n) => n.id === "test.ts:Function:notExported.method",
+    );
     assert(exportedMethod !== undefined);
     assert(notExportedMethod !== undefined);
     expect(exportedMethod.exported).toBe(true);

@@ -22,7 +22,9 @@ const mockEmbed = (text: string, dims: number): number[] => {
 
 describe(preprocessForBM25.name, () => {
   it("includes both split and original", () => {
-    expect(preprocessForBM25("validateCart")).toBe("validate Cart validateCart");
+    expect(preprocessForBM25("validateCart")).toBe(
+      "validate Cart validateCart",
+    );
   });
 
   it("handles single-word symbols", () => {
@@ -131,11 +133,7 @@ describe(createSearchIndex.name, () => {
   it("batch adds documents efficiently", async () => {
     const index = await createSearchIndex();
 
-    await index.addBatch([
-      doc("fnA"),
-      doc("fnB"),
-      doc("fnC"),
-    ]);
+    await index.addBatch([doc("fnA"), doc("fnB"), doc("fnC")]);
 
     const count = await index.count();
     expect(count).toBe(3);
@@ -185,17 +183,22 @@ describe(createSearchIndex.name, () => {
       await index.add({ ...docWithEmbed("test"), embedding: undefined });
 
       await expect(
-        index.search("test", { mode: "vector", vector: mockEmbed("test", DIMS) }),
-      ).rejects.toThrow("Vector search requires index created with vectorDimensions");
+        index.search("test", {
+          mode: "vector",
+          vector: mockEmbed("test", DIMS),
+        }),
+      ).rejects.toThrow(
+        "Vector search requires index created with vectorDimensions",
+      );
     });
 
     it("throws when vector not provided for vector search", async () => {
       const index = await createSearchIndex({ vectorDimensions: DIMS });
       await index.add(docWithEmbed("test"));
 
-      await expect(
-        index.search("test", { mode: "vector" }),
-      ).rejects.toThrow("Vector search requires a query vector");
+      await expect(index.search("test", { mode: "vector" })).rejects.toThrow(
+        "Vector search requires a query vector",
+      );
     });
 
     it("performs vector search", async () => {
@@ -299,7 +302,9 @@ describe(createSearchIndex.name, () => {
 
       await original.saveToFile(INDEX_PATH);
 
-      const loaded = await loadSearchIndexFromFile(INDEX_PATH, { vectorDimensions: DIMS });
+      const loaded = await loadSearchIndexFromFile(INDEX_PATH, {
+        vectorDimensions: DIMS,
+      });
 
       expect(loaded).not.toBeNull();
       expect(loaded!.supportsVectors).toBe(true);

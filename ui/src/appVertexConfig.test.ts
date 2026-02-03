@@ -1,13 +1,14 @@
 import assert from "node:assert";
-import { createGraph, Graph, Vertex } from "verdux";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { HealthResponse } from "./ApiService.js";
-import {
-  appActions,
-  createAppVertexConfig,
-} from "./appVertexConfig.js";
-import { GraphEndpoint, SymbolOption, symbolToEndpoint } from "./SymbolOption.js";
 import { Subject } from "rxjs";
+import { createGraph, type Graph, type Vertex } from "verdux";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { HealthResponse } from "./ApiService.js";
+import { appActions, createAppVertexConfig } from "./appVertexConfig.js";
+import {
+  type GraphEndpoint,
+  type SymbolOption,
+  symbolToEndpoint,
+} from "./SymbolOption.js";
 
 describe("appVertexConfig", () => {
   let graph: Graph;
@@ -408,7 +409,7 @@ describe("appVertexConfig", () => {
             file_path: `src/${i}.ts`,
             symbol: `func${i}`,
             type: "Function",
-          })
+          }),
         );
       }
       expect(vertex.currentState.selectionHistory).toHaveLength(12);
@@ -423,7 +424,9 @@ describe("appVertexConfig", () => {
     });
 
     it("does not add query endpoints to history", () => {
-      graph.dispatch(appActions.setFromEndpoint({ kind: "query", query: "user auth" }));
+      graph.dispatch(
+        appActions.setFromEndpoint({ kind: "query", query: "user auth" }),
+      );
       expect(vertex.currentState.selectionHistory).toEqual([]);
     });
   });

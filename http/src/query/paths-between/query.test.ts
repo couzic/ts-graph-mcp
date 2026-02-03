@@ -10,7 +10,7 @@ import type { Edge, FunctionNode } from "../../db/Types.js";
 import { queryPath } from "./query.js";
 
 const fn = (name: string, file = "src/test.ts"): FunctionNode => ({
-  id: `${file}:${name}`,
+  id: `${file}:Function:${name}`,
   type: "Function",
   name,
   package: "main",

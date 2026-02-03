@@ -28,7 +28,7 @@ describe(extractFunctionNodes.name, () => {
 
     expect(functions).toHaveLength(1);
     expect(functions[0]).toMatchObject({
-      id: "src/test.ts:formatDate",
+      id: "src/test.ts:Function:formatDate",
       type: "Function",
       name: "formatDate",
       package: "myapp",

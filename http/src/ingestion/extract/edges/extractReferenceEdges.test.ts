@@ -26,8 +26,8 @@ export const process = (nums: number[]) => nums.map(double);
       const edges = extractReferenceEdges(sourceFile, defaultContext);
 
       expect(edges).toContainEqual({
-        source: generateNodeId("test.ts", "process"),
-        target: generateNodeId("test.ts", "double"),
+        source: generateNodeId("test.ts", "Function", "process"),
+        target: generateNodeId("test.ts", "Function", "double"),
         type: "REFERENCES",
         referenceContext: "callback",
       });
@@ -46,8 +46,8 @@ export const filterEvens = (nums: number[]) => nums.filter(isEven);
       const edges = extractReferenceEdges(sourceFile, defaultContext);
 
       expect(edges).toContainEqual({
-        source: generateNodeId("test.ts", "filterEvens"),
-        target: generateNodeId("test.ts", "isEven"),
+        source: generateNodeId("test.ts", "Function", "filterEvens"),
+        target: generateNodeId("test.ts", "Function", "isEven"),
         type: "REFERENCES",
         referenceContext: "callback",
       });
@@ -68,8 +68,8 @@ export const config = { onClick: handleClick };
       const edges = extractReferenceEdges(sourceFile, defaultContext);
 
       expect(edges).toContainEqual({
-        source: generateNodeId("test.ts", "config"),
-        target: generateNodeId("test.ts", "handleClick"),
+        source: generateNodeId("test.ts", "Variable", "config"),
+        target: generateNodeId("test.ts", "Function", "handleClick"),
         type: "REFERENCES",
         referenceContext: "property",
       });
@@ -88,8 +88,8 @@ export const routes = { handler };
       const edges = extractReferenceEdges(sourceFile, defaultContext);
 
       expect(edges).toContainEqual({
-        source: generateNodeId("test.ts", "routes"),
-        target: generateNodeId("test.ts", "handler"),
+        source: generateNodeId("test.ts", "Variable", "routes"),
+        target: generateNodeId("test.ts", "Function", "handler"),
         type: "REFERENCES",
         referenceContext: "property",
       });
@@ -109,14 +109,14 @@ export const handlers = { create: handleCreate, delete: handleDelete };
       const edges = extractReferenceEdges(sourceFile, defaultContext);
 
       expect(edges).toContainEqual({
-        source: generateNodeId("test.ts", "handlers"),
-        target: generateNodeId("test.ts", "handleCreate"),
+        source: generateNodeId("test.ts", "Variable", "handlers"),
+        target: generateNodeId("test.ts", "Function", "handleCreate"),
         type: "REFERENCES",
         referenceContext: "property",
       });
       expect(edges).toContainEqual({
-        source: generateNodeId("test.ts", "handlers"),
-        target: generateNodeId("test.ts", "handleDelete"),
+        source: generateNodeId("test.ts", "Variable", "handlers"),
+        target: generateNodeId("test.ts", "Function", "handleDelete"),
         type: "REFERENCES",
         referenceContext: "property",
       });
@@ -138,14 +138,14 @@ export const handlers = [fn1, fn2];
       const edges = extractReferenceEdges(sourceFile, defaultContext);
 
       expect(edges).toContainEqual({
-        source: generateNodeId("test.ts", "handlers"),
-        target: generateNodeId("test.ts", "fn1"),
+        source: generateNodeId("test.ts", "Variable", "handlers"),
+        target: generateNodeId("test.ts", "Function", "fn1"),
         type: "REFERENCES",
         referenceContext: "array",
       });
       expect(edges).toContainEqual({
-        source: generateNodeId("test.ts", "handlers"),
-        target: generateNodeId("test.ts", "fn2"),
+        source: generateNodeId("test.ts", "Variable", "handlers"),
+        target: generateNodeId("test.ts", "Function", "fn2"),
         type: "REFERENCES",
         referenceContext: "array",
       });
@@ -168,8 +168,8 @@ export const factory = () => {
       const edges = extractReferenceEdges(sourceFile, defaultContext);
 
       expect(edges).toContainEqual({
-        source: generateNodeId("test.ts", "factory"),
-        target: generateNodeId("test.ts", "createHandler"),
+        source: generateNodeId("test.ts", "Function", "factory"),
+        target: generateNodeId("test.ts", "Function", "createHandler"),
         type: "REFERENCES",
         referenceContext: "return",
       });
@@ -190,8 +190,8 @@ export const alias = original;
       const edges = extractReferenceEdges(sourceFile, defaultContext);
 
       expect(edges).toContainEqual({
-        source: generateNodeId("test.ts", "alias"),
-        target: generateNodeId("test.ts", "original"),
+        source: generateNodeId("test.ts", "Variable", "alias"),
+        target: generateNodeId("test.ts", "Function", "original"),
         type: "REFERENCES",
         referenceContext: "assignment",
       });
@@ -218,22 +218,22 @@ export function dispatch(type: UserType) {
 
       // dispatch references userFormatters (via element access)
       expect(edges).toContainEqual({
-        source: generateNodeId("test.ts", "dispatch"),
-        target: generateNodeId("test.ts", "userFormatters"),
+        source: generateNodeId("test.ts", "Function", "dispatch"),
+        target: generateNodeId("test.ts", "Variable", "userFormatters"),
         type: "REFERENCES",
         referenceContext: "access",
       });
 
       // userFormatters references the functions (via object properties)
       expect(edges).toContainEqual({
-        source: generateNodeId("test.ts", "userFormatters"),
-        target: generateNodeId("test.ts", "formatCustomer"),
+        source: generateNodeId("test.ts", "Variable", "userFormatters"),
+        target: generateNodeId("test.ts", "Function", "formatCustomer"),
         type: "REFERENCES",
         referenceContext: "property",
       });
       expect(edges).toContainEqual({
-        source: generateNodeId("test.ts", "userFormatters"),
-        target: generateNodeId("test.ts", "formatAdmin"),
+        source: generateNodeId("test.ts", "Variable", "userFormatters"),
+        target: generateNodeId("test.ts", "Function", "formatAdmin"),
         type: "REFERENCES",
         referenceContext: "property",
       });
@@ -256,8 +256,8 @@ export const main = () => greet('world');
       // greet is called, not referenced - should not appear
       const hasGreetRef = edges.some(
         (e) =>
-          e.target === generateNodeId("test.ts", "greet") &&
-          e.source === generateNodeId("test.ts", "main"),
+          e.target === generateNodeId("test.ts", "Function", "greet") &&
+          e.source === generateNodeId("test.ts", "Function", "main"),
       );
       expect(hasGreetRef).toBe(false);
     });
@@ -276,8 +276,8 @@ export const myFunc = () => {};
       // Self-reference via definition should not appear
       const hasSelfRef = edges.some(
         (e) =>
-          e.source === generateNodeId("test.ts", "myFunc") &&
-          e.target === generateNodeId("test.ts", "myFunc"),
+          e.source === generateNodeId("test.ts", "Function", "myFunc") &&
+          e.target === generateNodeId("test.ts", "Function", "myFunc"),
       );
       expect(hasSelfRef).toBe(false);
     });
@@ -314,8 +314,8 @@ export function calculateArea(w: number, h: number) {
       // MathUtils is used to call a method, not referenced - should not appear
       const hasMathUtilsRef = edges.some(
         (e) =>
-          e.target === generateNodeId("test.ts", "MathUtils") &&
-          e.source === generateNodeId("test.ts", "calculateArea"),
+          e.target === generateNodeId("test.ts", "Variable", "MathUtils") &&
+          e.source === generateNodeId("test.ts", "Function", "calculateArea"),
       );
       expect(hasMathUtilsRef).toBe(false);
     });
@@ -337,8 +337,8 @@ export function calculateArea(w: number, h: number) {
       // MathUtils is used to call a method via bracket notation, not referenced
       const hasMathUtilsRef = edges.some(
         (e) =>
-          e.target === generateNodeId("test.ts", "MathUtils") &&
-          e.source === generateNodeId("test.ts", "calculateArea"),
+          e.target === generateNodeId("test.ts", "Variable", "MathUtils") &&
+          e.source === generateNodeId("test.ts", "Function", "calculateArea"),
       );
       expect(hasMathUtilsRef).toBe(false);
     });
@@ -369,8 +369,8 @@ export const process = (dates: Date[]) => dates.map(formatDate);
       });
 
       expect(edges).toContainEqual({
-        source: generateNodeId("main.ts", "process"),
-        target: generateNodeId("utils.ts", "formatDate"),
+        source: generateNodeId("main.ts", "Function", "process"),
+        target: generateNodeId("utils.ts", "Function", "formatDate"),
         type: "REFERENCES",
         referenceContext: "callback",
       });

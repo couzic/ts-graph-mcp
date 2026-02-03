@@ -1,12 +1,12 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import {
-  openDatabase,
-  closeDatabase,
-} from "../../db/sqlite/sqliteConnection.utils.js";
-import { dependenciesOf } from "./dependenciesOf.js";
 import type { Database } from "better-sqlite3";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { DbWriter } from "../../db/DbWriter.js";
 import { createSqliteWriter } from "../../db/sqlite/createSqliteWriter.js";
+import {
+  closeDatabase,
+  openDatabase,
+} from "../../db/sqlite/sqliteConnection.utils.js";
+import { dependenciesOf } from "./dependenciesOf.js";
 
 describe("mermaid start node type-aware display", () => {
   let db: Database;
@@ -20,7 +20,7 @@ describe("mermaid start node type-aware display", () => {
     // Insert test nodes
     await writer.addNodes([
       {
-        id: "src/api.ts:handleRequest",
+        id: "src/api.ts:Function:handleRequest",
         name: "handleRequest",
         type: "Function",
         package: "test",
@@ -30,7 +30,7 @@ describe("mermaid start node type-aware display", () => {
         exported: true,
       },
       {
-        id: "src/db.ts:saveData",
+        id: "src/db.ts:Function:saveData",
         name: "saveData",
         type: "Function",
         package: "test",
@@ -44,8 +44,8 @@ describe("mermaid start node type-aware display", () => {
     // Insert test edge
     await writer.addEdges([
       {
-        source: "src/api.ts:handleRequest",
-        target: "src/db.ts:saveData",
+        source: "src/api.ts:Function:handleRequest",
+        target: "src/db.ts:Function:saveData",
         type: "CALLS",
       },
     ]);

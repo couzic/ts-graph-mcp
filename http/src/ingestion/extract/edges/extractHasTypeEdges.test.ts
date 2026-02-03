@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import { Project } from "ts-morph";
+import { describe, expect, it } from "vitest";
 import { extractHasTypeEdges } from "./extractHasTypeEdges.js";
 
 const createSourceFile = (code: string) => {
@@ -20,8 +20,8 @@ describe("extractHasTypeEdges", () => {
 
     expect(edges).toHaveLength(1);
     expect(edges[0]).toEqual({
-      source: "test.ts:currentUser",
-      target: "test.ts:User",
+      source: "test.ts:Variable:currentUser",
+      target: "test.ts:Interface:User",
       type: "HAS_TYPE",
     });
   });
@@ -57,7 +57,7 @@ describe("extractHasTypeEdges", () => {
     const edges = extractHasTypeEdges(sourceFile, context);
 
     expect(edges).toHaveLength(1);
-    expect(edges[0]?.target).toBe("test.ts:User");
+    expect(edges[0]?.target).toBe("test.ts:Interface:User");
   });
 
   it("extracts multiple edges for union types", () => {
@@ -70,8 +70,8 @@ describe("extractHasTypeEdges", () => {
     const edges = extractHasTypeEdges(sourceFile, context);
 
     expect(edges).toHaveLength(2);
-    expect(edges.map((e) => e.target)).toContain("test.ts:User");
-    expect(edges.map((e) => e.target)).toContain("test.ts:Admin");
+    expect(edges.map((e) => e.target)).toContain("test.ts:Interface:User");
+    expect(edges.map((e) => e.target)).toContain("test.ts:Interface:Admin");
   });
 
   it("skips arrow function variables (handled by TAKES/RETURNS)", () => {
@@ -106,6 +106,6 @@ describe("extractHasTypeEdges", () => {
     });
 
     expect(edges).toHaveLength(1);
-    expect(edges[0]?.target).toBe("types.ts:User");
+    expect(edges[0]?.target).toBe("types.ts:Interface:User");
   });
 });

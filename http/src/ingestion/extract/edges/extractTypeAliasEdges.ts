@@ -73,18 +73,27 @@ export const extractTypeAliasEdges = (
 
   for (const typeAlias of sourceFile.getTypeAliases()) {
     const aliasName = typeAlias.getName();
-    const sourceId = generateNodeId(context.filePath, aliasName);
+    const sourceId = generateNodeId(context.filePath, "TypeAlias", aliasName);
     const typeNode = typeAlias.getTypeNode();
 
-    if (!typeNode) { continue; }
+    if (!typeNode) {
+      continue;
+    }
 
     // Union type: A | B -> DERIVES_FROM for each member
     if (Node.isUnionTypeNode(typeNode)) {
-      const typeNames = extractTypeNamesFromComposite(typeNode.getTypeNodes(), typeMap);
+      const typeNames = extractTypeNamesFromComposite(
+        typeNode.getTypeNodes(),
+        typeMap,
+      );
       for (const typeName of typeNames) {
         const targetId = typeMap.get(typeName);
         if (targetId) {
-          edges.push({ source: sourceId, target: targetId, type: "DERIVES_FROM" });
+          edges.push({
+            source: sourceId,
+            target: targetId,
+            type: "DERIVES_FROM",
+          });
         }
       }
       continue;
@@ -92,11 +101,18 @@ export const extractTypeAliasEdges = (
 
     // Intersection type: A & B -> DERIVES_FROM for each member
     if (Node.isIntersectionTypeNode(typeNode)) {
-      const typeNames = extractTypeNamesFromComposite(typeNode.getTypeNodes(), typeMap);
+      const typeNames = extractTypeNamesFromComposite(
+        typeNode.getTypeNodes(),
+        typeMap,
+      );
       for (const typeName of typeNames) {
         const targetId = typeMap.get(typeName);
         if (targetId) {
-          edges.push({ source: sourceId, target: targetId, type: "DERIVES_FROM" });
+          edges.push({
+            source: sourceId,
+            target: targetId,
+            type: "DERIVES_FROM",
+          });
         }
       }
       continue;
@@ -106,7 +122,11 @@ export const extractTypeAliasEdges = (
     if (Node.isTypeReference(typeNode)) {
       const result = extractFromTypeReference(typeNode, typeMap);
       if (result) {
-        edges.push({ source: sourceId, target: result.targetId, type: result.edgeType });
+        edges.push({
+          source: sourceId,
+          target: result.targetId,
+          type: result.edgeType,
+        });
       }
       continue;
     }
@@ -121,7 +141,6 @@ export const extractTypeAliasEdges = (
           edges.push({ source: sourceId, target: targetId, type: "ALIAS_FOR" });
         }
       }
-      continue;
     }
   }
 
@@ -151,7 +170,9 @@ const extractTypeNamesFromComposite = (
     // Handle type references
     if (Node.isTypeReference(node)) {
       const typeName = node.getTypeName();
-      const name = Node.isIdentifier(typeName) ? typeName.getText() : typeName.getText();
+      const name = Node.isIdentifier(typeName)
+        ? typeName.getText()
+        : typeName.getText();
 
       // Skip primitives
       if (PRIMITIVES.has(name.toLowerCase())) {
@@ -186,7 +207,9 @@ const extractFromTypeReference = (
   }
 
   const typeName = typeNode.getTypeName();
-  const name = Node.isIdentifier(typeName) ? typeName.getText() : typeName.getText();
+  const name = Node.isIdentifier(typeName)
+    ? typeName.getText()
+    : typeName.getText();
 
   // Skip primitives
   if (PRIMITIVES.has(name.toLowerCase())) {
@@ -218,10 +241,7 @@ const extractFromTypeReference = (
 /**
  * Extract inner type names from generic types.
  */
-const extractInnerTypes = (
-  typeNode: TypeNode,
-  typeMap: TypeMap,
-): string[] => {
+const extractInnerTypes = (typeNode: TypeNode, typeMap: TypeMap): string[] => {
   if (!Node.isTypeReference(typeNode)) {
     return [];
   }
@@ -248,7 +268,9 @@ const extractSimpleTypeNames = (
 
   if (Node.isTypeReference(typeNode)) {
     const typeName = typeNode.getTypeName();
-    const name = Node.isIdentifier(typeName) ? typeName.getText() : typeName.getText();
+    const name = Node.isIdentifier(typeName)
+      ? typeName.getText()
+      : typeName.getText();
 
     if (!PRIMITIVES.has(name.toLowerCase()) && !BUILT_IN_TYPES.has(name)) {
       if (typeMap.has(name)) {
@@ -262,7 +284,10 @@ const extractSimpleTypeNames = (
   }
 
   if (Node.isArrayTypeNode(typeNode)) {
-    const innerNames = extractSimpleTypeNames(typeNode.getElementTypeNode(), typeMap);
+    const innerNames = extractSimpleTypeNames(
+      typeNode.getElementTypeNode(),
+      typeMap,
+    );
     names.push(...innerNames);
   }
 
@@ -281,20 +306,20 @@ const buildCombinedTypeMap = (
   // Local interfaces
   for (const iface of sourceFile.getInterfaces()) {
     const name = iface.getName();
-    map.set(name, generateNodeId(context.filePath, name));
+    map.set(name, generateNodeId(context.filePath, "Interface", name));
   }
 
   // Local type aliases
   for (const typeAlias of sourceFile.getTypeAliases()) {
     const name = typeAlias.getName();
-    map.set(name, generateNodeId(context.filePath, name));
+    map.set(name, generateNodeId(context.filePath, "TypeAlias", name));
   }
 
   // Local classes
   for (const classDecl of sourceFile.getClasses()) {
     const name = classDecl.getName();
     if (name) {
-      map.set(name, generateNodeId(context.filePath, name));
+      map.set(name, generateNodeId(context.filePath, "Class", name));
     }
   }
 

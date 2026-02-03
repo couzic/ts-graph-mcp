@@ -1,6 +1,6 @@
 /**
  * Extract file path from node ID.
- * "src/utils.ts:formatDate" → "src/utils.ts"
+ * "src/utils.ts:Function:formatDate" → "src/utils.ts"
  */
 export const extractFilePath = (nodeId: string): string => {
   const colonIndex = nodeId.indexOf(":");

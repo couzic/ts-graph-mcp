@@ -1,5 +1,4 @@
-import { EdgeType, NodeType } from "@ts-graph/shared";
-
+import type { EdgeType, NodeType } from "@ts-graph/shared";
 
 // Call Site Range (line numbers where a call occurs)
 export interface CallSiteRange {
