@@ -72,7 +72,7 @@ describe("embeddingCache", () => {
     it("retrieves stored vector", () => {
       const cache = openEmbeddingCache(testDir, "nomic-embed");
       try {
-        const vector = [0.1, 0.2, 0.3, 0.4];
+        const vector = new Float32Array([0.1, 0.2, 0.3, 0.4]);
         cache.set("hash123", vector);
         const retrieved = cache.get("hash123");
         assert(retrieved !== undefined);
@@ -90,8 +90,8 @@ describe("embeddingCache", () => {
     it("overwrites existing entry", () => {
       const cache = openEmbeddingCache(testDir, "nomic-embed");
       try {
-        cache.set("hash123", [0.1, 0.2]);
-        cache.set("hash123", [0.3, 0.4]);
+        cache.set("hash123", new Float32Array([0.1, 0.2]));
+        cache.set("hash123", new Float32Array([0.3, 0.4]));
         const retrieved = cache.get("hash123");
         assert(retrieved !== undefined);
         expect(retrieved).toHaveLength(2);
@@ -105,7 +105,10 @@ describe("embeddingCache", () => {
     it("handles high-dimensional vectors", () => {
       const cache = openEmbeddingCache(testDir, "nomic-embed");
       try {
-        const vector = Array.from({ length: 768 }, (_, i) => i * 0.001);
+        const vector = new Float32Array(768);
+        for (let i = 0; i < 768; i++) {
+          vector[i] = i * 0.001;
+        }
         cache.set("hash768", vector);
         const retrieved = cache.get("hash768");
         assert(retrieved !== undefined);
@@ -125,11 +128,54 @@ describe("embeddingCache", () => {
     });
   });
 
+  describe("getBatch", () => {
+    it("retrieves multiple vectors in one call", () => {
+      const cache = openEmbeddingCache(testDir, "nomic-embed");
+      try {
+        cache.set("hash1", new Float32Array([0.1, 0.2]));
+        cache.set("hash2", new Float32Array([0.3, 0.4]));
+        cache.set("hash3", new Float32Array([0.5, 0.6]));
+
+        const result = cache.getBatch(["hash1", "hash3"]);
+        expect(result.size).toBe(2);
+        expect(result.get("hash1")?.[0]).toBeCloseTo(0.1, 5);
+        expect(result.get("hash3")?.[0]).toBeCloseTo(0.5, 5);
+        expect(result.has("hash2")).toBe(false);
+      } finally {
+        cache.close();
+      }
+    });
+
+    it("returns empty map for empty input", () => {
+      const cache = openEmbeddingCache(testDir, "nomic-embed");
+      try {
+        const result = cache.getBatch([]);
+        expect(result.size).toBe(0);
+      } finally {
+        cache.close();
+      }
+    });
+
+    it("skips missing hashes without error", () => {
+      const cache = openEmbeddingCache(testDir, "nomic-embed");
+      try {
+        cache.set("hash1", new Float32Array([0.1, 0.2]));
+
+        const result = cache.getBatch(["hash1", "nonexistent", "also-missing"]);
+        expect(result.size).toBe(1);
+        expect(result.has("hash1")).toBe(true);
+        expect(result.has("nonexistent")).toBe(false);
+      } finally {
+        cache.close();
+      }
+    });
+  });
+
   describe("persistence", () => {
     it("persists data across connections", () => {
       const cache1 = openEmbeddingCache(testDir, "qwen3-0.6b");
-      cache1.set("abc123", [0.1, 0.2, 0.3, 0.4]);
-      cache1.set("def456", [0.5, 0.6, 0.7, 0.8]);
+      cache1.set("abc123", new Float32Array([0.1, 0.2, 0.3, 0.4]));
+      cache1.set("def456", new Float32Array([0.5, 0.6, 0.7, 0.8]));
       cache1.close();
 
       const cache2 = openEmbeddingCache(testDir, "qwen3-0.6b");
@@ -150,7 +196,7 @@ describe("embeddingCache", () => {
 
     it("isolates different models", () => {
       const cache1 = openEmbeddingCache(testDir, "model-a");
-      cache1.set("hash1", [1.0, 2.0]);
+      cache1.set("hash1", new Float32Array([1.0, 2.0]));
       cache1.close();
 
       const cache2 = openEmbeddingCache(testDir, "model-b");

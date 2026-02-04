@@ -47,8 +47,8 @@ describe(populateSearchIndex.name, () => {
 
   it("returns 0 for empty database", async () => {
     const searchIndex = await createSearchIndex();
-    const count = await populateSearchIndex(db, searchIndex);
-    expect(count).toBe(0);
+    const result = await populateSearchIndex({ db, searchIndex });
+    expect(result.total).toBe(0);
     expect(await searchIndex.count()).toBe(0);
   });
 
@@ -61,9 +61,9 @@ describe(populateSearchIndex.name, () => {
     ]);
 
     const searchIndex = await createSearchIndex();
-    const count = await populateSearchIndex(db, searchIndex);
+    const result = await populateSearchIndex({ db, searchIndex });
 
-    expect(count).toBe(3);
+    expect(result.total).toBe(3);
     expect(await searchIndex.count()).toBe(3);
   });
 
@@ -76,7 +76,7 @@ describe(populateSearchIndex.name, () => {
     ]);
 
     const searchIndex = await createSearchIndex();
-    await populateSearchIndex(db, searchIndex);
+    await populateSearchIndex({ db, searchIndex });
 
     const results = await searchIndex.search("validate");
     expect(results).toHaveLength(2);
@@ -89,7 +89,7 @@ describe(populateSearchIndex.name, () => {
     await writer.addNodes([fn("handleUserRequest")]);
 
     const searchIndex = await createSearchIndex();
-    await populateSearchIndex(db, searchIndex);
+    await populateSearchIndex({ db, searchIndex });
 
     // Should find by "User" because camelCase is split
     const results = await searchIndex.search("User");
@@ -104,9 +104,9 @@ describe(populateSearchIndex.name, () => {
     await writer.addNodes(nodes);
 
     const searchIndex = await createSearchIndex();
-    const count = await populateSearchIndex(db, searchIndex);
+    const result = await populateSearchIndex({ db, searchIndex });
 
-    expect(count).toBe(1000);
+    expect(result.total).toBe(1000);
     expect(await searchIndex.count()).toBe(1000);
   });
 });

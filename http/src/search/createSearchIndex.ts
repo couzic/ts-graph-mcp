@@ -1,4 +1,3 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import {
   count,
   create,
@@ -12,7 +11,6 @@ import {
   search,
 } from "@orama/orama";
 import type { NodeType } from "@ts-graph/shared";
-import { pack, unpack } from "msgpackr";
 import type {
   SearchDocument,
   SearchMode,
@@ -35,10 +33,8 @@ export interface SearchIndexWrapper {
   removeByFile(filePath: string): Promise<void>;
   /** Search for symbols */
   search(query: string, options?: SearchOptions): Promise<SearchResult[]>;
-  /** Export index data for persistence */
+  /** Export index data for programmatic restore */
   export(): Promise<RawData>;
-  /** Save index to a file */
-  saveToFile(path: string): Promise<void>;
   /** Get document count */
   count(): Promise<number>;
   /** Check if index supports vector search */
@@ -113,7 +109,7 @@ const buildWrapper = <T extends TextOnlyIndex | VectorIndex>(
       if (supportsVectors && doc.embedding) {
         await insert(db as VectorIndex, {
           ...baseDoc,
-          embedding: doc.embedding,
+          embedding: Array.from(doc.embedding),
         });
       } else {
         await insert(db as TextOnlyIndex, baseDoc);
@@ -134,7 +130,8 @@ const buildWrapper = <T extends TextOnlyIndex | VectorIndex>(
             file: doc.file,
             nodeType: doc.nodeType,
             content: `${preprocessForBM25(doc.symbol)} ${doc.content}`,
-            embedding: doc.embedding as number[],
+            // biome-ignore lint/style/noNonNullAssertion: filtered above
+            embedding: Array.from(doc.embedding!),
           }));
           await insertMultiple(db as VectorIndex, prepared);
         }
@@ -205,7 +202,7 @@ const buildWrapper = <T extends TextOnlyIndex | VectorIndex>(
           ...baseParams,
           mode: mode as "vector" | "hybrid",
           vector: {
-            value: options.vector,
+            value: Array.from(options.vector),
             property: "embedding",
           },
           similarity: options?.similarityThreshold ?? 0.5,
@@ -234,19 +231,6 @@ const buildWrapper = <T extends TextOnlyIndex | VectorIndex>(
 
     async export(): Promise<RawData> {
       return save(db);
-    },
-
-    async saveToFile(path: string): Promise<void> {
-      const data = await save(db);
-      // Include file tracking data for restoration
-      const persistData = {
-        orama: data,
-        docsByFile: Object.fromEntries(
-          Array.from(docsByFile.entries()).map(([k, v]) => [k, Array.from(v)]),
-        ),
-      };
-      // Binary format avoids V8's ~512MB string limit with large indexes
-      writeFileSync(path, pack(persistData));
     },
 
     async count(): Promise<number> {
@@ -352,75 +336,4 @@ export const restoreSearchIndex = async (
   }
 
   return buildWrapper(db, docsByFile, supportsVectors);
-};
-
-/**
- * Persisted search index data format.
- */
-interface PersistedSearchIndex {
-  orama: RawData;
-  docsByFile: Record<string, string[]>;
-}
-
-/**
- * Load a search index from a file.
- * Returns null if the file doesn't exist.
- *
- * @example
- * const index = await loadSearchIndexFromFile('.ts-graph-mcp/orama/index.json', { vectorDimensions: 1024 });
- */
-export const loadSearchIndexFromFile = async (
-  path: string,
-  options?: SearchIndexOptions,
-): Promise<SearchIndexWrapper | null> => {
-  if (!existsSync(path)) {
-    return null;
-  }
-
-  try {
-    // Read as Buffer (no encoding) for binary MessagePack format
-    const buffer = readFileSync(path);
-    const persisted = unpack(buffer) as PersistedSearchIndex;
-    const dims = options?.vectorDimensions;
-
-    // Restore docsByFile mapping
-    const docsByFile = new Map<string, Set<string>>();
-    for (const [file, ids] of Object.entries(persisted.docsByFile)) {
-      docsByFile.set(file, new Set(ids));
-    }
-
-    let db: TextOnlyIndex | VectorIndex;
-    let supportsVectors = false;
-
-    if (dims) {
-      const schema = {
-        id: "string",
-        symbol: "string",
-        file: "string",
-        nodeType: "string",
-        content: "string",
-        embedding: `vector[${dims}]`,
-      } as const;
-
-      db = create({ schema }) as VectorIndex;
-      load(db, persisted.orama);
-      supportsVectors = true;
-    } else {
-      const schema = {
-        id: "string",
-        symbol: "string",
-        file: "string",
-        nodeType: "string",
-        content: "string",
-      } as const;
-
-      db = create({ schema }) as TextOnlyIndex;
-      load(db, persisted.orama);
-    }
-
-    return buildWrapper(db, docsByFile, supportsVectors);
-  } catch {
-    // File corrupted or incompatible format - return null to trigger fresh index
-    return null;
-  }
 };

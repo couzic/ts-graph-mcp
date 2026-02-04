@@ -35,18 +35,6 @@ export const getSqliteDir = (cacheDir: string): string => {
 };
 
 /**
- * Get the Orama directory path.
- *
- * @param cacheDir - The cache directory
- * @returns Absolute path to .ts-graph-mcp/orama/
- */
-export const getOramaDir = (cacheDir: string): string => {
-  const oramaDir = join(cacheDir, "orama");
-  mkdirSync(oramaDir, { recursive: true });
-  return oramaDir;
-};
-
-/**
  * Get the default database path for a project.
  *
  * @param projectRoot - The project root directory
@@ -55,14 +43,4 @@ export const getOramaDir = (cacheDir: string): string => {
 export const getDefaultDbPath = (projectRoot: string): string => {
   const cacheDir = getCacheDir(projectRoot);
   return join(getSqliteDir(cacheDir), "graph.db");
-};
-
-/**
- * Get the default Orama index path for a project.
- *
- * @param cacheDir - The cache directory
- * @returns Absolute path to .ts-graph-mcp/orama/index.msgpack
- */
-export const getOramaIndexPath = (cacheDir: string): string => {
-  return join(getOramaDir(cacheDir), "index.msgpack");
 };

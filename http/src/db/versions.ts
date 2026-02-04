@@ -7,8 +7,9 @@ export const HTTP_API_VERSION = 1;
 
 /**
  * DB schema version - bump when database schema changes.
+ * v2: Added content_hash column to nodes table
  */
-export const DB_SCHEMA_VERSION = 1;
+export const DB_SCHEMA_VERSION = 2;
 
 /**
  * Set the DB schema version in the SQLite user_version pragma.

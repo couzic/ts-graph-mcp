@@ -39,18 +39,26 @@ export const createFakeEmbeddingProvider = (options?: {
    * Generate a deterministic vector from a seed.
    * Uses a simple linear congruential generator for reproducibility.
    */
-  const generateVector = (seed: number): number[] => {
-    const vector: number[] = [];
+  const generateVector = (seed: number): Float32Array => {
+    const vector = new Float32Array(dimensions);
     let current = seed;
     for (let i = 0; i < dimensions; i++) {
       // Linear congruential generator
       current = (current * 1103515245 + 12345) & 0x7fffffff;
       // Normalize to [-1, 1] range
-      vector.push((current / 0x7fffffff) * 2 - 1);
+      vector[i] = (current / 0x7fffffff) * 2 - 1;
     }
     // Normalize to unit vector
-    const magnitude = Math.sqrt(vector.reduce((sum, v) => sum + v * v, 0));
-    return vector.map((v) => v / magnitude);
+    let sumOfSquares = 0;
+    for (const v of vector) {
+      sumOfSquares += v * v;
+    }
+    const magnitude = Math.sqrt(sumOfSquares);
+    for (let i = 0; i < vector.length; i++) {
+      // biome-ignore lint/style/noNonNullAssertion: index bounds checked by loop
+      vector[i] = vector[i]! / magnitude;
+    }
+    return vector;
   };
 
   return {
@@ -62,12 +70,12 @@ export const createFakeEmbeddingProvider = (options?: {
       // No initialization needed for fake provider
     },
 
-    async embedQuery(text: string): Promise<number[]> {
+    async embedQuery(text: string): Promise<Float32Array> {
       const seed = hashString(`query:${text}`);
       return generateVector(seed);
     },
 
-    async embedDocument(text: string): Promise<number[]> {
+    async embedDocument(text: string): Promise<Float32Array> {
       if (maxContentLength !== undefined && text.length > maxContentLength) {
         throw new Error(
           "Input is longer than the context size. Try to increase the context size or use another model that supports longer contexts.",

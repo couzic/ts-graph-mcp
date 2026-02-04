@@ -19,8 +19,14 @@ const MIN_USEFUL_SNIPPET_LENGTH = 100;
 /**
  * Extract source snippet for a node from the source file text.
  * Returns full node content - overflow is handled by embedWithFallback.
+ *
+ * @example
+ * extractSourceSnippet(sourceText, node) // "function foo() { return 42; }"
  */
-const extractSourceSnippet = (sourceText: string, node: Node): string => {
+export const extractSourceSnippet = (
+  sourceText: string,
+  node: Node,
+): string => {
   const lines = sourceText.split("\n");
   const startIdx = node.startLine - 1; // 1-indexed to 0-indexed
   return lines.slice(startIdx, node.endLine).join("\n");
@@ -29,8 +35,14 @@ const extractSourceSnippet = (sourceText: string, node: Node): string => {
 /**
  * Prepare content for embedding.
  * Includes metadata prefix and source snippet.
+ *
+ * @example
+ * prepareEmbeddingContent(node, snippet) // "// Function: foo\n// File: src/utils.ts\n\nfunction foo() {}"
  */
-const prepareEmbeddingContent = (node: Node, sourceSnippet: string): string => {
+export const prepareEmbeddingContent = (
+  node: Node,
+  sourceSnippet: string,
+): string => {
   return `// ${node.type}: ${node.name}
 // File: ${node.filePath}
 
@@ -44,27 +56,38 @@ const isContextOverflowError = (error: unknown): boolean =>
   error instanceof Error && error.message.includes("context size");
 
 /**
+ * Result of embedding a node's content.
+ */
+interface EmbedResult {
+  /** The embedding vector */
+  embedding: Float32Array;
+  /** Hash of the content that was actually embedded (after any truncation) */
+  contentHash: string;
+}
+
+/**
  * Embed content with progressive fallback strategy.
  * Tries: full content → stripped (for Class) → truncated (halving until fits).
  * Never throws - always returns an embedding.
+ * Returns both the embedding and the hash of the content that was actually embedded.
  */
 const embedWithFallback = async (
   node: Node,
   snippet: string,
   embeddingProvider: EmbeddingProvider,
   embeddingCache: EmbeddingCacheConnection | undefined,
-): Promise<number[]> => {
-  const tryEmbed = async (content: string): Promise<number[] | null> => {
+): Promise<EmbedResult> => {
+  const tryEmbed = async (content: string): Promise<EmbedResult | null> => {
     const hash = computeContentHash(content);
     const cached = embeddingCache?.get(hash);
     if (cached) {
-      return cached;
+      return { embedding: cached, contentHash: hash };
     }
 
     try {
       const vector = await embeddingProvider.embedDocument(content);
       embeddingCache?.set(hash, vector);
-      return vector;
+      return { embedding: vector, contentHash: hash };
     } catch (error) {
       if (isContextOverflowError(error)) {
         return null; // Signal to try fallback
@@ -121,7 +144,7 @@ const embedWithFallback = async (
 const nodeToSearchDoc = (
   node: Node,
   sourceSnippet: string,
-  embedding?: number[],
+  embedding?: Float32Array,
 ): SearchDocument => ({
   id: node.id,
   symbol: node.name,
@@ -184,43 +207,50 @@ export const indexFile = async (
   let nodesAdded = 0;
   let edgesAdded = 0;
 
-  // Extract and write nodes
+  // Extract nodes
   const nodes = extractNodes(sourceFile, context);
   if (nodes.length > 0) {
+    const sourceText = sourceFile.getFullText();
+    const { embeddingProvider, embeddingCache, searchIndex } = options;
+
+    // Extract snippets for all nodes
+    const nodeSnippets = nodes.map((node) => ({
+      node,
+      snippet: extractSourceSnippet(sourceText, node),
+    }));
+
+    // Generate embeddings in parallel (if provider available)
+    // This also gives us the contentHash for each node
+    let embedResults: Array<EmbedResult | undefined>;
+    if (embeddingProvider) {
+      embedResults = await Promise.all(
+        nodeSnippets.map(({ node, snippet }) =>
+          embedWithFallback(node, snippet, embeddingProvider, embeddingCache),
+        ),
+      );
+    } else {
+      embedResults = nodeSnippets.map(() => undefined);
+    }
+
+    // Set contentHash on nodes before writing to DB
+    for (let i = 0; i < nodes.length; i++) {
+      const embedResult = embedResults[i];
+      if (embedResult) {
+        // biome-ignore lint/style/noNonNullAssertion: index bounds checked by loop
+        nodes[i]!.contentHash = embedResult.contentHash;
+      }
+    }
+
+    // Write nodes to DB (now with contentHash set)
     await writer.addNodes(nodes);
     nodesAdded = nodes.length;
 
     // Add to search index
-    if (options.searchIndex) {
-      const sourceText = sourceFile.getFullText();
-      const { embeddingProvider } = options;
-
-      // Extract snippets for all nodes
-      const nodeSnippets = nodes.map((node) => ({
-        node,
-        snippet: extractSourceSnippet(sourceText, node),
-      }));
-
-      // Generate embeddings in parallel (if provider available)
-      // Uses progressive fallback to ensure every node gets an embedding
-      let embeddings: Array<number[] | undefined>;
-      if (embeddingProvider) {
-        const { embeddingCache } = options;
-        embeddings = await Promise.all(
-          nodeSnippets.map(({ node, snippet }) =>
-            embedWithFallback(node, snippet, embeddingProvider, embeddingCache),
-          ),
-        );
-      } else {
-        embeddings = nodeSnippets.map(() => undefined);
-      }
-
-      // Build search documents with embeddings
+    if (searchIndex) {
       const searchDocs = nodeSnippets.map(({ node, snippet }, i) =>
-        nodeToSearchDoc(node, snippet, embeddings[i]),
+        nodeToSearchDoc(node, snippet, embedResults[i]?.embedding),
       );
-
-      await options.searchIndex.addBatch(searchDocs);
+      await searchIndex.addBatch(searchDocs);
     }
   }
 

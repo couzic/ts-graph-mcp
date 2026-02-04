@@ -41,9 +41,9 @@ export interface EmbeddingProvider {
   /** Initialize the provider (downloads model if needed). Call before indexing. */
   initialize(): Promise<void>;
   /** Generate embedding for a query (for search) */
-  embedQuery(text: string): Promise<number[]>;
+  embedQuery(text: string): Promise<Float32Array>;
   /** Generate embedding for a document (for indexing) */
-  embedDocument(text: string): Promise<number[]>;
+  embedDocument(text: string): Promise<Float32Array>;
   /** Dispose of resources */
   dispose(): Promise<void>;
   /** Check if provider is ready */

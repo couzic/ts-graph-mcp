@@ -171,13 +171,13 @@ export const createEmbeddingProvider = async (
   const embedWithPool = async (
     text: string,
     prefix: string,
-  ): Promise<number[]> => {
+  ): Promise<Float32Array> => {
     await initialize();
     const context = await acquireContext();
     try {
       const input = prefix ? `${prefix}${text}` : text;
       const embedding = await context.getEmbeddingFor(input);
-      return [...embedding.vector];
+      return new Float32Array(embedding.vector);
     } finally {
       releaseContext(context);
     }
@@ -190,11 +190,11 @@ export const createEmbeddingProvider = async (
 
     initialize,
 
-    async embedQuery(text: string): Promise<number[]> {
+    async embedQuery(text: string): Promise<Float32Array> {
       return embedWithPool(text, queryPrefix);
     },
 
-    async embedDocument(text: string): Promise<number[]> {
+    async embedDocument(text: string): Promise<Float32Array> {
       return embedWithPool(text, documentPrefix);
     },
 

@@ -36,7 +36,7 @@ const getSearchConfig = async (
   query: string,
   searchIndex: SearchIndexWrapper,
   embeddingProvider?: EmbeddingProvider,
-): Promise<{ mode: SearchMode; vector?: number[] }> => {
+): Promise<{ mode: SearchMode; vector?: Float32Array }> => {
   if (searchIndex.supportsVectors && embeddingProvider?.ready) {
     const vector = await embeddingProvider.embedQuery(query);
     return { mode: "hybrid", vector };

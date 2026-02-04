@@ -19,31 +19,31 @@ export const computeContentHash = (content: string): string => {
  */
 export interface EmbeddingCacheConnection {
   /** Get cached embedding by content hash. Returns undefined if not found. */
-  get(hash: string): number[] | undefined;
+  get(hash: string): Float32Array | undefined;
+  /** Get multiple cached embeddings by content hashes. */
+  getBatch(hashes: string[]): Map<string, Float32Array>;
   /** Store embedding for content hash. */
-  set(hash: string, vector: number[]): void;
+  set(hash: string, vector: Float32Array): void;
   /** Close the database connection. */
   close(): void;
 }
 
 /**
- * Convert number array to Buffer for SQLite BLOB storage.
+ * Convert Float32Array to Buffer for SQLite BLOB storage.
  */
-const vectorToBuffer = (vector: number[]): Buffer => {
-  const float32 = new Float32Array(vector);
-  return Buffer.from(float32.buffer);
+const vectorToBuffer = (vector: Float32Array): Buffer => {
+  return Buffer.from(vector.buffer, vector.byteOffset, vector.byteLength);
 };
 
 /**
- * Convert Buffer from SQLite BLOB to number array.
+ * Convert Buffer from SQLite BLOB to Float32Array.
  */
-const bufferToVector = (buffer: Buffer): number[] => {
-  const float32 = new Float32Array(
+const bufferToFloat32Array = (buffer: Buffer): Float32Array => {
+  return new Float32Array(
     buffer.buffer,
     buffer.byteOffset,
     buffer.byteLength / Float32Array.BYTES_PER_ELEMENT,
   );
-  return Array.from(float32);
 };
 
 /**
@@ -94,15 +94,32 @@ export const openEmbeddingCache = (
   );
 
   return {
-    get(hash: string): number[] | undefined {
+    get(hash: string): Float32Array | undefined {
       const row = getStmt.get(hash);
       if (!row) {
         return undefined;
       }
-      return bufferToVector(row.vector);
+      return bufferToFloat32Array(row.vector);
     },
 
-    set(hash: string, vector: number[]): void {
+    getBatch(hashes: string[]): Map<string, Float32Array> {
+      const result = new Map<string, Float32Array>();
+      if (hashes.length === 0) {
+        return result;
+      }
+      const placeholders = hashes.map(() => "?").join(",");
+      const rows = db
+        .prepare<string[], { hash: string; vector: Buffer }>(
+          `SELECT hash, vector FROM embeddings WHERE hash IN (${placeholders})`,
+        )
+        .all(...hashes);
+      for (const row of rows) {
+        result.set(row.hash, bufferToFloat32Array(row.vector));
+      }
+      return result;
+    },
+
+    set(hash: string, vector: Float32Array): void {
       setStmt.run(hash, vectorToBuffer(vector));
     },
 

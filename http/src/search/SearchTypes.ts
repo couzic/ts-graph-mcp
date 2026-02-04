@@ -16,7 +16,7 @@ export interface SearchDocument {
   /** Preprocessed text for BM25 (split camelCase + comments) */
   content: string;
   /** Embedding vector (optional - for semantic search) */
-  embedding?: number[];
+  embedding?: Float32Array;
 }
 
 /**
@@ -53,7 +53,7 @@ export interface SearchOptions {
   /** Search mode: fulltext (BM25), vector (semantic), or hybrid (default: fulltext) */
   mode?: SearchMode;
   /** Query vector (required for vector/hybrid mode) */
-  vector?: number[];
+  vector?: Float32Array;
   /** Similarity threshold for vector search (0-1, default: 0.5) */
   similarityThreshold?: number;
 }

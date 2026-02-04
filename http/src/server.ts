@@ -5,11 +5,7 @@ import type Database from "better-sqlite3";
 import express from "express";
 import type { ProjectConfig } from "./config/Config.schemas.js";
 import { loadConfigOrDetect } from "./config/configLoader.utils.js";
-import {
-  getCacheDir,
-  getOramaIndexPath,
-  getSqliteDir,
-} from "./config/getCacheDir.js";
+import { getCacheDir, getSqliteDir } from "./config/getCacheDir.js";
 import { createSqliteWriter } from "./db/sqlite/createSqliteWriter.js";
 import { openDatabase } from "./db/sqlite/sqliteConnection.utils.js";
 import { createEmbeddingProvider } from "./embedding/createEmbeddingProvider.js";
@@ -29,7 +25,6 @@ import type { TsGraphLogger } from "./logging/TsGraphLogger.js";
 import { searchGraph } from "./query/search-graph/searchGraph.js";
 import {
   createSearchIndex,
-  loadSearchIndexFromFile,
   type SearchIndexWrapper,
 } from "./search/createSearchIndex.js";
 import { populateSearchIndex } from "./search/populateSearchIndex.js";
@@ -46,8 +41,6 @@ const indexAndOpenDb = async (
   forceReindex: boolean,
   logger: TsGraphLogger,
   searchIndex: SearchIndexWrapper,
-  oramaIndexPath: string,
-  searchIndexLoadedFromFile: boolean,
   embeddingProvider?: EmbeddingProvider,
 ): Promise<{
   db: Database.Database;
@@ -112,9 +105,6 @@ const indexAndOpenDb = async (
     populateManifest(manifest, result.filesIndexed, projectRoot);
     saveManifest(cacheDir, manifest);
 
-    // Persist search index to disk
-    await searchIndex.saveToFile(oramaIndexPath);
-
     return {
       db,
       indexedFiles: result.filesProcessed,
@@ -152,15 +142,8 @@ const indexAndOpenDb = async (
     }
   }
 
-  // If search index wasn't loaded from file, populate from DB
-  if (!searchIndexLoadedFromFile) {
-    await populateSearchIndex(db, searchIndex);
-    // Save the newly populated search index
-    await searchIndex.saveToFile(oramaIndexPath);
-  } else if (totalChanges > 0) {
-    // Search index was loaded, but files changed - save updated index
-    await searchIndex.saveToFile(oramaIndexPath);
-  }
+  // Populate search index from database
+  await populateSearchIndex({ db, searchIndex });
 
   // Get actual file count from database
   const countResult = db
@@ -253,25 +236,8 @@ export const startHttpServer = async (
   // Initialize embedding provider (downloads model if needed) before indexing
   await embeddingProvider.initialize();
 
-  // Try to load persisted search index, or create fresh
-  const oramaIndexPath = getOramaIndexPath(cacheDir);
-  let searchIndex: SearchIndexWrapper;
-  let searchIndexLoadedFromFile = false;
-
-  if (!shouldReindex) {
-    const loaded = await loadSearchIndexFromFile(oramaIndexPath, {
-      vectorDimensions,
-    });
-    if (loaded) {
-      logger.info("Loaded search index from disk");
-      searchIndex = loaded;
-      searchIndexLoadedFromFile = true;
-    } else {
-      searchIndex = await createSearchIndex({ vectorDimensions });
-    }
-  } else {
-    searchIndex = await createSearchIndex({ vectorDimensions });
-  }
+  // Create fresh search index (rebuilt from SQLite + embedding cache on startup)
+  const searchIndex = await createSearchIndex({ vectorDimensions });
 
   // Index project and keep DB open (unified: SQLite + search index)
   const { db, indexedFiles, manifest, config } = await indexAndOpenDb(
@@ -281,8 +247,6 @@ export const startHttpServer = async (
     shouldReindex,
     logger,
     searchIndex,
-    oramaIndexPath,
-    searchIndexLoadedFromFile,
     embeddingProvider,
   );
 
@@ -298,7 +262,6 @@ export const startHttpServer = async (
       logger,
       searchIndex,
       embeddingProvider,
-      oramaIndexPath,
       modelName: presetName,
       ...config.watch,
     });

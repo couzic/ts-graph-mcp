@@ -33,6 +33,9 @@ export interface BaseNode {
 
   /** Whether exported from module */
   exported: boolean;
+
+  /** Hash of embedding content (for cache lookup during search index population) */
+  contentHash?: string;
 }
 
 // Node Variants (Discriminated Union)

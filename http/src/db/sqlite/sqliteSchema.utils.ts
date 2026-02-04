@@ -24,7 +24,8 @@ CREATE TABLE IF NOT EXISTS nodes (
   start_line INTEGER NOT NULL,
   end_line INTEGER NOT NULL,
   exported INTEGER NOT NULL DEFAULT 0,
-  properties TEXT NOT NULL DEFAULT '{}'
+  properties TEXT NOT NULL DEFAULT '{}',
+  content_hash TEXT
 )`;
 
 const EDGES_TABLE = `
@@ -54,8 +55,21 @@ const INDEXES = [
 ];
 
 /**
+ * Check if a column exists in a table.
+ */
+const columnExists = (
+  db: Database.Database,
+  table: string,
+  column: string,
+): boolean => {
+  const columns = db.pragma(`table_info(${table})`) as Array<{ name: string }>;
+  return columns.some((col) => col.name === column);
+};
+
+/**
  * Initialize the schema on a database connection.
  * Creates tables and indexes if they don't exist.
+ * Migrates existing databases to add new columns.
  *
  * @param db - better-sqlite3 database instance
  */
@@ -66,6 +80,11 @@ export const initializeSchema = (db: Database.Database): void => {
   // Create tables
   db.exec(NODES_TABLE);
   db.exec(EDGES_TABLE);
+
+  // Migration: add content_hash column if missing (for existing databases)
+  if (!columnExists(db, "nodes", "content_hash")) {
+    db.exec("ALTER TABLE nodes ADD COLUMN content_hash TEXT");
+  }
 
   // Create indexes
   for (const indexSql of INDEXES) {

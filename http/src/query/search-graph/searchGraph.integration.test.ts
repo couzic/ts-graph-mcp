@@ -143,7 +143,7 @@ describe(searchGraph.name, () => {
         ),
       ]);
 
-      await populateSearchIndex(db, searchIndex);
+      await populateSearchIndex({ db, searchIndex });
 
       const result = await searchGraph(
         db,
@@ -165,7 +165,7 @@ describe(searchGraph.name, () => {
       await writer.addNodes([fn("validateInput"), fn("validateOutput")]);
       // No edges between them
 
-      await populateSearchIndex(db, searchIndex);
+      await populateSearchIndex({ db, searchIndex });
 
       const result = await searchGraph(
         db,
@@ -184,7 +184,7 @@ describe(searchGraph.name, () => {
       const writer = createSqliteWriter(db);
       await writer.addNodes([fn("processData")]);
 
-      await populateSearchIndex(db, searchIndex);
+      await populateSearchIndex({ db, searchIndex });
 
       const result = await searchGraph(
         db,
@@ -217,7 +217,7 @@ describe(searchGraph.name, () => {
         calls(validateA.id, unrelated.id),
         calls(validateB.id, unrelated.id),
       ]);
-      await populateSearchIndex(db, searchIndex);
+      await populateSearchIndex({ db, searchIndex });
 
       const result = await searchGraph(
         db,
@@ -245,7 +245,7 @@ describe(searchGraph.name, () => {
         calls(caller.id, saveA.id),
         calls(caller.id, saveB.id),
       ]);
-      await populateSearchIndex(db, searchIndex);
+      await populateSearchIndex({ db, searchIndex });
 
       const result = await searchGraph(
         db,
@@ -267,7 +267,7 @@ describe(searchGraph.name, () => {
 
       await writer.addNodes([nodeA, nodeB]);
       await writer.addEdges([calls(nodeA.id, nodeB.id)]);
-      await populateSearchIndex(db, searchIndex);
+      await populateSearchIndex({ db, searchIndex });
 
       const result = await searchGraph(
         db,
@@ -287,7 +287,7 @@ describe(searchGraph.name, () => {
 
       await writer.addNodes([nodeA, nodeB]);
       await writer.addEdges([calls(nodeA.id, nodeB.id)]);
-      await populateSearchIndex(db, searchIndex);
+      await populateSearchIndex({ db, searchIndex });
 
       const result = await searchGraph(
         db,
@@ -316,7 +316,7 @@ describe(searchGraph.name, () => {
 
       await writer.addNodes([weakMatch, targetNode]);
       await writer.addEdges([calls(weakMatch.id, targetNode.id)]);
-      await populateSearchIndex(db, searchIndex);
+      await populateSearchIndex({ db, searchIndex });
 
       // Query for "sqlite writer" - falls back to semantic search
       // which finds "createWriter" as the best available match
@@ -339,7 +339,7 @@ describe(searchGraph.name, () => {
 
       await writer.addNodes([weakMatch, caller]);
       await writer.addEdges([calls(caller.id, weakMatch.id)]);
-      await populateSearchIndex(db, searchIndex);
+      await populateSearchIndex({ db, searchIndex });
 
       // Query "Edge source property" - falls back to semantic search
       // which finds "sourceMap" as the best available match
@@ -366,7 +366,7 @@ describe(searchGraph.name, () => {
         calls(exactMatch.id, dependency.id),
         calls(partialMatch.id, dependency.id),
       ]);
-      await populateSearchIndex(db, searchIndex);
+      await populateSearchIndex({ db, searchIndex });
 
       const result = await searchGraph(
         db,
@@ -388,7 +388,7 @@ describe(searchGraph.name, () => {
 
       await writer.addNodes([weakMatch, target]);
       await writer.addEdges([calls(weakMatch.id, target.id)]);
-      await populateSearchIndex(db, searchIndex);
+      await populateSearchIndex({ db, searchIndex });
 
       // Query has 3 terms: "handle", "sqlite", "connection"
       // "handleRequest" only matches 1 of 3, but it's the best available

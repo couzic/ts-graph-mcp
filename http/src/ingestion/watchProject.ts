@@ -61,8 +61,6 @@ export interface WatchOptions {
   searchIndex?: SearchIndexWrapper;
   /** Embedding provider for semantic search (optional) */
   embeddingProvider?: EmbeddingProvider;
-  /** Path to Orama index file for persistence (optional) */
-  oramaIndexPath?: string;
   /** Model name for embedding cache lookup (optional) */
   modelName?: string;
 
@@ -141,7 +139,6 @@ export const watchProject = (
     logger,
     searchIndex,
     embeddingProvider,
-    oramaIndexPath,
     modelName,
     onReindex,
   } = options;
@@ -264,11 +261,6 @@ export const watchProject = (
     // Save manifest after processing batch
     saveManifest(cacheDir, manifest);
 
-    // Persist search index if any files were reindexed
-    if (searchIndex && oramaIndexPath && reindexedFiles.length > 0) {
-      await searchIndex.saveToFile(oramaIndexPath);
-    }
-
     // Notify callback if any files were reindexed
     if (onReindex && reindexedFiles.length > 0) {
       onReindex(reindexedFiles);
@@ -281,10 +273,6 @@ export const watchProject = (
       await writer.removeFileNodes(relativePath);
       if (searchIndex) {
         await searchIndex.removeByFile(relativePath);
-        // Persist search index after deletion
-        if (oramaIndexPath) {
-          await searchIndex.saveToFile(oramaIndexPath);
-        }
       }
       removeManifestEntry(manifest, relativePath);
       saveManifest(cacheDir, manifest);

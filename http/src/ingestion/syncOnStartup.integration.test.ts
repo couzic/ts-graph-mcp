@@ -18,10 +18,7 @@ import { initializeSchema } from "../db/sqlite/sqliteSchema.utils.js";
 import { createFakeEmbeddingProvider } from "../embedding/createFakeEmbeddingProvider.js";
 import { openEmbeddingCache } from "../embedding/embeddingCache.js";
 import { silentLogger } from "../logging/SilentTsGraphLogger.js";
-import {
-  createSearchIndex,
-  loadSearchIndexFromFile,
-} from "../search/createSearchIndex.js";
+import { createSearchIndex } from "../search/createSearchIndex.js";
 import { populateSearchIndex } from "../search/populateSearchIndex.js";
 import { indexProject } from "./indexProject.js";
 import { type IndexManifest, saveManifest } from "./manifest.js";
@@ -132,81 +129,12 @@ export function validateEmail(email: string): boolean {
     // Step 4: Populate search index from existing database
     // syncOnStartup only handles changed files, not unchanged ones.
     // Callers must call populateSearchIndex to load existing data.
-    await populateSearchIndex(db, freshSearchIndex);
+    await populateSearchIndex({ db, searchIndex: freshSearchIndex });
 
     // Step 5: Verify search works on the populated index
     const searchResults = await freshSearchIndex.search("validate");
     expect(searchResults.length).toBeGreaterThan(0);
     expect(searchResults.map((r) => r.symbol)).toContain("validateUser");
-  });
-
-  it("persists and loads search index from disk on restart", async () => {
-    // Setup: Create a project with source files
-    const pkgDir = join(TEST_DIR, "src");
-    mkdirSync(pkgDir, { recursive: true });
-
-    writeFileSync(
-      join(TEST_DIR, "tsconfig.json"),
-      JSON.stringify({
-        compilerOptions: { target: "ES2022", module: "NodeNext" },
-        include: ["src/**/*.ts"],
-      }),
-    );
-
-    const cartPath = join(pkgDir, "cart.ts");
-    writeFileSync(
-      cartPath,
-      `
-export function validateCart(items: unknown[]): boolean {
-  return items.length > 0;
-}
-
-export function calculateTotal(prices: number[]): number {
-  return prices.reduce((a, b) => a + b, 0);
-}
-`.trim(),
-    );
-
-    const config: ProjectConfig = {
-      packages: [{ name: "main", tsconfig: "./tsconfig.json" }],
-    };
-
-    const oramaIndexPath = join(CACHE_DIR, "orama", "index.json");
-    mkdirSync(join(CACHE_DIR, "orama"), { recursive: true });
-
-    // Step 1: Index the project with search index
-    const initialSearchIndex = await createSearchIndex();
-    const writer = createSqliteWriter(db);
-    const indexResult = await indexProject(config, writer, {
-      projectRoot: TEST_DIR,
-      logger: silentLogger,
-      searchIndex: initialSearchIndex,
-    });
-
-    expect(indexResult.nodesAdded).toBeGreaterThan(0);
-
-    // Verify search works
-    const initialResults = await initialSearchIndex.search("validate");
-    expect(initialResults.length).toBeGreaterThan(0);
-
-    // Step 2: Save search index to disk
-    await initialSearchIndex.saveToFile(oramaIndexPath);
-    expect(existsSync(oramaIndexPath)).toBe(true);
-
-    // Step 3: Simulate server restart - load search index from file
-    const loadedSearchIndex = await loadSearchIndexFromFile(oramaIndexPath);
-    expect(loadedSearchIndex).not.toBeNull();
-
-    // Step 4: Verify search works on loaded index (no populateSearchIndex needed!)
-    // biome-ignore lint/style/noNonNullAssertion: asserted not null above
-    const loadedResults = await loadedSearchIndex!.search("validate");
-    expect(loadedResults.length).toBeGreaterThan(0);
-    expect(loadedResults.map((r) => r.symbol)).toContain("validateCart");
-
-    // Step 5: Verify file tracking is preserved
-    await loadedSearchIndex?.removeByFile("src/cart.ts");
-    const afterRemoval = await loadedSearchIndex?.search("validate");
-    expect(afterRemoval).toHaveLength(0);
   });
 
   it("uses embedding cache during reindexing (avoids regenerating cached embeddings)", async () => {
@@ -293,95 +221,5 @@ export function formatDate(date: Date): string {
     // CRITICAL ASSERTION: If cache is working, NO embeddings should be regenerated
     // because the file content is unchanged and was already cached.
     expect(generatedEmbeddings).toHaveLength(0);
-  });
-
-  it("handles file changes after restart with persisted index", async () => {
-    // Setup: Create a project with source files
-    const pkgDir = join(TEST_DIR, "src");
-    mkdirSync(pkgDir, { recursive: true });
-
-    writeFileSync(
-      join(TEST_DIR, "tsconfig.json"),
-      JSON.stringify({
-        compilerOptions: { target: "ES2022", module: "NodeNext" },
-        include: ["src/**/*.ts"],
-      }),
-    );
-
-    const utilsPath = join(pkgDir, "utils.ts");
-    writeFileSync(
-      utilsPath,
-      `
-export function formatDate(date: Date): string {
-  return date.toISOString();
-}
-`.trim(),
-    );
-
-    const config: ProjectConfig = {
-      packages: [{ name: "main", tsconfig: "./tsconfig.json" }],
-    };
-
-    const oramaIndexPath = join(CACHE_DIR, "orama", "index.json");
-    mkdirSync(join(CACHE_DIR, "orama"), { recursive: true });
-
-    // Step 1: Index the project
-    const initialSearchIndex = await createSearchIndex();
-    const writer = createSqliteWriter(db);
-    await indexProject(config, writer, {
-      projectRoot: TEST_DIR,
-      logger: silentLogger,
-      searchIndex: initialSearchIndex,
-    });
-
-    // Save search index and manifest
-    await initialSearchIndex.saveToFile(oramaIndexPath);
-    const stat = statSync(utilsPath);
-    const manifest: IndexManifest = {
-      version: 1,
-      files: {
-        "src/utils.ts": {
-          mtime: stat.mtimeMs,
-          size: stat.size,
-        },
-      },
-    };
-    saveManifest(CACHE_DIR, manifest);
-
-    // Step 2: Modify file while server is "down"
-    writeFileSync(
-      utilsPath,
-      `
-export function formatDate(date: Date): string {
-  return date.toISOString();
-}
-
-export function parseDate(str: string): Date {
-  return new Date(str);
-}
-`.trim(),
-    );
-
-    // Step 3: Simulate restart - load persisted search index
-    const loadedSearchIndex = await loadSearchIndexFromFile(oramaIndexPath);
-    expect(loadedSearchIndex).not.toBeNull();
-
-    // Step 4: Run syncOnStartup - should detect modified file
-    const syncResult = await syncOnStartup(db, config, manifest, {
-      projectRoot: TEST_DIR,
-      cacheDir: CACHE_DIR,
-      logger: silentLogger,
-      // biome-ignore lint/style/noNonNullAssertion: asserted not null above
-      searchIndex: loadedSearchIndex!,
-    });
-
-    // File was modified
-    expect(syncResult.staleCount).toBe(1);
-
-    // Step 5: Verify new function is searchable
-    // biome-ignore lint/style/noNonNullAssertion: asserted not null above
-    const results = await loadedSearchIndex!.search("parse");
-    expect(results.length).toBeGreaterThan(0);
-    expect(results.map((r) => r.symbol)).toContain("parseDate");
   });
 });

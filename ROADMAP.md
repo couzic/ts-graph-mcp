@@ -728,6 +728,5 @@ patterns.
 
 **Ambitious but transformative:**
 
-- Semantic search with embeddings
 - VS Code extension
 - Multi-language support

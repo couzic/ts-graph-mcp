@@ -1,23 +1,29 @@
-import { existsSync, mkdirSync, rmSync } from "node:fs";
-import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   createSearchIndex,
-  loadSearchIndexFromFile,
   preprocessForBM25,
   restoreSearchIndex,
 } from "./createSearchIndex.js";
 import type { SearchDocument } from "./SearchTypes.js";
 
 // Simple embedding function for tests (just a normalized sum for similarity)
-const mockEmbed = (text: string, dims: number): number[] => {
-  const vec = new Array(dims).fill(0);
+const mockEmbed = (text: string, dims: number): Float32Array => {
+  const vec = new Float32Array(dims);
   for (let i = 0; i < text.length; i++) {
-    vec[i % dims] += text.charCodeAt(i) / 1000;
+    const idx = i % dims;
+    vec[idx] = (vec[idx] ?? 0) + text.charCodeAt(i) / 1000;
   }
   // Normalize
-  const norm = Math.sqrt(vec.reduce((sum, v) => sum + v * v, 0));
-  return vec.map((v) => v / (norm || 1));
+  let sumOfSquares = 0;
+  for (const v of vec) {
+    sumOfSquares += v * v;
+  }
+  const norm = Math.sqrt(sumOfSquares) || 1;
+  for (let i = 0; i < vec.length; i++) {
+    // biome-ignore lint/style/noNonNullAssertion: index bounds checked by loop
+    vec[i] = vec[i]! / norm;
+  }
+  return vec;
 };
 
 describe(preprocessForBM25.name, () => {
@@ -250,109 +256,6 @@ describe(createSearchIndex.name, () => {
       // Only the document with embedding should be indexed
       const count = await index.count();
       expect(count).toBe(1);
-    });
-  });
-
-  describe("file persistence", () => {
-    const TEST_DIR = "/tmp/ts-graph-search-persist-test";
-    const INDEX_PATH = join(TEST_DIR, "index.msgpack");
-
-    beforeEach(() => {
-      if (existsSync(TEST_DIR)) {
-        rmSync(TEST_DIR, { recursive: true });
-      }
-      mkdirSync(TEST_DIR, { recursive: true });
-    });
-
-    afterEach(() => {
-      if (existsSync(TEST_DIR)) {
-        rmSync(TEST_DIR, { recursive: true });
-      }
-    });
-
-    it("saves and loads index from file", async () => {
-      const original = await createSearchIndex();
-
-      await original.add(doc("validateCart", "src/cart.ts"));
-      await original.add(doc("processOrder", "src/order.ts"));
-
-      await original.saveToFile(INDEX_PATH);
-
-      const loaded = await loadSearchIndexFromFile(INDEX_PATH);
-
-      expect(loaded).not.toBeNull();
-      // biome-ignore lint/style/noNonNullAssertion: asserted not null above
-      const results = await loaded!.search("validate");
-      expect(results).toHaveLength(1);
-      // biome-ignore lint/style/noNonNullAssertion: length asserted above
-      expect(results[0]!.symbol).toBe("validateCart");
-    });
-
-    it("returns null when file does not exist", async () => {
-      const loaded = await loadSearchIndexFromFile("/nonexistent/path.json");
-      expect(loaded).toBeNull();
-    });
-
-    it("preserves file tracking data after load", async () => {
-      const original = await createSearchIndex();
-
-      await original.add(doc("fnA", "src/utils.ts"));
-      await original.add(doc("fnB", "src/utils.ts"));
-      await original.add(doc("fnC", "src/other.ts"));
-
-      await original.saveToFile(INDEX_PATH);
-
-      const loaded = await loadSearchIndexFromFile(INDEX_PATH);
-      expect(loaded).not.toBeNull();
-
-      // Remove by file should work correctly (relies on docsByFile tracking)
-      // biome-ignore lint/style/noNonNullAssertion: asserted not null above
-      await loaded!.removeByFile("src/utils.ts");
-
-      // biome-ignore lint/style/noNonNullAssertion: asserted not null above
-      const results = await loaded!.search("fn");
-      expect(results).toHaveLength(1);
-      // biome-ignore lint/style/noNonNullAssertion: length asserted above
-      expect(results[0]!.file).toBe("src/other.ts");
-    });
-
-    it("saves and loads vector index", async () => {
-      const DIMS = 8;
-      const original = await createSearchIndex({ vectorDimensions: DIMS });
-
-      await original.add({
-        ...doc("validateCart"),
-        embedding: mockEmbed("validateCart", DIMS),
-      });
-
-      await original.saveToFile(INDEX_PATH);
-
-      const loaded = await loadSearchIndexFromFile(INDEX_PATH, {
-        vectorDimensions: DIMS,
-      });
-
-      expect(loaded).not.toBeNull();
-      expect(loaded?.supportsVectors).toBe(true);
-
-      const queryVector = mockEmbed("validateCart", DIMS);
-      // biome-ignore lint/style/noNonNullAssertion: asserted not null above
-      const results = await loaded!.search("", {
-        mode: "vector",
-        vector: queryVector,
-      });
-
-      expect(results.length).toBeGreaterThan(0);
-      // biome-ignore lint/style/noNonNullAssertion: length asserted above
-      expect(results[0]!.symbol).toBe("validateCart");
-    });
-
-    it("returns null for corrupted file", async () => {
-      const { writeFileSync } = await import("node:fs");
-      // Write invalid binary data (not valid msgpack)
-      writeFileSync(INDEX_PATH, Buffer.from([0xff, 0xfe, 0x00, 0x01]));
-
-      const loaded = await loadSearchIndexFromFile(INDEX_PATH);
-      expect(loaded).toBeNull();
     });
   });
 });
