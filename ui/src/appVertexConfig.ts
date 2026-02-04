@@ -141,7 +141,7 @@ const buildVertexConfig = (dependencies: { apiService: () => ApiService }) =>
         {
           fromSymbolOptions: (fields$) =>
             fields$.pipe(
-              debounceTime(200),
+              debounceTime(300),
               distinctUntilChanged(
                 (prev, curr) =>
                   prev.fromSearchQuery === curr.fromSearchQuery &&
@@ -176,7 +176,7 @@ const buildVertexConfig = (dependencies: { apiService: () => ApiService }) =>
         {
           toSymbolOptions: (fields$) =>
             fields$.pipe(
-              debounceTime(200),
+              debounceTime(300),
               distinctUntilChanged(
                 (prev, curr) =>
                   prev.toSearchQuery === curr.toSearchQuery &&
@@ -209,7 +209,7 @@ const buildVertexConfig = (dependencies: { apiService: () => ApiService }) =>
       .loadFromFields$(["fromEndpoint", "toEndpoint", "topic", "maxNodes"], {
         queryResult: (fields$) =>
           fields$.pipe(
-            debounceTime(100),
+            debounceTime(300),
             switchMap(({ fromEndpoint, toEndpoint, topic, maxNodes }) => {
               // Topic only → semantic search
               if (topic.trim() && !fromEndpoint && !toEndpoint) {

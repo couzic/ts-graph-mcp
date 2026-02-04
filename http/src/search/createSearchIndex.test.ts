@@ -255,7 +255,7 @@ describe(createSearchIndex.name, () => {
 
   describe("file persistence", () => {
     const TEST_DIR = "/tmp/ts-graph-search-persist-test";
-    const INDEX_PATH = join(TEST_DIR, "index.json");
+    const INDEX_PATH = join(TEST_DIR, "index.msgpack");
 
     beforeEach(() => {
       if (existsSync(TEST_DIR)) {
@@ -348,7 +348,8 @@ describe(createSearchIndex.name, () => {
 
     it("returns null for corrupted file", async () => {
       const { writeFileSync } = await import("node:fs");
-      writeFileSync(INDEX_PATH, "not valid json {{{");
+      // Write invalid binary data (not valid msgpack)
+      writeFileSync(INDEX_PATH, Buffer.from([0xff, 0xfe, 0x00, 0x01]));
 
       const loaded = await loadSearchIndexFromFile(INDEX_PATH);
       expect(loaded).toBeNull();

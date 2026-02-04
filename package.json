@@ -58,6 +58,7 @@
     "chalk": "^5.0.0",
     "chokidar": "^5.0.0",
     "express": "^5.0.0",
+    "msgpackr": "^1.11.8",
     "node-llama-cpp": "^3.15.1",
     "rxjs": "^7.0.0",
     "ts-morph": "^24.0.0",

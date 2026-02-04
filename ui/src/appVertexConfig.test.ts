@@ -67,14 +67,14 @@ describe("appVertexConfig", () => {
 
       expect(vertex.currentLoadableState.status).toBe("loading");
 
-      vi.advanceTimersByTime(300);
+      vi.advanceTimersByTime(400);
       expect(vertex.currentLoadableState.status).toBe("loaded");
       expect(vertex.currentState.fromSymbolOptions).toEqual([]);
     });
 
     it("returns empty array when no history and query is less than 2 characters", () => {
       graph.dispatch(appActions.setFromSearchQuery("a"));
-      vi.advanceTimersByTime(300);
+      vi.advanceTimersByTime(400);
 
       expect(vertex.currentState.fromSymbolOptions).toEqual([]);
     });
@@ -82,7 +82,7 @@ describe("appVertexConfig", () => {
     it("filters out selected fromEndpoint from options", () => {
       graph.dispatch(appActions.setFromEndpoint(symbolToEndpoint(symbolA)));
       graph.dispatch(appActions.setFromSearchQuery("a"));
-      vi.advanceTimersByTime(300);
+      vi.advanceTimersByTime(400);
 
       expect(vertex.currentState.fromSymbolOptions).toEqual([]);
     });
@@ -96,7 +96,7 @@ describe("appVertexConfig", () => {
       graph.dispatch(appActions.setFromEndpoint(symbolToEndpoint(symbolA)));
       graph.dispatch(appActions.setToEndpoint(symbolToEndpoint(symbolB)));
       graph.dispatch(appActions.setFromSearchQuery("a"));
-      vi.advanceTimersByTime(300);
+      vi.advanceTimersByTime(400);
 
       expect(vertex.currentState.fromSymbolOptions).toEqual([]);
     });
@@ -118,7 +118,7 @@ describe("appVertexConfig", () => {
       graph.dispatch(appActions.setFromEndpoint(symbolToEndpoint(symbolA)));
       graph.dispatch(appActions.setToEndpoint(symbolToEndpoint(symbolB)));
       graph.dispatch(appActions.setFromSearchQuery("x"));
-      vi.advanceTimersByTime(300);
+      vi.advanceTimersByTime(400);
 
       expect(vertex.currentState.fromSymbolOptions).toEqual([symbolC]);
     });
@@ -129,7 +129,7 @@ describe("appVertexConfig", () => {
       ];
 
       graph.dispatch(appActions.setFromSearchQuery("te"));
-      vi.advanceTimersByTime(300);
+      vi.advanceTimersByTime(400);
       receivedSymbols$.next(symbols);
 
       expect(vertex.currentState.fromSymbolOptions).toEqual(symbols);
@@ -143,7 +143,7 @@ describe("appVertexConfig", () => {
       graph.dispatch(appActions.setFromSearchQuery("te"));
       graph.dispatch(appActions.setFromSearchQuery("tes"));
       graph.dispatch(appActions.setFromSearchQuery("test"));
-      vi.advanceTimersByTime(300);
+      vi.advanceTimersByTime(400);
       receivedSymbols$.next(symbols);
 
       expect(vertex.currentState.fromSymbolOptions).toEqual(symbols);
@@ -164,7 +164,7 @@ describe("appVertexConfig", () => {
 
     it("returns empty array when no history and query is less than 2 characters", () => {
       graph.dispatch(appActions.setToSearchQuery("x"));
-      vi.advanceTimersByTime(300);
+      vi.advanceTimersByTime(400);
 
       expect(vertex.currentState.toSymbolOptions).toEqual([]);
     });
@@ -172,7 +172,7 @@ describe("appVertexConfig", () => {
     it("filters out selected toEndpoint from options", () => {
       graph.dispatch(appActions.setToEndpoint(symbolToEndpoint(symbolB)));
       graph.dispatch(appActions.setToSearchQuery("x"));
-      vi.advanceTimersByTime(300);
+      vi.advanceTimersByTime(400);
 
       expect(vertex.currentState.toSymbolOptions).toEqual([]);
     });
@@ -189,7 +189,7 @@ describe("appVertexConfig", () => {
       graph.dispatch(appActions.setFromEndpoint(symbolToEndpoint(symbolA)));
       graph.dispatch(appActions.setToEndpoint(symbolToEndpoint(symbolB)));
       graph.dispatch(appActions.setToSearchQuery("x"));
-      vi.advanceTimersByTime(300);
+      vi.advanceTimersByTime(400);
 
       expect(vertex.currentState.toSymbolOptions).toEqual([symbolC]);
     });
@@ -200,7 +200,7 @@ describe("appVertexConfig", () => {
       ];
 
       graph.dispatch(appActions.setToSearchQuery("fo"));
-      vi.advanceTimersByTime(300);
+      vi.advanceTimersByTime(400);
       receivedSymbols$.next(symbols);
 
       expect(vertex.currentState.toSymbolOptions).toEqual(symbols);
@@ -222,7 +222,7 @@ describe("appVertexConfig", () => {
     };
 
     it("returns null when no endpoint or topic is specified", () => {
-      vi.advanceTimersByTime(200);
+      vi.advanceTimersByTime(400);
 
       expect(vertex.currentState.queryResult).toBeNull();
     });
@@ -231,7 +231,7 @@ describe("appVertexConfig", () => {
       const dependenciesResult = "## Graph\nstart --CALLS--> dep1";
 
       graph.dispatch(appActions.setFromEndpoint(fromEndpoint));
-      vi.advanceTimersByTime(200);
+      vi.advanceTimersByTime(400);
       receivedSearch$.next(dependenciesResult);
 
       expect(vertex.currentState.queryResult).toEqual(dependenciesResult);
@@ -241,7 +241,7 @@ describe("appVertexConfig", () => {
       const dependentsResult = "## Graph\ncaller --CALLS--> end";
 
       graph.dispatch(appActions.setToEndpoint(toEndpoint));
-      vi.advanceTimersByTime(200);
+      vi.advanceTimersByTime(400);
       receivedSearch$.next(dependentsResult);
 
       expect(vertex.currentState.queryResult).toEqual(dependentsResult);
@@ -252,7 +252,7 @@ describe("appVertexConfig", () => {
 
       graph.dispatch(appActions.setFromEndpoint(fromEndpoint));
       graph.dispatch(appActions.setToEndpoint(toEndpoint));
-      vi.advanceTimersByTime(200);
+      vi.advanceTimersByTime(400);
       receivedSearch$.next(pathsResult);
 
       expect(vertex.currentState.queryResult).toEqual(pathsResult);
@@ -260,11 +260,11 @@ describe("appVertexConfig", () => {
 
     it("returns null when endpoints are cleared", () => {
       graph.dispatch(appActions.setFromEndpoint(fromEndpoint));
-      vi.advanceTimersByTime(200);
+      vi.advanceTimersByTime(400);
       receivedSearch$.next("some result");
 
       graph.dispatch(appActions.clearFromEndpoint());
-      vi.advanceTimersByTime(200);
+      vi.advanceTimersByTime(400);
 
       expect(vertex.currentState.queryResult).toBeNull();
     });
@@ -275,11 +275,11 @@ describe("appVertexConfig", () => {
 
       graph.dispatch(appActions.setFromEndpoint(fromEndpoint));
       graph.dispatch(appActions.setToEndpoint(toEndpoint));
-      vi.advanceTimersByTime(200);
+      vi.advanceTimersByTime(400);
       receivedSearch$.next(pathsResult);
 
       graph.dispatch(appActions.clearToEndpoint());
-      vi.advanceTimersByTime(200);
+      vi.advanceTimersByTime(400);
       receivedSearch$.next(dependenciesResult);
 
       expect(vertex.currentState.queryResult).toEqual(dependenciesResult);
@@ -291,11 +291,11 @@ describe("appVertexConfig", () => {
 
       graph.dispatch(appActions.setFromEndpoint(fromEndpoint));
       graph.dispatch(appActions.setToEndpoint(toEndpoint));
-      vi.advanceTimersByTime(200);
+      vi.advanceTimersByTime(400);
       receivedSearch$.next(pathsResult);
 
       graph.dispatch(appActions.clearFromEndpoint());
-      vi.advanceTimersByTime(200);
+      vi.advanceTimersByTime(400);
       receivedSearch$.next(dependentsResult);
 
       expect(vertex.currentState.queryResult).toEqual(dependentsResult);
@@ -305,7 +305,7 @@ describe("appVertexConfig", () => {
       const topicResult = "## Symbols matching 'auth'";
 
       graph.dispatch(appActions.setTopic("auth"));
-      vi.advanceTimersByTime(200);
+      vi.advanceTimersByTime(400);
       receivedTopic$.next(topicResult);
 
       expect(vertex.currentState.queryResult).toEqual(topicResult);

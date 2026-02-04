@@ -61,8 +61,8 @@ export const getDefaultDbPath = (projectRoot: string): string => {
  * Get the default Orama index path for a project.
  *
  * @param cacheDir - The cache directory
- * @returns Absolute path to .ts-graph-mcp/orama/index.json
+ * @returns Absolute path to .ts-graph-mcp/orama/index.msgpack
  */
 export const getOramaIndexPath = (cacheDir: string): string => {
-  return join(getOramaDir(cacheDir), "index.json");
+  return join(getOramaDir(cacheDir), "index.msgpack");
 };

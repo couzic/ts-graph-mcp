@@ -320,5 +320,42 @@ export function processData(data: Data): Result {
         expect(content.length).toBeLessThanOrEqual(100);
       }
     });
+
+    it("embeds full function content beyond 50 lines when model can handle it", async () => {
+      const embeddedContents: string[] = [];
+      // Large context - no overflow expected
+      const embeddingProvider = createFakeEmbeddingProvider({
+        dimensions: 384,
+        maxContentLength: 10000,
+        onEmbed: (content) => embeddedContents.push(content),
+      });
+
+      // Generate a function with 60 lines (exceeds MAX_SOURCE_LINES = 50)
+      const functionLines = [
+        "export function largeFunction(): void {",
+        ...Array.from(
+          { length: 58 },
+          (_, i) => `  const line${i + 1} = ${i + 1};`,
+        ),
+        "}",
+      ];
+      const sourceCode = functionLines.join("\n");
+
+      const sourceFile = project.createSourceFile("src/test.ts", sourceCode);
+
+      await indexFile(sourceFile, context, writer, {
+        searchIndex,
+        embeddingProvider,
+      });
+
+      expect(embeddedContents).toHaveLength(1);
+      const embedding = embeddedContents[0];
+      assert(embedding !== undefined);
+
+      // Content from line 55 should be included (not truncated at line 50)
+      expect(embedding).toContain("line55");
+      // Should NOT contain truncation marker
+      expect(embedding).not.toContain("// ... truncated");
+    });
   });
 });

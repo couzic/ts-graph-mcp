@@ -12,6 +12,7 @@ import {
   search,
 } from "@orama/orama";
 import type { NodeType } from "@ts-graph/shared";
+import { pack, unpack } from "msgpackr";
 import type {
   SearchDocument,
   SearchMode,
@@ -244,7 +245,8 @@ const buildWrapper = <T extends TextOnlyIndex | VectorIndex>(
           Array.from(docsByFile.entries()).map(([k, v]) => [k, Array.from(v)]),
         ),
       };
-      writeFileSync(path, JSON.stringify(persistData));
+      // Binary format avoids V8's ~512MB string limit with large indexes
+      writeFileSync(path, pack(persistData));
     },
 
     async count(): Promise<number> {
@@ -376,8 +378,9 @@ export const loadSearchIndexFromFile = async (
   }
 
   try {
-    const content = readFileSync(path, "utf-8");
-    const persisted = JSON.parse(content) as PersistedSearchIndex;
+    // Read as Buffer (no encoding) for binary MessagePack format
+    const buffer = readFileSync(path);
+    const persisted = unpack(buffer) as PersistedSearchIndex;
     const dims = options?.vectorDimensions;
 
     // Restore docsByFile mapping

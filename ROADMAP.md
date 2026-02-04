@@ -8,32 +8,38 @@
 
 ## Near-term Enhancements
 
-### Embedding Cache (Hash-Based)
+### Embedding Cache Cleanup
 
-**Impact: High | Effort: Low**
+**Impact: Medium | Effort: Low**
 
-Cache generated embeddings to avoid regeneration on reindex.
+Add garbage collection for orphaned embeddings in the cache.
 
-**The Problem:** Embeddings are regenerated for every symbol on every reindex,
-even when the code hasn't changed. Embedding generation is the slowest part of
-indexing. This makes reindexing painfully slow for large codebases.
+**Current state:** Hash-based embedding cache is implemented
+(`http/src/embedding/embeddingCache.ts`). Embeddings are stored by content hash
+and reused when the same content is indexed again.
 
-**Solution:** Hash-based cache — compute a hash of the source snippet, look up
-existing embeddings before generating new ones.
+**The Problem:** When code is deleted or modified, old embeddings become
+orphaned. The cache grows indefinitely with stale entries that will never be
+read again.
+
+**Solution:** Add timestamp columns to enable smart cleanup:
+
+1. `created_at` — when the embedding was generated
+2. `last_read_at` — when the embedding was last accessed (updated on cache hit)
+
+**Cleanup strategies enabled by timestamps:**
+
+- **Age-based:** Delete embeddings not read in X days
+- **LRU eviction:** If cache exceeds size limit, evict least recently read
+- **Monitoring:** Track cache hit rate, growth over time
 
 **Implementation:**
 
-1. Add `embeddings(snippet_hash, vector)` table to SQLite
-2. Before generating embeddings, compute hash (e.g., SHA-256) of the snippet
-3. Query cache: if hash exists, reuse the vector
-4. Only generate embeddings for new/changed snippets
-5. Periodic cleanup: remove embeddings with no matching nodes
-
-**Why a separate table:**
-
-- Deduplicates identical snippets (generated code, copy-pasted functions)
-- Survives node deletion/recreation (same code = same hash)
-- Could be shared across projects in the future
+1. Add columns to cache schema: `created_at INTEGER, last_read_at INTEGER`
+2. Update `set()` to record `created_at = Date.now()`
+3. Update `get()` to update `last_read_at = Date.now()` on hit
+4. Add `cleanup(maxAgeDays: number)` method
+5. Optional: run cleanup on server startup or periodically
 
 ---
 

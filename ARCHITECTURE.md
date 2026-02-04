@@ -399,6 +399,18 @@ Claude Code has a built-in LSP tool. Use each for its strengths:
 | Point-to-point (definition, direct refs) | Transitive (callers of callers)      |
 | Single function context                  | Path finding (A → B)                 |
 
+## Search Index Persistence
+
+The Orama search index is persisted to `.ts-graph-mcp/orama/index.msgpack` using
+MessagePack binary format (via `msgpackr`).
+
+**Why not JSON?** With large codebases (20k+ symbols with 768-dim embeddings),
+`JSON.stringify()` exceeds V8's ~512MB string limit. MessagePack:
+
+- Outputs a Buffer directly (no string intermediate)
+- 50-70% smaller files (~60-120MB vs ~300MB for 20k symbols)
+- 2-10x faster serialization
+
 ## File Watching
 
 The server automatically reindexes files on save:

@@ -13,22 +13,17 @@ import { extractEdges } from "./extract/edges/extractEdges.js";
 import { extractNodes } from "./extract/nodes/extractNodes.js";
 import { stripClassImplementation } from "./stripClassImplementation.js";
 
-/** Maximum lines of source code to include in embedding content */
-const MAX_SOURCE_LINES = 50;
+/** Minimum snippet length worth embedding (below this, use metadata-only) */
+const MIN_USEFUL_SNIPPET_LENGTH = 100;
 
 /**
  * Extract source snippet for a node from the source file text.
+ * Returns full node content - overflow is handled by embedWithFallback.
  */
 const extractSourceSnippet = (sourceText: string, node: Node): string => {
   const lines = sourceText.split("\n");
   const startIdx = node.startLine - 1; // 1-indexed to 0-indexed
-  const endIdx = Math.min(node.endLine, startIdx + MAX_SOURCE_LINES);
-  const snippet = lines.slice(startIdx, endIdx).join("\n");
-
-  if (node.endLine > startIdx + MAX_SOURCE_LINES) {
-    return `${snippet}\n// ... truncated`;
-  }
-  return snippet;
+  return lines.slice(startIdx, node.endLine).join("\n");
 };
 
 /**
@@ -97,7 +92,7 @@ const embedWithFallback = async (
 
   // Strategy 3: Truncate content progressively until it fits
   let truncatedSnippet = snippet;
-  while (truncatedSnippet.length > 10) {
+  while (truncatedSnippet.length > MIN_USEFUL_SNIPPET_LENGTH) {
     truncatedSnippet = truncatedSnippet.slice(
       0,
       Math.floor(truncatedSnippet.length / 2),
