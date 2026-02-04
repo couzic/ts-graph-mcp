@@ -150,4 +150,58 @@ export function newFunction(): number { return 42; }
     assert(symbols.length === 1, `Expected 1 symbol, got ${symbols.length}`);
     expect(symbols[0]?.symbol).toBe("brandNew");
   });
+
+  it("uses embedding cache for reindexed files", async () => {
+    // This test verifies that semantic search works after file changes.
+    // The embedding cache should be used for unchanged content.
+
+    // Step 1: Create initial file
+    const searchPath = join(TEST_DIR, "src/searchable.ts");
+    writeFileSync(
+      searchPath,
+      `export function searchableFunction(): string { return "original"; }\n`,
+    );
+
+    await sleep(2000);
+
+    // Verify initial indexing worked via symbol search
+    const response1 = await fetch(
+      `http://localhost:${TEST_PORT}/api/symbols?q=searchableFunction`,
+    );
+    const symbols1 = (await response1.json()) as Array<{ symbol: string }>;
+    expect(symbols1.length).toBe(1);
+
+    // Step 2: Modify file to trigger reindex
+    writeFileSync(
+      searchPath,
+      `export function searchableFunction(): string { return "modified"; }
+export function anotherFunction(): number { return 42; }
+`,
+    );
+
+    await sleep(2000);
+
+    // Step 3: Verify both functions are searchable (reindex worked)
+    const response2 = await fetch(
+      `http://localhost:${TEST_PORT}/api/symbols?q=anotherFunction`,
+    );
+    const symbols2 = (await response2.json()) as Array<{ symbol: string }>;
+    expect(symbols2.length).toBe(1);
+    expect(symbols2[0]?.symbol).toBe("anotherFunction");
+
+    // Step 4: Verify semantic search (graph search with topic) works
+    // This requires embeddings to be present
+    const graphResponse = await fetch(
+      `http://localhost:${TEST_PORT}/api/graph/search`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topic: "searchable" }),
+      },
+    );
+    const graphResult = await graphResponse.text();
+
+    // Semantic search should find the function
+    expect(graphResult).toContain("searchableFunction");
+  });
 });

@@ -11,6 +11,7 @@ import type { SearchDocument } from "../search/SearchTypes.js";
 import type { EdgeExtractionContext } from "./extract/edges/EdgeExtractionContext.js";
 import { extractEdges } from "./extract/edges/extractEdges.js";
 import { extractNodes } from "./extract/nodes/extractNodes.js";
+import { stripClassImplementation } from "./stripClassImplementation.js";
 
 /** Maximum lines of source code to include in embedding content */
 const MAX_SOURCE_LINES = 50;
@@ -39,6 +40,84 @@ const prepareEmbeddingContent = (node: Node, sourceSnippet: string): string => {
 // File: ${node.filePath}
 
 ${sourceSnippet}`.trim();
+};
+
+/**
+ * Check if an error is a context overflow error from the embedding model.
+ */
+const isContextOverflowError = (error: unknown): boolean =>
+  error instanceof Error && error.message.includes("context size");
+
+/**
+ * Embed content with progressive fallback strategy.
+ * Tries: full content → stripped (for Class) → truncated (halving until fits).
+ * Never throws - always returns an embedding.
+ */
+const embedWithFallback = async (
+  node: Node,
+  snippet: string,
+  embeddingProvider: EmbeddingProvider,
+  embeddingCache: EmbeddingCacheConnection | undefined,
+): Promise<number[]> => {
+  const tryEmbed = async (content: string): Promise<number[] | null> => {
+    const hash = computeContentHash(content);
+    const cached = embeddingCache?.get(hash);
+    if (cached) {
+      return cached;
+    }
+
+    try {
+      const vector = await embeddingProvider.embedDocument(content);
+      embeddingCache?.set(hash, vector);
+      return vector;
+    } catch (error) {
+      if (isContextOverflowError(error)) {
+        return null; // Signal to try fallback
+      }
+      throw error; // Non-context errors are real failures
+    }
+  };
+
+  // Strategy 1: Try full content
+  const fullContent = prepareEmbeddingContent(node, snippet);
+  const fullResult = await tryEmbed(fullContent);
+  if (fullResult) {
+    return fullResult;
+  }
+
+  // Strategy 2: For Class nodes, try stripped implementation
+  if (node.type === "Class") {
+    const strippedSnippet = stripClassImplementation(snippet);
+    const strippedContent = prepareEmbeddingContent(node, strippedSnippet);
+    const strippedResult = await tryEmbed(strippedContent);
+    if (strippedResult) {
+      return strippedResult;
+    }
+  }
+
+  // Strategy 3: Truncate content progressively until it fits
+  let truncatedSnippet = snippet;
+  while (truncatedSnippet.length > 10) {
+    truncatedSnippet = truncatedSnippet.slice(
+      0,
+      Math.floor(truncatedSnippet.length / 2),
+    );
+    const truncatedContent = prepareEmbeddingContent(node, truncatedSnippet);
+    const truncatedResult = await tryEmbed(truncatedContent);
+    if (truncatedResult) {
+      return truncatedResult;
+    }
+  }
+
+  // Ultimate fallback: metadata only (symbol name + file path)
+  const metadataOnly = `// ${node.type}: ${node.name}\n// File: ${node.filePath}`;
+  const metadataResult = await tryEmbed(metadataOnly);
+  if (metadataResult) {
+    return metadataResult;
+  }
+
+  // This should never happen unless embedding model has < 50 char context
+  throw new Error(`Failed to embed ${node.id} even with minimal content`);
 };
 
 /**
@@ -128,24 +207,14 @@ export const indexFile = async (
       }));
 
       // Generate embeddings in parallel (if provider available)
-      // Uses cache to avoid regenerating embeddings for unchanged content
+      // Uses progressive fallback to ensure every node gets an embedding
       let embeddings: Array<number[] | undefined>;
       if (embeddingProvider) {
         const { embeddingCache } = options;
         embeddings = await Promise.all(
-          nodeSnippets.map(async ({ node, snippet }) => {
-            const content = prepareEmbeddingContent(node, snippet);
-            const hash = computeContentHash(content);
-
-            const cached = embeddingCache?.get(hash);
-            if (cached) {
-              return cached;
-            }
-
-            const vector = await embeddingProvider.embedDocument(content);
-            embeddingCache?.set(hash, vector);
-            return vector;
-          }),
+          nodeSnippets.map(({ node, snippet }) =>
+            embedWithFallback(node, snippet, embeddingProvider, embeddingCache),
+          ),
         );
       } else {
         embeddings = nodeSnippets.map(() => undefined);

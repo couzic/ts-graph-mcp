@@ -223,5 +223,102 @@ export function processData(data: Data): Result {
       const results = await textOnlyIndex.search("search");
       expect(results).toHaveLength(1);
     });
+
+    it("strips class implementation on context overflow and retries", async () => {
+      const embeddedContents: string[] = [];
+      const embeddingProvider = createFakeEmbeddingProvider({
+        dimensions: 384,
+        maxContentLength: 200,
+        onEmbed: (content) => embeddedContents.push(content),
+      });
+
+      const sourceFile = project.createSourceFile(
+        "src/test.ts",
+        `export class UserService {
+  private db: Database;
+
+  findUser(id: string): User {
+    const result = this.db.query(id);
+    return result;
+  }
+
+  saveUser(user: User): void {
+    this.db.save(user);
+    this.emit('saved', user);
+  }
+}`,
+      );
+
+      await indexFile(sourceFile, context, writer, {
+        searchIndex,
+        embeddingProvider,
+      });
+
+      // Should have embedded: Class (retried with stripped) + 2 Methods = 3 nodes
+      expect(embeddedContents).toHaveLength(3);
+
+      // Find the class embedding (contains "class UserService")
+      const classEmbedding = embeddedContents.find((c) =>
+        c.includes("// Class: UserService"),
+      );
+      assert(classEmbedding !== undefined);
+
+      // Class embedding should have stripped method bodies (after retry)
+      expect(classEmbedding).toContain("findUser(id: string): User { ... }");
+      expect(classEmbedding).toContain("saveUser(user: User): void { ... }");
+      expect(classEmbedding).not.toContain("this.db.query");
+      expect(classEmbedding).not.toContain("this.db.save");
+    });
+
+    it("always produces embeddings via progressive fallback (never fails)", async () => {
+      const embeddedContents: string[] = [];
+      // Very small limit - forces fallback to truncation
+      const embeddingProvider = createFakeEmbeddingProvider({
+        dimensions: 384,
+        maxContentLength: 100,
+        onEmbed: (content) => embeddedContents.push(content),
+      });
+
+      const sourceFile = project.createSourceFile(
+        "src/test.ts",
+        `export class UserService {
+  private db: Database;
+  private logger: Logger;
+  private config: Config;
+
+  constructor(db: Database, logger: Logger, config: Config) {
+    this.db = db;
+    this.logger = logger;
+    this.config = config;
+  }
+
+  findUser(id: string): User {
+    const result = this.db.query(id);
+    this.logger.log("Found user");
+    return result;
+  }
+
+  saveUser(user: User): void {
+    this.db.save(user);
+    this.logger.log("Saved user");
+    this.config.validate();
+  }
+}`,
+      );
+
+      // Should NOT throw - must always succeed via fallback
+      await indexFile(sourceFile, context, writer, {
+        searchIndex,
+        embeddingProvider,
+      });
+
+      // All nodes should have embeddings (Class + 2 Methods = 3)
+      expect(embeddedContents).toHaveLength(3);
+
+      // All embeddings should fit within the limit (via truncation if needed)
+      for (const content of embeddedContents) {
+        expect(content.length).toBeLessThanOrEqual(100);
+      }
+    });
   });
 });

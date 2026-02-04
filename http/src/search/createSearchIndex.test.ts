@@ -231,6 +231,26 @@ describe(createSearchIndex.name, () => {
 
       expect(results.length).toBeGreaterThan(0);
     });
+
+    it("addBatch skips documents without embeddings on vector index", async () => {
+      const index = await createSearchIndex({ vectorDimensions: DIMS });
+
+      const docWithoutEmbedding: SearchDocument = {
+        id: "src/test.ts:noEmbed",
+        symbol: "noEmbed",
+        file: "src/test.ts",
+        nodeType: "Function",
+        content: "",
+        // No embedding field
+      };
+
+      // Should not throw - documents without embeddings are skipped
+      await index.addBatch([docWithEmbed("withEmbed"), docWithoutEmbedding]);
+
+      // Only the document with embedding should be indexed
+      const count = await index.count();
+      expect(count).toBe(1);
+    });
   });
 
   describe("file persistence", () => {

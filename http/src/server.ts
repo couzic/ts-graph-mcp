@@ -132,6 +132,7 @@ const indexAndOpenDb = async (
     logger,
     searchIndex,
     embeddingProvider,
+    modelName,
   });
 
   const totalChanges =
@@ -298,6 +299,7 @@ export const startHttpServer = async (
       searchIndex,
       embeddingProvider,
       oramaIndexPath,
+      modelName: presetName,
       ...config.watch,
     });
     await watchHandle.ready;

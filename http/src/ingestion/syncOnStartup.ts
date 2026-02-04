@@ -3,6 +3,7 @@ import type Database from "better-sqlite3";
 import type { ProjectConfig } from "../config/Config.schemas.js";
 import { createSqliteWriter } from "../db/sqlite/createSqliteWriter.js";
 import type { EmbeddingProvider } from "../embedding/EmbeddingTypes.js";
+import { openEmbeddingCache } from "../embedding/embeddingCache.js";
 import type { TsGraphLogger } from "../logging/TsGraphLogger.js";
 import type { SearchIndexWrapper } from "../search/createSearchIndex.js";
 import { createProject } from "./createProject.js";
@@ -105,11 +106,19 @@ export const syncOnStartup = async (
     logger: TsGraphLogger;
     searchIndex?: SearchIndexWrapper;
     embeddingProvider?: EmbeddingProvider;
+    /** Model name for embedding cache lookup */
+    modelName?: string;
   },
 ): Promise<SyncOnStartupResult> => {
   const startTime = Date.now();
   const errors: Array<{ file: string; message: string }> = [];
   const writer = createSqliteWriter(db);
+
+  // Open embedding cache if model name is provided
+  const embeddingCache =
+    options.modelName !== undefined
+      ? openEmbeddingCache(options.cacheDir, options.modelName)
+      : undefined;
 
   const configuredPackageNames = extractConfiguredPackageNames(
     config,
@@ -206,6 +215,7 @@ export const syncOnStartup = async (
         const result = await indexFile(sourceFile, extractionContext, writer, {
           searchIndex: options.searchIndex,
           embeddingProvider: options.embeddingProvider,
+          embeddingCache,
         });
         filesReindexed++;
         nodesAdded += result.nodesAdded;
@@ -231,6 +241,9 @@ export const syncOnStartup = async (
 
   // Save updated manifest
   saveManifest(options.cacheDir, manifest);
+
+  // Close embedding cache
+  embeddingCache?.close();
 
   return {
     staleCount: stale.length,

@@ -122,15 +122,21 @@ const buildWrapper = <T extends TextOnlyIndex | VectorIndex>(
 
     async addBatch(docs: SearchDocument[]): Promise<void> {
       if (supportsVectors) {
-        const prepared = docs.map((doc) => ({
-          id: doc.id,
-          symbol: doc.symbol,
-          file: doc.file,
-          nodeType: doc.nodeType,
-          content: `${preprocessForBM25(doc.symbol)} ${doc.content}`,
-          embedding: doc.embedding ?? [],
-        }));
-        await insertMultiple(db as VectorIndex, prepared);
+        // Documents without embeddings are skipped (can't insert 0-dim vectors)
+        const docsWithEmbeddings = docs.filter(
+          (doc) => doc.embedding && doc.embedding.length > 0,
+        );
+        if (docsWithEmbeddings.length > 0) {
+          const prepared = docsWithEmbeddings.map((doc) => ({
+            id: doc.id,
+            symbol: doc.symbol,
+            file: doc.file,
+            nodeType: doc.nodeType,
+            content: `${preprocessForBM25(doc.symbol)} ${doc.content}`,
+            embedding: doc.embedding as number[],
+          }));
+          await insertMultiple(db as VectorIndex, prepared);
+        }
       } else {
         const prepared = docs.map((doc) => ({
           id: doc.id,

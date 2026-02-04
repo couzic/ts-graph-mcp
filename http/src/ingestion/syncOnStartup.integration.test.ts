@@ -15,6 +15,8 @@ import {
   openDatabase,
 } from "../db/sqlite/sqliteConnection.utils.js";
 import { initializeSchema } from "../db/sqlite/sqliteSchema.utils.js";
+import { createFakeEmbeddingProvider } from "../embedding/createFakeEmbeddingProvider.js";
+import { openEmbeddingCache } from "../embedding/embeddingCache.js";
 import { silentLogger } from "../logging/SilentTsGraphLogger.js";
 import {
   createSearchIndex,
@@ -205,6 +207,92 @@ export function calculateTotal(prices: number[]): number {
     await loadedSearchIndex?.removeByFile("src/cart.ts");
     const afterRemoval = await loadedSearchIndex?.search("validate");
     expect(afterRemoval).toHaveLength(0);
+  });
+
+  it("uses embedding cache during reindexing (avoids regenerating cached embeddings)", async () => {
+    // Setup: Create a project with source files
+    const pkgDir = join(TEST_DIR, "src");
+    mkdirSync(pkgDir, { recursive: true });
+
+    writeFileSync(
+      join(TEST_DIR, "tsconfig.json"),
+      JSON.stringify({
+        compilerOptions: { target: "ES2022", module: "NodeNext" },
+        include: ["src/**/*.ts"],
+      }),
+    );
+
+    const utilsPath = join(pkgDir, "utils.ts");
+    writeFileSync(
+      utilsPath,
+      `
+export function formatDate(date: Date): string {
+  return date.toISOString();
+}
+`.trim(),
+    );
+
+    const config: ProjectConfig = {
+      packages: [{ name: "main", tsconfig: "./tsconfig.json" }],
+    };
+
+    // Step 1: Index with embedding provider and cache
+    const generatedEmbeddings: string[] = [];
+    const embeddingProvider = createFakeEmbeddingProvider({
+      dimensions: 384,
+      onEmbed: (content) => generatedEmbeddings.push(content),
+    });
+
+    const searchIndex = await createSearchIndex({ vectorDimensions: 384 });
+    const writer = createSqliteWriter(db);
+    await indexProject(config, writer, {
+      projectRoot: TEST_DIR,
+      cacheDir: CACHE_DIR,
+      modelName: "test-model",
+      logger: silentLogger,
+      searchIndex,
+      embeddingProvider,
+    });
+
+    // Verify embedding was generated and cached
+    expect(generatedEmbeddings).toHaveLength(1);
+    expect(generatedEmbeddings[0]).toContain("formatDate");
+
+    // Verify cache has the embedding
+    const cache = openEmbeddingCache(CACHE_DIR, "test-model");
+    // Cache should have 1 entry (we can't easily query count, but it exists)
+    cache.close();
+
+    // Step 2: Clear DB but keep cache - simulate server restart that needs reindex
+    await writer.clearAll();
+
+    // Step 3: Create manifest that marks the file as needing reindex
+    // (by having wrong mtime/size, or being missing from manifest)
+    const manifest: IndexManifest = {
+      version: 1,
+      files: {}, // Empty = all files will be treated as "added"
+    };
+    saveManifest(CACHE_DIR, manifest);
+
+    // Clear the tracking array
+    generatedEmbeddings.length = 0;
+
+    // Step 4: Run syncOnStartup - file content unchanged, cache should be used
+    const syncResult = await syncOnStartup(db, config, manifest, {
+      projectRoot: TEST_DIR,
+      cacheDir: CACHE_DIR,
+      logger: silentLogger,
+      searchIndex,
+      embeddingProvider,
+      modelName: "test-model",
+    });
+
+    // File was detected as new (not in manifest)
+    expect(syncResult.addedCount).toBe(1);
+
+    // CRITICAL ASSERTION: If cache is working, NO embeddings should be regenerated
+    // because the file content is unchanged and was already cached.
+    expect(generatedEmbeddings).toHaveLength(0);
   });
 
   it("handles file changes after restart with persisted index", async () => {

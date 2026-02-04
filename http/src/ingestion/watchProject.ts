@@ -7,6 +7,10 @@ import { Subject, type Subscription } from "rxjs";
 import type { ProjectConfig } from "../config/Config.schemas.js";
 import { createSqliteWriter } from "../db/sqlite/createSqliteWriter.js";
 import type { EmbeddingProvider } from "../embedding/EmbeddingTypes.js";
+import {
+  type EmbeddingCacheConnection,
+  openEmbeddingCache,
+} from "../embedding/embeddingCache.js";
 import type { TsGraphLogger } from "../logging/TsGraphLogger.js";
 import type { SearchIndexWrapper } from "../search/createSearchIndex.js";
 import { bufferDebounce } from "./bufferDebounce.js";
@@ -59,6 +63,8 @@ export interface WatchOptions {
   embeddingProvider?: EmbeddingProvider;
   /** Path to Orama index file for persistence (optional) */
   oramaIndexPath?: string;
+  /** Model name for embedding cache lookup (optional) */
+  modelName?: string;
 
   // Callbacks
   /** Called after each batch of files is reindexed. Useful for testing. */
@@ -136,10 +142,17 @@ export const watchProject = (
     searchIndex,
     embeddingProvider,
     oramaIndexPath,
+    modelName,
     onReindex,
   } = options;
 
   const writer = createSqliteWriter(db);
+
+  // Open embedding cache if model name is provided (kept open for watcher lifetime)
+  const embeddingCache: EmbeddingCacheConnection | undefined =
+    modelName !== undefined
+      ? openEmbeddingCache(cacheDir, modelName)
+      : undefined;
   const configuredPackageNames = extractConfiguredPackageNames(
     config,
     projectRoot,
@@ -205,6 +218,7 @@ export const watchProject = (
     const result = await indexFile(sourceFile, extractionContext, writer, {
       searchIndex,
       embeddingProvider,
+      embeddingCache,
     });
 
     return result;
@@ -378,6 +392,8 @@ export const watchProject = (
       fileChanges$.complete();
       subscription?.unsubscribe();
       await watcher.close();
+      // Close embedding cache
+      embeddingCache?.close();
     },
     ready: readyPromise,
   };

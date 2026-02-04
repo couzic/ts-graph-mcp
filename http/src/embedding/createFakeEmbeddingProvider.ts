@@ -13,8 +13,13 @@ import type { EmbeddingProvider } from "./EmbeddingTypes.js";
  */
 export const createFakeEmbeddingProvider = (options?: {
   dimensions?: number;
+  /** Throws context overflow error if content exceeds this length */
+  maxContentLength?: number;
+  /** Callback invoked with each embedded content (for test assertions) */
+  onEmbed?: (content: string) => void;
 }): EmbeddingProvider => {
   const dimensions = options?.dimensions ?? 384;
+  const { maxContentLength, onEmbed } = options ?? {};
 
   /**
    * Simple string hash function.
@@ -63,6 +68,12 @@ export const createFakeEmbeddingProvider = (options?: {
     },
 
     async embedDocument(text: string): Promise<number[]> {
+      if (maxContentLength !== undefined && text.length > maxContentLength) {
+        throw new Error(
+          "Input is longer than the context size. Try to increase the context size or use another model that supports longer contexts.",
+        );
+      }
+      onEmbed?.(text);
       const seed = hashString(`document:${text}`);
       return generateVector(seed);
     },
