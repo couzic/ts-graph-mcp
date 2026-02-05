@@ -234,16 +234,10 @@ flowchart TD
     subgraph File["indexFile.ts — Per File"]
         E --> F[extractNodes]
         F --> G[Write nodes to SQLite]
-        G --> H{Search index<br/>enabled?}
-        H -->|Yes| I[Extract source snippets]
-        I --> J{Embedding<br/>provider?}
-        J -->|Yes| K[Generate embeddings<br/>node-llama-cpp]
-        J -->|No| L[Skip embeddings]
-        K --> M[Add to Orama index<br/>BM25 + vectors]
-        L --> M
-        H -->|No| N[Skip search indexing]
-        M --> O[extractEdges]
-        N --> O
+        G --> H[Extract source snippets]
+        H --> I[Generate embeddings<br/>node-llama-cpp]
+        I --> J[Add to Orama index<br/>BM25 + vectors]
+        J --> O[extractEdges]
         O --> P[Build import map<br/>cross-file resolution]
         P --> Q[Write edges to SQLite]
     end
@@ -263,7 +257,7 @@ flowchart TD
 Streaming architecture — processes one file at a time:
 
 1. **Extract Nodes** from AST → write to DB
-2. **Generate Embeddings** (optional) → add to search index
+2. **Generate Embeddings** → add to search index
 3. **Extract Edges** using import map for cross-file resolution → write to DB
 
 Memory efficient: O(1) per file, scales to any codebase size.

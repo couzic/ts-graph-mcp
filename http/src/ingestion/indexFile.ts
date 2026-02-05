@@ -6,6 +6,7 @@ import {
   computeContentHash,
   type EmbeddingCacheConnection,
 } from "../embedding/embeddingCache.js";
+import { prepareEmbeddingContent } from "../embedding/prepareEmbeddingContent.js";
 import type { SearchIndexWrapper } from "../search/createSearchIndex.js";
 import type { SearchDocument } from "../search/SearchTypes.js";
 import type { EdgeExtractionContext } from "./extract/edges/EdgeExtractionContext.js";
@@ -23,30 +24,10 @@ const MIN_USEFUL_SNIPPET_LENGTH = 100;
  * @example
  * extractSourceSnippet(sourceText, node) // "function foo() { return 42; }"
  */
-export const extractSourceSnippet = (
-  sourceText: string,
-  node: Node,
-): string => {
+const extractSourceSnippet = (sourceText: string, node: Node): string => {
   const lines = sourceText.split("\n");
   const startIdx = node.startLine - 1; // 1-indexed to 0-indexed
   return lines.slice(startIdx, node.endLine).join("\n");
-};
-
-/**
- * Prepare content for embedding.
- * Includes metadata prefix and source snippet.
- *
- * @example
- * prepareEmbeddingContent(node, snippet) // "// Function: foo\n// File: src/utils.ts\n\nfunction foo() {}"
- */
-export const prepareEmbeddingContent = (
-  node: Node,
-  sourceSnippet: string,
-): string => {
-  return `// ${node.type}: ${node.name}
-// File: ${node.filePath}
-
-${sourceSnippet}`.trim();
 };
 
 /**
@@ -97,7 +78,12 @@ const embedWithFallback = async (
   };
 
   // Strategy 1: Try full content
-  const fullContent = prepareEmbeddingContent(node, snippet);
+  const fullContent = prepareEmbeddingContent(
+    node.type,
+    node.name,
+    node.filePath,
+    snippet,
+  );
   const fullResult = await tryEmbed(fullContent);
   if (fullResult) {
     return fullResult;
@@ -106,7 +92,12 @@ const embedWithFallback = async (
   // Strategy 2: For Class nodes, try stripped implementation
   if (node.type === "Class") {
     const strippedSnippet = stripClassImplementation(snippet);
-    const strippedContent = prepareEmbeddingContent(node, strippedSnippet);
+    const strippedContent = prepareEmbeddingContent(
+      node.type,
+      node.name,
+      node.filePath,
+      strippedSnippet,
+    );
     const strippedResult = await tryEmbed(strippedContent);
     if (strippedResult) {
       return strippedResult;
@@ -120,7 +111,12 @@ const embedWithFallback = async (
       0,
       Math.floor(truncatedSnippet.length / 2),
     );
-    const truncatedContent = prepareEmbeddingContent(node, truncatedSnippet);
+    const truncatedContent = prepareEmbeddingContent(
+      node.type,
+      node.name,
+      node.filePath,
+      truncatedSnippet,
+    );
     const truncatedResult = await tryEmbed(truncatedContent);
     if (truncatedResult) {
       return truncatedResult;

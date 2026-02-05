@@ -190,18 +190,160 @@ export function anotherFunction(): number { return 42; }
     expect(symbols2[0]?.symbol).toBe("anotherFunction");
 
     // Step 4: Verify semantic search (graph search with topic) works
-    // This requires embeddings to be present
+    // This requires embeddings to be present.
+    // Use "lookup" — semantically related to "search" but does NOT appear
+    // literally in the source code, ensuring vector search is exercised.
     const graphResponse = await fetch(
       `http://localhost:${TEST_PORT}/api/graph/search`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic: "searchable" }),
+        body: JSON.stringify({ topic: "lookup" }),
       },
     );
     const graphResult = await graphResponse.text();
 
-    // Semantic search should find the function
+    // Semantic search should find the function via vector similarity
     expect(graphResult).toContain("searchableFunction");
   });
+});
+
+/**
+ * E2E test for topic search after server restart.
+ *
+ * This test verifies that semantic search (topic queries) continue to work
+ * after the server is stopped and restarted with an existing database.
+ *
+ * Bug: On first run, embeddings are generated and cached. On restart with
+ * existing DB, populateSearchIndex() was not loading embeddings from cache,
+ * causing all topic searches to return zero results.
+ */
+describe("HTTP server restart preserves topic search", () => {
+  const TEST_DIR = mkdtempSync(join(tmpdir(), "server-restart-test-"));
+  const TEST_PORT = 14998; // Different port from other test suite
+  let serverHandle: ServerHandle;
+  let originalCwd: string;
+
+  const sleep = (ms: number) =>
+    new Promise((resolve) => setTimeout(resolve, ms));
+
+  beforeAll(async () => {
+    // Create test project structure
+    mkdirSync(join(TEST_DIR, "src"), { recursive: true });
+    mkdirSync(join(TEST_DIR, ".ts-graph-mcp"), { recursive: true });
+
+    // Symlink models from repo root to avoid re-downloading (~300MB)
+    const repoRoot = join(import.meta.dirname, "..", "..");
+    const repoModelsDir = join(repoRoot, ".ts-graph-mcp", "models");
+    symlinkSync(repoModelsDir, join(TEST_DIR, ".ts-graph-mcp", "models"));
+
+    writeFileSync(
+      join(TEST_DIR, "tsconfig.json"),
+      JSON.stringify(
+        {
+          compilerOptions: {
+            target: "ES2022",
+            module: "ESNext",
+            moduleResolution: "bundler",
+            strict: true,
+          },
+          include: ["src/**/*.ts"],
+        },
+        null,
+        2,
+      ),
+    );
+
+    writeFileSync(
+      join(TEST_DIR, "ts-graph-mcp.config.json"),
+      JSON.stringify(
+        {
+          packages: [{ name: "main", tsconfig: "./tsconfig.json" }],
+          server: { port: TEST_PORT },
+          watch: { silent: true },
+        },
+        null,
+        2,
+      ),
+    );
+
+    // Create source file with distinctive name for topic search
+    writeFileSync(
+      join(TEST_DIR, "src/authentication.ts"),
+      `/**
+ * Validates user credentials for authentication.
+ */
+export function validateUserCredentials(username: string, password: string): boolean {
+  return username.length > 0 && password.length > 8;
+}
+
+/**
+ * Authenticates a user session.
+ */
+export function authenticateSession(token: string): boolean {
+  return token.startsWith("valid_");
+}
+`,
+    );
+
+    // Change to test directory (server uses process.cwd())
+    originalCwd = process.cwd();
+    process.chdir(TEST_DIR);
+  });
+
+  afterAll(async () => {
+    // Restore working directory
+    process.chdir(originalCwd);
+
+    // Clean up temp directory
+    rmSync(TEST_DIR, { recursive: true, force: true });
+  });
+
+  it("topic search works after server restart", async () => {
+    // Step 1: Start server (full indexing with embeddings)
+    serverHandle = await startHttpServer([], { logger: silentLogger });
+    await sleep(1000);
+
+    // Step 2: Verify topic search works on first run
+    // Use "login" — semantically related to authentication/credentials
+    // but does NOT appear literally in the source code, file name, or JSDoc.
+    // This ensures the test exercises vector/semantic search, not just BM25.
+    const firstRunResponse = await fetch(
+      `http://localhost:${TEST_PORT}/api/graph/search`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topic: "login" }),
+      },
+    );
+    const firstRunResult = await firstRunResponse.text();
+
+    // Should find authentication-related symbols via semantic similarity
+    expect(firstRunResult).toContain("validateUserCredentials");
+
+    // Step 3: Stop the server
+    await serverHandle.close();
+    await sleep(500);
+
+    // Step 4: Start server again (uses existing DB)
+    serverHandle = await startHttpServer([], { logger: silentLogger });
+    await sleep(1000);
+
+    // Step 5: Verify topic search still works after restart
+    const restartResponse = await fetch(
+      `http://localhost:${TEST_PORT}/api/graph/search`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topic: "login" }),
+      },
+    );
+    const restartResult = await restartResponse.text();
+
+    // This will FAIL if embeddings aren't restored from cache
+    expect(restartResult).toContain("validateUserCredentials");
+
+    // Clean up
+    await serverHandle.close();
+  }, 60_000); // 60s timeout for model loading
 });

@@ -15,6 +15,7 @@ import {
   openDatabase,
 } from "../db/sqlite/sqliteConnection.utils.js";
 import { initializeSchema } from "../db/sqlite/sqliteSchema.utils.js";
+import { createFakeEmbeddingCache } from "../embedding/createFakeEmbeddingCache.js";
 import { createFakeEmbeddingProvider } from "../embedding/createFakeEmbeddingProvider.js";
 import { openEmbeddingCache } from "../embedding/embeddingCache.js";
 import { silentLogger } from "../logging/SilentTsGraphLogger.js";
@@ -26,6 +27,8 @@ import { syncOnStartup } from "./syncOnStartup.js";
 
 const TEST_DIR = "/tmp/ts-graph-sync-startup-test";
 const CACHE_DIR = join(TEST_DIR, ".ts-graph-mcp");
+
+const vectorDimensions = 3; // Use small dimensions for testing to speed up embedding generation
 
 describe(syncOnStartup.name, () => {
   let db: Database.Database;
@@ -80,12 +83,20 @@ export function validateEmail(email: string): boolean {
     };
 
     // Step 1: Index the project (populates both DB and search index)
-    const initialSearchIndex = await createSearchIndex();
+    const initialSearchIndex = await createSearchIndex({
+      vectorDimensions,
+    });
     const writer = createSqliteWriter(db);
+    const embeddingProvider = createFakeEmbeddingProvider({
+      dimensions: vectorDimensions,
+    });
     const indexResult = await indexProject(config, writer, {
       projectRoot: TEST_DIR,
+      cacheDir: CACHE_DIR,
+      modelName: "test-model",
       logger: silentLogger,
       searchIndex: initialSearchIndex,
+      embeddingProvider,
     });
 
     expect(indexResult.nodesAdded).toBeGreaterThan(0);
@@ -129,7 +140,13 @@ export function validateEmail(email: string): boolean {
     // Step 4: Populate search index from existing database
     // syncOnStartup only handles changed files, not unchanged ones.
     // Callers must call populateSearchIndex to load existing data.
-    await populateSearchIndex({ db, searchIndex: freshSearchIndex });
+    await populateSearchIndex({
+      db,
+      searchIndex: freshSearchIndex,
+      embeddingCache: createFakeEmbeddingCache(vectorDimensions),
+      embeddingProvider: embeddingProvider,
+      projectRoot: TEST_DIR,
+    });
 
     // Step 5: Verify search works on the populated index
     const searchResults = await freshSearchIndex.search("validate");
@@ -167,11 +184,11 @@ export function formatDate(date: Date): string {
     // Step 1: Index with embedding provider and cache
     const generatedEmbeddings: string[] = [];
     const embeddingProvider = createFakeEmbeddingProvider({
-      dimensions: 384,
+      dimensions: vectorDimensions,
       onEmbed: (content) => generatedEmbeddings.push(content),
     });
 
-    const searchIndex = await createSearchIndex({ vectorDimensions: 384 });
+    const searchIndex = await createSearchIndex({ vectorDimensions });
     const writer = createSqliteWriter(db);
     await indexProject(config, writer, {
       projectRoot: TEST_DIR,

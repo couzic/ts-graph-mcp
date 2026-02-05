@@ -8,6 +8,8 @@ import {
 } from "../db/sqlite/sqliteConnection.utils.js";
 import { initializeSchema } from "../db/sqlite/sqliteSchema.utils.js";
 import type { FunctionNode, InterfaceNode } from "../db/Types.js";
+import { createFakeEmbeddingCache } from "../embedding/createFakeEmbeddingCache.js";
+import { createFakeEmbeddingProvider } from "../embedding/createFakeEmbeddingProvider.js";
 import { createSearchIndex } from "./createSearchIndex.js";
 import { populateSearchIndex } from "./populateSearchIndex.js";
 
@@ -20,6 +22,7 @@ const fn = (name: string, file = "src/test.ts"): FunctionNode => ({
   startLine: 1,
   endLine: 10,
   exported: true,
+  contentHash: `hash-${name}`,
 });
 
 const iface = (name: string, file = "src/types.ts"): InterfaceNode => ({
@@ -31,10 +34,18 @@ const iface = (name: string, file = "src/types.ts"): InterfaceNode => ({
   startLine: 1,
   endLine: 5,
   exported: true,
+  contentHash: `hash-${name}`,
 });
+
+const vectorDimensions = 3;
 
 describe(populateSearchIndex.name, () => {
   let db: Database.Database;
+  const embeddingCache = createFakeEmbeddingCache(vectorDimensions);
+  const embeddingProvider = createFakeEmbeddingProvider({
+    dimensions: vectorDimensions,
+  });
+  const projectRoot = "/test/project";
 
   beforeEach(() => {
     db = openDatabase({ path: ":memory:" });
@@ -47,7 +58,13 @@ describe(populateSearchIndex.name, () => {
 
   it("returns 0 for empty database", async () => {
     const searchIndex = await createSearchIndex();
-    const result = await populateSearchIndex({ db, searchIndex });
+    const result = await populateSearchIndex({
+      db,
+      searchIndex,
+      embeddingCache,
+      embeddingProvider,
+      projectRoot,
+    });
     expect(result.total).toBe(0);
     expect(await searchIndex.count()).toBe(0);
   });
@@ -61,7 +78,13 @@ describe(populateSearchIndex.name, () => {
     ]);
 
     const searchIndex = await createSearchIndex();
-    const result = await populateSearchIndex({ db, searchIndex });
+    const result = await populateSearchIndex({
+      db,
+      searchIndex,
+      embeddingCache,
+      embeddingProvider,
+      projectRoot,
+    });
 
     expect(result.total).toBe(3);
     expect(await searchIndex.count()).toBe(3);
@@ -76,7 +99,13 @@ describe(populateSearchIndex.name, () => {
     ]);
 
     const searchIndex = await createSearchIndex();
-    await populateSearchIndex({ db, searchIndex });
+    await populateSearchIndex({
+      db,
+      searchIndex,
+      embeddingCache,
+      embeddingProvider,
+      projectRoot,
+    });
 
     const results = await searchIndex.search("validate");
     expect(results).toHaveLength(2);
@@ -89,7 +118,13 @@ describe(populateSearchIndex.name, () => {
     await writer.addNodes([fn("handleUserRequest")]);
 
     const searchIndex = await createSearchIndex();
-    await populateSearchIndex({ db, searchIndex });
+    await populateSearchIndex({
+      db,
+      searchIndex,
+      embeddingCache,
+      embeddingProvider,
+      projectRoot,
+    });
 
     // Should find by "User" because camelCase is split
     const results = await searchIndex.search("User");
@@ -104,7 +139,13 @@ describe(populateSearchIndex.name, () => {
     await writer.addNodes(nodes);
 
     const searchIndex = await createSearchIndex();
-    const result = await populateSearchIndex({ db, searchIndex });
+    const result = await populateSearchIndex({
+      db,
+      searchIndex,
+      embeddingCache,
+      embeddingProvider,
+      projectRoot,
+    });
 
     expect(result.total).toBe(1000);
     expect(await searchIndex.count()).toBe(1000);

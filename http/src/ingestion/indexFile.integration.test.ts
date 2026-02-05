@@ -11,6 +11,8 @@ import {
 import type { EdgeExtractionContext } from "./extract/edges/EdgeExtractionContext.js";
 import { indexFile } from "./indexFile.js";
 
+const vectorDimensions = 3;
+
 /**
  * Create a fake DbWriter for testing.
  */
@@ -144,12 +146,12 @@ export type DATE_FORMAT = typeof DATE_FORMAT;`,
 
     beforeEach(async () => {
       // Create index with vector support
-      searchIndex = await createSearchIndex({ vectorDimensions: 384 });
+      searchIndex = await createSearchIndex({ vectorDimensions });
     });
 
     it("generates embeddings when provider is present", async () => {
       const embeddingProvider = createFakeEmbeddingProvider({
-        dimensions: 384,
+        dimensions: vectorDimensions,
       });
       const sourceFile = project.createSourceFile(
         "src/test.ts",
@@ -180,7 +182,7 @@ export type DATE_FORMAT = typeof DATE_FORMAT;`,
 
     it("generates different embeddings for different functions", async () => {
       const embeddingProvider = createFakeEmbeddingProvider({
-        dimensions: 384,
+        dimensions: vectorDimensions,
       });
       const sourceFile = project.createSourceFile(
         "src/test.ts",
@@ -227,7 +229,7 @@ export function processData(data: Data): Result {
     it("strips class implementation on context overflow and retries", async () => {
       const embeddedContents: string[] = [];
       const embeddingProvider = createFakeEmbeddingProvider({
-        dimensions: 384,
+        dimensions: vectorDimensions,
         maxContentLength: 200,
         onEmbed: (content) => embeddedContents.push(content),
       });
@@ -274,7 +276,7 @@ export function processData(data: Data): Result {
       const embeddedContents: string[] = [];
       // Very small limit - forces fallback to truncation
       const embeddingProvider = createFakeEmbeddingProvider({
-        dimensions: 384,
+        dimensions: vectorDimensions,
         maxContentLength: 100,
         onEmbed: (content) => embeddedContents.push(content),
       });
@@ -325,7 +327,7 @@ export function processData(data: Data): Result {
       const embeddedContents: string[] = [];
       // Large context - no overflow expected
       const embeddingProvider = createFakeEmbeddingProvider({
-        dimensions: 384,
+        dimensions: vectorDimensions,
         maxContentLength: 10000,
         onEmbed: (content) => embeddedContents.push(content),
       });

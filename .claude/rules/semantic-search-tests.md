@@ -1,0 +1,1 @@
+When testing topic/semantic search, the query term must NOT appear literally in the source code, file names, or JSDoc of the test fixtures. Use a semantically related synonym instead (e.g., search for "login" when the code says "authentication"). This ensures the test exercises vector search, not just BM25/lexical matching.

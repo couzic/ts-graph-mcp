@@ -7,6 +7,7 @@ import {
 } from "../../db/sqlite/sqliteConnection.utils.js";
 import { initializeSchema } from "../../db/sqlite/sqliteSchema.utils.js";
 import type { Edge, FunctionNode } from "../../db/Types.js";
+import { createFakeEmbeddingCache } from "../../embedding/createFakeEmbeddingCache.js";
 import { createFakeEmbeddingProvider } from "../../embedding/createFakeEmbeddingProvider.js";
 import {
   createSearchIndex,
@@ -25,6 +26,7 @@ const fn = (name: string, file = "src/test.ts"): FunctionNode => ({
   startLine: 1,
   endLine: 10,
   exported: true,
+  contentHash: `hash-${name}`,
 });
 
 const calls = (from: string, to: string): Edge => ({
@@ -33,9 +35,15 @@ const calls = (from: string, to: string): Edge => ({
   type: "CALLS",
 });
 
+const vectorDimensions = 3;
+
 describe(searchGraph.name, () => {
   let db: Database.Database;
   const projectRoot = "/test/project";
+  const embeddingCache = createFakeEmbeddingCache(vectorDimensions);
+  const embeddingProvider = createFakeEmbeddingProvider({
+    dimensions: vectorDimensions,
+  });
 
   beforeEach(() => {
     db = openDatabase({ path: ":memory:" });
@@ -143,7 +151,13 @@ describe(searchGraph.name, () => {
         ),
       ]);
 
-      await populateSearchIndex({ db, searchIndex });
+      await populateSearchIndex({
+        db,
+        searchIndex,
+        embeddingCache,
+        embeddingProvider,
+        projectRoot,
+      });
 
       const result = await searchGraph(
         db,
@@ -165,7 +179,13 @@ describe(searchGraph.name, () => {
       await writer.addNodes([fn("validateInput"), fn("validateOutput")]);
       // No edges between them
 
-      await populateSearchIndex({ db, searchIndex });
+      await populateSearchIndex({
+        db,
+        searchIndex,
+        embeddingCache,
+        embeddingProvider,
+        projectRoot,
+      });
 
       const result = await searchGraph(
         db,
@@ -184,7 +204,13 @@ describe(searchGraph.name, () => {
       const writer = createSqliteWriter(db);
       await writer.addNodes([fn("processData")]);
 
-      await populateSearchIndex({ db, searchIndex });
+      await populateSearchIndex({
+        db,
+        searchIndex,
+        embeddingCache,
+        embeddingProvider,
+        projectRoot,
+      });
 
       const result = await searchGraph(
         db,
@@ -217,7 +243,13 @@ describe(searchGraph.name, () => {
         calls(validateA.id, unrelated.id),
         calls(validateB.id, unrelated.id),
       ]);
-      await populateSearchIndex({ db, searchIndex });
+      await populateSearchIndex({
+        db,
+        searchIndex,
+        embeddingCache,
+        embeddingProvider,
+        projectRoot,
+      });
 
       const result = await searchGraph(
         db,
@@ -245,7 +277,13 @@ describe(searchGraph.name, () => {
         calls(caller.id, saveA.id),
         calls(caller.id, saveB.id),
       ]);
-      await populateSearchIndex({ db, searchIndex });
+      await populateSearchIndex({
+        db,
+        searchIndex,
+        embeddingCache,
+        embeddingProvider,
+        projectRoot,
+      });
 
       const result = await searchGraph(
         db,
@@ -267,7 +305,13 @@ describe(searchGraph.name, () => {
 
       await writer.addNodes([nodeA, nodeB]);
       await writer.addEdges([calls(nodeA.id, nodeB.id)]);
-      await populateSearchIndex({ db, searchIndex });
+      await populateSearchIndex({
+        db,
+        searchIndex,
+        embeddingCache,
+        embeddingProvider,
+        projectRoot,
+      });
 
       const result = await searchGraph(
         db,
@@ -287,7 +331,13 @@ describe(searchGraph.name, () => {
 
       await writer.addNodes([nodeA, nodeB]);
       await writer.addEdges([calls(nodeA.id, nodeB.id)]);
-      await populateSearchIndex({ db, searchIndex });
+      await populateSearchIndex({
+        db,
+        searchIndex,
+        embeddingCache,
+        embeddingProvider,
+        projectRoot,
+      });
 
       const result = await searchGraph(
         db,
@@ -316,7 +366,13 @@ describe(searchGraph.name, () => {
 
       await writer.addNodes([weakMatch, targetNode]);
       await writer.addEdges([calls(weakMatch.id, targetNode.id)]);
-      await populateSearchIndex({ db, searchIndex });
+      await populateSearchIndex({
+        db,
+        searchIndex,
+        embeddingCache,
+        embeddingProvider,
+        projectRoot,
+      });
 
       // Query for "sqlite writer" - falls back to semantic search
       // which finds "createWriter" as the best available match
@@ -339,7 +395,13 @@ describe(searchGraph.name, () => {
 
       await writer.addNodes([weakMatch, caller]);
       await writer.addEdges([calls(caller.id, weakMatch.id)]);
-      await populateSearchIndex({ db, searchIndex });
+      await populateSearchIndex({
+        db,
+        searchIndex,
+        embeddingCache,
+        embeddingProvider,
+        projectRoot,
+      });
 
       // Query "Edge source property" - falls back to semantic search
       // which finds "sourceMap" as the best available match
@@ -366,7 +428,13 @@ describe(searchGraph.name, () => {
         calls(exactMatch.id, dependency.id),
         calls(partialMatch.id, dependency.id),
       ]);
-      await populateSearchIndex({ db, searchIndex });
+      await populateSearchIndex({
+        db,
+        searchIndex,
+        embeddingCache,
+        embeddingProvider,
+        projectRoot,
+      });
 
       const result = await searchGraph(
         db,
@@ -388,7 +456,13 @@ describe(searchGraph.name, () => {
 
       await writer.addNodes([weakMatch, target]);
       await writer.addEdges([calls(weakMatch.id, target.id)]);
-      await populateSearchIndex({ db, searchIndex });
+      await populateSearchIndex({
+        db,
+        searchIndex,
+        embeddingCache,
+        embeddingProvider,
+        projectRoot,
+      });
 
       // Query has 3 terms: "handle", "sqlite", "connection"
       // "handleRequest" only matches 1 of 3, but it's the best available
@@ -405,16 +479,15 @@ describe(searchGraph.name, () => {
   });
 
   describe("hybrid search (with embedding provider)", () => {
-    const VECTOR_DIMS = 384;
     let searchIndex: SearchIndexWrapper;
 
     beforeEach(async () => {
-      searchIndex = await createSearchIndex({ vectorDimensions: VECTOR_DIMS });
+      searchIndex = await createSearchIndex({ vectorDimensions });
     });
 
     it("indicates semantic search mode when embedding provider available", async () => {
       const embeddingProvider = createFakeEmbeddingProvider({
-        dimensions: VECTOR_DIMS,
+        dimensions: vectorDimensions,
       });
       const writer = createSqliteWriter(db);
       await writer.addNodes([fn("calculateTax"), fn("computeDiscount")]);
@@ -458,7 +531,7 @@ describe(searchGraph.name, () => {
 
     it("falls back to keyword search without embedding provider", async () => {
       const embeddingProvider = createFakeEmbeddingProvider({
-        dimensions: VECTOR_DIMS,
+        dimensions: vectorDimensions,
       });
       const writer = createSqliteWriter(db);
       await writer.addNodes([fn("validateInput")]);
@@ -491,7 +564,7 @@ describe(searchGraph.name, () => {
 
     it("uses hybrid search for from.query resolution", async () => {
       const embeddingProvider = createFakeEmbeddingProvider({
-        dimensions: VECTOR_DIMS,
+        dimensions: vectorDimensions,
       });
       const writer = createSqliteWriter(db);
       const nodeA = fn("processUserData");

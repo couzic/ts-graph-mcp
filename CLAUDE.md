@@ -16,6 +16,11 @@ enabling instant traversal of entire call chains.
 paths — "How does A reach B?" in one query instead of manual file-by-file
 tracing.
 
+**Semantic search is a core feature.** It must be available at all times — never
+silently degrade or fail. If embeddings are missing, regenerate them. If
+regeneration fails, log a warning. Always validate that required components are
+present when vector search is enabled.
+
 **Simplicity is a feature.** Each tool should do one thing well. If a tool tries
 to do multiple things, split it. The code, the architecture, the tools — all
 should reflect simplicity.

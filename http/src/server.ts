@@ -10,6 +10,7 @@ import { createSqliteWriter } from "./db/sqlite/createSqliteWriter.js";
 import { openDatabase } from "./db/sqlite/sqliteConnection.utils.js";
 import { createEmbeddingProvider } from "./embedding/createEmbeddingProvider.js";
 import type { EmbeddingProvider } from "./embedding/EmbeddingTypes.js";
+import { openEmbeddingCache } from "./embedding/embeddingCache.js";
 import { DEFAULT_PRESET, EMBEDDING_PRESETS } from "./embedding/presets.js";
 import { indexProject } from "./ingestion/indexProject.js";
 import {
@@ -41,7 +42,7 @@ const indexAndOpenDb = async (
   forceReindex: boolean,
   logger: TsGraphLogger,
   searchIndex: SearchIndexWrapper,
-  embeddingProvider?: EmbeddingProvider,
+  embeddingProvider: EmbeddingProvider,
 ): Promise<{
   db: Database.Database;
   indexedFiles: number;
@@ -142,8 +143,16 @@ const indexAndOpenDb = async (
     }
   }
 
-  // Populate search index from database
-  await populateSearchIndex({ db, searchIndex });
+  // Populate search index from database (with embeddings from cache)
+  const embeddingCache = openEmbeddingCache(cacheDir, modelName);
+  await populateSearchIndex({
+    db,
+    searchIndex,
+    embeddingCache,
+    embeddingProvider,
+    projectRoot,
+  });
+  embeddingCache.close();
 
   // Get actual file count from database
   const countResult = db
