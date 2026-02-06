@@ -59,8 +59,8 @@ export interface WatchOptions {
   // Search
   /** Search index for unified indexing (optional) */
   searchIndex?: SearchIndexWrapper;
-  /** Embedding provider for semantic search (optional) */
-  embeddingProvider?: EmbeddingProvider;
+  /** Embedding provider for semantic search */
+  embeddingProvider: EmbeddingProvider;
   /** Model name for embedding cache lookup (optional) */
   modelName?: string;
 

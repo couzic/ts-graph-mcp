@@ -27,6 +27,7 @@ describe("formatToolOutput", () => {
           filePath: "src/b.ts",
           startLine: 1,
           endLine: 3,
+          snippet: "function fnB() {\n  return fnC();\n}",
           locs: [
             { line: 1, code: "function fnB() {" },
             { line: 2, code: "  return fnC();" },
@@ -97,6 +98,7 @@ fnA --CALLS--> fnB`);
             filePath: "src/b.ts",
             startLine: 1,
             endLine: 1,
+            snippet: "function fnB() {}",
             locs: [{ line: 1, code: "function fnB() {}" }],
           },
         ],
@@ -132,6 +134,7 @@ fnA --CALLS--> fnB`);
             filePath: "src/b.ts",
             startLine: 1,
             endLine: 1,
+            snippet: "function fnB() {}",
             locs: [{ line: 1, code: "function fnB() {}" }],
           },
         ],
@@ -265,6 +268,7 @@ fnA --CALLS--> fnB`);
           filePath: "src/fn1.ts",
           startLine: 1,
           endLine: 3,
+          snippet: "function fn1() {\n  return fn2();\n}",
           locs: [
             { line: 1, code: "function fn1() {" },
             { line: 2, code: "  return fn2();" },
@@ -305,6 +309,7 @@ fnA --CALLS--> fnB`);
           filePath: "src/fn1.ts",
           startLine: 1,
           endLine: 3,
+          snippet: "function fn1() {\n  return fn2();\n}",
           locs: [
             { line: 1, code: "function fn1() {" },
             { line: 2, code: "  return fn2();" },
@@ -350,6 +355,7 @@ fnA --CALLS--> fnB`);
           filePath: "src/fn1.ts",
           startLine: 1,
           endLine: 3,
+          snippet: "function fn1() {\n  return fn2();\n}",
           locs: [
             { line: 1, code: "function fn1() {" },
             { line: 2, code: "  return fn2();" },

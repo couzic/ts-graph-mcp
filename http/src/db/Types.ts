@@ -35,7 +35,10 @@ export interface BaseNode {
   exported: boolean;
 
   /** Hash of embedding content (for cache lookup during search index population) */
-  contentHash?: string;
+  contentHash: string;
+
+  /** Source code snippet for this node */
+  snippet: string;
 }
 
 // Node Variants (Discriminated Union)
@@ -85,6 +88,15 @@ export type Node =
   | InterfaceNode
   | TypeAliasNode
   | VariableNode;
+
+/**
+ * A node as returned by extractors, before contentHash and snippet are added.
+ * Extractors create nodes without these fields; indexFile enriches them later.
+ */
+export type Extracted<T extends BaseNode> = Omit<T, "contentHash" | "snippet">;
+
+/** Union of all extracted node types (before enrichment). */
+export type ExtractedNode = Extracted<Node>;
 
 // Edge
 export interface Edge {

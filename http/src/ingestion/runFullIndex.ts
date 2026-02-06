@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { loadConfigOrDetect } from "../config/configLoader.utils.js";
 import { createSqliteWriter } from "../db/sqlite/createSqliteWriter.js";
 import { openDatabase } from "../db/sqlite/sqliteConnection.utils.js";
+import type { EmbeddingProvider } from "../embedding/EmbeddingTypes.js";
 import { consoleLogger } from "../logging/ConsoleTsGraphLogger.js";
 import { indexProject } from "./indexProject.js";
 import { loadManifest, populateManifest, saveManifest } from "./manifest.js";
@@ -16,6 +17,8 @@ export interface RunFullIndexOptions {
   projectRoot: string;
   /** Cache directory (contains graph.db, manifest.json) */
   cacheDir: string;
+  /** Embedding provider for semantic search */
+  embeddingProvider: EmbeddingProvider;
 }
 
 /**
@@ -27,7 +30,7 @@ export interface RunFullIndexOptions {
 export const runFullIndex = async (
   options: RunFullIndexOptions,
 ): Promise<void> => {
-  const { projectRoot, cacheDir } = options;
+  const { projectRoot, cacheDir, embeddingProvider } = options;
 
   console.error(`[ts-graph] Cache: ${cacheDir}`);
   console.error(`[ts-graph] Project root: ${projectRoot}`);
@@ -62,6 +65,7 @@ export const runFullIndex = async (
         projectRoot,
         clearFirst: false,
         logger: consoleLogger,
+        embeddingProvider,
       });
 
       console.error(
@@ -90,7 +94,7 @@ export const runFullIndex = async (
         db,
         configResult.config,
         manifest,
-        { projectRoot, cacheDir, logger: consoleLogger },
+        { projectRoot, cacheDir, logger: consoleLogger, embeddingProvider },
       );
 
       const totalChanges =

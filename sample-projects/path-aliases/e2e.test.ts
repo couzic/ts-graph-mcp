@@ -7,6 +7,7 @@ import {
   openDatabase,
 } from "../../http/src/db/sqlite/sqliteConnection.utils.js";
 import { initializeSchema } from "../../http/src/db/sqlite/sqliteSchema.utils.js";
+import { createFakeEmbeddingProvider } from "../../http/src/embedding/createFakeEmbeddingProvider.js";
 import { indexProject } from "../../http/src/ingestion/indexProject.js";
 import { silentLogger } from "../../http/src/logging/SilentTsGraphLogger.js";
 import { dependenciesOf } from "../../http/src/query/dependencies-of/dependenciesOf.js";
@@ -38,7 +39,12 @@ describe("path-aliases E2E tests", () => {
     projectRoot = import.meta.dirname;
     const config = loadConfig(`${projectRoot}/ts-graph-mcp.config.json`);
     const writer = createSqliteWriter(db);
-    await indexProject(config, writer, { projectRoot, logger: silentLogger });
+    const embeddingProvider = createFakeEmbeddingProvider({ dimensions: 3 });
+    await indexProject(config, writer, {
+      projectRoot,
+      logger: silentLogger,
+      embeddingProvider,
+    });
   });
 
   afterAll(() => {
@@ -49,12 +55,7 @@ describe("path-aliases E2E tests", () => {
     it("CALLS edge goes directly to actual definition, not barrel file", () => {
       // consumer.ts imports from barrel (index.ts) and calls formatValue
       // The CALLS edge should go directly to helper.ts:formatValue
-      const output = dependenciesOf(
-        db,
-        projectRoot,
-        "src/consumer.ts",
-        "displayValue",
-      );
+      const output = dependenciesOf(db, "src/consumer.ts", "displayValue");
 
       // Edge skips barrel file, points directly to actual definition
       expect(output).toContain("src/utils/helper.ts");
@@ -66,12 +67,7 @@ describe("path-aliases E2E tests", () => {
     it("finds real callers, not barrel files, as dependents", () => {
       // helper.ts:formatValue is called by consumer.ts
       // index.ts re-exports it but should NOT appear as dependent
-      const output = dependentsOf(
-        db,
-        projectRoot,
-        "src/utils/helper.ts",
-        "formatValue",
-      );
+      const output = dependentsOf(db, "src/utils/helper.ts", "formatValue");
 
       // consumer.ts is a real caller
       expect(output).toContain("src/consumer.ts");
@@ -85,12 +81,7 @@ describe("path-aliases E2E tests", () => {
     it("querying re-exported symbol at barrel file auto-resolves to actual definition", () => {
       // Barrel files have no symbol nodes - re-exports are invisible
       // When querying at barrel file, symbol auto-resolves to actual definition
-      const output = dependenciesOf(
-        db,
-        projectRoot,
-        "src/index.ts",
-        "formatValue",
-      );
+      const output = dependenciesOf(db, "src/index.ts", "formatValue");
 
       // Auto-resolve finds the actual definition
       expect(output).toContain("Found 'formatValue' in src/utils/helper.ts");

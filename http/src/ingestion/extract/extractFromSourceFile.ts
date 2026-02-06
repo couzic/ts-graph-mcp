@@ -1,5 +1,5 @@
 import type { Project, SourceFile } from "ts-morph";
-import type { Edge, Node } from "../../db/Types.js";
+import type { Edge, ExtractedNode } from "../../db/Types.js";
 import { extractEdges } from "./edges/extractEdges.js";
 import { extractNodes } from "./nodes/extractNodes.js";
 import type { NodeExtractionContext as ExtractionContext } from "./nodes/NodeExtractionContext.js";
@@ -23,7 +23,7 @@ export interface ExtractionStats {
  */
 export interface ExtractionResult {
   /** All extracted nodes */
-  nodes: Node[];
+  nodes: ExtractedNode[];
   /** All extracted edges */
   edges: Edge[];
   /** Extraction statistics */

@@ -7,6 +7,7 @@ import {
   openDatabase,
 } from "../../http/src/db/sqlite/sqliteConnection.utils.js";
 import { initializeSchema } from "../../http/src/db/sqlite/sqliteSchema.utils.js";
+import { createFakeEmbeddingProvider } from "../../http/src/embedding/createFakeEmbeddingProvider.js";
 import { indexProject } from "../../http/src/ingestion/indexProject.js";
 import { silentLogger } from "../../http/src/logging/SilentTsGraphLogger.js";
 import { dependenciesOf } from "../../http/src/query/dependencies-of/dependenciesOf.js";
@@ -29,7 +30,12 @@ describe("clean-architecture E2E tests", () => {
       packages: [{ name: "main", tsconfig: "tsconfig.json" }],
     };
     const writer = createSqliteWriter(db);
-    await indexProject(config, writer, { projectRoot, logger: silentLogger });
+    const embeddingProvider = createFakeEmbeddingProvider({ dimensions: 3 });
+    await indexProject(config, writer, {
+      projectRoot,
+      logger: silentLogger,
+      embeddingProvider,
+    });
   });
 
   afterAll(() => {
@@ -45,7 +51,6 @@ describe("clean-architecture E2E tests", () => {
     it("auto-resolves single-method class to its method", () => {
       const output = dependenciesOf(
         db,
-        projectRoot,
         "src/usecases/SetDefaultProviderCommand.ts",
         "SetDefaultProviderCommand",
       );
@@ -70,7 +75,6 @@ describe("clean-architecture E2E tests", () => {
     it("shows method disambiguation for multi-method class", () => {
       const output = dependenciesOf(
         db,
-        projectRoot,
         "src/usecases/ManageProvidersCommand.ts",
         "ManageProvidersCommand",
       );
@@ -91,7 +95,6 @@ describe("clean-architecture E2E tests", () => {
     it("auto-resolves single-method class to its method for dependents", () => {
       const output = dependentsOf(
         db,
-        projectRoot,
         "src/usecases/SetDefaultProviderCommand.ts",
         "SetDefaultProviderCommand",
       );
@@ -116,7 +119,6 @@ describe("clean-architecture E2E tests", () => {
     it("auto-resolves class in 'to' position", () => {
       const output = pathsBetween(
         db,
-        projectRoot,
         {
           file_path: "src/controllers/AdminController.ts",
           symbol: "AdminController.configureProvider",
@@ -144,7 +146,6 @@ describe("clean-architecture E2E tests", () => {
     it("auto-resolves class in 'from' position", () => {
       const output = pathsBetween(
         db,
-        projectRoot,
         {
           file_path: "src/usecases/SetDefaultProviderCommand.ts",
           symbol: "SetDefaultProviderCommand",

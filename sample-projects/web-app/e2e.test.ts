@@ -7,6 +7,7 @@ import {
   openDatabase,
 } from "../../http/src/db/sqlite/sqliteConnection.utils.js";
 import { initializeSchema } from "../../http/src/db/sqlite/sqliteSchema.utils.js";
+import { createFakeEmbeddingProvider } from "../../http/src/embedding/createFakeEmbeddingProvider.js";
 import { indexProject } from "../../http/src/ingestion/indexProject.js";
 import { silentLogger } from "../../http/src/logging/SilentTsGraphLogger.js";
 import { dependenciesOf } from "../../http/src/query/dependencies-of/dependenciesOf.js";
@@ -34,7 +35,12 @@ describe("web-app multi-package E2E tests", () => {
     projectRoot = import.meta.dirname;
     const config = loadConfig(`${projectRoot}/ts-graph-mcp.config.json`);
     const writer = createSqliteWriter(db);
-    await indexProject(config, writer, { projectRoot, logger: silentLogger });
+    const embeddingProvider = createFakeEmbeddingProvider({ dimensions: 3 });
+    await indexProject(config, writer, {
+      projectRoot,
+      logger: silentLogger,
+      embeddingProvider,
+    });
   });
 
   afterAll(() => {
@@ -43,12 +49,7 @@ describe("web-app multi-package E2E tests", () => {
 
   describe("dependenciesOf", () => {
     it("finds cross-package dependencies from backend to shared", () => {
-      const output = dependenciesOf(
-        db,
-        projectRoot,
-        "backend/src/userApi.ts",
-        "getUser",
-      );
+      const output = dependenciesOf(db, "backend/src/userApi.ts", "getUser");
 
       expect(output).toBe(
         `
@@ -89,12 +90,7 @@ User:
     });
 
     it("finds type dependencies for function with no calls", () => {
-      const output = dependenciesOf(
-        db,
-        projectRoot,
-        "shared/src/common.ts",
-        "createUser",
-      );
+      const output = dependenciesOf(db, "shared/src/common.ts", "createUser");
 
       expect(output).toBe(
         `
@@ -122,12 +118,7 @@ User:
 
   describe("dependentsOf", () => {
     it("finds cross-package callers of shared createUser function", () => {
-      const output = dependentsOf(
-        db,
-        projectRoot,
-        "shared/src/common.ts",
-        "createUser",
-      );
+      const output = dependentsOf(db, "shared/src/common.ts", "createUser");
 
       expect(output).toBe(
         `
@@ -167,12 +158,7 @@ listUsers:
     });
 
     it("returns empty for entry point with no callers", () => {
-      const output = dependentsOf(
-        db,
-        projectRoot,
-        "backend/src/userApi.ts",
-        "getUser",
-      );
+      const output = dependentsOf(db, "backend/src/userApi.ts", "getUser");
 
       expect(output).toBe(`No dependents found.`);
     });
@@ -182,7 +168,6 @@ listUsers:
     it("finds path from backend function to shared function", () => {
       const output = pathsBetween(
         db,
-        projectRoot,
         { file_path: "backend/src/userApi.ts", symbol: "getUser" },
         { file_path: "shared/src/common.ts", symbol: "createUser" },
       );
@@ -200,7 +185,6 @@ getUser --CALLS--> createUser
     it("returns no path for unconnected symbols", () => {
       const output = pathsBetween(
         db,
-        projectRoot,
         { file_path: "frontend/src/UserCard.ts", symbol: "renderUserCard" },
         { file_path: "backend/src/userApi.ts", symbol: "getUser" },
       );
@@ -212,7 +196,6 @@ getUser --CALLS--> createUser
     it("returns error for same node", () => {
       const output = pathsBetween(
         db,
-        projectRoot,
         { file_path: "shared/src/common.ts", symbol: "createUser" },
         { file_path: "shared/src/common.ts", symbol: "createUser" },
       );

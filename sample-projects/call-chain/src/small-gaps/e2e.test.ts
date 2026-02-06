@@ -8,6 +8,7 @@ import {
   openDatabase,
 } from "../../../../http/src/db/sqlite/sqliteConnection.utils.js";
 import { initializeSchema } from "../../../../http/src/db/sqlite/sqliteSchema.utils.js";
+import { createFakeEmbeddingProvider } from "../../../../http/src/embedding/createFakeEmbeddingProvider.js";
 import { indexProject } from "../../../../http/src/ingestion/indexProject.js";
 import { silentLogger } from "../../../../http/src/logging/SilentTsGraphLogger.js";
 import { dependenciesOf } from "../../../../http/src/query/dependencies-of/dependenciesOf.js";
@@ -25,7 +26,12 @@ describe("small gaps E2E - gap indicator threshold", () => {
       packages: [{ name: "main", tsconfig: "tsconfig.json" }],
     };
     const writer = createSqliteWriter(db);
-    await indexProject(config, writer, { projectRoot, logger: silentLogger });
+    const embeddingProvider = createFakeEmbeddingProvider({ dimensions: 3 });
+    await indexProject(config, writer, {
+      projectRoot,
+      logger: silentLogger,
+      embeddingProvider,
+    });
   });
 
   afterAll(() => {
@@ -34,12 +40,7 @@ describe("small gaps E2E - gap indicator threshold", () => {
 
   describe("dependenciesOf", () => {
     it("shows actual lines for small gaps instead of gap indicator", () => {
-      const output = dependenciesOf(
-        db,
-        projectRoot,
-        "src/small-gaps/entry.ts",
-        "entry",
-      );
+      const output = dependenciesOf(db, "src/small-gaps/entry.ts", "entry");
 
       // With 27+ nodes, contextLines=0, so caller's snippet shows only call sites.
       // Call sites on lines 9, 11, 13 produce gaps of 1 and 1 lines.

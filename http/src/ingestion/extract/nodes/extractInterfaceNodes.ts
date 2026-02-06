@@ -1,5 +1,5 @@
 import type { SourceFile } from "ts-morph";
-import type { InterfaceNode } from "../../../db/Types.js";
+import type { Extracted, InterfaceNode } from "../../../db/Types.js";
 import { generateNodeId } from "../../generateNodeId.js";
 import type { NodeExtractionContext } from "./NodeExtractionContext.js";
 import { normalizeTypeText } from "./normalizeTypeText.js";
@@ -10,7 +10,7 @@ import { normalizeTypeText } from "./normalizeTypeText.js";
 export const extractInterfaceNodes = (
   sourceFile: SourceFile,
   context: NodeExtractionContext,
-): InterfaceNode[] => {
+): Extracted<InterfaceNode>[] => {
   const interfaces = sourceFile.getInterfaces();
   return interfaces.map((interfaceDecl) => {
     const name = interfaceDecl.getName();

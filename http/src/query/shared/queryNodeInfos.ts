@@ -12,6 +12,7 @@ interface NodeRow {
   file_path: string;
   start_line: number;
   end_line: number;
+  snippet: string;
 }
 
 /**
@@ -27,7 +28,7 @@ export const queryNodeInfos = (
 
   const placeholders = nodeIds.map(() => "?").join(", ");
   const sql = `
-		SELECT id, name, type, file_path, start_line, end_line
+		SELECT id, name, type, file_path, start_line, end_line, snippet
 		FROM nodes
 		WHERE id IN (${placeholders})
 	`;
@@ -41,5 +42,6 @@ export const queryNodeInfos = (
     filePath: row.file_path,
     startLine: row.start_line,
     endLine: row.end_line,
+    snippet: row.snippet,
   }));
 };

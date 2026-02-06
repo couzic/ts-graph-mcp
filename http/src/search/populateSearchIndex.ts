@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import type { NodeType } from "@ts-graph/shared";
 import type Database from "better-sqlite3";
 import type { EmbeddingProvider } from "../embedding/EmbeddingTypes.js";
@@ -21,9 +19,8 @@ interface NodeRow {
   name: string;
   file_path: string;
   type: string;
-  content_hash: string | null;
-  start_line: number;
-  end_line: number;
+  content_hash: string;
+  snippet: string;
 }
 
 /**
@@ -50,25 +47,7 @@ export interface PopulateSearchIndexOptions {
   embeddingCache: EmbeddingCacheConnection;
   /** Embedding provider for regenerating cache misses */
   embeddingProvider: EmbeddingProvider;
-  /** Project root path for reading source files on cache miss */
-  projectRoot: string;
 }
-
-/**
- * Extract source snippet from file using line numbers.
- */
-const extractSnippetFromFile = (
-  projectRoot: string,
-  filePath: string,
-  startLine: number,
-  endLine: number,
-): string => {
-  const fullPath = join(projectRoot, filePath);
-  const content = readFileSync(fullPath, "utf-8");
-  const lines = content.split("\n");
-  const startIdx = startLine - 1; // 1-indexed to 0-indexed
-  return lines.slice(startIdx, endLine).join("\n");
-};
 
 /**
  * Load all nodes from the database into the search index with embeddings from cache.
@@ -83,20 +62,18 @@ const extractSnippetFromFile = (
  *   searchIndex,
  *   embeddingCache: cache,
  *   embeddingProvider,
- *   projectRoot: "/path/to/project",
  * });
  * cache.close();
  */
 export const populateSearchIndex = async (
   options: PopulateSearchIndexOptions,
 ): Promise<PopulateSearchIndexResult> => {
-  const { db, searchIndex, embeddingCache, embeddingProvider, projectRoot } =
-    options;
+  const { db, searchIndex, embeddingCache, embeddingProvider } = options;
 
-  // Query all nodes with content_hash and line numbers for cache lookup and regeneration
+  // Query all nodes with content_hash and snippet
   const rows = db
     .prepare<[], NodeRow>(
-      `SELECT id, name, file_path, type, content_hash, start_line, end_line FROM nodes`,
+      `SELECT id, name, file_path, type, content_hash, snippet FROM nodes`,
     )
     .all();
 
@@ -111,26 +88,16 @@ export const populateSearchIndex = async (
   for (let i = 0; i < rows.length; i += BATCH_SIZE) {
     const batch = rows.slice(i, i + BATCH_SIZE);
 
-    // Batch cache lookup (only for rows with content_hash)
-    const hashesToLookup = batch
-      .filter((r) => r.content_hash !== null)
-      .map((r) => r.content_hash as string);
+    // Batch cache lookup
+    const hashesToLookup = batch.map((r) => r.content_hash);
 
-    const cachedEmbeddings =
-      hashesToLookup.length > 0
-        ? embeddingCache.getBatch(hashesToLookup)
-        : new Map<string, Float32Array>();
+    const cachedEmbeddings = embeddingCache.getBatch(hashesToLookup);
 
     // Separate cache hits from misses
     const hits: Array<{ row: NodeRow; embedding: Float32Array }> = [];
     const misses: NodeRow[] = [];
 
     for (const row of batch) {
-      if (!row.content_hash) {
-        throw new Error(
-          `Node ${row.id} is missing content_hash. Cannot lookup embedding in cache.`,
-        );
-      }
       const embedding = cachedEmbeddings.get(row.content_hash);
       if (embedding) {
         hits.push({ row, embedding });
@@ -140,20 +107,14 @@ export const populateSearchIndex = async (
       }
     }
 
-    // Regenerate cache misses in parallel
+    // Regenerate cache misses in parallel using snippet from DB
     const regeneratedEmbeddings = await Promise.all(
       misses.map(async (row) => {
-        const snippet = extractSnippetFromFile(
-          projectRoot,
-          row.file_path,
-          row.start_line,
-          row.end_line,
-        );
         const content = prepareEmbeddingContent(
           row.type,
           row.name,
           row.file_path,
-          snippet,
+          row.snippet,
         );
         const embedding = await embeddingProvider.embedDocument(content);
         const hash = computeContentHash(content);
@@ -163,14 +124,14 @@ export const populateSearchIndex = async (
       }),
     );
 
-    // Build search documents
+    // Build search documents (use snippet for BM25 content when available)
     const docs: SearchDocument[] = [
       ...hits.map(({ row, embedding }) => ({
         id: row.id,
         symbol: row.name,
         file: row.file_path,
         nodeType: row.type as NodeType,
-        content: row.name,
+        content: row.snippet,
         embedding,
       })),
       ...misses.map((row, idx) => ({
@@ -178,7 +139,7 @@ export const populateSearchIndex = async (
         symbol: row.name,
         file: row.file_path,
         nodeType: row.type as NodeType,
-        content: row.name,
+        content: row.snippet,
         embedding: regeneratedEmbeddings[idx],
       })),
     ];

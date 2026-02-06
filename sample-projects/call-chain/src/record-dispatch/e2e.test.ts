@@ -8,6 +8,7 @@ import {
   openDatabase,
 } from "../../../../http/src/db/sqlite/sqliteConnection.utils.js";
 import { initializeSchema } from "../../../../http/src/db/sqlite/sqliteSchema.utils.js";
+import { createFakeEmbeddingProvider } from "../../../../http/src/embedding/createFakeEmbeddingProvider.js";
 import { indexProject } from "../../../../http/src/ingestion/indexProject.js";
 import { silentLogger } from "../../../../http/src/logging/SilentTsGraphLogger.js";
 import { dependenciesOf } from "../../../../http/src/query/dependencies-of/dependenciesOf.js";
@@ -38,7 +39,12 @@ describe("record-dispatch E2E tests", () => {
       packages: [{ name: "main", tsconfig: "tsconfig.json" }],
     };
     const writer = createSqliteWriter(db);
-    await indexProject(config, writer, { projectRoot, logger: silentLogger });
+    const embeddingProvider = createFakeEmbeddingProvider({ dimensions: 3 });
+    await indexProject(config, writer, {
+      projectRoot,
+      logger: silentLogger,
+      embeddingProvider,
+    });
   });
 
   afterAll(() => {
@@ -49,7 +55,6 @@ describe("record-dispatch E2E tests", () => {
     it("finds formatters via Record dispatch", () => {
       const output = dependenciesOf(
         db,
-        projectRoot,
         "src/record-dispatch/formatErrorMessage.ts",
         "formatErrorMessage",
       );
@@ -110,7 +115,6 @@ formatAdminError:
     it("finds dispatch function as dependent of formatter", () => {
       const output = dependentsOf(
         db,
-        projectRoot,
         "src/record-dispatch/formatCustomerError.ts",
         "formatCustomerError",
       );
@@ -156,7 +160,6 @@ formatMessageByAccessLevel:
     it("finds path from dispatch to formatter via Record", () => {
       const output = pathsBetween(
         db,
-        projectRoot,
         {
           file_path: "src/record-dispatch/formatErrorMessage.ts",
           symbol: "formatErrorMessage",

@@ -11,7 +11,6 @@ import { dependenciesOf } from "./dependenciesOf.js";
 describe("mermaid start node type-aware display", () => {
   let db: Database;
   let writer: DbWriter;
-  const projectRoot = "/test"; // Not used in this test (in-memory DB)
 
   beforeAll(async () => {
     db = openDatabase({ path: ":memory:" });
@@ -28,6 +27,8 @@ describe("mermaid start node type-aware display", () => {
         startLine: 1,
         endLine: 10,
         exported: true,
+        contentHash: "hash-handleRequest",
+        snippet: "function handleRequest() {}",
       },
       {
         id: "src/db.ts:Function:saveData",
@@ -38,6 +39,8 @@ describe("mermaid start node type-aware display", () => {
         startLine: 1,
         endLine: 10,
         exported: true,
+        contentHash: "hash-saveData",
+        snippet: "function saveData() {}",
       },
     ]);
 
@@ -56,13 +59,9 @@ describe("mermaid start node type-aware display", () => {
   });
 
   it("includes parentheses for start node function in mermaid output", () => {
-    const output = dependenciesOf(
-      db,
-      projectRoot,
-      "src/api.ts",
-      "handleRequest",
-      { format: "mermaid" },
-    );
+    const output = dependenciesOf(db, "src/api.ts", "handleRequest", {
+      format: "mermaid",
+    });
 
     // Start node (handleRequest) should show "()" since it's a Function
     expect(output).toContain('["handleRequest()"]');

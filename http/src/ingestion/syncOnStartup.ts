@@ -105,7 +105,7 @@ export const syncOnStartup = async (
     cacheDir: string;
     logger: TsGraphLogger;
     searchIndex?: SearchIndexWrapper;
-    embeddingProvider?: EmbeddingProvider;
+    embeddingProvider: EmbeddingProvider;
     /** Model name for embedding cache lookup */
     modelName?: string;
   },

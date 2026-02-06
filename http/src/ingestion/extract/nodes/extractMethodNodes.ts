@@ -1,5 +1,5 @@
 import { type ClassDeclaration, SyntaxKind } from "ts-morph";
-import type { MethodNode } from "../../../db/Types.js";
+import type { Extracted, MethodNode } from "../../../db/Types.js";
 import { generateNodeId } from "../../generateNodeId.js";
 import type { NodeExtractionContext } from "./NodeExtractionContext.js";
 import { normalizeTypeText } from "./normalizeTypeText.js";
@@ -10,7 +10,7 @@ import { normalizeTypeText } from "./normalizeTypeText.js";
 export const extractMethodNodes = (
   classNode: ClassDeclaration,
   context: NodeExtractionContext,
-): MethodNode[] => {
+): Extracted<MethodNode>[] => {
   const className = classNode.getName() || "<anonymous>";
   const methods = classNode.getMethods();
 

@@ -46,6 +46,7 @@ describe("indexFile", () => {
   let project: Project;
   let writer: ReturnType<typeof createFakeDbWriter>;
   let context: EdgeExtractionContext;
+  let embeddingProvider: ReturnType<typeof createFakeEmbeddingProvider>;
 
   beforeEach(() => {
     project = new Project({ useInMemoryFileSystem: true });
@@ -54,6 +55,9 @@ describe("indexFile", () => {
       filePath: "src/test.ts",
       package: "test",
     };
+    embeddingProvider = createFakeEmbeddingProvider({
+      dimensions: vectorDimensions,
+    });
   });
 
   afterEach(() => {
@@ -70,7 +74,9 @@ describe("indexFile", () => {
 }`,
     );
 
-    const result = await indexFile(sourceFile, context, writer);
+    const result = await indexFile(sourceFile, context, writer, {
+      embeddingProvider,
+    });
 
     expect(result.nodesAdded).toBe(1);
     expect(writer.nodes).toHaveLength(1);
@@ -93,7 +99,10 @@ describe("indexFile", () => {
 }`,
       );
 
-      await indexFile(sourceFile, context, writer, { searchIndex });
+      await indexFile(sourceFile, context, writer, {
+        searchIndex,
+        embeddingProvider,
+      });
 
       const count = await searchIndex.count();
       expect(count).toBe(1);
@@ -113,7 +122,10 @@ describe("indexFile", () => {
 }`,
       );
 
-      await indexFile(sourceFile, context, writer, { searchIndex });
+      await indexFile(sourceFile, context, writer, {
+        searchIndex,
+        embeddingProvider,
+      });
 
       // Source content is used in BM25 search
       const results = await searchIndex.search("processOrder");
@@ -129,7 +141,10 @@ describe("indexFile", () => {
 export type DATE_FORMAT = typeof DATE_FORMAT;`,
       );
 
-      await indexFile(sourceFile, context, writer, { searchIndex });
+      await indexFile(sourceFile, context, writer, {
+        searchIndex,
+        embeddingProvider,
+      });
 
       // Both the const (Variable) and type (TypeAlias) should be indexed
       const count = await searchIndex.count();
@@ -150,9 +165,6 @@ export type DATE_FORMAT = typeof DATE_FORMAT;`,
     });
 
     it("generates embeddings when provider is present", async () => {
-      const embeddingProvider = createFakeEmbeddingProvider({
-        dimensions: vectorDimensions,
-      });
       const sourceFile = project.createSourceFile(
         "src/test.ts",
         `export function calculateTotal(items: Item[]): number {
@@ -179,9 +191,6 @@ export type DATE_FORMAT = typeof DATE_FORMAT;`,
     });
 
     it("generates different embeddings for different functions", async () => {
-      const embeddingProvider = createFakeEmbeddingProvider({
-        dimensions: vectorDimensions,
-      });
       const sourceFile = project.createSourceFile(
         "src/test.ts",
         `export function validateInput(input: string): boolean {
@@ -202,30 +211,9 @@ export function processData(data: Data): Result {
       expect(count).toBe(2);
     });
 
-    it("works without embedding provider (fulltext only)", async () => {
-      const textOnlyIndex = await createSearchIndex({ vectorDimensions });
-      const sourceFile = project.createSourceFile(
-        "src/test.ts",
-        `export function searchUsers(query: string): User[] {
-  return users.filter(u => u.name.includes(query));
-}`,
-      );
-
-      await indexFile(sourceFile, context, writer, {
-        searchIndex: textOnlyIndex,
-      });
-
-      const count = await textOnlyIndex.count();
-      expect(count).toBe(1);
-
-      // Fulltext search should still work
-      const results = await textOnlyIndex.search("search");
-      expect(results).toHaveLength(1);
-    });
-
     it("strips class implementation on context overflow and retries", async () => {
       const embeddedContents: string[] = [];
-      const embeddingProvider = createFakeEmbeddingProvider({
+      const overflowProvider = createFakeEmbeddingProvider({
         dimensions: vectorDimensions,
         maxContentLength: 200,
         onEmbed: (content) => embeddedContents.push(content),
@@ -250,7 +238,7 @@ export function processData(data: Data): Result {
 
       await indexFile(sourceFile, context, writer, {
         searchIndex,
-        embeddingProvider,
+        embeddingProvider: overflowProvider,
       });
 
       // Should have embedded: Class (retried with stripped) + 2 Methods = 3 nodes
@@ -272,7 +260,7 @@ export function processData(data: Data): Result {
     it("always produces embeddings via progressive fallback (never fails)", async () => {
       const embeddedContents: string[] = [];
       // Very small limit - forces fallback to truncation
-      const embeddingProvider = createFakeEmbeddingProvider({
+      const tinyProvider = createFakeEmbeddingProvider({
         dimensions: vectorDimensions,
         maxContentLength: 100,
         onEmbed: (content) => embeddedContents.push(content),
@@ -308,7 +296,7 @@ export function processData(data: Data): Result {
       // Should NOT throw - must always succeed via fallback
       await indexFile(sourceFile, context, writer, {
         searchIndex,
-        embeddingProvider,
+        embeddingProvider: tinyProvider,
       });
 
       // All nodes should have embeddings (Class + 2 Methods = 3)
@@ -323,7 +311,7 @@ export function processData(data: Data): Result {
     it("embeds full function content beyond 50 lines when model can handle it", async () => {
       const embeddedContents: string[] = [];
       // Large context - no overflow expected
-      const embeddingProvider = createFakeEmbeddingProvider({
+      const largeProvider = createFakeEmbeddingProvider({
         dimensions: vectorDimensions,
         maxContentLength: 10000,
         onEmbed: (content) => embeddedContents.push(content),
@@ -344,7 +332,7 @@ export function processData(data: Data): Result {
 
       await indexFile(sourceFile, context, writer, {
         searchIndex,
-        embeddingProvider,
+        embeddingProvider: largeProvider,
       });
 
       expect(embeddedContents).toHaveLength(1);

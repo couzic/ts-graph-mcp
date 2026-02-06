@@ -17,6 +17,7 @@ const extractNodeProperties = (node: Node): Record<string, unknown> => {
     endLine: _endLine,
     exported: _exported,
     contentHash: _contentHash,
+    snippet: _snippet,
     ...properties
   } = node;
   return properties;
@@ -31,8 +32,8 @@ const extractNodeProperties = (node: Node): Record<string, unknown> => {
 export const createSqliteWriter = (db: Database.Database): DbWriter => {
   // Prepared statements for upsert operations
   const upsertNodeStmt = db.prepare(`
-    INSERT INTO nodes (id, type, name, package, file_path, start_line, end_line, exported, properties, content_hash)
-    VALUES (@id, @type, @name, @package, @filePath, @startLine, @endLine, @exported, @properties, @contentHash)
+    INSERT INTO nodes (id, type, name, package, file_path, start_line, end_line, exported, properties, content_hash, snippet)
+    VALUES (@id, @type, @name, @package, @filePath, @startLine, @endLine, @exported, @properties, @contentHash, @snippet)
     ON CONFLICT(id) DO UPDATE SET
       type = excluded.type,
       name = excluded.name,
@@ -42,7 +43,8 @@ export const createSqliteWriter = (db: Database.Database): DbWriter => {
       end_line = excluded.end_line,
       exported = excluded.exported,
       properties = excluded.properties,
-      content_hash = excluded.content_hash
+      content_hash = excluded.content_hash,
+      snippet = excluded.snippet
   `);
 
   const upsertEdgeStmt = db.prepare(`
@@ -86,7 +88,8 @@ export const createSqliteWriter = (db: Database.Database): DbWriter => {
         endLine: node.endLine,
         exported: node.exported ? 1 : 0,
         properties: JSON.stringify(properties),
-        contentHash: node.contentHash ?? null,
+        contentHash: node.contentHash,
+        snippet: node.snippet,
       });
     }
   });

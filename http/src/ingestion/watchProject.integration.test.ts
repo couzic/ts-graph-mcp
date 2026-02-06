@@ -16,6 +16,7 @@ import {
   openDatabase,
 } from "../db/sqlite/sqliteConnection.utils.js";
 import { initializeSchema } from "../db/sqlite/sqliteSchema.utils.js";
+import { createFakeEmbeddingProvider } from "../embedding/createFakeEmbeddingProvider.js";
 import { silentLogger } from "../logging/SilentTsGraphLogger.js";
 import { dependenciesOf } from "../query/dependencies-of/dependenciesOf.js";
 import { dependentsOf } from "../query/dependents-of/dependentsOf.js";
@@ -27,6 +28,7 @@ import {
   watchProject,
 } from "./watchProject.js";
 
+const embeddingProvider = createFakeEmbeddingProvider({ dimensions: 3 });
 const pollingInterval = 100;
 const debounceInterval = 100;
 const processingTime = 500;
@@ -129,6 +131,7 @@ export function entry(): string { return helper(); }
     await indexProject(projectConfig, writer, {
       projectRoot: TEST_DIR,
       logger: silentLogger,
+      embeddingProvider,
     });
 
     // Create initial manifest
@@ -140,6 +143,7 @@ export function entry(): string { return helper(); }
       projectRoot: TEST_DIR,
       cacheDir: CACHE_DIR,
       logger: silentLogger,
+      embeddingProvider,
       onReindex: (files) => reindexCalls.push(files),
       ...config,
     });
@@ -157,7 +161,7 @@ export function entry(): string { return helper(); }
   });
 
   it("reflects initial state: entry calls helper", () => {
-    const output = dependenciesOf(db, TEST_DIR, "src/entry.ts", "entry");
+    const output = dependenciesOf(db, "src/entry.ts", "entry");
     expect(output).toContain("helper");
     expect(output).toContain("entry --CALLS--> helper");
   });
@@ -180,7 +184,7 @@ export function entry(): string { return newHelper(); }
 
     await sleep(waitTime);
 
-    const output = dependenciesOf(db, TEST_DIR, "src/entry.ts", "entry");
+    const output = dependenciesOf(db, "src/entry.ts", "entry");
     expect(output).toContain("entry --CALLS--> newHelper");
     expect(output).not.toContain("--CALLS--> helper");
   });
@@ -202,7 +206,7 @@ export function newHelper(): string { return deepHelper(); }
     await sleep(waitTime);
 
     // Now entry → newHelper → deepHelper
-    const output = dependenciesOf(db, TEST_DIR, "src/entry.ts", "entry");
+    const output = dependenciesOf(db, "src/entry.ts", "entry");
     expect(output).toContain(
       "entry --CALLS--> newHelper --CALLS--> deepHelper",
     );
@@ -215,7 +219,7 @@ export function newHelper(): string { return deepHelper(); }
     await sleep(waitTime * 2); // This one is particularly flaky
 
     // Old helper symbol should not be found (removed from database)
-    const output = dependentsOf(db, TEST_DIR, "src/helper.ts", "helper");
+    const output = dependentsOf(db, "src/helper.ts", "helper");
     // The tool reports "not indexed" because the file was removed from DB
     expect(output).toContain("is not indexed");
   });
@@ -250,7 +254,7 @@ export function newHelper(): string { return deepHelper(); }
 
     // Also verify the file is correctly indexed
     // Exact match (file_path + symbol name) returns clean output without resolution message
-    const output = dependenciesOf(db, TEST_DIR, "src/rapid.ts", "rapid");
+    const output = dependenciesOf(db, "src/rapid.ts", "rapid");
     expect(output).toBe("No dependencies found.");
   });
 });

@@ -1,6 +1,6 @@
 import type { SourceFile } from "ts-morph";
 import type { DbWriter } from "../db/DbWriter.js";
-import type { Node } from "../db/Types.js";
+import type { ExtractedNode, Node } from "../db/Types.js";
 import type { EmbeddingProvider } from "../embedding/EmbeddingTypes.js";
 import {
   computeContentHash,
@@ -24,7 +24,10 @@ const MIN_USEFUL_SNIPPET_LENGTH = 100;
  * @example
  * extractSourceSnippet(sourceText, node) // "function foo() { return 42; }"
  */
-const extractSourceSnippet = (sourceText: string, node: Node): string => {
+const extractSourceSnippet = (
+  sourceText: string,
+  node: ExtractedNode,
+): string => {
   const lines = sourceText.split("\n");
   const startIdx = node.startLine - 1; // 1-indexed to 0-indexed
   return lines.slice(startIdx, node.endLine).join("\n");
@@ -53,7 +56,7 @@ interface EmbedResult {
  * Returns both the embedding and the hash of the content that was actually embedded.
  */
 const embedWithFallback = async (
-  node: Node,
+  node: ExtractedNode,
   snippet: string,
   embeddingProvider: EmbeddingProvider,
   embeddingCache: EmbeddingCacheConnection | undefined,
@@ -138,7 +141,7 @@ const embedWithFallback = async (
  * Convert a graph node to a search document.
  */
 const nodeToSearchDoc = (
-  node: Node,
+  node: ExtractedNode,
   sourceSnippet: string,
   embedding?: Float32Array,
 ): SearchDocument => ({
@@ -171,8 +174,8 @@ export type EmbeddingCache = EmbeddingCacheConnection;
 export interface IndexFileOptions {
   /** Search index for fulltext/semantic search (optional) */
   searchIndex?: SearchIndexWrapper;
-  /** Embedding provider for semantic search (optional) */
-  embeddingProvider?: EmbeddingProvider;
+  /** Embedding provider for semantic search */
+  embeddingProvider: EmbeddingProvider;
   /** Embedding cache for avoiding regeneration (optional) */
   embeddingCache?: EmbeddingCache;
 }
@@ -191,53 +194,46 @@ export interface IndexFileOptions {
  * @param sourceFile - ts-morph SourceFile (already loaded into a Project)
  * @param context - Extraction context (filePath, package, projectRegistry)
  * @param writer - Database writer instance
- * @param options - Optional search index for unified indexing
+ * @param options - Indexing options including embedding provider
  * @returns Count of nodes and edges added
  */
 export const indexFile = async (
   sourceFile: SourceFile,
   context: EdgeExtractionContext,
   writer: DbWriter,
-  options: IndexFileOptions = {},
+  options: IndexFileOptions,
 ): Promise<IndexFileResult> => {
   let nodesAdded = 0;
   let edgesAdded = 0;
 
   // Extract nodes
-  const nodes = extractNodes(sourceFile, context);
-  if (nodes.length > 0) {
+  const extractedNodes = extractNodes(sourceFile, context);
+  if (extractedNodes.length > 0) {
     const sourceText = sourceFile.getFullText();
     const { embeddingProvider, embeddingCache, searchIndex } = options;
 
     // Extract snippets for all nodes
-    const nodeSnippets = nodes.map((node) => ({
+    const nodeSnippets = extractedNodes.map((node) => ({
       node,
       snippet: extractSourceSnippet(sourceText, node),
     }));
 
-    // Generate embeddings in parallel (if provider available)
-    // This also gives us the contentHash for each node
-    let embedResults: Array<EmbedResult | undefined>;
-    if (embeddingProvider) {
-      embedResults = await Promise.all(
-        nodeSnippets.map(({ node, snippet }) =>
-          embedWithFallback(node, snippet, embeddingProvider, embeddingCache),
-        ),
-      );
-    } else {
-      embedResults = nodeSnippets.map(() => undefined);
-    }
+    // Generate embeddings in parallel
+    const embedResults = await Promise.all(
+      nodeSnippets.map(({ node, snippet }) =>
+        embedWithFallback(node, snippet, embeddingProvider, embeddingCache),
+      ),
+    );
 
-    // Set contentHash on nodes before writing to DB
-    for (let i = 0; i < nodes.length; i++) {
-      const embedResult = embedResults[i];
-      if (embedResult) {
-        // biome-ignore lint/style/noNonNullAssertion: index bounds checked by loop
-        nodes[i]!.contentHash = embedResult.contentHash;
-      }
-    }
+    // Enrich extracted nodes with snippet + contentHash to produce full Nodes
+    const nodes: Node[] = nodeSnippets.map(({ node, snippet }, i) => ({
+      ...node,
+      snippet,
+      // biome-ignore lint/style/noNonNullAssertion: embedResults has same length as nodeSnippets
+      contentHash: embedResults[i]!.contentHash,
+    })) as Node[];
 
-    // Write nodes to DB (now with contentHash set)
+    // Write nodes to DB
     await writer.addNodes(nodes);
     nodesAdded = nodes.length;
 

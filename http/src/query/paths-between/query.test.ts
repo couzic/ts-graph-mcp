@@ -18,6 +18,8 @@ const fn = (name: string, file = "src/test.ts"): FunctionNode => ({
   startLine: 1,
   endLine: 10,
   exported: true,
+  contentHash: `hash-${name}`,
+  snippet: `function ${name}() {}`,
 });
 
 const calls = (from: string, to: string): Edge => ({

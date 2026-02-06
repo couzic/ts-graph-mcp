@@ -18,6 +18,7 @@ import {
   openDatabase,
 } from "../db/sqlite/sqliteConnection.utils.js";
 import { initializeSchema } from "../db/sqlite/sqliteSchema.utils.js";
+import { createFakeEmbeddingProvider } from "../embedding/createFakeEmbeddingProvider.js";
 import { silentLogger } from "../logging/SilentTsGraphLogger.js";
 import { createSearchIndex } from "../search/createSearchIndex.js";
 import { indexFile } from "./indexFile.js";
@@ -27,6 +28,9 @@ import { watchProject } from "./watchProject.js";
 
 const TEST_DIR = mkdtempSync(join(tmpdir(), "unified-indexing-test-"));
 const vectorDimensions = 3;
+const embeddingProvider = createFakeEmbeddingProvider({
+  dimensions: vectorDimensions,
+});
 
 describe("Unified Indexing", () => {
   let db: Database.Database;
@@ -70,7 +74,7 @@ export function parseDate(s: string): Date { return new Date(s); }`,
         sourceFile,
         { filePath: "utils.ts", package: "main" },
         writer,
-        { searchIndex },
+        { searchIndex, embeddingProvider },
       );
 
       // Verify nodes were added to SQLite
@@ -110,6 +114,7 @@ export function parseDate(s: string): Date { return new Date(s); }`,
         sourceFile,
         { filePath: "app.ts", package: "main" },
         writer,
+        { embeddingProvider },
       );
 
       // SQLite should have nodes
@@ -151,6 +156,7 @@ export function validateInput(): boolean { return true; }`,
         projectRoot: pkgDir,
         logger: silentLogger,
         searchIndex,
+        embeddingProvider,
       });
 
       // Verify files were indexed
@@ -228,6 +234,7 @@ describe("Unified Indexing - Watch Mode", () => {
       projectRoot: WATCH_TEST_DIR,
       logger: silentLogger,
       searchIndex,
+      embeddingProvider,
     });
 
     expect(await searchIndex.count()).toBe(1);
@@ -241,6 +248,7 @@ describe("Unified Indexing - Watch Mode", () => {
       cacheDir: CACHE_DIR,
       logger: silentLogger,
       searchIndex,
+      embeddingProvider,
       debounce: true,
       debounceInterval: 50,
     });
@@ -283,6 +291,7 @@ describe("Unified Indexing - Watch Mode", () => {
       projectRoot: WATCH_TEST_DIR,
       logger: silentLogger,
       searchIndex,
+      embeddingProvider,
     });
 
     // Verify it's in search index
@@ -298,6 +307,7 @@ describe("Unified Indexing - Watch Mode", () => {
       cacheDir: CACHE_DIR,
       logger: silentLogger,
       searchIndex,
+      embeddingProvider,
       debounce: true,
       debounceInterval: 50,
     });
@@ -342,6 +352,7 @@ describe("Unified Indexing - Watch Mode", () => {
       projectRoot: WATCH_TEST_DIR,
       logger: silentLogger,
       searchIndex,
+      embeddingProvider,
     });
 
     // Verify original is in search index
@@ -357,6 +368,7 @@ describe("Unified Indexing - Watch Mode", () => {
       cacheDir: CACHE_DIR,
       logger: silentLogger,
       searchIndex,
+      embeddingProvider,
       debounce: true,
       debounceInterval: 50,
     });

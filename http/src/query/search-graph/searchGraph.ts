@@ -91,7 +91,6 @@ const resolveEndpoint = async (
  */
 const queryMultipleFromEndpoints = (
   db: Database.Database,
-  projectRoot: string,
   endpoints: ResolvedEndpoint[],
   maxNodes?: number,
 ): string => {
@@ -118,7 +117,6 @@ const queryMultipleFromEndpoints = (
 
   return formatFilteredTraversal({
     db,
-    projectRoot,
     edges: uniqueEdges,
     startNodeId: "", // No single start - include all
     maxNodes,
@@ -131,7 +129,6 @@ const queryMultipleFromEndpoints = (
  */
 const queryMultipleToEndpoints = (
   db: Database.Database,
-  projectRoot: string,
   endpoints: ResolvedEndpoint[],
   maxNodes?: number,
 ): string => {
@@ -158,7 +155,6 @@ const queryMultipleToEndpoints = (
 
   return formatFilteredTraversal({
     db,
-    projectRoot,
     edges: uniqueEdges,
     startNodeId: "", // No single start - include all
     maxNodes,
@@ -170,7 +166,6 @@ const queryMultipleToEndpoints = (
  */
 const traverseWithTopicFilter = async (
   db: Database.Database,
-  projectRoot: string,
   direction: "dependencies" | "dependents",
   filePath: string | undefined,
   symbol: string,
@@ -219,7 +214,6 @@ const traverseWithTopicFilter = async (
   // Format the filtered result
   return formatFilteredTraversal({
     db,
-    projectRoot,
     edges: filteredEdges,
     startNodeId: nodeId,
     maxNodes,
@@ -238,20 +232,19 @@ const traverseWithTopicFilter = async (
  *
  * @example
  * // What does handleRequest call?
- * searchGraph(db, projectRoot, { from: { symbol: "handleRequest" } })
+ * searchGraph(db, { from: { symbol: "handleRequest" } })
  *
  * // Who calls saveUser?
- * searchGraph(db, projectRoot, { to: { symbol: "saveUser" } })
+ * searchGraph(db, { to: { symbol: "saveUser" } })
  *
  * // How does handleRequest reach saveUser?
- * searchGraph(db, projectRoot, {
+ * searchGraph(db, {
  *   from: { symbol: "handleRequest" },
  *   to: { symbol: "saveUser" }
  * })
  */
 export const searchGraph = async (
   db: Database.Database,
-  projectRoot: string,
   input: SearchGraphInput,
   options: SearchGraphOptions,
 ): Promise<string> => {
@@ -287,7 +280,6 @@ export const searchGraph = async (
     const to = toResolved[0]!;
     return pathsBetween(
       db,
-      projectRoot,
       { file_path: from.file_path, symbol: from.symbol },
       { file_path: to.file_path, symbol: to.symbol },
       { ...options, maxNodes },
@@ -304,7 +296,6 @@ export const searchGraph = async (
       const from = fromResolved[0]!;
       return traverseWithTopicFilter(
         db,
-        projectRoot,
         "dependencies",
         from.file_path,
         from.symbol,
@@ -317,18 +308,13 @@ export const searchGraph = async (
 
     // Multiple from endpoints: query dependencies for each, merge results
     if (fromResolved.length > 1 && input.from?.query) {
-      return queryMultipleFromEndpoints(
-        db,
-        projectRoot,
-        fromResolved,
-        maxNodes,
-      );
+      return queryMultipleFromEndpoints(db, fromResolved, maxNodes);
     }
 
     // Single endpoint: standard traversal
     // biome-ignore lint/style/noNonNullAssertion: length checked above
     const from = fromResolved[0]!;
-    return dependenciesOf(db, projectRoot, from.file_path, from.symbol, {
+    return dependenciesOf(db, from.file_path, from.symbol, {
       ...options,
       maxNodes,
     });
@@ -344,7 +330,6 @@ export const searchGraph = async (
       const to = toResolved[0]!;
       return traverseWithTopicFilter(
         db,
-        projectRoot,
         "dependents",
         to.file_path,
         to.symbol,
@@ -357,13 +342,13 @@ export const searchGraph = async (
 
     // Multiple to endpoints: query dependents for each, merge results
     if (toResolved.length > 1 && input.to?.query) {
-      return queryMultipleToEndpoints(db, projectRoot, toResolved, maxNodes);
+      return queryMultipleToEndpoints(db, toResolved, maxNodes);
     }
 
     // Single endpoint: standard traversal
     // biome-ignore lint/style/noNonNullAssertion: length checked above
     const to = toResolved[0]!;
-    return dependentsOf(db, projectRoot, to.file_path, to.symbol, {
+    return dependentsOf(db, to.file_path, to.symbol, {
       ...options,
       maxNodes,
     });
@@ -404,7 +389,6 @@ export const searchGraph = async (
     // Format as graph
     return formatFilteredTraversal({
       db,
-      projectRoot,
       edges,
       startNodeId: "", // No single start node - include all
       maxNodes,

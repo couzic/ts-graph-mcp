@@ -14,7 +14,7 @@ Parses TypeScript source code using ts-morph AST and extracts nodes (symbols) an
 - `extractFromSourceFile` - Orchestrates extraction: nodes first, then edges
 
 **Node Extraction** (`extract/nodes/`)
-- `extractNodes` - Extract all node types (Function, Class, Method, Interface, TypeAlias, Variable, Property)
+- `extractNodes` - Extract all node types as `ExtractedNode[]` (without `contentHash`/`snippet`). `indexFile` enriches them into full `Node[]` by adding snippet and contentHash after embedding.
 - See `extract/nodes/CLAUDE.md` for detailed node extractor documentation
 
 **Edge Extraction** (`extract/edges/`)
@@ -85,7 +85,8 @@ Uses ts-morph for type-aware TypeScript parsing:
 ```typescript
 const result = await indexProject(config, dbWriter, {
   projectRoot: "/path/to/project",
-  clearFirst: true  // Optional: clear DB first
+  embeddingProvider,  // Required: embedding provider for semantic search
+  clearFirst: true    // Optional: clear DB first
 });
 // Returns: { filesProcessed, nodesAdded, edgesAdded, durationMs, errors? }
 ```

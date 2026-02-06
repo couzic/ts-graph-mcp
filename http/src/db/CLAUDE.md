@@ -8,6 +8,7 @@ Persistence layer for the TypeScript code graph. Provides read/write interfaces 
 
 ### Types (`Types.ts`)
 - `Node` - Discriminated union of all node types (Function, Class, Method, Interface, TypeAlias, Variable)
+- `Extracted<T>` / `ExtractedNode` - Node without `contentHash` and `snippet` (returned by extractors, enriched into full `Node` by `indexFile`)
 - `Edge` - Relationship between nodes with type-specific metadata
 - `Subgraph` - A center node with its neighbors and connecting edges
 - `Path` - Shortest path result between two nodes
@@ -36,8 +37,8 @@ Write operations used by Ingestion Module:
 - `closeDatabase()` - Clean shutdown
 
 #### `sqliteSchema.utils.ts`
-- `initializeSchema()` - Create tables and indexes
-- Schema design: `nodes` table (JSON properties column), `edges` table (composite PK)
+- `initializeSchema()` - Create tables and indexes. Drops and recreates tables if the schema version is outdated.
+- Schema design: `nodes` table (JSON properties column, `content_hash` and `snippet` columns), `edges` table (composite PK)
 
 #### `createSqliteWriter.ts`
 - `createSqliteWriter()` - Factory returning DbWriter implementation
@@ -56,7 +57,7 @@ Examples:
 This format is deterministic and human-readable.
 
 ### Properties Storage
-Node-specific properties (parameters, return types, etc.) are stored as JSON in the `properties` column. Base properties (id, type, name, module, package, filePath, etc.) have dedicated columns for efficient querying.
+Node-specific properties (parameters, return types, etc.) are stored as JSON in the `properties` column. Base properties (id, type, name, package, filePath, startLine, endLine, exported, contentHash, snippet) have dedicated columns for efficient querying.
 
 ### Edge Metadata
 Common edge metadata (call_count, call_sites, context, reference_context) stored in dedicated columns for performance. All edges have composite unique key: (source, target, type).

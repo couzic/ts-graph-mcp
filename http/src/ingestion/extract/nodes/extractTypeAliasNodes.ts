@@ -1,5 +1,5 @@
 import type { SourceFile } from "ts-morph";
-import type { TypeAliasNode } from "../../../db/Types.js";
+import type { Extracted, TypeAliasNode } from "../../../db/Types.js";
 import { generateNodeId } from "../../generateNodeId.js";
 import type { NodeExtractionContext } from "./NodeExtractionContext.js";
 import { normalizeTypeText } from "./normalizeTypeText.js";
@@ -10,7 +10,7 @@ import { normalizeTypeText } from "./normalizeTypeText.js";
 export const extractTypeAliasNodes = (
   sourceFile: SourceFile,
   context: NodeExtractionContext,
-): TypeAliasNode[] => {
+): Extracted<TypeAliasNode>[] => {
   const typeAliases = sourceFile.getTypeAliases();
   return typeAliases.map((typeAlias) => {
     const name = typeAlias.getName();

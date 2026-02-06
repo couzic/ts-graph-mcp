@@ -7,8 +7,23 @@ import {
   closeDatabase,
   openDatabase,
 } from "../../db/sqlite/sqliteConnection.utils.js";
+import type { ExtractedNode, Node } from "../../db/Types.js";
 import { extractNodes } from "../../ingestion/extract/nodes/extractNodes.js";
 import { resolveSymbol, symbolNotFound } from "./symbolNotFound.js";
+
+/**
+ * Enrich extracted nodes with dummy contentHash and snippet values
+ * so they can be passed to writer.addNodes() which expects full Node[].
+ */
+const toNodes = (extractedNodes: ExtractedNode[]): Node[] =>
+  extractedNodes.map(
+    (node) =>
+      ({
+        ...node,
+        contentHash: "test-hash",
+        snippet: `// ${node.name}`,
+      }) as Node,
+  );
 
 describe("symbolNotFound", () => {
   let db: Database.Database;
@@ -43,7 +58,9 @@ describe("symbolNotFound", () => {
       indexedPath,
       "export function formatDate() {}",
     );
-    await writer.addNodes(extractNodes(sourceFile, createContext(indexedPath)));
+    await writer.addNodes(
+      toNodes(extractNodes(sourceFile, createContext(indexedPath))),
+    );
 
     // Query for formatDate in a file that is NOT indexed
     const result = symbolNotFound(db, "src/other.ts", "formatDate");
@@ -61,7 +78,7 @@ describe("symbolNotFound", () => {
 export function parseDate() {}
 export const MAX_DATE = 100;`,
     );
-    const nodes = extractNodes(sourceFile, createContext(filePath));
+    const nodes = toNodes(extractNodes(sourceFile, createContext(filePath)));
     await writer.addNodes(nodes);
 
     const result = symbolNotFound(db, filePath, "invalidSymbol");
@@ -82,7 +99,7 @@ export const MAX_DATE = 100;`,
       fileA,
       "export function formatDate() {}",
     );
-    await writer.addNodes(extractNodes(sourceA, createContext(fileA)));
+    await writer.addNodes(toNodes(extractNodes(sourceA, createContext(fileA))));
 
     // Index file B without the symbol
     const fileB = "src/utils.ts";
@@ -90,7 +107,7 @@ export const MAX_DATE = 100;`,
       fileB,
       "export function helper() {}",
     );
-    await writer.addNodes(extractNodes(sourceB, createContext(fileB)));
+    await writer.addNodes(toNodes(extractNodes(sourceB, createContext(fileB))));
 
     const result = symbolNotFound(db, fileB, "formatDate");
 
@@ -106,7 +123,7 @@ export const MAX_DATE = 100;`,
       fileA,
       "export function formatDate() {}",
     );
-    await writer.addNodes(extractNodes(sourceA, createContext(fileA)));
+    await writer.addNodes(toNodes(extractNodes(sourceA, createContext(fileA))));
 
     // Index file B
     const fileB = "src/other.ts";
@@ -114,7 +131,7 @@ export const MAX_DATE = 100;`,
       fileB,
       "export function other() {}",
     );
-    await writer.addNodes(extractNodes(sourceB, createContext(fileB)));
+    await writer.addNodes(toNodes(extractNodes(sourceB, createContext(fileB))));
 
     // Search with different case
     const result = symbolNotFound(db, fileB, "formatdate");
@@ -131,7 +148,9 @@ export const MAX_DATE = 100;`,
 export function formatDat() {}
 export function banana() {}`,
     );
-    await writer.addNodes(extractNodes(sourceFile, createContext(filePath)));
+    await writer.addNodes(
+      toNodes(extractNodes(sourceFile, createContext(filePath))),
+    );
 
     const result = symbolNotFound(db, filePath, "formatDate");
 
@@ -154,7 +173,9 @@ export function banana() {}`,
         filePath,
         "export function formatDate() {}",
       );
-      await writer.addNodes(extractNodes(sourceFile, createContext(filePath)));
+      await writer.addNodes(
+        toNodes(extractNodes(sourceFile, createContext(filePath))),
+      );
     }
 
     // Index search file without formatDate
@@ -163,7 +184,9 @@ export function banana() {}`,
       searchPath,
       "export function other() {}",
     );
-    await writer.addNodes(extractNodes(sourceFile, createContext(searchPath)));
+    await writer.addNodes(
+      toNodes(extractNodes(sourceFile, createContext(searchPath))),
+    );
 
     const result = symbolNotFound(db, searchPath, "formatDate");
 
@@ -192,7 +215,7 @@ export function banana() {}`,
       fileA,
       "export function formatDate() {}",
     );
-    await writer.addNodes(extractNodes(sourceA, createContext(fileA)));
+    await writer.addNodes(toNodes(extractNodes(sourceA, createContext(fileA))));
 
     // Index file B with other symbols
     const fileB = "src/utils.ts";
@@ -201,7 +224,7 @@ export function banana() {}`,
       `export function helper() {}
 export function parser() {}`,
     );
-    await writer.addNodes(extractNodes(sourceB, createContext(fileB)));
+    await writer.addNodes(toNodes(extractNodes(sourceB, createContext(fileB))));
 
     const result = symbolNotFound(db, fileB, "formatDate");
 
@@ -239,7 +262,9 @@ describe("resolveSymbol", () => {
       filePath,
       "export function formatDate() {}",
     );
-    await writer.addNodes(extractNodes(sourceFile, createContext(filePath)));
+    await writer.addNodes(
+      toNodes(extractNodes(sourceFile, createContext(filePath))),
+    );
 
     const result = resolveSymbol(db, filePath, "formatDate");
 
@@ -259,7 +284,9 @@ describe("resolveSymbol", () => {
         getSituations() { return []; }
       }`,
     );
-    await writer.addNodes(extractNodes(sourceFile, createContext(filePath)));
+    await writer.addNodes(
+      toNodes(extractNodes(sourceFile, createContext(filePath))),
+    );
 
     // Search for method without class prefix
     const result = resolveSymbol(db, filePath, "getSituations");
@@ -280,7 +307,7 @@ describe("resolveSymbol", () => {
       fileA,
       "export function formatDate() {}",
     );
-    await writer.addNodes(extractNodes(sourceA, createContext(fileA)));
+    await writer.addNodes(toNodes(extractNodes(sourceA, createContext(fileA))));
 
     // Search for formatDate in a different file
     const result = resolveSymbol(db, "src/other.ts", "formatDate");
@@ -304,7 +331,7 @@ describe("resolveSymbol", () => {
         getLines() { return []; }
       }`,
     );
-    await writer.addNodes(extractNodes(sourceA, createContext(fileA)));
+    await writer.addNodes(toNodes(extractNodes(sourceA, createContext(fileA))));
 
     const fileB = "src/order.ts";
     const sourceB = project.createSourceFile(
@@ -313,7 +340,7 @@ describe("resolveSymbol", () => {
         getLines() { return []; }
       }`,
     );
-    await writer.addNodes(extractNodes(sourceB, createContext(fileB)));
+    await writer.addNodes(toNodes(extractNodes(sourceB, createContext(fileB))));
 
     const result = resolveSymbol(db, "src/other.ts", "getLines");
 
@@ -334,7 +361,9 @@ describe("resolveSymbol", () => {
       filePath,
       "export function helper() {}",
     );
-    await writer.addNodes(extractNodes(sourceFile, createContext(filePath)));
+    await writer.addNodes(
+      toNodes(extractNodes(sourceFile, createContext(filePath))),
+    );
 
     const result = resolveSymbol(db, filePath, "nonExistent");
 
@@ -352,7 +381,9 @@ describe("resolveSymbol", () => {
         GetData() { return {}; }
       }`,
     );
-    await writer.addNodes(extractNodes(sourceFile, createContext(filePath)));
+    await writer.addNodes(
+      toNodes(extractNodes(sourceFile, createContext(filePath))),
+    );
 
     // Search with different case
     const result = resolveSymbol(db, filePath, "getdata");
@@ -369,7 +400,9 @@ describe("resolveSymbol", () => {
       filePath,
       "export function formatDate() {}",
     );
-    await writer.addNodes(extractNodes(sourceFile, createContext(filePath)));
+    await writer.addNodes(
+      toNodes(extractNodes(sourceFile, createContext(filePath))),
+    );
 
     const result = resolveSymbol(db, undefined, "formatDate");
 
@@ -388,14 +421,14 @@ describe("resolveSymbol", () => {
       fileA,
       "export function formatDate() {}",
     );
-    await writer.addNodes(extractNodes(sourceA, createContext(fileA)));
+    await writer.addNodes(toNodes(extractNodes(sourceA, createContext(fileA))));
 
     const fileB = "src/dateB.ts";
     const sourceB = project.createSourceFile(
       fileB,
       "export function formatDate() {}",
     );
-    await writer.addNodes(extractNodes(sourceB, createContext(fileB)));
+    await writer.addNodes(toNodes(extractNodes(sourceB, createContext(fileB))));
 
     const result = resolveSymbol(db, undefined, "formatDate");
 
@@ -426,7 +459,9 @@ describe("resolveSymbol", () => {
         getSituations() { return []; }
       }`,
     );
-    await writer.addNodes(extractNodes(sourceFile, createContext(filePath)));
+    await writer.addNodes(
+      toNodes(extractNodes(sourceFile, createContext(filePath))),
+    );
 
     // Search with fully-qualified method name without file_path
     // Now works thanks to ID pattern matching
@@ -452,7 +487,7 @@ describe("resolveSymbol", () => {
         save() { return true; }
       }`,
     );
-    await writer.addNodes(extractNodes(sourceA, createContext(fileA)));
+    await writer.addNodes(toNodes(extractNodes(sourceA, createContext(fileA))));
 
     // File B also has a save method (Order.save)
     const fileB = "src/order.ts";
@@ -462,7 +497,7 @@ describe("resolveSymbol", () => {
         save() { return true; }
       }`,
     );
-    await writer.addNodes(extractNodes(sourceB, createContext(fileB)));
+    await writer.addNodes(toNodes(extractNodes(sourceB, createContext(fileB))));
 
     // When resolving "save" with fileA specified, should find User.save in fileA
     // even though there are multiple "save" methods globally
@@ -481,7 +516,9 @@ describe("resolveSymbol", () => {
       filePath,
       "export function helper() {}",
     );
-    await writer.addNodes(extractNodes(sourceFile, createContext(filePath)));
+    await writer.addNodes(
+      toNodes(extractNodes(sourceFile, createContext(filePath))),
+    );
 
     // Method name requires resolution even with file_path provided
     const sourceFile2 = project.createSourceFile(
@@ -489,7 +526,7 @@ describe("resolveSymbol", () => {
       `export class User { save() {} }`,
     );
     await writer.addNodes(
-      extractNodes(sourceFile2, createContext("src/entity.ts")),
+      toNodes(extractNodes(sourceFile2, createContext("src/entity.ts"))),
     );
 
     const result = resolveSymbol(db, "src/entity.ts", "save");

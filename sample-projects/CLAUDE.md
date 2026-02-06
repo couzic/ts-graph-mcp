@@ -50,9 +50,9 @@ import { queryEdges } from "../../http/src/db/queryEdges.js";  // NO!
 - `indexProject()` — Index the sample project
 
 **Test assertions** (internal query functions):
-- `dependenciesOf(db, projectRoot, filePath, symbol)` — Forward traversal
-- `dependentsOf(db, projectRoot, filePath, symbol)` — Backward traversal
-- `pathsBetween(db, projectRoot, from, to)` — Path finding
+- `dependenciesOf(db, filePath, symbol)` — Forward traversal
+- `dependentsOf(db, filePath, symbol)` — Backward traversal
+- `pathsBetween(db, from, to)` — Path finding
 
 ### Forbidden in E2E Tests
 
@@ -66,7 +66,7 @@ E2E tests use **golden master assertions** — exact `.toBe()` matching against 
 
 ```typescript
 it("finds all callees of entry", () => {
-  const output = dependenciesOf(db, projectRoot, "src/entry.ts", "entry");
+  const output = dependenciesOf(db, "src/entry.ts", "entry");
 
   // Golden master: exact output match
   expect(output).toBe(`## Graph
@@ -114,7 +114,7 @@ beforeAll(async () => {
 
 describe("dependenciesOf E2E", () => {
   it("finds forward dependencies", () => {
-    const output = dependenciesOf(db, projectRoot, "src/entry.ts", "entry");
+    const output = dependenciesOf(db, "src/entry.ts", "entry");
 
     // Golden master assertion - exact match
     expect(output).toBe(`## Graph

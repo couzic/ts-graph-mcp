@@ -121,7 +121,6 @@ const indexAndOpenDb = async (
     projectRoot,
     cacheDir,
     logger,
-    searchIndex,
     embeddingProvider,
     modelName,
   });
@@ -150,7 +149,6 @@ const indexAndOpenDb = async (
     searchIndex,
     embeddingCache,
     embeddingProvider,
-    projectRoot,
   });
   embeddingCache.close();
 
@@ -334,7 +332,6 @@ export const startHttpServer = async (
 
     const result = await searchGraph(
       db,
-      projectRoot,
       { topic, from, to, max_nodes },
       { searchIndex, embeddingProvider },
     );
@@ -364,9 +361,7 @@ export const startHttpServer = async (
     if (watchHandle) {
       await watchHandle.close();
     }
-    if (embeddingProvider) {
-      await embeddingProvider.dispose();
-    }
+    await embeddingProvider.dispose();
     return new Promise((resolve) => {
       server.close(() => {
         db.close();

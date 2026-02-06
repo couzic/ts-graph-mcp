@@ -22,6 +22,8 @@ interface NodeRow {
   end_line: number;
   exported: number;
   properties: string;
+  content_hash: string;
+  snippet: string;
 }
 
 /**
@@ -52,6 +54,8 @@ const rowToNode = (row: NodeRow): Node => {
     startLine: row.start_line,
     endLine: row.end_line,
     exported: row.exported === 1,
+    contentHash: row.content_hash,
+    snippet: row.snippet,
   };
 
   return { ...baseNode, ...properties } as Node;
@@ -233,7 +237,7 @@ export const createSqliteReader = (db: Database.Database): DbReader => {
     getNode(id: string): Node | null {
       const row = db
         .prepare<[string], NodeRow>(
-          `SELECT id, type, name, package, file_path, start_line, end_line, exported, properties
+          `SELECT id, type, name, package, file_path, start_line, end_line, exported, properties, content_hash, snippet
            FROM nodes WHERE id = ?`,
         )
         .get(id);
@@ -249,7 +253,7 @@ export const createSqliteReader = (db: Database.Database): DbReader => {
       const placeholders = ids.map(() => "?").join(", ");
       const rows = db
         .prepare<unknown[], NodeRow>(
-          `SELECT id, type, name, package, file_path, start_line, end_line, exported, properties
+          `SELECT id, type, name, package, file_path, start_line, end_line, exported, properties, content_hash, snippet
            FROM nodes WHERE id IN (${placeholders})`,
         )
         .all(...ids);
@@ -264,7 +268,7 @@ export const createSqliteReader = (db: Database.Database): DbReader => {
       if (filePath) {
         // Scoped to file: exact ID match or name match within file
         sql = `
-          SELECT id, type, name, package, file_path, start_line, end_line, exported, properties
+          SELECT id, type, name, package, file_path, start_line, end_line, exported, properties, content_hash, snippet
           FROM nodes
           WHERE (id = ? OR (LOWER(name) = LOWER(?) AND file_path = ?))
           LIMIT 10
@@ -276,7 +280,7 @@ export const createSqliteReader = (db: Database.Database): DbReader => {
         // 2. Method match (name ends with .symbol)
         // 3. Symbol path match (extract from ID)
         sql = `
-          SELECT id, type, name, package, file_path, start_line, end_line, exported, properties
+          SELECT id, type, name, package, file_path, start_line, end_line, exported, properties, content_hash, snippet
           FROM nodes
           WHERE (LOWER(name) = LOWER(?)
                  OR LOWER(name) LIKE '%.' || LOWER(?)

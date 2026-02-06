@@ -71,7 +71,7 @@ used directly by e2e tests.
 ## searchGraph API
 
 ```typescript
-searchGraph(db, projectRoot, {
+searchGraph(db, {
   // At least one required:
   topic?: string,           // Filter to focus on relevant nodes
   from?: GraphEndpoint,     // Start node(s)

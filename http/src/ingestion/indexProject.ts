@@ -38,8 +38,8 @@ export interface IndexProjectOptions {
   logger: TsGraphLogger;
   /** Search index for unified indexing (optional) */
   searchIndex?: SearchIndexWrapper;
-  /** Embedding provider for semantic search (optional) */
-  embeddingProvider?: EmbeddingProvider;
+  /** Embedding provider for semantic search */
+  embeddingProvider: EmbeddingProvider;
 }
 
 /**
@@ -166,7 +166,7 @@ const processPackage = async (
   configuredPackageNames: Set<string>,
   logger: TsGraphLogger,
   searchIndex: SearchIndexWrapper | undefined,
-  embeddingProvider: EmbeddingProvider | undefined,
+  embeddingProvider: EmbeddingProvider,
   embeddingCache: EmbeddingCache | undefined,
 ): Promise<PackageProcessResult> => {
   const errors: Array<{ file: string; message: string }> = [];

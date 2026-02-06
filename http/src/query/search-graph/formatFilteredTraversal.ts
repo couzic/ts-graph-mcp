@@ -14,8 +14,6 @@ import { queryNodeInfos } from "../shared/queryNodeInfos.js";
 export interface FormatFilteredTraversalInput {
   /** Database connection */
   db: Database.Database;
-  /** Project root for loading snippets */
-  projectRoot: string;
   /** Edges in the traversal (already filtered) */
   edges: GraphEdgeWithCallSites[];
   /** Node ID of the starting point (to exclude from Nodes section) */
@@ -35,8 +33,7 @@ export interface FormatFilteredTraversalInput {
 export const formatFilteredTraversal = (
   input: FormatFilteredTraversalInput,
 ): string => {
-  const { db, projectRoot, edges, startNodeId, maxNodes, prependMessage } =
-    input;
+  const { db, edges, startNodeId, maxNodes, prependMessage } = input;
 
   if (edges.length === 0) {
     const noResults = "No results found matching the filter.";
@@ -55,12 +52,7 @@ export const formatFilteredTraversal = (
   // Enrich with call sites BEFORE loading snippets
   const enrichedNodes = enrichNodesWithCallSites(nodes, edges);
 
-  // Load snippets
-  const nodesWithSnippets = loadNodeSnippets(
-    enrichedNodes,
-    projectRoot,
-    nodes.length,
-  );
+  const nodesWithSnippets = loadNodeSnippets(enrichedNodes, nodes.length);
 
   // Format output
   const output = formatToolOutput({

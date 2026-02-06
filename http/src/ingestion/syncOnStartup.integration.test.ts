@@ -130,6 +130,7 @@ export function validateEmail(email: string): boolean {
       cacheDir: CACHE_DIR,
       logger: silentLogger,
       searchIndex: freshSearchIndex,
+      embeddingProvider,
     });
 
     // No files should need reindexing (manifest matches filesystem)
@@ -145,7 +146,6 @@ export function validateEmail(email: string): boolean {
       searchIndex: freshSearchIndex,
       embeddingCache: createFakeEmbeddingCache(vectorDimensions),
       embeddingProvider: embeddingProvider,
-      projectRoot: TEST_DIR,
     });
 
     // Step 5: Verify search works on the populated index

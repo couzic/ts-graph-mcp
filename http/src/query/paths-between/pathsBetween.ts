@@ -31,7 +31,6 @@ export interface SymbolRef {
  */
 export function pathsBetween(
   db: Database.Database,
-  projectRoot: string,
   from: SymbolRef,
   to: SymbolRef,
   options: QueryOptions = {},
@@ -169,12 +168,7 @@ export function pathsBetween(
   // (so extractSnippet can truncate around call sites)
   const enrichedNodes = enrichNodesWithCallSites(nodes, graphEdges);
 
-  // Load snippets (I/O boundary)
-  const nodesWithSnippets = loadNodeSnippets(
-    enrichedNodes,
-    projectRoot,
-    nodes.length,
-  );
+  const nodesWithSnippets = loadNodeSnippets(enrichedNodes, nodes.length);
 
   // Format output (pure)
   // Exclusion already happened at query time (nodeIdsToQuery)

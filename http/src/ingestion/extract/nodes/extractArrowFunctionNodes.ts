@@ -1,5 +1,5 @@
 import { Node, type SourceFile } from "ts-morph";
-import type { FunctionNode } from "../../../db/Types.js";
+import type { Extracted, FunctionNode } from "../../../db/Types.js";
 import { generateNodeId } from "../../generateNodeId.js";
 import type { NodeExtractionContext } from "./NodeExtractionContext.js";
 import { normalizeTypeText } from "./normalizeTypeText.js";
@@ -14,9 +14,9 @@ import { normalizeTypeText } from "./normalizeTypeText.js";
 export const extractArrowFunctionNodes = (
   sourceFile: SourceFile,
   context: NodeExtractionContext,
-): FunctionNode[] => {
+): Extracted<FunctionNode>[] => {
   const variableStatements = sourceFile.getVariableStatements();
-  const functions: FunctionNode[] = [];
+  const functions: Extracted<FunctionNode>[] = [];
 
   // Get default export to check if any variable is default-exported
   const defaultExport = sourceFile.getExportAssignment(

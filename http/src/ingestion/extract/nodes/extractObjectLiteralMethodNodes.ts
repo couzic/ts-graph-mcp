@@ -1,5 +1,5 @@
 import { Node, type SourceFile } from "ts-morph";
-import type { FunctionNode } from "../../../db/Types.js";
+import type { Extracted, FunctionNode } from "../../../db/Types.js";
 import { generateNodeId } from "../../generateNodeId.js";
 import type { NodeExtractionContext } from "./NodeExtractionContext.js";
 import { normalizeTypeText } from "./normalizeTypeText.js";
@@ -16,8 +16,8 @@ import { normalizeTypeText } from "./normalizeTypeText.js";
 export const extractObjectLiteralMethodNodes = (
   sourceFile: SourceFile,
   context: NodeExtractionContext,
-): FunctionNode[] => {
-  const functions: FunctionNode[] = [];
+): Extracted<FunctionNode>[] => {
+  const functions: Extracted<FunctionNode>[] = [];
   const variableStatements = sourceFile.getVariableStatements();
 
   for (const statement of variableStatements) {

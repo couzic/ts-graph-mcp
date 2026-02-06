@@ -68,7 +68,6 @@ const queryDependentEdges = (
  */
 export function dependentsOf(
   db: Database.Database,
-  projectRoot: string,
   filePath: string | undefined,
   symbol: string,
   options: QueryOptions = {},
@@ -148,12 +147,7 @@ export function dependentsOf(
   // (so extractSnippet can truncate around call sites)
   const enrichedNodes = enrichNodesWithCallSites(nodes, edges);
 
-  // Load snippets (I/O boundary)
-  const nodesWithSnippets = loadNodeSnippets(
-    enrichedNodes,
-    projectRoot,
-    nodes.length,
-  );
+  const nodesWithSnippets = loadNodeSnippets(enrichedNodes, nodes.length);
 
   // Format output (pure)
   // Exclusion already happened at query time (nodeIdsToQuery)

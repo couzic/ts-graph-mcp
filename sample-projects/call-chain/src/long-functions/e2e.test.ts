@@ -8,6 +8,7 @@ import {
   openDatabase,
 } from "../../../../http/src/db/sqlite/sqliteConnection.utils.js";
 import { initializeSchema } from "../../../../http/src/db/sqlite/sqliteSchema.utils.js";
+import { createFakeEmbeddingProvider } from "../../../../http/src/embedding/createFakeEmbeddingProvider.js";
 import { indexProject } from "../../../../http/src/ingestion/indexProject.js";
 import { silentLogger } from "../../../../http/src/logging/SilentTsGraphLogger.js";
 import { dependenciesOf } from "../../../../http/src/query/dependencies-of/dependenciesOf.js";
@@ -27,7 +28,12 @@ describe("long functions E2E - snippet truncation", () => {
       packages: [{ name: "main", tsconfig: "tsconfig.json" }],
     };
     const writer = createSqliteWriter(db);
-    await indexProject(config, writer, { projectRoot, logger: silentLogger });
+    const embeddingProvider = createFakeEmbeddingProvider({ dimensions: 3 });
+    await indexProject(config, writer, {
+      projectRoot,
+      logger: silentLogger,
+      embeddingProvider,
+    });
   });
 
   afterAll(() => {
@@ -36,12 +42,7 @@ describe("long functions E2E - snippet truncation", () => {
 
   describe("dependenciesOf", () => {
     it("truncates step04 snippet to context around call site", () => {
-      const output = dependenciesOf(
-        db,
-        projectRoot,
-        "src/long-functions/entry.ts",
-        "entry",
-      );
+      const output = dependenciesOf(db, "src/long-functions/entry.ts", "entry");
       expect(output).toMatchInlineSnapshot(`
         "## Graph
 
@@ -111,7 +112,6 @@ describe("long functions E2E - snippet truncation", () => {
     it("truncates step04 snippet to context around call site", () => {
       const output = dependentsOf(
         db,
-        projectRoot,
         "src/long-functions/terminal.ts",
         "terminal",
       );
@@ -184,7 +184,6 @@ describe("long functions E2E - snippet truncation", () => {
     it("truncates step04 snippet to context around call site", () => {
       const output = pathsBetween(
         db,
-        projectRoot,
         { file_path: "src/long-functions/entry.ts", symbol: "entry" },
         { file_path: "src/long-functions/terminal.ts", symbol: "terminal" },
       );

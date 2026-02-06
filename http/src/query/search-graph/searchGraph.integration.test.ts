@@ -27,6 +27,7 @@ const fn = (name: string, file = "src/test.ts"): FunctionNode => ({
   endLine: 10,
   exported: true,
   contentHash: `hash-${name}`,
+  snippet: `function ${name}() { return true; }`,
 });
 
 const calls = (from: string, to: string): Edge => ({
@@ -39,7 +40,6 @@ const vectorDimensions = 3;
 
 describe(searchGraph.name, () => {
   let db: Database.Database;
-  const projectRoot = "/test/project";
   const embeddingCache = createFakeEmbeddingCache(vectorDimensions);
   const embeddingProvider = createFakeEmbeddingProvider({
     dimensions: vectorDimensions,
@@ -55,12 +55,7 @@ describe(searchGraph.name, () => {
   });
 
   it("returns error when no constraints provided", async () => {
-    const result = await searchGraph(
-      db,
-      projectRoot,
-      {},
-      { embeddingProvider },
-    );
+    const result = await searchGraph(db, {}, { embeddingProvider });
     expect(result).toContain("At least one of");
   });
 
@@ -75,7 +70,6 @@ describe(searchGraph.name, () => {
 
       const result = await searchGraph(
         db,
-        projectRoot,
         { from: { symbol: "fnA" } },
         { embeddingProvider },
       );
@@ -97,7 +91,6 @@ describe(searchGraph.name, () => {
 
       const result = await searchGraph(
         db,
-        projectRoot,
         { to: { symbol: "fnB" } },
         { embeddingProvider },
       );
@@ -123,7 +116,6 @@ describe(searchGraph.name, () => {
 
       const result = await searchGraph(
         db,
-        projectRoot,
         { from: { symbol: "fnA" }, to: { symbol: "fnC" } },
         { embeddingProvider },
       );
@@ -144,7 +136,6 @@ describe(searchGraph.name, () => {
     it("returns guidance when search index not provided", async () => {
       const result = await searchGraph(
         db,
-        projectRoot,
         { topic: "validation" },
         { embeddingProvider },
       );
@@ -172,12 +163,10 @@ describe(searchGraph.name, () => {
         searchIndex,
         embeddingCache,
         embeddingProvider,
-        projectRoot,
       });
 
       const result = await searchGraph(
         db,
-        projectRoot,
         { topic: "validate" },
         { searchIndex, embeddingProvider },
       );
@@ -200,12 +189,10 @@ describe(searchGraph.name, () => {
         searchIndex,
         embeddingCache,
         embeddingProvider,
-        projectRoot,
       });
 
       const result = await searchGraph(
         db,
-        projectRoot,
         { topic: "validate" },
         { searchIndex, embeddingProvider },
       );
@@ -225,12 +212,10 @@ describe(searchGraph.name, () => {
         searchIndex,
         embeddingCache,
         embeddingProvider,
-        projectRoot,
       });
 
       const result = await searchGraph(
         db,
-        projectRoot,
         { topic: "authentication" },
         { searchIndex, embeddingProvider },
       );
@@ -264,12 +249,10 @@ describe(searchGraph.name, () => {
         searchIndex,
         embeddingCache,
         embeddingProvider,
-        projectRoot,
       });
 
       const result = await searchGraph(
         db,
-        projectRoot,
         { from: { query: "validate" } },
         { searchIndex, embeddingProvider },
       );
@@ -298,12 +281,10 @@ describe(searchGraph.name, () => {
         searchIndex,
         embeddingCache,
         embeddingProvider,
-        projectRoot,
       });
 
       const result = await searchGraph(
         db,
-        projectRoot,
         { to: { query: "save" } },
         { searchIndex, embeddingProvider },
       );
@@ -326,12 +307,10 @@ describe(searchGraph.name, () => {
         searchIndex,
         embeddingCache,
         embeddingProvider,
-        projectRoot,
       });
 
       const result = await searchGraph(
         db,
-        projectRoot,
         { from: { query: "handle User" } },
         { searchIndex, embeddingProvider },
       );
@@ -352,12 +331,10 @@ describe(searchGraph.name, () => {
         searchIndex,
         embeddingCache,
         embeddingProvider,
-        projectRoot,
       });
 
       const result = await searchGraph(
         db,
-        projectRoot,
         { to: { query: "validate User" } },
         { searchIndex, embeddingProvider },
       );
@@ -387,14 +364,12 @@ describe(searchGraph.name, () => {
         searchIndex,
         embeddingCache,
         embeddingProvider,
-        projectRoot,
       });
 
       // Query for "sqlite writer" - falls back to semantic search
       // which finds "createWriter" as the best available match
       const result = await searchGraph(
         db,
-        projectRoot,
         { from: { query: "sqlite writer" } },
         { searchIndex, embeddingProvider },
       );
@@ -416,14 +391,12 @@ describe(searchGraph.name, () => {
         searchIndex,
         embeddingCache,
         embeddingProvider,
-        projectRoot,
       });
 
       // Query "Edge source property" - falls back to semantic search
       // which finds "sourceMap" as the best available match
       const result = await searchGraph(
         db,
-        projectRoot,
         { to: { query: "Edge source property" } },
         { searchIndex, embeddingProvider },
       );
@@ -449,12 +422,10 @@ describe(searchGraph.name, () => {
         searchIndex,
         embeddingCache,
         embeddingProvider,
-        projectRoot,
       });
 
       const result = await searchGraph(
         db,
-        projectRoot,
         { from: { query: "indexProject" } },
         { searchIndex, embeddingProvider },
       );
@@ -477,14 +448,12 @@ describe(searchGraph.name, () => {
         searchIndex,
         embeddingCache,
         embeddingProvider,
-        projectRoot,
       });
 
       // Query has 3 terms: "handle", "sqlite", "connection"
       // "handleRequest" only matches 1 of 3, but it's the best available
       const result = await searchGraph(
         db,
-        projectRoot,
         { from: { query: "handle sqlite connection" } },
         { searchIndex, embeddingProvider },
       );
@@ -538,7 +507,6 @@ describe(searchGraph.name, () => {
 
       const result = await searchGraph(
         db,
-        projectRoot,
         { from: { query: "data processing" } },
         { searchIndex, embeddingProvider },
       );

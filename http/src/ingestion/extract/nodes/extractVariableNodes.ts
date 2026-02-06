@@ -1,5 +1,5 @@
 import { Node, type SourceFile, VariableDeclarationKind } from "ts-morph";
-import type { VariableNode } from "../../../db/Types.js";
+import type { Extracted, VariableNode } from "../../../db/Types.js";
 import { generateNodeId } from "../../generateNodeId.js";
 import type { NodeExtractionContext } from "./NodeExtractionContext.js";
 import { normalizeTypeText } from "./normalizeTypeText.js";
@@ -23,9 +23,9 @@ const isCallableInitializer = (initializer: Node | undefined): boolean => {
 export const extractVariableNodes = (
   sourceFile: SourceFile,
   context: NodeExtractionContext,
-): VariableNode[] => {
+): Extracted<VariableNode>[] => {
   const variableStatements = sourceFile.getVariableStatements();
-  const variables: VariableNode[] = [];
+  const variables: Extracted<VariableNode>[] = [];
 
   // Get default export to check if any variable is default-exported
   // e.g., `const Foo = ...; export default Foo;`

@@ -8,6 +8,7 @@ import {
   openDatabase,
 } from "../../../../http/src/db/sqlite/sqliteConnection.utils.js";
 import { initializeSchema } from "../../../../http/src/db/sqlite/sqliteSchema.utils.js";
+import { createFakeEmbeddingProvider } from "../../../../http/src/embedding/createFakeEmbeddingProvider.js";
 import { indexProject } from "../../../../http/src/ingestion/indexProject.js";
 import { silentLogger } from "../../../../http/src/logging/SilentTsGraphLogger.js";
 import { dependenciesOf } from "../../../../http/src/query/dependencies-of/dependenciesOf.js";
@@ -35,7 +36,12 @@ describe("direct call chain E2E tests", () => {
       packages: [{ name: "main", tsconfig: "tsconfig.json" }],
     };
     const writer = createSqliteWriter(db);
-    await indexProject(config, writer, { projectRoot, logger: silentLogger });
+    const embeddingProvider = createFakeEmbeddingProvider({ dimensions: 3 });
+    await indexProject(config, writer, {
+      projectRoot,
+      logger: silentLogger,
+      embeddingProvider,
+    });
   });
 
   afterAll(() => {
@@ -44,12 +50,7 @@ describe("direct call chain E2E tests", () => {
 
   describe("dependenciesOf", () => {
     it("finds all callees of entry", () => {
-      const output = dependenciesOf(
-        db,
-        projectRoot,
-        "src/direct-call/entry.ts",
-        "entry",
-      );
+      const output = dependenciesOf(db, "src/direct-call/entry.ts", "entry");
 
       expect(output).toBe(
         `
@@ -101,7 +102,6 @@ step05:
     it("returns empty for terminal node", () => {
       const output = dependenciesOf(
         db,
-        projectRoot,
         "src/direct-call/lib/step05.ts",
         "step05",
       );
@@ -114,7 +114,6 @@ step05:
     it("finds all callers of step05", () => {
       const output = dependentsOf(
         db,
-        projectRoot,
         "src/direct-call/lib/step05.ts",
         "step05",
       );
@@ -167,12 +166,7 @@ step04:
     });
 
     it("returns empty for entry point", () => {
-      const output = dependentsOf(
-        db,
-        projectRoot,
-        "src/direct-call/entry.ts",
-        "entry",
-      );
+      const output = dependentsOf(db, "src/direct-call/entry.ts", "entry");
 
       expect(output).toBe(`No dependents found.`);
     });
@@ -182,7 +176,6 @@ step04:
     it("finds path from entry to step05", () => {
       const output = pathsBetween(
         db,
-        projectRoot,
         { file_path: "src/direct-call/entry.ts", symbol: "entry" },
         { file_path: "src/direct-call/lib/step05.ts", symbol: "step05" },
       );
@@ -228,7 +221,6 @@ step04:
     it("finds shorter path from midpoint", () => {
       const output = pathsBetween(
         db,
-        projectRoot,
         { file_path: "src/direct-call/core/step03.ts", symbol: "step03" },
         { file_path: "src/direct-call/lib/step05.ts", symbol: "step05" },
       );
@@ -258,7 +250,6 @@ step04:
       // Bidirectional search finds the path; arrows show actual direction
       const output = pathsBetween(
         db,
-        projectRoot,
         { file_path: "src/direct-call/lib/step05.ts", symbol: "step05" },
         { file_path: "src/direct-call/entry.ts", symbol: "entry" },
       );
@@ -304,7 +295,6 @@ step04:
     it("returns error for same node", () => {
       const output = pathsBetween(
         db,
-        projectRoot,
         { file_path: "src/direct-call/core/step03.ts", symbol: "step03" },
         { file_path: "src/direct-call/core/step03.ts", symbol: "step03" },
       );

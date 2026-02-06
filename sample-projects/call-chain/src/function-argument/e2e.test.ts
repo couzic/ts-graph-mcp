@@ -8,6 +8,7 @@ import {
   openDatabase,
 } from "../../../../http/src/db/sqlite/sqliteConnection.utils.js";
 import { initializeSchema } from "../../../../http/src/db/sqlite/sqliteSchema.utils.js";
+import { createFakeEmbeddingProvider } from "../../../../http/src/embedding/createFakeEmbeddingProvider.js";
 import { indexProject } from "../../../../http/src/ingestion/indexProject.js";
 import { silentLogger } from "../../../../http/src/logging/SilentTsGraphLogger.js";
 import { dependenciesOf } from "../../../../http/src/query/dependencies-of/dependenciesOf.js";
@@ -35,7 +36,12 @@ describe("function-argument E2E tests", () => {
       packages: [{ name: "main", tsconfig: "tsconfig.json" }],
     };
     const writer = createSqliteWriter(db);
-    await indexProject(config, writer, { projectRoot, logger: silentLogger });
+    const embeddingProvider = createFakeEmbeddingProvider({ dimensions: 3 });
+    await indexProject(config, writer, {
+      projectRoot,
+      logger: silentLogger,
+      embeddingProvider,
+    });
   });
 
   afterAll(() => {
@@ -46,7 +52,6 @@ describe("function-argument E2E tests", () => {
     it("finds dependencies of entry()", () => {
       const output = dependenciesOf(
         db,
-        projectRoot,
         "src/function-argument/entry.ts",
         "entry",
       );
@@ -114,7 +119,6 @@ processor:
     it("finds entry as dependent of processor", () => {
       const output = dependentsOf(
         db,
-        projectRoot,
         "src/function-argument/lib/processor.ts",
         "processor",
       );
@@ -145,7 +149,6 @@ entry:
     it("finds path from entry to processor", () => {
       const output = pathsBetween(
         db,
-        projectRoot,
         { file_path: "src/function-argument/entry.ts", symbol: "entry" },
         {
           file_path: "src/function-argument/lib/processor.ts",

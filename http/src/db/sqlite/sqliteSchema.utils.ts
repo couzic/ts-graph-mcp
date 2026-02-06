@@ -1,5 +1,5 @@
 import type Database from "better-sqlite3";
-import { setDbSchemaVersion } from "../versions.js";
+import { DB_SCHEMA_VERSION, setDbSchemaVersion } from "../versions.js";
 
 /**
  * SQLite schema for the code graph.
@@ -25,7 +25,8 @@ CREATE TABLE IF NOT EXISTS nodes (
   end_line INTEGER NOT NULL,
   exported INTEGER NOT NULL DEFAULT 0,
   properties TEXT NOT NULL DEFAULT '{}',
-  content_hash TEXT
+  content_hash TEXT NOT NULL,
+  snippet TEXT NOT NULL
 )`;
 
 const EDGES_TABLE = `
@@ -55,36 +56,27 @@ const INDEXES = [
 ];
 
 /**
- * Check if a column exists in a table.
- */
-const columnExists = (
-  db: Database.Database,
-  table: string,
-  column: string,
-): boolean => {
-  const columns = db.pragma(`table_info(${table})`) as Array<{ name: string }>;
-  return columns.some((col) => col.name === column);
-};
-
-/**
  * Initialize the schema on a database connection.
  * Creates tables and indexes if they don't exist.
- * Migrates existing databases to add new columns.
+ * Drops and recreates tables if the schema version is outdated.
  *
  * @param db - better-sqlite3 database instance
  */
 export const initializeSchema = (db: Database.Database): void => {
-  // Set schema version first
+  // Check existing schema version — drop tables if outdated
+  const currentVersion = (
+    db.pragma("user_version") as Array<{ user_version: number }>
+  )[0]?.user_version;
+  if (currentVersion !== undefined && currentVersion < DB_SCHEMA_VERSION) {
+    dropAllTables(db);
+  }
+
+  // Set schema version
   setDbSchemaVersion(db);
 
   // Create tables
   db.exec(NODES_TABLE);
   db.exec(EDGES_TABLE);
-
-  // Migration: add content_hash column if missing (for existing databases)
-  if (!columnExists(db, "nodes", "content_hash")) {
-    db.exec("ALTER TABLE nodes ADD COLUMN content_hash TEXT");
-  }
 
   // Create indexes
   for (const indexSql of INDEXES) {

@@ -12,6 +12,7 @@ describe(formatNodes.name, () => {
         filePath: "src/fnA.ts",
         startLine: 1,
         endLine: 5,
+        snippet: "function fnA() {\n  return 42;\n}",
         locs: [
           { line: 1, code: "function fnA() {" },
           { line: 2, code: "  return 42;" },
@@ -44,6 +45,7 @@ describe(formatNodes.name, () => {
         filePath: "src/fnA.ts",
         startLine: 1,
         endLine: 5,
+        snippet: "function fnA() {\n  callTarget();\n}",
         locs: [
           { line: 1, code: "function fnA() {" },
           { line: 2, code: "  callTarget();" },
@@ -68,6 +70,7 @@ describe(formatNodes.name, () => {
         filePath: "src/fnA.ts",
         startLine: 1,
         endLine: 10,
+        snippet: "function fnA() {\n  return 42;\n}",
         locs: [
           { line: 1, code: "function fnA() {" },
           { line: 10, code: "  return 42;" },
@@ -90,6 +93,7 @@ describe(formatNodes.name, () => {
         filePath: "src/fnA.ts",
         startLine: 1,
         endLine: 5,
+        snippet: "function fnA() {}",
       },
       {
         id: "src/b.ts:Function:fnB",
@@ -98,6 +102,7 @@ describe(formatNodes.name, () => {
         filePath: "src/fnB.ts",
         startLine: 1,
         endLine: 5,
+        snippet: "function fnB() {}",
       },
     ];
     const displayNames = new Map([
@@ -124,6 +129,7 @@ describe(formatNodes.name, () => {
         filePath: "src/fnA.ts",
         startLine: 1,
         endLine: 5,
+        snippet: "function fnA() {}",
       },
       {
         id: "src/b.ts:Function:fnB",
@@ -132,6 +138,7 @@ describe(formatNodes.name, () => {
         filePath: "src/fnB.ts",
         startLine: 1,
         endLine: 5,
+        snippet: "function fnB() {}",
       },
       {
         id: "src/c.ts:Function:fnC",
@@ -140,6 +147,7 @@ describe(formatNodes.name, () => {
         filePath: "src/fnC.ts",
         startLine: 1,
         endLine: 5,
+        snippet: "function fnC() {}",
       },
     ];
     const displayNames = new Map([
@@ -171,6 +179,7 @@ describe(formatNodes.name, () => {
         filePath: "src/fnA.ts",
         startLine: 1,
         endLine: 5,
+        snippet: "function fnA() {}",
       },
     ];
     const displayNames = new Map([["src/a.ts:Function:fnA", "fnA"]]);

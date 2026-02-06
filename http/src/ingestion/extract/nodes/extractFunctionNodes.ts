@@ -1,5 +1,5 @@
 import type { SourceFile } from "ts-morph";
-import type { FunctionNode } from "../../../db/Types.js";
+import type { Extracted, FunctionNode } from "../../../db/Types.js";
 import { generateNodeId } from "../../generateNodeId.js";
 import type { NodeExtractionContext } from "./NodeExtractionContext.js";
 import { normalizeTypeText } from "./normalizeTypeText.js";
@@ -10,7 +10,7 @@ import { normalizeTypeText } from "./normalizeTypeText.js";
 export const extractFunctionNodes = (
   sourceFile: SourceFile,
   context: NodeExtractionContext,
-): FunctionNode[] => {
+): Extracted<FunctionNode>[] => {
   const functions = sourceFile.getFunctions();
   return functions.map((func) => {
     const name = func.getName() || "<anonymous>";

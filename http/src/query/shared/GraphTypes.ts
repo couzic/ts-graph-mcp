@@ -28,6 +28,7 @@ export interface NodeInfo {
   filePath: string;
   startLine: number;
   endLine: number;
+  snippet: string; // Source code snippet from DB
   callSites?: CallSiteRange[]; // Line ranges where this node is called (from edges)
   locs?: LOC[]; // Pre-loaded lines of code for snippet display
 }

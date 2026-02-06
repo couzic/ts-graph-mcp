@@ -7,6 +7,7 @@ import {
   openDatabase,
 } from "../../http/src/db/sqlite/sqliteConnection.utils.js";
 import { initializeSchema } from "../../http/src/db/sqlite/sqliteSchema.utils.js";
+import { createFakeEmbeddingProvider } from "../../http/src/embedding/createFakeEmbeddingProvider.js";
 import { indexProject } from "../../http/src/ingestion/indexProject.js";
 import { silentLogger } from "../../http/src/logging/SilentTsGraphLogger.js";
 import { dependenciesOf } from "../../http/src/query/dependencies-of/dependenciesOf.js";
@@ -40,7 +41,12 @@ describe("yarn-pnp-monorepo E2E tests", () => {
     projectRoot = import.meta.dirname;
     const config = loadConfig(`${projectRoot}/ts-graph-mcp.config.json`);
     const writer = createSqliteWriter(db);
-    await indexProject(config, writer, { projectRoot, logger: silentLogger });
+    const embeddingProvider = createFakeEmbeddingProvider({ dimensions: 3 });
+    await indexProject(config, writer, {
+      projectRoot,
+      logger: silentLogger,
+      embeddingProvider,
+    });
   });
 
   afterAll(() => {
@@ -54,7 +60,6 @@ describe("yarn-pnp-monorepo E2E tests", () => {
       // NOT to libs/toolkit/src/index.ts:MathUtils or a synthetic string
       const output = dependenciesOf(
         db,
-        projectRoot,
         "modules/app/packages/backend/src/api.ts",
         "calculateArea",
       );
@@ -83,7 +88,6 @@ multiply:
       // Should find calculateArea as a caller of multiply
       const output = dependentsOf(
         db,
-        projectRoot,
         "libs/toolkit/src/math/operations.ts",
         "multiply",
       );
@@ -120,7 +124,6 @@ calculateArea:
       // via path alias "@/strings" in the barrel file
       const output = dependenciesOf(
         db,
-        projectRoot,
         "modules/app/packages/backend/src/api.ts",
         "formatLabel",
       );
@@ -149,7 +152,6 @@ capitalize:
       // Should find formatLabel as a caller of capitalize
       const output = dependentsOf(
         db,
-        projectRoot,
         "libs/toolkit/src/strings/operations.ts",
         "capitalize",
       );
@@ -179,7 +181,6 @@ formatLabel:
     it("finds cross-module call chain from frontend through ui to toolkit", () => {
       const output = dependenciesOf(
         db,
-        projectRoot,
         "modules/app/packages/frontend/src/App.tsx",
         "renderDashboard",
       );
@@ -246,7 +247,6 @@ Config:
     it("finds dependencies from analytics-api to toolkit", () => {
       const output = dependenciesOf(
         db,
-        projectRoot,
         "modules/analytics-api/src/tracker.ts",
         "trackMetric",
       );
@@ -287,7 +287,6 @@ Config:
     it("finds all callers of toolkit.formatValue across modules", () => {
       const output = dependentsOf(
         db,
-        projectRoot,
         "libs/toolkit/src/helpers.ts",
         "formatValue",
       );
@@ -358,7 +357,6 @@ LoadingWrapper:
     it("finds all callers of shared.validateThreshold", () => {
       const output = dependentsOf(
         db,
-        projectRoot,
         "modules/app/packages/shared/src/types.ts",
         "validateThreshold",
       );
@@ -409,7 +407,6 @@ handleConfigUpdate:
       // The INCLUDES edge should point to the actual definition
       const output = dependentsOf(
         db,
-        projectRoot,
         "libs/ui/src/components/LoadingWrapper/LoadingWrapper.tsx",
         "LoadingWrapper",
       );
@@ -439,7 +436,6 @@ renderLoading:
       // Should trace to the actual definition through the path alias in barrel
       const output = dependenciesOf(
         db,
-        projectRoot,
         "modules/app/packages/frontend/src/App.tsx",
         "renderLoading",
       );
@@ -487,7 +483,6 @@ formatValue:
     it("finds both toUpperCase and formatError as dependencies", () => {
       const output = dependenciesOf(
         db,
-        projectRoot,
         "modules/app/packages/backend/src/api.ts",
         "processInput",
       );
@@ -502,7 +497,6 @@ formatValue:
     it("finds dependents of toUpperCase from text-utils", () => {
       const output = dependentsOf(
         db,
-        projectRoot,
         "libs/text-utils/src/utils.ts",
         "toUpperCase",
       );
@@ -513,7 +507,6 @@ formatValue:
     it("finds dependents of formatError from error-utils", () => {
       const output = dependentsOf(
         db,
-        projectRoot,
         "libs/error-utils/src/utils.ts",
         "formatError",
       );
@@ -527,7 +520,6 @@ formatValue:
     it("finds direct path from analytics-api to toolkit", () => {
       const output = pathsBetween(
         db,
-        projectRoot,
         {
           file_path: "modules/analytics-api/src/tracker.ts",
           symbol: "trackMetric",
@@ -547,7 +539,6 @@ trackMetric --CALLS--> formatValue
     it("finds multi-hop path from frontend through shared to toolkit", () => {
       const output = pathsBetween(
         db,
-        projectRoot,
         {
           file_path: "modules/app/packages/frontend/src/App.tsx",
           symbol: "renderDashboard",
@@ -578,7 +569,6 @@ validateThreshold:
     it("returns no path between unconnected packages (backend has no ui dependency)", () => {
       const output = pathsBetween(
         db,
-        projectRoot,
         {
           file_path: "modules/app/packages/backend/src/api.ts",
           symbol: "handleConfigUpdate",

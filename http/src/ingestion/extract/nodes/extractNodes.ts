@@ -1,5 +1,5 @@
 import type { SourceFile } from "ts-morph";
-import type { Node } from "../../../db/Types.js";
+import type { ExtractedNode } from "../../../db/Types.js";
 import { extractArrowFunctionNodes } from "./extractArrowFunctionNodes.js";
 import { extractClassNodes } from "./extractClassNodes.js";
 import { extractFunctionNodes } from "./extractFunctionNodes.js";
@@ -16,8 +16,8 @@ import type { NodeExtractionContext } from "./NodeExtractionContext.js";
 export const extractNodes = (
   sourceFile: SourceFile,
   context: NodeExtractionContext,
-): Node[] => {
-  const nodes: Node[] = [];
+): ExtractedNode[] => {
+  const nodes: ExtractedNode[] = [];
 
   // Extract top-level functions
   nodes.push(...extractFunctionNodes(sourceFile, context));

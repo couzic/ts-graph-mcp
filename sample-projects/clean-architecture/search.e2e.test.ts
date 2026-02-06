@@ -73,7 +73,6 @@ describe("search recall E2E tests", () => {
     it("finds symbols with exact token match", async () => {
       const result = await searchGraph(
         db,
-        projectRoot,
         { topic: "provider" },
         { searchIndex, embeddingProvider },
       );
@@ -87,7 +86,6 @@ describe("search recall E2E tests", () => {
     it("returns graph format with connected symbols", async () => {
       const result = await searchGraph(
         db,
-        projectRoot,
         { topic: "provider" },
         { searchIndex, embeddingProvider },
       );
@@ -101,7 +99,6 @@ describe("search recall E2E tests", () => {
     it("finds plural form with plural query", async () => {
       const result = await searchGraph(
         db,
-        projectRoot,
         { topic: "providers" },
         { searchIndex, embeddingProvider },
       );
@@ -112,7 +109,6 @@ describe("search recall E2E tests", () => {
     it("finds symbols by camelCase split word", async () => {
       const result = await searchGraph(
         db,
-        projectRoot,
         { topic: "default" },
         { searchIndex, embeddingProvider },
       );
@@ -124,7 +120,6 @@ describe("search recall E2E tests", () => {
     it("finds all audit-related symbols", async () => {
       const result = await searchGraph(
         db,
-        projectRoot,
         { topic: "audit" },
         { searchIndex, embeddingProvider },
       );
@@ -136,7 +131,6 @@ describe("search recall E2E tests", () => {
     it("finds methods by exact name", async () => {
       const result = await searchGraph(
         db,
-        projectRoot,
         { topic: "enable" },
         { searchIndex, embeddingProvider },
       );
@@ -147,7 +141,6 @@ describe("search recall E2E tests", () => {
     it("finds controller symbols", async () => {
       const result = await searchGraph(
         db,
-        projectRoot,
         { topic: "controller" },
         { searchIndex, embeddingProvider },
       );
@@ -161,7 +154,6 @@ describe("search recall E2E tests", () => {
     it("finds enable/disable via synonym 'activate'", async () => {
       const result = await searchGraph(
         db,
-        projectRoot,
         { topic: "activate" },
         { searchIndex, embeddingProvider },
       );
@@ -173,7 +165,6 @@ describe("search recall E2E tests", () => {
     it("finds audit via concept 'logging'", async () => {
       const result = await searchGraph(
         db,
-        projectRoot,
         { topic: "logging" },
         { searchIndex, embeddingProvider },
       );
@@ -185,7 +176,6 @@ describe("search recall E2E tests", () => {
     it("finds config via concept 'settings'", async () => {
       const result = await searchGraph(
         db,
-        projectRoot,
         { topic: "settings" },
         { searchIndex, embeddingProvider },
       );
@@ -196,7 +186,6 @@ describe("search recall E2E tests", () => {
     it("finds repository via concept 'data access layer'", async () => {
       const result = await searchGraph(
         db,
-        projectRoot,
         { topic: "data access layer" },
         { searchIndex, embeddingProvider },
       );
@@ -208,7 +197,6 @@ describe("search recall E2E tests", () => {
     it("finds commands via concept 'action'", async () => {
       const result = await searchGraph(
         db,
-        projectRoot,
         { topic: "user action command" },
         { searchIndex, embeddingProvider },
       );
@@ -222,7 +210,6 @@ describe("search recall E2E tests", () => {
       // Without topic filter: SetDefaultProviderCommand depends on many symbols
       const unfilteredResult = await searchGraph(
         db,
-        projectRoot,
         { from: { symbol: "SetDefaultProviderCommand" } },
         { searchIndex, embeddingProvider },
       );
@@ -235,7 +222,6 @@ describe("search recall E2E tests", () => {
       // With topic filter: only audit-related symbols should appear
       const filteredResult = await searchGraph(
         db,
-        projectRoot,
         { topic: "audit", from: { symbol: "SetDefaultProviderCommand" } },
         { searchIndex, embeddingProvider },
       );
@@ -254,7 +240,6 @@ describe("search recall E2E tests", () => {
       // Note: Must use method name since class fallback for dependents isn't implemented
       const result = await searchGraph(
         db,
-        projectRoot,
         { topic: "logging", to: { symbol: "AuditRepository.save" } },
         { searchIndex, embeddingProvider },
       );
@@ -268,7 +253,6 @@ describe("search recall E2E tests", () => {
       // Find path from AdminController to AuditRepository, filtered by "audit"
       const result = await searchGraph(
         db,
-        projectRoot,
         {
           topic: "audit",
           from: { symbol: "AdminController" },
@@ -286,7 +270,6 @@ describe("search recall E2E tests", () => {
     it("resolves from.query to traverse dependencies", async () => {
       const result = await searchGraph(
         db,
-        projectRoot,
         { from: { query: "SetDefaultProviderCommand" } },
         { searchIndex, embeddingProvider },
       );
@@ -299,7 +282,6 @@ describe("search recall E2E tests", () => {
     it("resolves to.query to find dependents", async () => {
       const result = await searchGraph(
         db,
-        projectRoot,
         { to: { query: "ProviderService" } },
         { searchIndex, embeddingProvider },
       );

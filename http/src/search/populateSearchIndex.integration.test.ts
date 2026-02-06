@@ -23,6 +23,7 @@ const fn = (name: string, file = "src/test.ts"): FunctionNode => ({
   endLine: 10,
   exported: true,
   contentHash: `hash-${name}`,
+  snippet: `function ${name}() { return true; }`,
 });
 
 const iface = (name: string, file = "src/types.ts"): InterfaceNode => ({
@@ -35,6 +36,7 @@ const iface = (name: string, file = "src/types.ts"): InterfaceNode => ({
   endLine: 5,
   exported: true,
   contentHash: `hash-${name}`,
+  snippet: `interface ${name} {}`,
 });
 
 const vectorDimensions = 3;
@@ -45,7 +47,6 @@ describe(populateSearchIndex.name, () => {
   const embeddingProvider = createFakeEmbeddingProvider({
     dimensions: vectorDimensions,
   });
-  const projectRoot = "/test/project";
 
   beforeEach(() => {
     db = openDatabase({ path: ":memory:" });
@@ -63,7 +64,6 @@ describe(populateSearchIndex.name, () => {
       searchIndex,
       embeddingCache,
       embeddingProvider,
-      projectRoot,
     });
     expect(result.total).toBe(0);
     expect(await searchIndex.count()).toBe(0);
@@ -83,7 +83,6 @@ describe(populateSearchIndex.name, () => {
       searchIndex,
       embeddingCache,
       embeddingProvider,
-      projectRoot,
     });
 
     expect(result.total).toBe(3);
@@ -104,7 +103,6 @@ describe(populateSearchIndex.name, () => {
       searchIndex,
       embeddingCache,
       embeddingProvider,
-      projectRoot,
     });
 
     const results = await searchIndex.search("validate");
@@ -123,7 +121,6 @@ describe(populateSearchIndex.name, () => {
       searchIndex,
       embeddingCache,
       embeddingProvider,
-      projectRoot,
     });
 
     // Should find by "User" because camelCase is split
@@ -144,7 +141,6 @@ describe(populateSearchIndex.name, () => {
       searchIndex,
       embeddingCache,
       embeddingProvider,
-      projectRoot,
     });
 
     expect(result.total).toBe(1000);

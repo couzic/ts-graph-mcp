@@ -16,8 +16,19 @@ const insertNode = (
   filePath: string,
 ) => {
   db.prepare(
-    `INSERT INTO nodes (id, name, type, package, file_path, start_line, end_line, exported) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-  ).run(id, name, type, pkg, filePath, 1, 10, 1);
+    `INSERT INTO nodes (id, name, type, package, file_path, start_line, end_line, exported, content_hash, snippet) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).run(
+    id,
+    name,
+    type,
+    pkg,
+    filePath,
+    1,
+    10,
+    1,
+    `hash-${name}`,
+    `${type} ${name}`,
+  );
 };
 
 describe("queryNodeMetadata", () => {

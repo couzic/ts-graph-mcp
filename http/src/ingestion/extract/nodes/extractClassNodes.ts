@@ -1,5 +1,5 @@
 import type { SourceFile } from "ts-morph";
-import type { ClassNode } from "../../../db/Types.js";
+import type { ClassNode, Extracted } from "../../../db/Types.js";
 import { generateNodeId } from "../../generateNodeId.js";
 import type { NodeExtractionContext } from "./NodeExtractionContext.js";
 import { normalizeTypeText } from "./normalizeTypeText.js";
@@ -10,7 +10,7 @@ import { normalizeTypeText } from "./normalizeTypeText.js";
 export const extractClassNodes = (
   sourceFile: SourceFile,
   context: NodeExtractionContext,
-): ClassNode[] => {
+): Extracted<ClassNode>[] => {
   const classes = sourceFile.getClasses();
   return classes.map((classDecl) => {
     const name = classDecl.getName() || "<anonymous>";
