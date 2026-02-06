@@ -1,14 +1,17 @@
 import {
   existsSync,
   mkdirSync,
+  mkdtempSync,
   rmSync,
   statSync,
   writeFileSync,
 } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { ProjectConfig } from "../config/Config.schemas.js";
+import { loadConfig } from "../config/configLoader.utils.js";
 import { createSqliteWriter } from "../db/sqlite/createSqliteWriter.js";
 import {
   closeDatabase,
@@ -19,6 +22,7 @@ import { createFakeEmbeddingCache } from "../embedding/createFakeEmbeddingCache.
 import { createFakeEmbeddingProvider } from "../embedding/createFakeEmbeddingProvider.js";
 import { openEmbeddingCache } from "../embedding/embeddingCache.js";
 import { silentLogger } from "../logging/SilentTsGraphLogger.js";
+import { dependenciesOf } from "../query/dependencies-of/dependenciesOf.js";
 import { createSearchIndex } from "../search/createSearchIndex.js";
 import { populateSearchIndex } from "../search/populateSearchIndex.js";
 import { indexProject } from "./indexProject.js";
@@ -239,4 +243,84 @@ export function formatDate(date: Date): string {
     // because the file content is unchanged and was already cached.
     expect(generatedEmbeddings).toHaveLength(0);
   });
+});
+
+describe("syncOnStartup cross-package resolution", () => {
+  it(
+    "preserves cross-package namespace import edges after reindexing",
+    { timeout: 60_000 },
+    async () => {
+      // Uses yarn-pnp-monorepo which has namespace imports requiring projectRegistry:
+      // backend/api.ts: calculateArea() calls MathUtils.multiply()
+      const projectRoot = join(
+        import.meta.dirname,
+        "../../../sample-projects/yarn-pnp-monorepo",
+      );
+      const cacheDir = mkdtempSync(
+        join(tmpdir(), "ts-graph-sync-registry-test-"),
+      );
+      mkdirSync(cacheDir, { recursive: true });
+
+      const db = openDatabase({ path: ":memory:" });
+      initializeSchema(db);
+      const writer = createSqliteWriter(db);
+      const config = loadConfig(`${projectRoot}/ts-graph-mcp.config.json`);
+      const embeddingProvider = createFakeEmbeddingProvider({
+        dimensions: vectorDimensions,
+      });
+
+      await indexProject(config, writer, {
+        projectRoot,
+        logger: silentLogger,
+        embeddingProvider,
+      });
+
+      const baselineOutput = dependenciesOf(
+        db,
+        "modules/app/packages/backend/src/api.ts",
+        "formatLabel",
+      );
+      expect(baselineOutput).toContain("formatLabel --CALLS--> capitalize");
+
+      await writer.removeFileNodes("modules/app/packages/backend/src/api.ts");
+
+      // Build manifest with all files EXCEPT the one we want to reindex
+      const manifest: IndexManifest = { version: 1, files: {} };
+      const allNodes = db
+        .prepare<[], { file_path: string }>(
+          "SELECT DISTINCT file_path FROM nodes",
+        )
+        .all();
+      for (const row of allNodes) {
+        const absolutePath = join(projectRoot, row.file_path);
+        try {
+          const stat = statSync(absolutePath);
+          manifest.files[row.file_path] = {
+            mtime: stat.mtimeMs,
+            size: stat.size,
+          };
+        } catch {
+          // File might not exist, skip
+        }
+      }
+      saveManifest(cacheDir, manifest);
+
+      await syncOnStartup(db, config, manifest, {
+        projectRoot,
+        cacheDir,
+        logger: silentLogger,
+        embeddingProvider,
+      });
+
+      const afterSync = dependenciesOf(
+        db,
+        "modules/app/packages/backend/src/api.ts",
+        "formatLabel",
+      );
+      expect(afterSync).toContain("formatLabel --CALLS--> capitalize");
+
+      closeDatabase(db);
+      rmSync(cacheDir, { recursive: true });
+    },
+  );
 });

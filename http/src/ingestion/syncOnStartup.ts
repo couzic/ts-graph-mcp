@@ -7,7 +7,7 @@ import { openEmbeddingCache } from "../embedding/embeddingCache.js";
 import type { TsGraphLogger } from "../logging/TsGraphLogger.js";
 import type { SearchIndexWrapper } from "../search/createSearchIndex.js";
 import { createProject } from "./createProject.js";
-import type { NodeExtractionContext } from "./extract/nodes/NodeExtractionContext.js";
+import type { EdgeExtractionContext } from "./extract/edges/EdgeExtractionContext.js";
 import { extractConfiguredPackageNames } from "./extractConfiguredPackageNames.js";
 import { indexFile } from "./indexFile.js";
 import {
@@ -16,6 +16,7 @@ import {
   saveManifest,
   updateManifestEntry,
 } from "./manifest.js";
+import { createProjectRegistry } from "./ProjectRegistry.js";
 
 /**
  * Result of startup sync operation.
@@ -125,6 +126,9 @@ export const syncOnStartup = async (
     options.projectRoot,
   );
 
+  // Create project registry for cross-package resolution
+  const projectRegistry = createProjectRegistry(config, options.projectRoot);
+
   // Build context map for all configured files
   const fileContextMap = buildFileContextMap(
     config,
@@ -206,9 +210,10 @@ export const syncOnStartup = async (
         // Add and parse file
         const sourceFile = project.addSourceFileAtPath(absolutePath);
 
-        const extractionContext: NodeExtractionContext = {
+        const extractionContext: EdgeExtractionContext = {
           filePath: relativePath,
           package: context.package,
+          projectRegistry,
         };
 
         // Use shared indexFile function (writes to both DB and search index)

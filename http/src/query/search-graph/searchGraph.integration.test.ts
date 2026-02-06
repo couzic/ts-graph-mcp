@@ -231,6 +231,28 @@ describe(searchGraph.name, () => {
       searchIndex = await createSearchIndex({ vectorDimensions });
     });
 
+    it("returns helpful error when from.query resolves no symbols", async () => {
+      // searchIndex is empty — no documents match the query
+      const result = await searchGraph(
+        db,
+        { from: { query: "nonexistent" } },
+        { searchIndex, embeddingProvider },
+      );
+
+      expect(result).toContain("No symbols found matching query");
+    });
+
+    it("returns helpful error when to.query resolves no symbols", async () => {
+      // searchIndex is empty — no documents match the query
+      const result = await searchGraph(
+        db,
+        { to: { query: "nonexistent" } },
+        { searchIndex, embeddingProvider },
+      );
+
+      expect(result).toContain("No symbols found matching query");
+    });
+
     it("returns multiple matching symbols for from.query", async () => {
       const writer = createSqliteWriter(db);
       // Multiple symbols matching "validate"

@@ -1,11 +1,8 @@
 import type { NodeType } from "@ts-graph/shared";
 import type Database from "better-sqlite3";
 import type { EmbeddingProvider } from "../embedding/EmbeddingTypes.js";
-import {
-  computeContentHash,
-  type EmbeddingCacheConnection,
-} from "../embedding/embeddingCache.js";
-import { prepareEmbeddingContent } from "../embedding/prepareEmbeddingContent.js";
+import type { EmbeddingCacheConnection } from "../embedding/embeddingCache.js";
+import { embedWithFallback } from "../embedding/embedWithFallback.js";
 import type { SearchIndexWrapper } from "./createSearchIndex.js";
 import type { SearchDocument } from "./SearchTypes.js";
 
@@ -108,19 +105,19 @@ export const populateSearchIndex = async (
     }
 
     // Regenerate cache misses in parallel using snippet from DB
-    const regeneratedEmbeddings = await Promise.all(
+    // Uses embedWithFallback for progressive truncation on context overflow
+    const regeneratedResults = await Promise.all(
       misses.map(async (row) => {
-        const content = prepareEmbeddingContent(
+        const result = await embedWithFallback(
           row.type,
           row.name,
           row.file_path,
           row.snippet,
+          embeddingProvider,
+          embeddingCache,
         );
-        const embedding = await embeddingProvider.embedDocument(content);
-        const hash = computeContentHash(content);
-        embeddingCache.set(hash, embedding);
         regenerated++;
-        return embedding;
+        return result.embedding;
       }),
     );
 
@@ -140,7 +137,7 @@ export const populateSearchIndex = async (
         file: row.file_path,
         nodeType: row.type as NodeType,
         content: row.snippet,
-        embedding: regeneratedEmbeddings[idx],
+        embedding: regeneratedResults[idx],
       })),
     ];
 

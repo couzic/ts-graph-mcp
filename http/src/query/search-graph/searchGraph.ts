@@ -401,10 +401,10 @@ export const searchGraph = async (
   }
 
   // Query-based from/to that failed to resolve (no matching symbols found)
-  if (input.from?.query && !fromResolved) {
+  if (input.from?.query && fromResolved.length === 0) {
     return `No symbols found matching query: "${input.from.query}". Try a more specific query or use Topic search.`;
   }
-  if (input.to?.query && !toResolved) {
+  if (input.to?.query && toResolved.length === 0) {
     return `No symbols found matching query: "${input.to.query}". Try a more specific query or use Topic search.`;
   }
 

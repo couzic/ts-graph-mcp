@@ -44,13 +44,16 @@ Node IDs are deterministic and hierarchical:
 
 ### Extraction Context
 
-Every extraction requires `ExtractionContext`:
+`indexFile` requires `EdgeExtractionContext`, which extends the base context with cross-package resolution:
 ```typescript
 {
-  filePath: string,  // Relative path from project root
-  package: string    // Package name from config
+  filePath: string,        // Relative path from project root
+  package: string,         // Package name from config
+  projectRegistry?: Map    // Cross-package resolution (monorepos)
 }
 ```
+
+All three callers (`indexProject`, `syncOnStartup`, `watchProject`) pass `EdgeExtractionContext` with `projectRegistry` to enable cross-package edge resolution.
 
 ### Extraction Order
 

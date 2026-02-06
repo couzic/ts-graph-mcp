@@ -130,6 +130,61 @@ describe(populateSearchIndex.name, () => {
     expect(results[0].symbol).toBe("handleUserRequest");
   });
 
+  it("handles cache miss for node that overflows embedding context", async () => {
+    const maxContentLength = 200;
+    const overflowProvider = createFakeEmbeddingProvider({
+      dimensions: vectorDimensions,
+      maxContentLength,
+    });
+
+    // Create a node with a snippet that exceeds the context limit
+    const longSnippet = `function bigFunction() {\n${"  x();\n".repeat(100)}}`;
+    const bigNode: FunctionNode = {
+      ...fn("bigFunction"),
+      snippet: longSnippet,
+      contentHash: "hash-that-wont-match-cache",
+    };
+
+    const writer = createSqliteWriter(db);
+    await writer.addNodes([bigNode]);
+
+    const searchIndex = await createSearchIndex({ vectorDimensions });
+    // Use a cache that starts empty — forces regeneration on cache miss
+    const store = new Map<string, Float32Array>();
+    const emptyCache: import("../embedding/embeddingCache.js").EmbeddingCacheConnection =
+      {
+        get(hash: string) {
+          return store.get(hash);
+        },
+        getBatch(hashes: string[]) {
+          const map = new Map<string, Float32Array>();
+          for (const hash of hashes) {
+            const val = store.get(hash);
+            if (val) {
+              map.set(hash, val);
+            }
+          }
+          return map;
+        },
+        set(hash: string, embedding: Float32Array) {
+          store.set(hash, embedding);
+        },
+        close() {},
+      };
+
+    const result = await populateSearchIndex({
+      db,
+      searchIndex,
+      embeddingCache: emptyCache,
+      embeddingProvider: overflowProvider,
+    });
+
+    // Should succeed via progressive truncation fallback, not throw
+    expect(result.total).toBe(1);
+    expect(result.regenerated).toBe(1);
+    expect(await searchIndex.count()).toBe(1);
+  });
+
   it("handles large datasets in batches", async () => {
     const writer = createSqliteWriter(db);
     const nodes = Array.from({ length: 1000 }, (_, i) => fn(`func${i}`));

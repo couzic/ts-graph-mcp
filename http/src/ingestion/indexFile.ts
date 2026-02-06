@@ -2,20 +2,13 @@ import type { SourceFile } from "ts-morph";
 import type { DbWriter } from "../db/DbWriter.js";
 import type { ExtractedNode, Node } from "../db/Types.js";
 import type { EmbeddingProvider } from "../embedding/EmbeddingTypes.js";
-import {
-  computeContentHash,
-  type EmbeddingCacheConnection,
-} from "../embedding/embeddingCache.js";
-import { prepareEmbeddingContent } from "../embedding/prepareEmbeddingContent.js";
+import type { EmbeddingCacheConnection } from "../embedding/embeddingCache.js";
+import { embedWithFallback } from "../embedding/embedWithFallback.js";
 import type { SearchIndexWrapper } from "../search/createSearchIndex.js";
 import type { SearchDocument } from "../search/SearchTypes.js";
 import type { EdgeExtractionContext } from "./extract/edges/EdgeExtractionContext.js";
 import { extractEdges } from "./extract/edges/extractEdges.js";
 import { extractNodes } from "./extract/nodes/extractNodes.js";
-import { stripClassImplementation } from "./stripClassImplementation.js";
-
-/** Minimum snippet length worth embedding (below this, use metadata-only) */
-const MIN_USEFUL_SNIPPET_LENGTH = 100;
 
 /**
  * Extract source snippet for a node from the source file text.
@@ -31,110 +24,6 @@ const extractSourceSnippet = (
   const lines = sourceText.split("\n");
   const startIdx = node.startLine - 1; // 1-indexed to 0-indexed
   return lines.slice(startIdx, node.endLine).join("\n");
-};
-
-/**
- * Check if an error is a context overflow error from the embedding model.
- */
-const isContextOverflowError = (error: unknown): boolean =>
-  error instanceof Error && error.message.includes("context size");
-
-/**
- * Result of embedding a node's content.
- */
-interface EmbedResult {
-  /** The embedding vector */
-  embedding: Float32Array;
-  /** Hash of the content that was actually embedded (after any truncation) */
-  contentHash: string;
-}
-
-/**
- * Embed content with progressive fallback strategy.
- * Tries: full content → stripped (for Class) → truncated (halving until fits).
- * Never throws - always returns an embedding.
- * Returns both the embedding and the hash of the content that was actually embedded.
- */
-const embedWithFallback = async (
-  node: ExtractedNode,
-  snippet: string,
-  embeddingProvider: EmbeddingProvider,
-  embeddingCache: EmbeddingCacheConnection | undefined,
-): Promise<EmbedResult> => {
-  const tryEmbed = async (content: string): Promise<EmbedResult | null> => {
-    const hash = computeContentHash(content);
-    const cached = embeddingCache?.get(hash);
-    if (cached) {
-      return { embedding: cached, contentHash: hash };
-    }
-
-    try {
-      const vector = await embeddingProvider.embedDocument(content);
-      embeddingCache?.set(hash, vector);
-      return { embedding: vector, contentHash: hash };
-    } catch (error) {
-      if (isContextOverflowError(error)) {
-        return null; // Signal to try fallback
-      }
-      throw error; // Non-context errors are real failures
-    }
-  };
-
-  // Strategy 1: Try full content
-  const fullContent = prepareEmbeddingContent(
-    node.type,
-    node.name,
-    node.filePath,
-    snippet,
-  );
-  const fullResult = await tryEmbed(fullContent);
-  if (fullResult) {
-    return fullResult;
-  }
-
-  // Strategy 2: For Class nodes, try stripped implementation
-  if (node.type === "Class") {
-    const strippedSnippet = stripClassImplementation(snippet);
-    const strippedContent = prepareEmbeddingContent(
-      node.type,
-      node.name,
-      node.filePath,
-      strippedSnippet,
-    );
-    const strippedResult = await tryEmbed(strippedContent);
-    if (strippedResult) {
-      return strippedResult;
-    }
-  }
-
-  // Strategy 3: Truncate content progressively until it fits
-  let truncatedSnippet = snippet;
-  while (truncatedSnippet.length > MIN_USEFUL_SNIPPET_LENGTH) {
-    truncatedSnippet = truncatedSnippet.slice(
-      0,
-      Math.floor(truncatedSnippet.length / 2),
-    );
-    const truncatedContent = prepareEmbeddingContent(
-      node.type,
-      node.name,
-      node.filePath,
-      truncatedSnippet,
-    );
-    const truncatedResult = await tryEmbed(truncatedContent);
-    if (truncatedResult) {
-      return truncatedResult;
-    }
-  }
-
-  // Ultimate fallback: metadata only (symbol name + file path)
-  const metadataOnly = `// ${node.type}: ${node.name}\n// File: ${node.filePath}`;
-  const metadataResult = await tryEmbed(metadataOnly);
-  if (metadataResult) {
-    return metadataResult;
-  }
-
-  // This should never happen unless embedding model has < 50 char context
-  throw new Error(`Failed to embed ${node.id} even with minimal content`);
 };
 
 /**
@@ -221,7 +110,14 @@ export const indexFile = async (
     // Generate embeddings in parallel
     const embedResults = await Promise.all(
       nodeSnippets.map(({ node, snippet }) =>
-        embedWithFallback(node, snippet, embeddingProvider, embeddingCache),
+        embedWithFallback(
+          node.type,
+          node.name,
+          node.filePath,
+          snippet,
+          embeddingProvider,
+          embeddingCache,
+        ),
       ),
     );
 

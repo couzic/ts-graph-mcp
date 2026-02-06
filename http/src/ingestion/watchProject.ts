@@ -15,7 +15,7 @@ import type { TsGraphLogger } from "../logging/TsGraphLogger.js";
 import type { SearchIndexWrapper } from "../search/createSearchIndex.js";
 import { bufferDebounce } from "./bufferDebounce.js";
 import { createProject } from "./createProject.js";
-import type { NodeExtractionContext } from "./extract/nodes/NodeExtractionContext.js";
+import type { EdgeExtractionContext } from "./extract/edges/EdgeExtractionContext.js";
 import { extractConfiguredPackageNames } from "./extractConfiguredPackageNames.js";
 import { indexFile } from "./indexFile.js";
 import {
@@ -24,6 +24,7 @@ import {
   saveManifest,
   updateManifestEntry,
 } from "./manifest.js";
+import { createProjectRegistry } from "./ProjectRegistry.js";
 
 /**
  * Options for the file watcher.
@@ -155,6 +156,9 @@ export const watchProject = (
     projectRoot,
   );
 
+  // Create project registry for cross-package resolution
+  const projectRegistry = createProjectRegistry(config, projectRoot);
+
   /**
    * Check if a file is part of the tsconfig compilation.
    * Creates a fresh Project to ensure accurate file discovery.
@@ -206,9 +210,10 @@ export const watchProject = (
     });
     const sourceFile = project.addSourceFileAtPath(absolutePath);
 
-    const extractionContext: NodeExtractionContext = {
+    const extractionContext: EdgeExtractionContext = {
       filePath: context.relativePath,
       package: context.package,
+      projectRegistry,
     };
 
     // Use shared indexFile function (writes to both DB and search index)
