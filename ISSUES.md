@@ -112,18 +112,6 @@ phrases.
 
 ---
 
-### Benchmark Build Compiles UI Unnecessarily
-
-**Impact:** Low (developer experience)
-
-**Problem:** Running benchmarks triggers UI compilation, which is not needed for
-benchmark execution and adds unnecessary build time.
-
-**Fix approach:** Create a separate build script or configuration that excludes
-UI compilation when running benchmarks only.
-
----
-
 ### Inconsistent Logging
 
 **Impact:** Low (maintainability)
