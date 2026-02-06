@@ -57,7 +57,7 @@ describe(populateSearchIndex.name, () => {
   });
 
   it("returns 0 for empty database", async () => {
-    const searchIndex = await createSearchIndex();
+    const searchIndex = await createSearchIndex({ vectorDimensions });
     const result = await populateSearchIndex({
       db,
       searchIndex,
@@ -77,7 +77,7 @@ describe(populateSearchIndex.name, () => {
       iface("User"),
     ]);
 
-    const searchIndex = await createSearchIndex();
+    const searchIndex = await createSearchIndex({ vectorDimensions });
     const result = await populateSearchIndex({
       db,
       searchIndex,
@@ -98,7 +98,7 @@ describe(populateSearchIndex.name, () => {
       fn("validateOutput"),
     ]);
 
-    const searchIndex = await createSearchIndex();
+    const searchIndex = await createSearchIndex({ vectorDimensions });
     await populateSearchIndex({
       db,
       searchIndex,
@@ -117,7 +117,7 @@ describe(populateSearchIndex.name, () => {
     const writer = createSqliteWriter(db);
     await writer.addNodes([fn("handleUserRequest")]);
 
-    const searchIndex = await createSearchIndex();
+    const searchIndex = await createSearchIndex({ vectorDimensions });
     await populateSearchIndex({
       db,
       searchIndex,
@@ -138,7 +138,7 @@ describe(populateSearchIndex.name, () => {
     const nodes = Array.from({ length: 1000 }, (_, i) => fn(`func${i}`));
     await writer.addNodes(nodes);
 
-    const searchIndex = await createSearchIndex();
+    const searchIndex = await createSearchIndex({ vectorDimensions });
     const result = await populateSearchIndex({
       db,
       searchIndex,

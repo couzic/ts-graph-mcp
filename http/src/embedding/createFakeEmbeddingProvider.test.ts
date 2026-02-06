@@ -48,11 +48,6 @@ describe("createFakeEmbeddingProvider", () => {
     expect(queryEmbedding).not.toEqual(docEmbedding);
   });
 
-  it("reports ready as true immediately", () => {
-    const provider = createFakeEmbeddingProvider();
-    expect(provider.ready).toBe(true);
-  });
-
   it("dispose is a no-op", async () => {
     const provider = createFakeEmbeddingProvider();
     await expect(provider.dispose()).resolves.toBeUndefined();

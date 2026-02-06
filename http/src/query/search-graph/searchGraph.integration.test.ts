@@ -55,7 +55,12 @@ describe(searchGraph.name, () => {
   });
 
   it("returns error when no constraints provided", async () => {
-    const result = await searchGraph(db, projectRoot, {});
+    const result = await searchGraph(
+      db,
+      projectRoot,
+      {},
+      { embeddingProvider },
+    );
     expect(result).toContain("At least one of");
   });
 
@@ -68,9 +73,12 @@ describe(searchGraph.name, () => {
       await writer.addNodes([nodeA, nodeB]);
       await writer.addEdges([calls(nodeA.id, nodeB.id)]);
 
-      const result = await searchGraph(db, projectRoot, {
-        from: { symbol: "fnA" },
-      });
+      const result = await searchGraph(
+        db,
+        projectRoot,
+        { from: { symbol: "fnA" } },
+        { embeddingProvider },
+      );
 
       expect(result).toContain("fnA");
       expect(result).toContain("fnB");
@@ -87,9 +95,12 @@ describe(searchGraph.name, () => {
       await writer.addNodes([nodeA, nodeB]);
       await writer.addEdges([calls(nodeA.id, nodeB.id)]);
 
-      const result = await searchGraph(db, projectRoot, {
-        to: { symbol: "fnB" },
-      });
+      const result = await searchGraph(
+        db,
+        projectRoot,
+        { to: { symbol: "fnB" } },
+        { embeddingProvider },
+      );
 
       expect(result).toContain("fnA");
       expect(result).toContain("fnB");
@@ -110,10 +121,12 @@ describe(searchGraph.name, () => {
         calls(nodeB.id, nodeC.id),
       ]);
 
-      const result = await searchGraph(db, projectRoot, {
-        from: { symbol: "fnA" },
-        to: { symbol: "fnC" },
-      });
+      const result = await searchGraph(
+        db,
+        projectRoot,
+        { from: { symbol: "fnA" }, to: { symbol: "fnC" } },
+        { embeddingProvider },
+      );
 
       expect(result).toContain("fnA");
       expect(result).toContain("fnB");
@@ -125,13 +138,16 @@ describe(searchGraph.name, () => {
     let searchIndex: SearchIndexWrapper;
 
     beforeEach(async () => {
-      searchIndex = await createSearchIndex();
+      searchIndex = await createSearchIndex({ vectorDimensions });
     });
 
     it("returns guidance when search index not provided", async () => {
-      const result = await searchGraph(db, projectRoot, {
-        topic: "validation",
-      });
+      const result = await searchGraph(
+        db,
+        projectRoot,
+        { topic: "validation" },
+        { embeddingProvider },
+      );
 
       expect(result).toContain("requires embeddings");
     });
@@ -163,7 +179,7 @@ describe(searchGraph.name, () => {
         db,
         projectRoot,
         { topic: "validate" },
-        { searchIndex },
+        { searchIndex, embeddingProvider },
       );
 
       // Should contain graph structure
@@ -191,7 +207,7 @@ describe(searchGraph.name, () => {
         db,
         projectRoot,
         { topic: "validate" },
-        { searchIndex },
+        { searchIndex, embeddingProvider },
       );
 
       // Should indicate no connections
@@ -216,7 +232,7 @@ describe(searchGraph.name, () => {
         db,
         projectRoot,
         { topic: "authentication" },
-        { searchIndex },
+        { searchIndex, embeddingProvider },
       );
 
       expect(result).toContain("No symbols found matching");
@@ -227,7 +243,7 @@ describe(searchGraph.name, () => {
     let searchIndex: SearchIndexWrapper;
 
     beforeEach(async () => {
-      searchIndex = await createSearchIndex();
+      searchIndex = await createSearchIndex({ vectorDimensions });
     });
 
     it("returns multiple matching symbols for from.query", async () => {
@@ -255,7 +271,7 @@ describe(searchGraph.name, () => {
         db,
         projectRoot,
         { from: { query: "validate" } },
-        { searchIndex },
+        { searchIndex, embeddingProvider },
       );
 
       // Should return BOTH matching symbols as start nodes
@@ -289,7 +305,7 @@ describe(searchGraph.name, () => {
         db,
         projectRoot,
         { to: { query: "save" } },
-        { searchIndex },
+        { searchIndex, embeddingProvider },
       );
 
       // Should return BOTH matching symbols as end nodes
@@ -317,7 +333,7 @@ describe(searchGraph.name, () => {
         db,
         projectRoot,
         { from: { query: "handle User" } },
-        { searchIndex },
+        { searchIndex, embeddingProvider },
       );
 
       expect(result).toContain("handleUserRequest");
@@ -343,7 +359,7 @@ describe(searchGraph.name, () => {
         db,
         projectRoot,
         { to: { query: "validate User" } },
-        { searchIndex },
+        { searchIndex, embeddingProvider },
       );
 
       expect(result).toContain("handleRequest");
@@ -355,7 +371,7 @@ describe(searchGraph.name, () => {
     let searchIndex: SearchIndexWrapper;
 
     beforeEach(async () => {
-      searchIndex = await createSearchIndex();
+      searchIndex = await createSearchIndex({ vectorDimensions });
     });
 
     it("falls back to semantic search for forward traversal when no exact match", async () => {
@@ -380,7 +396,7 @@ describe(searchGraph.name, () => {
         db,
         projectRoot,
         { from: { query: "sqlite writer" } },
-        { searchIndex },
+        { searchIndex, embeddingProvider },
       );
 
       // Now falls back to semantic search result instead of failing
@@ -409,7 +425,7 @@ describe(searchGraph.name, () => {
         db,
         projectRoot,
         { to: { query: "Edge source property" } },
-        { searchIndex },
+        { searchIndex, embeddingProvider },
       );
 
       // Now falls back to semantic search result instead of failing
@@ -440,7 +456,7 @@ describe(searchGraph.name, () => {
         db,
         projectRoot,
         { from: { query: "indexProject" } },
-        { searchIndex },
+        { searchIndex, embeddingProvider },
       );
 
       // Should use exact match "indexProject", not partial match "reindexFiles"
@@ -470,7 +486,7 @@ describe(searchGraph.name, () => {
         db,
         projectRoot,
         { from: { query: "handle sqlite connection" } },
-        { searchIndex },
+        { searchIndex, embeddingProvider },
       );
 
       // Falls back to semantic search, finding "handleRequest" as best match
@@ -483,83 +499,6 @@ describe(searchGraph.name, () => {
 
     beforeEach(async () => {
       searchIndex = await createSearchIndex({ vectorDimensions });
-    });
-
-    it("indicates semantic search mode when embedding provider available", async () => {
-      const embeddingProvider = createFakeEmbeddingProvider({
-        dimensions: vectorDimensions,
-      });
-      const writer = createSqliteWriter(db);
-      await writer.addNodes([fn("calculateTax"), fn("computeDiscount")]);
-
-      // Add documents with embeddings
-      const docs: SearchDocument[] = [
-        {
-          id: "src/test.ts:calculateTax",
-          symbol: "calculateTax",
-          file: "src/test.ts",
-          nodeType: "Function",
-          content: "calculate tax for order",
-          embedding: await embeddingProvider.embedDocument(
-            "calculate tax for order",
-          ),
-        },
-        {
-          id: "src/test.ts:computeDiscount",
-          symbol: "computeDiscount",
-          file: "src/test.ts",
-          nodeType: "Function",
-          content: "compute discount percentage",
-          embedding: await embeddingProvider.embedDocument(
-            "compute discount percentage",
-          ),
-        },
-      ];
-      await searchIndex.addBatch(docs);
-
-      // Query with text overlap so BM25 component of hybrid search finds matches
-      const result = await searchGraph(
-        db,
-        projectRoot,
-        { topic: "calculate tax" },
-        { searchIndex, embeddingProvider },
-      );
-
-      expect(result).toContain("semantic search");
-      expect(result).toContain("calculateTax");
-    });
-
-    it("falls back to keyword search without embedding provider", async () => {
-      const embeddingProvider = createFakeEmbeddingProvider({
-        dimensions: vectorDimensions,
-      });
-      const writer = createSqliteWriter(db);
-      await writer.addNodes([fn("validateInput")]);
-
-      const docs: SearchDocument[] = [
-        {
-          id: "src/test.ts:validateInput",
-          symbol: "validateInput",
-          file: "src/test.ts",
-          nodeType: "Function",
-          content: "validate user input",
-          embedding: await embeddingProvider.embedDocument(
-            "validate user input",
-          ),
-        },
-      ];
-      await searchIndex.addBatch(docs);
-
-      // No embeddingProvider passed
-      const result = await searchGraph(
-        db,
-        projectRoot,
-        { topic: "validate" },
-        { searchIndex },
-      );
-
-      expect(result).toContain("keyword search");
-      expect(result).toContain("validateInput");
     });
 
     it("uses hybrid search for from.query resolution", async () => {

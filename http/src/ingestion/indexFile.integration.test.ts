@@ -82,7 +82,7 @@ describe("indexFile", () => {
     let searchIndex: SearchIndexWrapper;
 
     beforeEach(async () => {
-      searchIndex = await createSearchIndex();
+      searchIndex = await createSearchIndex({ vectorDimensions });
     });
 
     it("adds nodes to search index", async () => {
@@ -169,11 +169,9 @@ export type DATE_FORMAT = typeof DATE_FORMAT;`,
       expect(count).toBe(1);
 
       // Vector search should work
-      const queryEmbedding =
-        await embeddingProvider.embedQuery("calculate sum");
+      const vector = await embeddingProvider.embedQuery("calculate sum");
       const results = await searchIndex.search("calculate", {
-        mode: "hybrid",
-        vector: queryEmbedding,
+        vector,
       });
       expect(results).toHaveLength(1);
       assert(results[0] !== undefined);
@@ -205,8 +203,7 @@ export function processData(data: Data): Result {
     });
 
     it("works without embedding provider (fulltext only)", async () => {
-      // Create a non-vector index for fulltext-only search
-      const textOnlyIndex = await createSearchIndex();
+      const textOnlyIndex = await createSearchIndex({ vectorDimensions });
       const sourceFile = project.createSourceFile(
         "src/test.ts",
         `export function searchUsers(query: string): User[] {

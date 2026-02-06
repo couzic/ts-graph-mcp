@@ -75,7 +75,7 @@ describe("search recall E2E tests", () => {
         db,
         projectRoot,
         { topic: "provider" },
-        { searchIndex },
+        { searchIndex, embeddingProvider },
       );
 
       // Exact token match: "Provider" in symbol name
@@ -89,7 +89,7 @@ describe("search recall E2E tests", () => {
         db,
         projectRoot,
         { topic: "provider" },
-        { searchIndex },
+        { searchIndex, embeddingProvider },
       );
 
       // With graph format, connected symbols are included
@@ -103,7 +103,7 @@ describe("search recall E2E tests", () => {
         db,
         projectRoot,
         { topic: "providers" },
-        { searchIndex },
+        { searchIndex, embeddingProvider },
       );
 
       expect(result).toContain("ManageProvidersCommand");
@@ -114,7 +114,7 @@ describe("search recall E2E tests", () => {
         db,
         projectRoot,
         { topic: "default" },
-        { searchIndex },
+        { searchIndex, embeddingProvider },
       );
 
       expect(result).toContain("setAsDefault");
@@ -126,7 +126,7 @@ describe("search recall E2E tests", () => {
         db,
         projectRoot,
         { topic: "audit" },
-        { searchIndex },
+        { searchIndex, embeddingProvider },
       );
 
       expect(result).toContain("AuditService");
@@ -138,7 +138,7 @@ describe("search recall E2E tests", () => {
         db,
         projectRoot,
         { topic: "enable" },
-        { searchIndex },
+        { searchIndex, embeddingProvider },
       );
 
       expect(result).toContain("enable");
@@ -149,7 +149,7 @@ describe("search recall E2E tests", () => {
         db,
         projectRoot,
         { topic: "controller" },
-        { searchIndex },
+        { searchIndex, embeddingProvider },
       );
 
       expect(result).toContain("AdminController");

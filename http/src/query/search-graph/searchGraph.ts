@@ -1,7 +1,6 @@
 import type Database from "better-sqlite3";
 import type { EmbeddingProvider } from "../../embedding/EmbeddingTypes.js";
 import type { SearchIndexWrapper } from "../../search/createSearchIndex.js";
-import type { SearchMode } from "../../search/SearchTypes.js";
 import { dependenciesOf } from "../dependencies-of/dependenciesOf.js";
 import { dependentsOf } from "../dependents-of/dependentsOf.js";
 import { pathsBetween } from "../paths-between/pathsBetween.js";
@@ -25,24 +24,9 @@ import {
 export interface SearchGraphOptions extends QueryOptions {
   /** Search index for semantic queries (optional - degrades gracefully if missing) */
   searchIndex?: SearchIndexWrapper;
-  /** Embedding provider for hybrid search (optional - falls back to fulltext if missing) */
-  embeddingProvider?: EmbeddingProvider;
+  /** Embedding provider for hybrid/vector search */
+  embeddingProvider: EmbeddingProvider;
 }
-
-/**
- * Determine search mode and get query vector if hybrid search is available.
- */
-const getSearchConfig = async (
-  query: string,
-  searchIndex: SearchIndexWrapper,
-  embeddingProvider?: EmbeddingProvider,
-): Promise<{ mode: SearchMode; vector?: Float32Array }> => {
-  if (searchIndex.supportsVectors && embeddingProvider?.ready) {
-    const vector = await embeddingProvider.embedQuery(query);
-    return { mode: "hybrid", vector };
-  }
-  return { mode: "fulltext" };
-};
 
 /**
  * Resolved endpoint result.
@@ -62,7 +46,7 @@ interface ResolvedEndpoint {
 const resolveEndpoint = async (
   endpoint: GraphEndpoint | undefined,
   searchIndex: SearchIndexWrapper | undefined,
-  embeddingProvider?: EmbeddingProvider,
+  embeddingProvider: EmbeddingProvider,
   limit = 10,
 ): Promise<ResolvedEndpoint[]> => {
   if (!endpoint) {
@@ -80,15 +64,11 @@ const resolveEndpoint = async (
       return [];
     }
 
-    const searchConfig = await getSearchConfig(
-      endpoint.query,
-      searchIndex,
-      embeddingProvider,
-    );
+    const vector = await embeddingProvider.embedQuery(endpoint.query);
 
     const results = await searchIndex.search(endpoint.query, {
       limit,
-      ...searchConfig,
+      vector,
     });
 
     if (results.length === 0) {
@@ -196,7 +176,7 @@ const traverseWithTopicFilter = async (
   symbol: string,
   topic: string,
   searchIndex: SearchIndexWrapper,
-  embeddingProvider?: EmbeddingProvider,
+  embeddingProvider: EmbeddingProvider,
   maxNodes?: number,
 ): Promise<string> => {
   // Query raw edges
@@ -273,7 +253,7 @@ export const searchGraph = async (
   db: Database.Database,
   projectRoot: string,
   input: SearchGraphInput,
-  options: SearchGraphOptions = {},
+  options: SearchGraphOptions,
 ): Promise<string> => {
   // Validate input - at least one constraint required
   if (!input.topic && !input.from && !input.to) {
@@ -395,15 +375,11 @@ export const searchGraph = async (
       return "Semantic search requires embeddings. Run the server to enable semantic search.";
     }
 
-    const searchConfig = await getSearchConfig(
-      input.topic,
-      searchIndex,
-      embeddingProvider,
-    );
+    const vector = await embeddingProvider.embedQuery(input.topic);
 
     const results = await searchIndex.search(input.topic, {
       limit: maxNodes ?? 50,
-      ...searchConfig,
+      vector,
     });
 
     if (results.length === 0) {
@@ -418,13 +394,11 @@ export const searchGraph = async (
 
     // If no edges found, return as flat list (isolated symbols)
     if (edges.length === 0) {
-      const searchModeLabel =
-        searchConfig.mode === "hybrid" ? "semantic" : "keyword";
       const lines = results.map(
         (r) =>
           `${r.symbol} (${r.nodeType}) - ${r.file} [score: ${r.score.toFixed(3)}]`,
       );
-      return `## Symbols matching "${input.topic}" (${searchModeLabel} search)\n\nNo connections found between symbols.\n\n${lines.join("\n")}`;
+      return `## Symbols matching "${input.topic}"\n\nNo connections found between symbols.\n\n${lines.join("\n")}`;
     }
 
     // Format as graph

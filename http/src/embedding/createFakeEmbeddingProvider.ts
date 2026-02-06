@@ -62,10 +62,6 @@ export const createFakeEmbeddingProvider = (options?: {
   };
 
   return {
-    get ready() {
-      return true;
-    },
-
     async initialize(): Promise<void> {
       // No initialization needed for fake provider
     },

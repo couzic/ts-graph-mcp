@@ -46,6 +46,4 @@ export interface EmbeddingProvider {
   embedDocument(text: string): Promise<Float32Array>;
   /** Dispose of resources */
   dispose(): Promise<void>;
-  /** Check if provider is ready */
-  readonly ready: boolean;
 }

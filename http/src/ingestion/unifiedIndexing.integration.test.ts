@@ -26,6 +26,7 @@ import { type IndexManifest, saveManifest } from "./manifest.js";
 import { watchProject } from "./watchProject.js";
 
 const TEST_DIR = mkdtempSync(join(tmpdir(), "unified-indexing-test-"));
+const vectorDimensions = 3;
 
 describe("Unified Indexing", () => {
   let db: Database.Database;
@@ -63,7 +64,7 @@ export function parseDate(s: string): Date { return new Date(s); }`,
       const sourceFile = project.getSourceFileOrThrow(join(pkgDir, "utils.ts"));
 
       const writer = createSqliteWriter(db);
-      const searchIndex = await createSearchIndex();
+      const searchIndex = await createSearchIndex({ vectorDimensions });
 
       const result = await indexFile(
         sourceFile,
@@ -144,7 +145,7 @@ export function validateInput(): boolean { return true; }`,
       };
 
       const writer = createSqliteWriter(db);
-      const searchIndex = await createSearchIndex();
+      const searchIndex = await createSearchIndex({ vectorDimensions });
 
       const result = await indexProject(config, writer, {
         projectRoot: pkgDir,
@@ -220,7 +221,7 @@ describe("Unified Indexing - Watch Mode", () => {
     };
 
     const writer = createSqliteWriter(db);
-    const searchIndex = await createSearchIndex();
+    const searchIndex = await createSearchIndex({ vectorDimensions });
 
     // Index initially
     await indexProject(config, writer, {
@@ -275,7 +276,7 @@ describe("Unified Indexing - Watch Mode", () => {
     };
 
     const writer = createSqliteWriter(db);
-    const searchIndex = await createSearchIndex();
+    const searchIndex = await createSearchIndex({ vectorDimensions });
 
     // Index initially
     await indexProject(config, writer, {
@@ -334,7 +335,7 @@ describe("Unified Indexing - Watch Mode", () => {
     };
 
     const writer = createSqliteWriter(db);
-    const searchIndex = await createSearchIndex();
+    const searchIndex = await createSearchIndex({ vectorDimensions });
 
     // Index initially
     await indexProject(config, writer, {

@@ -72,7 +72,7 @@ export const createEmbeddingProvider = async (
   let llama: Llama | null = null;
   let model: LlamaModel | null = null;
   let contextPool: PooledContext[] = [];
-  let ready = false;
+  let initialized = false;
 
   // Queue for callers waiting for an available context
   const waitQueue: Array<(ctx: LlamaEmbeddingContext) => void> = [];
@@ -113,7 +113,7 @@ export const createEmbeddingProvider = async (
    * Initialize the embedding model and context pool (lazy).
    */
   const initialize = async (): Promise<void> => {
-    if (ready) {
+    if (initialized) {
       return;
     }
 
@@ -155,7 +155,7 @@ export const createEmbeddingProvider = async (
         context: ctx,
         busy: false,
       }));
-      ready = true;
+      initialized = true;
     } catch (e) {
       // Cleanup on partial failure
       for (const ctx of createdContexts) {
@@ -184,10 +184,6 @@ export const createEmbeddingProvider = async (
   };
 
   return {
-    get ready() {
-      return ready;
-    },
-
     initialize,
 
     async embedQuery(text: string): Promise<Float32Array> {
@@ -214,7 +210,7 @@ export const createEmbeddingProvider = async (
         await llama.dispose();
         llama = null;
       }
-      ready = false;
+      initialized = false;
     },
   };
 };

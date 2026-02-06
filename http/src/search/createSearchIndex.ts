@@ -13,7 +13,6 @@ import {
 import type { NodeType } from "@ts-graph/shared";
 import type {
   SearchDocument,
-  SearchMode,
   SearchOptions,
   SearchResult,
 } from "./SearchTypes.js";
@@ -37,16 +36,14 @@ export interface SearchIndexWrapper {
   export(): Promise<RawData>;
   /** Get document count */
   count(): Promise<number>;
-  /** Check if index supports vector search */
-  readonly supportsVectors: boolean;
 }
 
 /**
  * Options for creating a search index.
  */
 export interface SearchIndexOptions {
-  /** Vector dimensions (e.g., 384, 768, 1024). Required for hybrid search. */
-  vectorDimensions?: number;
+  /** Vector dimensions (e.g., 384, 768, 1024). */
+  vectorDimensions: number;
 }
 
 /**
@@ -61,30 +58,23 @@ export const preprocessForBM25 = (symbol: string): string => {
   return split === symbol ? symbol : `${split} ${symbol}`;
 };
 
-// Type for Orama index without vectors
-type TextOnlySchema = {
+type SearchSchema = {
   id: "string";
   symbol: "string";
   file: "string";
   nodeType: "string";
   content: "string";
-};
-
-// Type for Orama index with vectors
-type VectorSchema = TextOnlySchema & {
   embedding: `vector[${number}]`;
 };
 
-type TextOnlyIndex = Orama<TextOnlySchema>;
-type VectorIndex = Orama<VectorSchema>;
+type SearchIndex = Orama<SearchSchema>;
 
 /**
  * Build the search wrapper methods.
  */
-const buildWrapper = <T extends TextOnlyIndex | VectorIndex>(
-  db: T,
+const buildWrapper = (
+  db: SearchIndex,
   docsByFile: Map<string, Set<string>>,
-  supportsVectors: boolean,
 ): SearchIndexWrapper => {
   const trackDoc = (doc: SearchDocument) => {
     const ids = docsByFile.get(doc.file) ?? new Set();
@@ -93,10 +83,6 @@ const buildWrapper = <T extends TextOnlyIndex | VectorIndex>(
   };
 
   return {
-    get supportsVectors() {
-      return supportsVectors;
-    },
-
     async add(doc: SearchDocument): Promise<void> {
       const baseDoc = {
         id: doc.id,
@@ -106,45 +92,53 @@ const buildWrapper = <T extends TextOnlyIndex | VectorIndex>(
         content: `${preprocessForBM25(doc.symbol)} ${doc.content}`,
       };
 
-      if (supportsVectors && doc.embedding) {
-        await insert(db as VectorIndex, {
+      if (doc.embedding) {
+        await insert(db, {
           ...baseDoc,
           embedding: Array.from(doc.embedding),
         });
       } else {
-        await insert(db as TextOnlyIndex, baseDoc);
+        // Orama accepts docs without the vector field at runtime
+        // biome-ignore lint/suspicious/noExplicitAny: Orama typing mismatch
+        await insert(db, baseDoc as any);
       }
       trackDoc(doc);
     },
 
     async addBatch(docs: SearchDocument[]): Promise<void> {
-      if (supportsVectors) {
-        // Documents without embeddings are skipped (can't insert 0-dim vectors)
-        const docsWithEmbeddings = docs.filter(
-          (doc) => doc.embedding && doc.embedding.length > 0,
-        );
-        if (docsWithEmbeddings.length > 0) {
-          const prepared = docsWithEmbeddings.map((doc) => ({
-            id: doc.id,
-            symbol: doc.symbol,
-            file: doc.file,
-            nodeType: doc.nodeType,
-            content: `${preprocessForBM25(doc.symbol)} ${doc.content}`,
-            // biome-ignore lint/style/noNonNullAssertion: filtered above
-            embedding: Array.from(doc.embedding!),
-          }));
-          await insertMultiple(db as VectorIndex, prepared);
-        }
-      } else {
-        const prepared = docs.map((doc) => ({
+      const docsWithEmbeddings = docs.filter(
+        (doc) => doc.embedding && doc.embedding.length > 0,
+      );
+      const docsWithoutEmbeddings = docs.filter(
+        (doc) => !doc.embedding || doc.embedding.length === 0,
+      );
+
+      if (docsWithEmbeddings.length > 0) {
+        const prepared = docsWithEmbeddings.map((doc) => ({
+          id: doc.id,
+          symbol: doc.symbol,
+          file: doc.file,
+          nodeType: doc.nodeType,
+          content: `${preprocessForBM25(doc.symbol)} ${doc.content}`,
+          // biome-ignore lint/style/noNonNullAssertion: filtered above
+          embedding: Array.from(doc.embedding!),
+        }));
+        await insertMultiple(db, prepared);
+      }
+
+      if (docsWithoutEmbeddings.length > 0) {
+        const prepared = docsWithoutEmbeddings.map((doc) => ({
           id: doc.id,
           symbol: doc.symbol,
           file: doc.file,
           nodeType: doc.nodeType,
           content: `${preprocessForBM25(doc.symbol)} ${doc.content}`,
         }));
-        await insertMultiple(db as TextOnlyIndex, prepared);
+        // Orama accepts docs without the vector field at runtime
+        // biome-ignore lint/suspicious/noExplicitAny: Orama typing mismatch
+        await insertMultiple(db, prepared as any);
       }
+
       for (const doc of docs) {
         trackDoc(doc);
       }
@@ -169,7 +163,6 @@ const buildWrapper = <T extends TextOnlyIndex | VectorIndex>(
       options?: SearchOptions,
     ): Promise<SearchResult[]> {
       const limit = options?.limit ?? 10;
-      const mode: SearchMode = options?.mode ?? "fulltext";
 
       const where: Record<string, string | string[]> = {};
       if (options?.nodeTypes && options.nodeTypes.length > 0) {
@@ -181,26 +174,16 @@ const buildWrapper = <T extends TextOnlyIndex | VectorIndex>(
         where["file"] = options.filePattern;
       }
 
-      // Build search params based on mode
       const baseParams = {
         term: query,
         limit,
         ...(Object.keys(where).length > 0 ? { where } : {}),
       };
 
-      if (mode === "vector" || mode === "hybrid") {
-        if (!supportsVectors) {
-          throw new Error(
-            "Vector search requires index created with vectorDimensions option",
-          );
-        }
-        if (!options?.vector) {
-          throw new Error("Vector search requires a query vector");
-        }
-
+      if (options?.vector) {
         const vectorParams = {
           ...baseParams,
-          mode: mode as "vector" | "hybrid",
+          mode: "hybrid" as const,
           vector: {
             value: Array.from(options.vector),
             property: "embedding",
@@ -208,7 +191,7 @@ const buildWrapper = <T extends TextOnlyIndex | VectorIndex>(
           similarity: options?.similarityThreshold ?? 0.5,
         };
 
-        const results = await search(db as VectorIndex, vectorParams);
+        const results = await search(db, vectorParams);
         return results.hits.map((hit) => ({
           id: hit.document.id,
           symbol: hit.document.symbol,
@@ -218,7 +201,7 @@ const buildWrapper = <T extends TextOnlyIndex | VectorIndex>(
         }));
       }
 
-      // Fulltext only
+      // Fulltext only (no vector provided)
       const results = await search(db, baseParams);
       return results.hits.map((hit) => ({
         id: hit.document.id,
@@ -243,44 +226,24 @@ const buildWrapper = <T extends TextOnlyIndex | VectorIndex>(
  * Create a new search index.
  *
  * @example
- * // Text-only search (BM25)
- * const index = await createSearchIndex();
- *
- * // Hybrid search (BM25 + vectors)
  * const index = await createSearchIndex({ vectorDimensions: 384 });
  */
 export const createSearchIndex = async (
-  options?: SearchIndexOptions,
+  options: SearchIndexOptions,
 ): Promise<SearchIndexWrapper> => {
   const docsByFile = new Map<string, Set<string>>();
-  const dims = options?.vectorDimensions;
 
-  if (dims) {
-    // Create index with vector support
-    const schema = {
-      id: "string",
-      symbol: "string",
-      file: "string",
-      nodeType: "string",
-      content: "string",
-      embedding: `vector[${dims}]`,
-    } as const;
-
-    const db = create({ schema }) as VectorIndex;
-    return buildWrapper(db, docsByFile, true);
-  }
-
-  // Create text-only index
   const schema = {
     id: "string",
     symbol: "string",
     file: "string",
     nodeType: "string",
     content: "string",
+    embedding: `vector[${options.vectorDimensions}]`,
   } as const;
 
-  const db = create({ schema }) as TextOnlyIndex;
-  return buildWrapper(db, docsByFile, false);
+  const db = create({ schema }) as SearchIndex;
+  return buildWrapper(db, docsByFile);
 };
 
 /**
@@ -288,43 +251,25 @@ export const createSearchIndex = async (
  *
  * @example
  * const data = JSON.parse(fs.readFileSync('.ts-graph-mcp/search.json', 'utf8'));
- * const index = await restoreSearchIndex(data);
+ * const index = await restoreSearchIndex(data, { vectorDimensions: 384 });
  */
 export const restoreSearchIndex = async (
   data: RawData,
-  options?: SearchIndexOptions,
+  options: SearchIndexOptions,
 ): Promise<SearchIndexWrapper> => {
   const docsByFile = new Map<string, Set<string>>();
-  const dims = options?.vectorDimensions;
 
-  let db: TextOnlyIndex | VectorIndex;
-  let supportsVectors = false;
+  const schema = {
+    id: "string",
+    symbol: "string",
+    file: "string",
+    nodeType: "string",
+    content: "string",
+    embedding: `vector[${options.vectorDimensions}]`,
+  } as const;
 
-  if (dims) {
-    const schema = {
-      id: "string",
-      symbol: "string",
-      file: "string",
-      nodeType: "string",
-      content: "string",
-      embedding: `vector[${dims}]`,
-    } as const;
-
-    db = create({ schema }) as VectorIndex;
-    load(db, data);
-    supportsVectors = true;
-  } else {
-    const schema = {
-      id: "string",
-      symbol: "string",
-      file: "string",
-      nodeType: "string",
-      content: "string",
-    } as const;
-
-    db = create({ schema }) as TextOnlyIndex;
-    load(db, data);
-  }
+  const db = create({ schema }) as SearchIndex;
+  load(db, data);
 
   // Rebuild file tracking from restored data
   const allDocs = await search(db, { term: "", limit: 1000000 });
@@ -335,5 +280,5 @@ export const restoreSearchIndex = async (
     docsByFile.set(file, ids);
   }
 
-  return buildWrapper(db, docsByFile, supportsVectors);
+  return buildWrapper(db, docsByFile);
 };

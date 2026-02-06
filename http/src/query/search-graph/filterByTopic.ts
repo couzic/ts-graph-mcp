@@ -1,6 +1,5 @@
 import type { EmbeddingProvider } from "../../embedding/EmbeddingTypes.js";
 import type { SearchIndexWrapper } from "../../search/createSearchIndex.js";
-import type { SearchMode } from "../../search/SearchTypes.js";
 
 /**
  * Result of filtering node IDs by topic relevance.
@@ -23,21 +22,6 @@ export interface TopicFilterResult {
 const DEFAULT_TOPIC_THRESHOLD = 0.5;
 
 /**
- * Determine search mode and get query vector if hybrid search is available.
- */
-const getSearchConfig = async (
-  query: string,
-  searchIndex: SearchIndexWrapper,
-  embeddingProvider?: EmbeddingProvider,
-): Promise<{ mode: SearchMode; vector?: Float32Array }> => {
-  if (searchIndex.supportsVectors && embeddingProvider?.ready) {
-    const vector = await embeddingProvider.embedQuery(query);
-    return { mode: "hybrid", vector };
-  }
-  return { mode: "fulltext" };
-};
-
-/**
  * Find topic-relevant nodes from a set of node IDs.
  *
  * Searches for the topic and returns nodes that appear in search results
@@ -46,26 +30,20 @@ const getSearchConfig = async (
  * @param nodeIds - Node IDs to check (from graph traversal)
  * @param topic - Topic to filter by (e.g., "audit", "validation")
  * @param searchIndex - Search index for topic matching
- * @param embeddingProvider - Optional embedding provider for hybrid search
  * @param threshold - Minimum score to be considered topic-relevant (default: 0.3)
  */
 export const filterNodesByTopic = async (
   nodeIds: string[],
   topic: string,
   searchIndex: SearchIndexWrapper,
-  embeddingProvider?: EmbeddingProvider,
+  embeddingProvider: EmbeddingProvider,
   threshold = DEFAULT_TOPIC_THRESHOLD,
 ): Promise<TopicFilterResult> => {
-  // Search for the topic with a high limit to catch all potentially relevant nodes
-  const searchConfig = await getSearchConfig(
-    topic,
-    searchIndex,
-    embeddingProvider,
-  );
+  const vector = await embeddingProvider.embedQuery(topic);
 
   const results = await searchIndex.search(topic, {
     limit: 1000, // High limit to capture all candidates
-    ...searchConfig,
+    vector,
   });
 
   // Build a map of node ID → score from search results

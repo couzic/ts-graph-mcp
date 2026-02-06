@@ -108,7 +108,7 @@ export function validateEmail(email: string): boolean {
 
     // Step 2: Simulate server restart - create a NEW empty search index
     // (This is what happens in server.ts on restart)
-    const freshSearchIndex = await createSearchIndex();
+    const freshSearchIndex = await createSearchIndex({ vectorDimensions });
     expect(await freshSearchIndex.count()).toBe(0);
 
     // Create manifest that matches current file state (simulating previous indexing)

@@ -36,11 +36,6 @@ export interface SearchResult {
 }
 
 /**
- * Search mode for queries.
- */
-export type SearchMode = "fulltext" | "vector" | "hybrid";
-
-/**
  * Options for search queries.
  */
 export interface SearchOptions {
@@ -50,9 +45,7 @@ export interface SearchOptions {
   nodeTypes?: NodeType[];
   /** Filter by file path pattern (glob) */
   filePattern?: string;
-  /** Search mode: fulltext (BM25), vector (semantic), or hybrid (default: fulltext) */
-  mode?: SearchMode;
-  /** Query vector (required for vector/hybrid mode) */
+  /** Query vector for hybrid search (BM25 + vector). If omitted, fulltext only. */
   vector?: Float32Array;
   /** Similarity threshold for vector search (0-1, default: 0.5) */
   similarityThreshold?: number;
