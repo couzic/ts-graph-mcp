@@ -12,6 +12,31 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { silentLogger } from "./logging/SilentTsGraphLogger.js";
 import { type ServerHandle, startHttpServer } from "./server.js";
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const waitForSymbol = async (
+  port: number,
+  symbolName: string,
+  timeoutMs = 10_000,
+): Promise<Array<{ symbol: string }>> => {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    const response = await fetch(
+      `http://localhost:${port}/api/symbols?q=${symbolName}`,
+    );
+    const symbols = (await response.json()) as Array<{ symbol: string }>;
+    if (symbols.some((s) => s.symbol === symbolName)) {
+      return symbols;
+    }
+    await sleep(300);
+  }
+  // Final attempt — return whatever we got for assertion error
+  const response = await fetch(
+    `http://localhost:${port}/api/symbols?q=${symbolName}`,
+  );
+  return (await response.json()) as Array<{ symbol: string }>;
+};
+
 /**
  * E2E test for HTTP server file watching.
  *
@@ -26,9 +51,6 @@ describe("HTTP server file watching E2E", () => {
   const TEST_PORT = 14999; // Use high port to avoid conflicts
   let serverHandle: ServerHandle;
   let originalCwd: string;
-
-  const sleep = (ms: number) =>
-    new Promise((resolve) => setTimeout(resolve, ms));
 
   beforeAll(async () => {
     // Create test project structure
@@ -82,9 +104,6 @@ describe("HTTP server file watching E2E", () => {
 
     // Start the server (this is what production does)
     serverHandle = await startHttpServer([], { logger: silentLogger });
-
-    // Wait for server to be fully ready
-    await sleep(1000);
   });
 
   afterAll(async () => {
@@ -117,15 +136,8 @@ export function newFunction(): number { return 42; }
 `,
     );
 
-    // Wait for watcher to detect and reindex
-    // With default debounce of 300ms + processing time, 2s should be plenty
-    await sleep(2000);
-
-    // Query the HTTP API to check if newFunction was indexed
-    const response = await fetch(
-      `http://localhost:${TEST_PORT}/api/symbols?q=newFunction`,
-    );
-    const symbols = (await response.json()) as Array<{ symbol: string }>;
+    // Poll until the watcher detects and reindexes the new symbol
+    const symbols = await waitForSymbol(TEST_PORT, "newFunction");
 
     // This will FAIL if the server doesn't start the watcher
     assert(symbols.length === 1, `Expected 1 symbol, got ${symbols.length}`);
@@ -139,12 +151,8 @@ export function newFunction(): number { return 42; }
       `export function brandNew(): boolean { return true; }\n`,
     );
 
-    await sleep(2000);
-
-    const response = await fetch(
-      `http://localhost:${TEST_PORT}/api/symbols?q=brandNew`,
-    );
-    const symbols = (await response.json()) as Array<{ symbol: string }>;
+    // Poll until the watcher detects and indexes the new file
+    const symbols = await waitForSymbol(TEST_PORT, "brandNew");
 
     // This will FAIL if the server doesn't start the watcher
     assert(symbols.length === 1, `Expected 1 symbol, got ${symbols.length}`);
@@ -162,13 +170,8 @@ export function newFunction(): number { return 42; }
       `export function searchableFunction(): string { return "original"; }\n`,
     );
 
-    await sleep(2000);
-
-    // Verify initial indexing worked via symbol search
-    const response1 = await fetch(
-      `http://localhost:${TEST_PORT}/api/symbols?q=searchableFunction`,
-    );
-    const symbols1 = (await response1.json()) as Array<{ symbol: string }>;
+    // Poll until indexed
+    const symbols1 = await waitForSymbol(TEST_PORT, "searchableFunction");
     expect(symbols1.length).toBe(1);
 
     // Step 2: Modify file to trigger reindex
@@ -179,13 +182,8 @@ export function anotherFunction(): number { return 42; }
 `,
     );
 
-    await sleep(2000);
-
-    // Step 3: Verify both functions are searchable (reindex worked)
-    const response2 = await fetch(
-      `http://localhost:${TEST_PORT}/api/symbols?q=anotherFunction`,
-    );
-    const symbols2 = (await response2.json()) as Array<{ symbol: string }>;
+    // Step 3: Poll until reindex picks up the new function
+    const symbols2 = await waitForSymbol(TEST_PORT, "anotherFunction");
     expect(symbols2.length).toBe(1);
     expect(symbols2[0]?.symbol).toBe("anotherFunction");
 
@@ -223,9 +221,6 @@ describe("HTTP server restart preserves topic search", () => {
   const TEST_PORT = 14998; // Different port from other test suite
   let serverHandle: ServerHandle;
   let originalCwd: string;
-
-  const sleep = (ms: number) =>
-    new Promise((resolve) => setTimeout(resolve, ms));
 
   beforeAll(async () => {
     // Create test project structure
@@ -302,7 +297,7 @@ export function authenticateSession(token: string): boolean {
   it("topic search works after server restart", async () => {
     // Step 1: Start server (full indexing with embeddings)
     serverHandle = await startHttpServer([], { logger: silentLogger });
-    await sleep(1000);
+    await waitForSymbol(TEST_PORT, "validateUserCredentials");
 
     // Step 2: Verify topic search works on first run
     // Use "login" — semantically related to authentication/credentials
@@ -323,11 +318,10 @@ export function authenticateSession(token: string): boolean {
 
     // Step 3: Stop the server
     await serverHandle.close();
-    await sleep(500);
 
     // Step 4: Start server again (uses existing DB)
     serverHandle = await startHttpServer([], { logger: silentLogger });
-    await sleep(1000);
+    await waitForSymbol(TEST_PORT, "validateUserCredentials");
 
     // Step 5: Verify topic search still works after restart
     const restartResponse = await fetch(
