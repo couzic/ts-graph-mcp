@@ -110,7 +110,7 @@ export const filterEdgesToTopicRelevant = <
       }
       visited.add(current);
 
-      if (topicRelevantNodes.has(current)) {
+      if (nodesLeadingToTopic.has(current)) {
         return true;
       }
 

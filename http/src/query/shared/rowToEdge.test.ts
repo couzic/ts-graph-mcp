@@ -11,6 +11,7 @@ describe(rowToEdge.name, () => {
       call_count: null,
       call_sites: null,
       context: null,
+      reference_context: null,
     };
 
     const edge = rowToEdge(row);
@@ -32,6 +33,7 @@ describe(rowToEdge.name, () => {
       call_count: 3,
       call_sites: null,
       context: null,
+      reference_context: null,
     };
 
     const edge = rowToEdge(row);
@@ -47,6 +49,7 @@ describe(rowToEdge.name, () => {
       call_count: 3,
       call_sites: "[12, 45, 87]",
       context: null,
+      reference_context: null,
     };
 
     const edge = rowToEdge(row);
@@ -62,6 +65,7 @@ describe(rowToEdge.name, () => {
       call_count: 0,
       call_sites: null,
       context: null,
+      reference_context: null,
     };
 
     const edge = rowToEdge(row);
@@ -77,6 +81,7 @@ describe(rowToEdge.name, () => {
       call_count: null,
       call_sites: null,
       context: "parameter",
+      reference_context: null,
     };
 
     const edge = rowToEdge(row);
@@ -92,6 +97,7 @@ describe(rowToEdge.name, () => {
       call_count: null,
       call_sites: null,
       context: null,
+      reference_context: null,
     };
 
     const edge = rowToEdge(row);
@@ -124,6 +130,7 @@ describe(rowToEdge.name, () => {
       call_count: null,
       call_sites: null,
       context: null,
+      reference_context: null,
     };
 
     const edge = rowToEdge(row);
@@ -143,6 +150,7 @@ describe(rowToEdge.name, () => {
       call_count: null,
       call_sites: null,
       context: null,
+      reference_context: null,
     };
 
     const edge = rowToEdge(row);

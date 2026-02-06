@@ -42,5 +42,5 @@ export interface EdgeRow {
   call_count: number | null;
   call_sites: string | null;
   context: string | null;
-  reference_context?: string | null;
+  reference_context: string | null;
 }

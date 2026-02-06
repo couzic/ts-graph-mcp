@@ -1,65 +1,20 @@
-import { EDGE_TYPES } from "@ts-graph/shared";
 import type Database from "better-sqlite3";
 import {
   attemptClassMethodFallback,
   formatDisambiguationMessage,
 } from "../shared/classMethodFallback.js";
 import { collectNodeIds } from "../shared/collectNodeIds.js";
-import { MAX_DEPTH } from "../shared/constants.js";
 import { formatMermaid } from "../shared/formatMermaid.js";
 import {
   enrichNodesWithCallSites,
   formatToolOutput,
 } from "../shared/formatToolOutput.js";
 import { loadNodeSnippets } from "../shared/loadNodeSnippets.js";
-import {
-  type EdgeRowWithCallSites,
-  type GraphEdgeWithCallSites,
-  parseEdgeRows,
-} from "../shared/parseEdgeRows.js";
 import type { QueryOptions } from "../shared/QueryTypes.js";
 import { queryNodeInfos } from "../shared/queryNodeInfos.js";
 import { queryNodeMetadata } from "../shared/queryNodeMetadata.js";
+import { queryDependencyEdges } from "../shared/queryTraversalEdges.js";
 import { resolveSymbol } from "../shared/symbolNotFound.js";
-
-/**
- * Query all forward dependencies from a source node.
- * Returns all edges in the reachable subgraph with call site information.
- */
-const queryDependencyEdges = (
-  db: Database.Database,
-  sourceId: string,
-): GraphEdgeWithCallSites[] => {
-  const edgeTypesPlaceholder = EDGE_TYPES.map(() => "?").join(", ");
-
-  const sql = `
-    WITH RECURSIVE deps(id, depth) AS (
-      SELECT target, 1 FROM edges
-      WHERE source = ? AND type IN (${edgeTypesPlaceholder})
-      UNION
-      SELECT e.target, d.depth + 1 FROM edges e
-      JOIN deps d ON e.source = d.id
-      WHERE e.type IN (${edgeTypesPlaceholder}) AND d.depth < ?
-    )
-    SELECT DISTINCT e.source, e.target, e.type, e.call_sites
-    FROM edges e
-    WHERE (e.source = ? OR e.source IN (SELECT id FROM deps))
-      AND e.target IN (SELECT id FROM deps)
-      AND e.type IN (${edgeTypesPlaceholder})
-  `;
-
-  const params = [
-    sourceId,
-    ...EDGE_TYPES,
-    ...EDGE_TYPES,
-    MAX_DEPTH,
-    sourceId,
-    ...EDGE_TYPES,
-  ];
-
-  const rows = db.prepare<unknown[], EdgeRowWithCallSites>(sql).all(...params);
-  return parseEdgeRows(rows);
-};
 
 /**
  * Find all code that a symbol depends on (forward dependencies).

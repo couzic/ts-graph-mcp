@@ -1,65 +1,20 @@
-import { EDGE_TYPES } from "@ts-graph/shared";
 import type Database from "better-sqlite3";
 import {
   attemptClassMethodFallback,
   formatDisambiguationMessage,
 } from "../shared/classMethodFallback.js";
 import { collectNodeIds } from "../shared/collectNodeIds.js";
-import { MAX_DEPTH } from "../shared/constants.js";
 import { formatMermaid } from "../shared/formatMermaid.js";
 import {
   enrichNodesWithCallSites,
   formatToolOutput,
 } from "../shared/formatToolOutput.js";
 import { loadNodeSnippets } from "../shared/loadNodeSnippets.js";
-import {
-  type EdgeRowWithCallSites,
-  type GraphEdgeWithCallSites,
-  parseEdgeRows,
-} from "../shared/parseEdgeRows.js";
 import type { QueryOptions } from "../shared/QueryTypes.js";
 import { queryNodeInfos } from "../shared/queryNodeInfos.js";
 import { queryNodeMetadata } from "../shared/queryNodeMetadata.js";
+import { queryDependentEdges } from "../shared/queryTraversalEdges.js";
 import { resolveSymbol } from "../shared/symbolNotFound.js";
-
-/**
- * Query all reverse dependencies (callers/dependents) of a target node.
- * Returns all edges in the reachable subgraph with call site information.
- */
-const queryDependentEdges = (
-  db: Database.Database,
-  targetId: string,
-): GraphEdgeWithCallSites[] => {
-  const edgeTypesPlaceholder = EDGE_TYPES.map(() => "?").join(", ");
-
-  const sql = `
-    WITH RECURSIVE callers(id, depth) AS (
-      SELECT source, 1 FROM edges
-      WHERE target = ? AND type IN (${edgeTypesPlaceholder})
-      UNION
-      SELECT e.source, c.depth + 1 FROM edges e
-      JOIN callers c ON e.target = c.id
-      WHERE e.type IN (${edgeTypesPlaceholder}) AND c.depth < ?
-    )
-    SELECT DISTINCT e.source, e.target, e.type, e.call_sites
-    FROM edges e
-    WHERE e.source IN (SELECT id FROM callers)
-      AND (e.target = ? OR e.target IN (SELECT id FROM callers))
-      AND e.type IN (${edgeTypesPlaceholder})
-  `;
-
-  const params = [
-    targetId,
-    ...EDGE_TYPES,
-    ...EDGE_TYPES,
-    MAX_DEPTH,
-    targetId,
-    ...EDGE_TYPES,
-  ];
-
-  const rows = db.prepare<unknown[], EdgeRowWithCallSites>(sql).all(...params);
-  return parseEdgeRows(rows);
-};
 
 /**
  * Find all code that depends on a symbol (reverse dependencies).
