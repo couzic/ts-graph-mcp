@@ -1,10 +1,57 @@
+import { extractFilePath } from "./extractFilePath.js";
 import { extractSymbol } from "./extractSymbol.js";
+
+/**
+ * Extract node type from node ID.
+ * "src/utils.ts:Function:formatDate" → "Function"
+ */
+const extractNodeType = (nodeId: string): string => {
+  const firstColon = nodeId.indexOf(":");
+  const lastColon = nodeId.lastIndexOf(":");
+  return nodeId.slice(firstColon + 1, lastColon);
+};
+
+/**
+ * Compute minimal unique file suffixes for a set of file paths.
+ * Starts with filename only, adds parent directories until all are unique.
+ *
+ * @example
+ * minimalFileSuffixes(["src/v1/api.ts", "src/v2/api.ts"])
+ * // Map { "src/v1/api.ts" => "v1/api.ts", "src/v2/api.ts" => "v2/api.ts" }
+ */
+const minimalFileSuffixes = (filePaths: string[]): Map<string, string> => {
+  const distinctPaths = [...new Set(filePaths)];
+  let segments = 1;
+  while (true) {
+    const suffixes = distinctPaths.map((p) => {
+      const parts = p.split("/");
+      return parts.slice(-segments).join("/");
+    });
+    const unique = new Set(suffixes).size === distinctPaths.length;
+    if (unique) {
+      const result = new Map<string, string>();
+      for (let i = 0; i < distinctPaths.length; i++) {
+        const path = distinctPaths[i];
+        const suffix = suffixes[i];
+        if (path !== undefined && suffix !== undefined) {
+          result.set(path, suffix);
+        }
+      }
+      return result;
+    }
+    segments++;
+  }
+};
 
 /**
  * Build display name map, handling disambiguation when names collide.
  * Returns: Map<nodeId, displayName>
  *
- * When multiple nodes share the same name, they get #1, #2 suffixes.
+ * Disambiguation strategy:
+ * - Types are unique → suffix with (Type)
+ * - Types clash but files are unique → suffix with (filename)
+ * - Both axes clash → suffix with (Type, filename)
+ *
  * When aliasMap is provided, replaces ReturnType<typeof X> prefixes with alias names.
  *
  * @example
@@ -19,7 +66,7 @@ export const buildDisplayNames = (
   const displayNames = new Map<string, string>();
   const nameCount = new Map<string, string[]>(); // name → [nodeId, ...]
 
-  // First pass: count names
+  // First pass: group by display name (after alias replacement)
   for (const nodeId of nodeIds) {
     let name = extractSymbol(nodeId);
     if (aliasMap) {
@@ -39,16 +86,39 @@ export const buildDisplayNames = (
     }
   }
 
-  // Second pass: assign display names
+  // Second pass: assign display names with context-aware disambiguation
   for (const [name, ids] of nameCount) {
     if (ids.length === 1 && ids[0] !== undefined) {
-      // Unique name - use as-is
       displayNames.set(ids[0], name);
+      continue;
+    }
+
+    const types = ids.map((id) => extractNodeType(id));
+    const files = ids.map((id) => extractFilePath(id));
+
+    const typesUnique = new Set(types).size === ids.length;
+    const filesUnique = new Set(files).size === ids.length;
+
+    if (typesUnique) {
+      for (const id of ids) {
+        displayNames.set(id, `${name} (${extractNodeType(id)})`);
+      }
+    } else if (filesUnique) {
+      // Different files, same type
+      const suffixes = minimalFileSuffixes(files);
+      for (const id of ids) {
+        const fileSuffix =
+          suffixes.get(extractFilePath(id)) ?? extractFilePath(id);
+        displayNames.set(id, `${name} (${fileSuffix})`);
+      }
     } else {
-      // Ambiguous - add #N suffix
-      ids.forEach((id, index) => {
-        displayNames.set(id, `${name}#${index + 1}`);
-      });
+      // Both axes clash — need type + file
+      const suffixes = minimalFileSuffixes(files);
+      for (const id of ids) {
+        const fileSuffix =
+          suffixes.get(extractFilePath(id)) ?? extractFilePath(id);
+        displayNames.set(id, `${name} (${extractNodeType(id)}, ${fileSuffix})`);
+      }
     }
   }
 

@@ -81,7 +81,7 @@ root --CALLS--> right --CALLS--> rightChild`);
       },
     ]);
 
-    expect(result.text).toBe("format#1 --CALLS--> format#2");
+    expect(result.text).toBe("format (a.ts) --CALLS--> format (b.ts)");
   });
 
   it("handles different edge types", () => {
