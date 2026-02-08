@@ -11,6 +11,7 @@ import {
 } from "../shared/formatToolOutput.js";
 import { loadNodeSnippets } from "../shared/loadNodeSnippets.js";
 import type { QueryOptions } from "../shared/QueryTypes.js";
+import { queryAliasMap } from "../shared/queryAliasMap.js";
 import { queryNodeInfos } from "../shared/queryNodeInfos.js";
 import { queryNodeMetadata } from "../shared/queryNodeMetadata.js";
 import { resolveSymbol } from "../shared/symbolNotFound.js";
@@ -139,12 +140,16 @@ export function pathsBetween(
     callSites: e.callSites,
   }));
 
+  // Query alias map for display simplification
+  const aliasMap = queryAliasMap(db, path.nodes);
+
   // For mermaid format, skip node loading and return graph only
   if (options.format === "mermaid") {
     const metadataByNodeId = queryNodeMetadata(db, path.nodes);
     const output = formatMermaid(graphEdges, {
       maxNodes: options.maxNodes,
       metadataByNodeId,
+      aliasMap,
     });
     return resolutionPrefix + output;
   }
@@ -176,6 +181,7 @@ export function pathsBetween(
     edges: graphEdges,
     nodes: nodesWithSnippets,
     maxNodes: options.maxNodes,
+    aliasMap,
   });
 
   // Prepend resolution messages if any symbols were auto-resolved

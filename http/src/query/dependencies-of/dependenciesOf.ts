@@ -11,6 +11,7 @@ import {
 } from "../shared/formatToolOutput.js";
 import { loadNodeSnippets } from "../shared/loadNodeSnippets.js";
 import type { QueryOptions } from "../shared/QueryTypes.js";
+import { queryAliasMap } from "../shared/queryAliasMap.js";
 import { queryNodeInfos } from "../shared/queryNodeInfos.js";
 import { queryNodeMetadata } from "../shared/queryNodeMetadata.js";
 import { queryDependencyEdges } from "../shared/queryTraversalEdges.js";
@@ -80,12 +81,16 @@ export function dependenciesOf(
   // Collect all node IDs from edges
   const nodeIds = collectNodeIds(edges);
 
+  // Query alias map for display simplification
+  const aliasMap = queryAliasMap(db, nodeIds);
+
   // For mermaid format, skip node loading and return graph only
   if (options.format === "mermaid") {
     const metadataByNodeId = queryNodeMetadata(db, nodeIds);
     const output = formatMermaid(edges, {
       maxNodes: options.maxNodes,
       metadataByNodeId,
+      aliasMap,
     });
     return combinedMessage ? `${combinedMessage}\n\n${output}` : output;
   }
@@ -110,6 +115,7 @@ export function dependenciesOf(
     edges,
     nodes: nodesWithSnippets,
     maxNodes: options.maxNodes,
+    aliasMap,
   });
 
   // Prepend resolution message if symbol was auto-resolved

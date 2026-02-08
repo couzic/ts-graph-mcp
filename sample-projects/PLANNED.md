@@ -47,6 +47,7 @@ This document tracks test projects to be created for integration testing and ben
 | `web-app` | L2: 3 modules, 1 pkg each | Cross-module edges, Issue #5 regression | **Active** - 15 tests |
 | `monorepo` | L3: 3 modules, 2 pkg each | Cross-package + cross-module edges | **Active** - 30 tests |
 | `layered-api` | L1: 5-layer architecture | Multi-layer paths (routes→controllers→services→repos→db) | **Active** - 19 tests |
+| `factory-pattern` | L1: 3 files | Factory functions, SyntheticType nodes, alias display simplification | **Active** |
 
 ### Migration Notes
 

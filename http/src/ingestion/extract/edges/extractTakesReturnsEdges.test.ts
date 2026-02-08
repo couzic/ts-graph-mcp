@@ -195,6 +195,66 @@ describe("extractTakesReturnsEdges", () => {
     });
   });
 
+  describe("factory functions", () => {
+    it("creates RETURNS edge from factory to SyntheticType", () => {
+      const sourceFile = createSourceFile(`
+        const createService = () => ({
+          fetchAll: () => [],
+          fetchById: (id: string) => null,
+        });
+      `);
+
+      const edges = extractTakesReturnsEdges(sourceFile, context);
+
+      const returnsEdges = edges.filter((e) => e.type === "RETURNS");
+      expect(returnsEdges).toHaveLength(1);
+      expect(returnsEdges[0]).toEqual({
+        source: "test.ts:Function:createService",
+        target: "test.ts:SyntheticType:ReturnType<typeof createService>",
+        type: "RETURNS",
+      });
+    });
+
+    it("extracts TAKES edges from factory method parameters", () => {
+      const sourceFile = createSourceFile(`
+        interface User { name: string }
+        const createService = () => ({
+          save: (user: User) => {},
+        });
+      `);
+
+      const edges = extractTakesReturnsEdges(sourceFile, context);
+
+      const takesEdges = edges.filter((e) => e.type === "TAKES");
+      expect(takesEdges).toHaveLength(1);
+      expect(takesEdges[0]).toEqual({
+        source: "test.ts:Function:ReturnType<typeof createService>.save",
+        target: "test.ts:Interface:User",
+        type: "TAKES",
+      });
+    });
+
+    it("creates RETURNS edge for function expression factory", () => {
+      const sourceFile = createSourceFile(`
+        const createRepo = function() {
+          return {
+            save: (data: any) => {},
+          };
+        };
+      `);
+
+      const edges = extractTakesReturnsEdges(sourceFile, context);
+
+      const returnsEdges = edges.filter((e) => e.type === "RETURNS");
+      expect(returnsEdges).toHaveLength(1);
+      expect(returnsEdges[0]).toEqual({
+        source: "test.ts:Function:createRepo",
+        target: "test.ts:SyntheticType:ReturnType<typeof createRepo>",
+        type: "RETURNS",
+      });
+    });
+  });
+
   describe("cross-file types", () => {
     it("resolves imported types", () => {
       const project = new Project({ useInMemoryFileSystem: true });

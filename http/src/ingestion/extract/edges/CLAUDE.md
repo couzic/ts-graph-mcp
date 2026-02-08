@@ -63,14 +63,16 @@ interface EdgeExtractionContext {
 - Builds local symbol map from current file's AST
 - Counts multiple calls to same target (`callCount`)
 - Handles arrow functions, regular functions, and methods
+- Factory pattern: `getFactoryMethodPrefix()` detects calls inside factory-returned objects and uses `ReturnType<typeof X>.methodName` as caller ID
+- Cross-file factory method calls (e.g., `service.fetchAll()`) resolve to `ReturnType<typeof createService>.fetchAll` targets
 
 ### Type Signature Edges (TAKES/RETURNS/HAS_TYPE/HAS_PROPERTY/DERIVES_FROM/ALIAS_FOR)
 - **TAKES**: Extracts from function/method parameter types
-- **RETURNS**: Extracts from function/method return types
+- **RETURNS**: Extracts from function/method return types; factory functions without explicit return type produce RETURNS edge to `SyntheticType` node
 - **HAS_TYPE**: Extracts from variable type annotations
 - **HAS_PROPERTY**: Extracts from class/interface/object literal property types
 - **DERIVES_FROM**: Extracts from type alias intersection/union composition
-- **ALIAS_FOR**: Extracts from direct type aliases
+- **ALIAS_FOR**: Extracts from direct type aliases; handles `ReturnType<typeof X>` patterns targeting `SyntheticType` nodes
 - All use `buildImportMap` to resolve cross-file type references
 - Filter built-in types (String, Array, Promise, Partial, etc.)
 - Extract inner types from generic wrappers (e.g., `Promise<User>` → edge to `User`)

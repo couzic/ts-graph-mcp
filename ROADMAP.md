@@ -99,8 +99,6 @@ remaining edge cases:
   `fn --USES_TYPE--> User`
 - **Type predicates:** `x is User` → `fn --USES_TYPE--> User`
 - **Mapped type arguments:** `Record<string, User>` → `type --USES_TYPE--> User`
-- **typeof references:** `type X = ReturnType<typeof fn>` →
-  `X --USES_TYPE--> fn`
 
 **Implementation:** Update `extractTypeUsageEdges.ts` to extract only these edge
 cases (not params/returns/variables/properties which are now covered by specific

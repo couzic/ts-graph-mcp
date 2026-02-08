@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { Project } from "ts-morph";
 import { describe, expect, it } from "vitest";
+import type { Extracted, FunctionNode } from "../../../db/Types.js";
 import { extractObjectLiteralMethodNodes } from "./extractObjectLiteralMethodNodes.js";
 
 const createSourceFile = (code: string) => {
@@ -9,6 +10,13 @@ const createSourceFile = (code: string) => {
 };
 
 const context = { filePath: "test.ts", package: "test-pkg" };
+
+function assertFunctionNode(
+  node: unknown,
+): asserts node is Extracted<FunctionNode> {
+  assert(node !== null && typeof node === "object");
+  assert("type" in node && node.type === "Function");
+}
 
 describe("extractObjectLiteralMethodNodes", () => {
   it("extracts method from object literal", () => {
@@ -24,10 +32,9 @@ describe("extractObjectLiteralMethodNodes", () => {
 
     expect(nodes).toHaveLength(1);
     const [method] = nodes;
-    assert(method !== undefined);
+    assertFunctionNode(method);
     expect(method.id).toBe("test.ts:Function:userService.login");
     expect(method.name).toBe("login");
-    expect(method.type).toBe("Function");
     expect(method.parameters).toEqual([{ name: "user", type: "User" }]);
     expect(method.returnType).toBe("boolean");
   });
@@ -61,7 +68,7 @@ describe("extractObjectLiteralMethodNodes", () => {
 
     expect(nodes).toHaveLength(1);
     const [method] = nodes;
-    assert(method !== undefined);
+    assertFunctionNode(method);
     expect(method.async).toBe(true);
   });
 
@@ -76,7 +83,7 @@ describe("extractObjectLiteralMethodNodes", () => {
 
     expect(nodes).toHaveLength(1);
     const [method] = nodes;
-    assert(method !== undefined);
+    assertFunctionNode(method);
     expect(method.id).toBe("test.ts:Function:utils.format");
     expect(method.name).toBe("format");
     expect(method.parameters).toEqual([{ name: "value", type: "string" }]);
@@ -112,6 +119,32 @@ describe("extractObjectLiteralMethodNodes", () => {
     // Only extracts top-level methods, not nested
     expect(nodes).toHaveLength(1);
     expect(nodes[0]?.name).toBe("process");
+  });
+
+  it("extracts SyntheticType node and method from factory function", () => {
+    const sourceFile = createSourceFile(`
+      export const createService = () => ({
+        doSomething: () => { console.log("doing"); }
+      });
+    `);
+
+    const nodes = extractObjectLiteralMethodNodes(sourceFile, context);
+
+    expect(nodes).toHaveLength(2);
+
+    const syntheticType = nodes.find((n) => n.type === "SyntheticType");
+    assert(syntheticType !== undefined);
+    expect(syntheticType.id).toBe(
+      "test.ts:SyntheticType:ReturnType<typeof createService>",
+    );
+    expect(syntheticType.name).toBe("ReturnType<typeof createService>");
+
+    const method = nodes.find((n) => n.type === "Function");
+    assert(method !== undefined);
+    expect(method.id).toBe(
+      "test.ts:Function:ReturnType<typeof createService>.doSomething",
+    );
+    expect(method.name).toBe("doSomething");
   });
 
   it("sets exported flag based on variable export status", () => {

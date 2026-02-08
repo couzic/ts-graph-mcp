@@ -24,6 +24,24 @@ describe(buildDisplayNames.name, () => {
     expect(names.get("src/c.ts:Function:format")).toBe("format#3");
   });
 
+  it("simplifies ReturnType<typeof X> when alias map is provided", () => {
+    const aliasMap = new Map([["ReturnType<typeof createService>", "Service"]]);
+
+    const names = buildDisplayNames(
+      [
+        "src/s.ts:Function:ReturnType<typeof createService>.doSomething",
+        "src/s.ts:TypeAlias:Service",
+      ],
+      aliasMap,
+    );
+
+    expect(
+      names.get(
+        "src/s.ts:Function:ReturnType<typeof createService>.doSomething",
+      ),
+    ).toBe("Service.doSomething");
+  });
+
   it("handles method names with dots", () => {
     const names = buildDisplayNames([
       "src/a.ts:Method:User.save",

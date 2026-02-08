@@ -1,4 +1,5 @@
 import type { CallSiteRange } from "../../db/Types.js";
+import { buildAliasMap } from "./buildAliasMap.js";
 import { buildDisplayNames } from "./buildDisplayNames.js";
 import { formatGraph } from "./formatGraph.js";
 import { formatNodes } from "./formatNodes.js";
@@ -27,6 +28,8 @@ export interface FormatInput {
   nodes: NodeInfo[];
   /** Maximum nodes before truncation (default: 50) */
   maxNodes?: number;
+  /** Alias map for display simplification (e.g., ReturnType<typeof X> → Service) */
+  aliasMap?: Map<string, string>;
 }
 
 /**
@@ -63,7 +66,7 @@ export const formatToolOutput = (input: FormatInput): string => {
   // Full output path (under maxNodes limit)
   // Omit snippets when over NO_SNIPPET_THRESHOLD (too much noise)
   const includeSnippets = totalNodeCount <= NO_SNIPPET_THRESHOLD;
-  return formatFullOutput(edges, nodes, includeSnippets);
+  return formatFullOutput(edges, nodes, includeSnippets, input.aliasMap);
 };
 
 /**
@@ -73,6 +76,7 @@ const formatFullOutput = (
   edges: EdgeWithCallSites[],
   nodes: NodeInfo[],
   includeSnippets: boolean,
+  aliasMap?: Map<string, string>,
 ): string => {
   // Enrich nodes with call site information
   let enrichedNodes = enrichNodesWithCallSites(nodes, edges);
@@ -92,10 +96,14 @@ const formatFullOutput = (
     allNodeIds.add(edge.source);
     allNodeIds.add(edge.target);
   }
-  const displayNames = buildDisplayNames([...allNodeIds]);
+  const effectiveAliasMap = aliasMap ?? buildAliasMap(edges);
+  const displayNames = buildDisplayNames([...allNodeIds], effectiveAliasMap);
 
   // Format graph section
-  const { text: graphSection, nodeOrder } = formatGraph(edges);
+  const { text: graphSection, nodeOrder } = formatGraph(
+    edges,
+    effectiveAliasMap,
+  );
 
   // Format nodes section
   const nodesResult = formatNodes(

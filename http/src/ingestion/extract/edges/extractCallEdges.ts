@@ -4,6 +4,7 @@ import {
   type CallExpression,
   type ConstructorDeclaration,
   type FunctionDeclaration,
+  type FunctionExpression,
   type GetAccessorDeclaration,
   type JsxOpeningElement,
   type JsxSelfClosingElement,
@@ -185,6 +186,61 @@ const resolveNamespaceCallCrossPackage = (
 };
 
 /**
+ * Detect if a declaration is inside an object literal returned by a factory function.
+ * Returns the factory prefix (e.g., "ReturnType<typeof createService>") or undefined.
+ *
+ * @example
+ * // const createService = () => ({ fetchAll: () => {} })
+ * // For the fetchAll ArrowFunction declaration:
+ * getFactoryMethodPrefix(declaration) // "ReturnType<typeof createService>"
+ */
+const getFactoryMethodPrefix = (
+  declaration: TsMorphNode,
+): string | undefined => {
+  // Walk up to find the containing ObjectLiteralExpression
+  let current: TsMorphNode | undefined = declaration.getParent();
+  while (current) {
+    if (TsMorphNode.isObjectLiteralExpression(current)) {
+      break;
+    }
+    if (
+      TsMorphNode.isSourceFile(current) ||
+      TsMorphNode.isClassDeclaration(current)
+    ) {
+      return undefined;
+    }
+    current = current.getParent();
+  }
+
+  if (!current || !TsMorphNode.isObjectLiteralExpression(current)) {
+    return undefined;
+  }
+
+  // Check if the object literal is the body of an arrow/function expression
+  const objectParent = current.getParent();
+  const factoryBody = TsMorphNode.isParenthesizedExpression(objectParent)
+    ? objectParent?.getParent()
+    : objectParent;
+
+  if (
+    !factoryBody ||
+    !(
+      TsMorphNode.isArrowFunction(factoryBody) ||
+      TsMorphNode.isFunctionExpression(factoryBody)
+    )
+  ) {
+    return undefined;
+  }
+
+  const factoryParent = factoryBody.getParent();
+  if (!factoryParent || !TsMorphNode.isVariableDeclaration(factoryParent)) {
+    return undefined;
+  }
+
+  return `ReturnType<typeof ${factoryParent.getName()}>`;
+};
+
+/**
  * Resolve a call expression target to its actual definition.
  *
  * Handles:
@@ -262,7 +318,13 @@ const resolveCallTarget = (
             targetId = `${relativePath}:${nodeType}:${symbolName}`;
           }
         } else {
-          targetId = `${relativePath}:${nodeType}:${symbolName}`;
+          // Check if declaration is inside a factory-returned object literal
+          const factoryPrefix = getFactoryMethodPrefix(declaration);
+          if (factoryPrefix) {
+            targetId = `${relativePath}:${nodeType}:${factoryPrefix}.${symbolName}`;
+          } else {
+            targetId = `${relativePath}:${nodeType}:${symbolName}`;
+          }
         }
 
         return { targetId, symbolName };
@@ -426,16 +488,73 @@ export const extractCallEdges = (
     const varName = variable.getName();
     const initializer = variable.getInitializer();
 
-    if (initializer && TsMorphNode.isArrowFunction(initializer)) {
-      const callerId = generateNodeId(context.filePath, "Function", varName);
-      extractCallsFromCallable(
-        initializer,
-        callerId,
-        symbolMap,
-        edges,
-        projectRoot,
-        context.projectRegistry,
-      );
+    if (
+      initializer &&
+      (TsMorphNode.isArrowFunction(initializer) ||
+        TsMorphNode.isFunctionExpression(initializer))
+    ) {
+      // Check if this is a factory function (returns object literal)
+      const body = initializer.getBody();
+      const unwrapped = TsMorphNode.isParenthesizedExpression(body)
+        ? body.getExpression()
+        : body;
+
+      if (TsMorphNode.isObjectLiteralExpression(unwrapped)) {
+        // Factory pattern: extract calls from each method individually
+        const parentName = `ReturnType<typeof ${varName}>`;
+        for (const property of unwrapped.getProperties()) {
+          if (TsMorphNode.isMethodDeclaration(property)) {
+            const methodName = property.getName();
+            const callerId = generateNodeId(
+              context.filePath,
+              "Function",
+              `${parentName}.${methodName}`,
+            );
+            extractCallsFromCallable(
+              property,
+              callerId,
+              symbolMap,
+              edges,
+              projectRoot,
+              context.projectRegistry,
+            );
+          }
+          if (TsMorphNode.isPropertyAssignment(property)) {
+            const propInit = property.getInitializer();
+            if (
+              propInit &&
+              (TsMorphNode.isArrowFunction(propInit) ||
+                TsMorphNode.isFunctionExpression(propInit))
+            ) {
+              const methodName = property.getName();
+              const callerId = generateNodeId(
+                context.filePath,
+                "Function",
+                `${parentName}.${methodName}`,
+              );
+              extractCallsFromCallable(
+                propInit,
+                callerId,
+                symbolMap,
+                edges,
+                projectRoot,
+                context.projectRegistry,
+              );
+            }
+          }
+        }
+      } else {
+        // Regular arrow/function expression
+        const callerId = generateNodeId(context.filePath, "Function", varName);
+        extractCallsFromCallable(
+          initializer,
+          callerId,
+          symbolMap,
+          edges,
+          projectRoot,
+          context.projectRegistry,
+        );
+      }
     }
   }
 
@@ -671,6 +790,7 @@ const buildLocalAliasMap = (
   callable:
     | FunctionDeclaration
     | ArrowFunction
+    | FunctionExpression
     | MethodDeclaration
     | ConstructorDeclaration
     | GetAccessorDeclaration
@@ -764,6 +884,7 @@ const extractCallsFromCallable = (
   callable:
     | FunctionDeclaration
     | ArrowFunction
+    | FunctionExpression
     | MethodDeclaration
     | ConstructorDeclaration
     | GetAccessorDeclaration

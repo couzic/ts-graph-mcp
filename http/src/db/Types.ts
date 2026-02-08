@@ -81,13 +81,18 @@ export interface VariableNode extends BaseNode {
   isConst?: boolean;
 }
 
+export interface SyntheticTypeNode extends BaseNode {
+  type: "SyntheticType";
+}
+
 export type Node =
   | FunctionNode
   | ClassNode
   | MethodNode
   | InterfaceNode
   | TypeAliasNode
-  | VariableNode;
+  | VariableNode
+  | SyntheticTypeNode;
 
 /**
  * A node as returned by extractors, before contentHash and snippet are added.

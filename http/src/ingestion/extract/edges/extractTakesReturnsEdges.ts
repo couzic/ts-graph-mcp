@@ -4,6 +4,7 @@ import {
   type FunctionExpression,
   type MethodDeclaration,
   Node,
+  type ObjectLiteralExpression,
   type SourceFile,
   type TypeNode,
 } from "ts-morph";
@@ -86,6 +87,17 @@ export const extractTakesReturnsEdges = (
     ) {
       const sourceId = generateNodeId(context.filePath, "Function", varName);
       extractFromCallable(initializer, sourceId, typeMap, edges);
+
+      // Factory function without explicit return type → RETURNS edge to SyntheticType
+      if (!initializer.getReturnTypeNode() && isFactoryFunction(initializer)) {
+        const syntheticName = `ReturnType<typeof ${varName}>`;
+        const targetId = generateNodeId(
+          context.filePath,
+          "SyntheticType",
+          syntheticName,
+        );
+        edges.push({ source: sourceId, target: targetId, type: "RETURNS" });
+      }
     }
   }
 
@@ -106,21 +118,42 @@ export const extractTakesReturnsEdges = (
     }
   }
 
-  // Object literal methods
+  // Object literal methods (plain objects and factory functions)
   for (const statement of sourceFile.getVariableStatements()) {
     for (const decl of statement.getDeclarations()) {
       const initializer = decl.getInitializer();
-      if (!initializer || !Node.isObjectLiteralExpression(initializer)) {
+      if (!initializer) {
         continue;
       }
-      const objectName = decl.getName();
-      for (const property of initializer.getProperties()) {
+
+      let objectLiteral: ObjectLiteralExpression | undefined;
+      let prefix: string;
+
+      if (Node.isObjectLiteralExpression(initializer)) {
+        objectLiteral = initializer;
+        prefix = decl.getName();
+      } else if (
+        (Node.isArrowFunction(initializer) ||
+          Node.isFunctionExpression(initializer)) &&
+        isFactoryFunction(initializer)
+      ) {
+        objectLiteral = getFactoryObjectLiteral(initializer);
+        prefix = `ReturnType<typeof ${decl.getName()}>`;
+      } else {
+        continue;
+      }
+
+      if (!objectLiteral) {
+        continue;
+      }
+
+      for (const property of objectLiteral.getProperties()) {
         if (Node.isMethodDeclaration(property)) {
           const methodName = property.getName();
           const sourceId = generateNodeId(
             context.filePath,
             "Function",
-            `${objectName}.${methodName}`,
+            `${prefix}.${methodName}`,
           );
           extractFromCallable(property, sourceId, typeMap, edges);
         }
@@ -135,7 +168,7 @@ export const extractTakesReturnsEdges = (
             const sourceId = generateNodeId(
               context.filePath,
               "Function",
-              `${objectName}.${methodName}`,
+              `${prefix}.${methodName}`,
             );
             extractFromCallable(propInit, sourceId, typeMap, edges);
           }
@@ -295,4 +328,72 @@ const extractTypeNamesRecursive = (
 
   // Primitive keyword types (string, number, etc.) - skip
   // These are handled by the TypeReference case above or by keyword nodes
+};
+
+/**
+ * Detect factory functions: arrow/function expressions that return object literals.
+ *
+ * Matches two patterns:
+ * - Arrow with expression body: `() => ({ ... })`
+ * - Arrow/function with block body containing `return { ... }`
+ */
+const isFactoryFunction = (
+  node: ArrowFunction | FunctionExpression,
+): boolean => {
+  const body = node.getBody();
+
+  // Arrow with expression body: () => ({ ... })
+  if (Node.isParenthesizedExpression(body)) {
+    return Node.isObjectLiteralExpression(body.getExpression());
+  }
+  if (Node.isObjectLiteralExpression(body)) {
+    return true;
+  }
+
+  // Block body: look for `return { ... }` as the last statement
+  if (Node.isBlock(body)) {
+    const statements = body.getStatements();
+    const lastStatement = statements[statements.length - 1];
+    if (lastStatement && Node.isReturnStatement(lastStatement)) {
+      const returnExpr = lastStatement.getExpression();
+      return (
+        returnExpr !== undefined && Node.isObjectLiteralExpression(returnExpr)
+      );
+    }
+  }
+
+  return false;
+};
+
+/**
+ * Extract the returned object literal from a factory function.
+ * Only call after `isFactoryFunction` returns true.
+ */
+const getFactoryObjectLiteral = (
+  node: ArrowFunction | FunctionExpression,
+): ObjectLiteralExpression | undefined => {
+  const body = node.getBody();
+
+  if (Node.isParenthesizedExpression(body)) {
+    const expr = body.getExpression();
+    if (Node.isObjectLiteralExpression(expr)) {
+      return expr;
+    }
+  }
+  if (Node.isObjectLiteralExpression(body)) {
+    return body;
+  }
+
+  if (Node.isBlock(body)) {
+    const statements = body.getStatements();
+    const lastStatement = statements[statements.length - 1];
+    if (lastStatement && Node.isReturnStatement(lastStatement)) {
+      const returnExpr = lastStatement.getExpression();
+      if (returnExpr && Node.isObjectLiteralExpression(returnExpr)) {
+        return returnExpr;
+      }
+    }
+  }
+
+  return undefined;
 };

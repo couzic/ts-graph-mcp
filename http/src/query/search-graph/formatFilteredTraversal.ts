@@ -6,6 +6,7 @@ import {
 } from "../shared/formatToolOutput.js";
 import { loadNodeSnippets } from "../shared/loadNodeSnippets.js";
 import type { GraphEdgeWithCallSites } from "../shared/parseEdgeRows.js";
+import { queryAliasMap } from "../shared/queryAliasMap.js";
 import { queryNodeInfos } from "../shared/queryNodeInfos.js";
 
 /**
@@ -43,6 +44,9 @@ export const formatFilteredTraversal = (
   // Collect node IDs from filtered edges
   const nodeIds = collectNodeIds(edges);
 
+  // Query alias map for display simplification
+  const aliasMap = queryAliasMap(db, nodeIds);
+
   // Exclude start node from Nodes section (already known to the agent)
   const nodeIdsToQuery = nodeIds.filter((id) => id !== startNodeId);
 
@@ -59,6 +63,7 @@ export const formatFilteredTraversal = (
     edges,
     nodes: nodesWithSnippets,
     maxNodes,
+    aliasMap,
   });
 
   return prependMessage ? `${prependMessage}\n\n${output}` : output;

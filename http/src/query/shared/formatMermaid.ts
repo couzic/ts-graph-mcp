@@ -1,4 +1,5 @@
 import type { NodeType } from "@ts-graph/shared";
+import { buildAliasMap } from "./buildAliasMap.js";
 import { buildDisplayNames } from "./buildDisplayNames.js";
 import { extractFilePath } from "./extractFilePath.js";
 import { extractSymbol } from "./extractSymbol.js";
@@ -13,6 +14,7 @@ import type { NodeMetadata } from "./queryNodeMetadata.js";
 export type MermaidOptions = {
   maxNodes?: number;
   metadataByNodeId?: Map<string, NodeMetadata>;
+  aliasMap?: Map<string, string>;
 };
 
 /**
@@ -60,7 +62,11 @@ export const formatMermaid = (
   }
 
   // Build display names with disambiguation
-  const displayNames = buildDisplayNames([...workingNodeIds]);
+  const effectiveAliasMap = options?.aliasMap ?? buildAliasMap(workingEdges);
+  const displayNames = buildDisplayNames(
+    [...workingNodeIds],
+    effectiveAliasMap,
+  );
 
   // Build context for type-aware display names
   const includesTargets = new Set<string>();

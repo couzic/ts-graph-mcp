@@ -19,6 +19,7 @@ export const NODE_TYPES = [
   "Interface",
   "TypeAlias",
   "Variable",
+  "SyntheticType",
 ] as const;
 
 export type NodeType = (typeof NODE_TYPES)[number];

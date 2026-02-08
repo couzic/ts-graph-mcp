@@ -1279,6 +1279,72 @@ export function Page() {
     });
   });
 
+  describe("factory function pattern", () => {
+    it("attributes calls inside factory methods to the method, not the factory", () => {
+      const project = createProject();
+      const sourceFile = project.createSourceFile(
+        "test.ts",
+        `
+export const loadData = () => [{ id: "1" }];
+
+export const createService = () => ({
+  fetchAll: () => {
+    return loadData();
+  },
+});
+        `,
+      );
+
+      const edges = extractCallEdges(sourceFile, defaultContext);
+
+      // loadData() is called inside fetchAll, not inside createService directly
+      const callToLoadData = edges.find((e) => e.target.includes("loadData"));
+      expect(callToLoadData).toBeDefined();
+      expect(callToLoadData?.source).toBe(
+        "test.ts:Function:ReturnType<typeof createService>.fetchAll",
+      );
+    });
+
+    it("resolves factory method call to correct target ID", () => {
+      const project = createProject();
+
+      project.createSourceFile(
+        "service.ts",
+        `
+export const createService = () => ({
+  fetchAll: () => {
+    return [];
+  },
+});
+        `,
+      );
+
+      const handlerFile = project.createSourceFile(
+        "handler.ts",
+        `
+import { createService } from './service';
+
+export const handleRequest = () => {
+  const service = createService();
+  return service.fetchAll();
+};
+        `,
+      );
+
+      const edges = extractCallEdges(handlerFile, {
+        filePath: "handler.ts",
+        package: "test-package",
+      });
+
+      const callToFetchAll = edges.find((e) => e.target.includes("fetchAll"));
+      expect(callToFetchAll).toBeDefined();
+      // Target should use ReturnType<typeof X> prefix to match the node ID
+      expect(callToFetchAll?.target).toBe(
+        "service.ts:Function:ReturnType<typeof createService>.fetchAll",
+      );
+    });
+  });
+
   describe("built-in method calls on imported constants", () => {
     it("does not create CALLS edge when calling built-in method on imported array", () => {
       const project = createProject();

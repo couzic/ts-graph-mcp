@@ -1,50 +1,5 @@
 # Known Issues
 
-## Dangling Edges from Inline Methods
-
-**Impact:** Medium (incorrect graph traversal)
-
-**Problem:** Edge extractor creates edges to targets that the node extractor
-doesn't create nodes for. This causes silent graph truncation.
-
-**Example:**
-
-```typescript
-// Factory function with inline methods
-export const createService = () => ({
-  doSomething: () => { ... }  // No node created
-});
-
-// Caller
-const service = createService();
-service.doSomething();  // Edge created to "doSomething" - but no node exists
-```
-
-**Current behavior:**
-
-1. Edge extractor sees `service.doSomething()`, creates edge targeting
-   `doSomething`
-2. Node extractor doesn't create node (inline arrow function in object literal)
-3. Query JOINs with nodes table, silently filters out the dangling edge
-4. Graph stops at `service` with no indication something is missing
-
-**Root cause:** Edge extractor and node extractor have inconsistent definitions
-of "what is a symbol". Edge extractor creates edges to anything that looks
-callable. Node extractor only creates nodes for explicit declarations.
-
-**Fix approach:** Edge extractor should validate that target would produce a
-valid node before creating an edge. This requires:
-
-1. Define explicit rules for "what is a node" (functions, classes, methods,
-   etc.)
-2. Edge extractor checks target against these rules before creating edge
-3. If target wouldn't be a node, skip edge creation (or log warning)
-
-**Workaround:** Use classes instead of factory functions when graph traversal is
-needed.
-
----
-
 ## Branded Types Not Enforced
 
 **Impact:** Low (type safety)

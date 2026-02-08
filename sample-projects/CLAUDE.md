@@ -151,7 +151,7 @@ step02:
 
 | Query Type | Internal Function | Covered By | Status |
 |------------|-------------------|-----------|--------|
-| Forward traversal | `dependenciesOf` | call-chain | ✅ |
+| Forward traversal | `dependenciesOf` | call-chain, factory-pattern | ✅ |
 | Backward traversal | `dependentsOf` | call-chain | ✅ |
 | Path finding | `pathsBetween` | call-chain | ✅ |
 

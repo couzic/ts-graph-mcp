@@ -129,6 +129,26 @@ describe("extractTypeAliasEdges", () => {
     });
   });
 
+  describe("ReturnType<typeof X>", () => {
+    it("extracts ALIAS_FOR edge for ReturnType<typeof factory>", () => {
+      const sourceFile = createSourceFile(`
+        const createService = () => ({
+          doSomething: () => {}
+        });
+        type Service = ReturnType<typeof createService>;
+      `);
+
+      const edges = extractTypeAliasEdges(sourceFile, context);
+
+      expect(edges).toHaveLength(1);
+      expect(edges[0]).toEqual({
+        source: "test.ts:TypeAlias:Service",
+        target: "test.ts:SyntheticType:ReturnType<typeof createService>",
+        type: "ALIAS_FOR",
+      });
+    });
+  });
+
   describe("cross-file types", () => {
     it("resolves imported types", () => {
       const project = new Project({ useInMemoryFileSystem: true });

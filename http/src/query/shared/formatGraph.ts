@@ -1,3 +1,4 @@
+import { buildAliasMap } from "./buildAliasMap.js";
 import { buildDisplayNames } from "./buildDisplayNames.js";
 import { extractSymbol } from "./extractSymbol.js";
 import type { GraphEdge } from "./GraphTypes.js";
@@ -19,7 +20,10 @@ export interface FormatGraphResult {
  *
  * @returns Object with formatted text and node order (for consistent Nodes section ordering)
  */
-export const formatGraph = (edges: GraphEdge[]): FormatGraphResult => {
+export const formatGraph = (
+  edges: GraphEdge[],
+  aliasMap?: Map<string, string>,
+): FormatGraphResult => {
   if (edges.length === 0) return { text: "", nodeOrder: [] };
 
   // Collect all node IDs
@@ -30,7 +34,8 @@ export const formatGraph = (edges: GraphEdge[]): FormatGraphResult => {
   }
 
   // Build display names with disambiguation
-  const displayNames = buildDisplayNames([...allNodeIds]);
+  const effectiveAliasMap = aliasMap ?? buildAliasMap(edges);
+  const displayNames = buildDisplayNames([...allNodeIds], effectiveAliasMap);
 
   // Build adjacency list
   const outgoing = new Map<string, GraphEdge[]>();

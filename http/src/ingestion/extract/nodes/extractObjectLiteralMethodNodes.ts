@@ -1,5 +1,9 @@
-import { Node, type SourceFile } from "ts-morph";
-import type { Extracted, FunctionNode } from "../../../db/Types.js";
+import { Node, type ObjectLiteralExpression, type SourceFile } from "ts-morph";
+import type {
+  Extracted,
+  FunctionNode,
+  SyntheticTypeNode,
+} from "../../../db/Types.js";
 import { generateNodeId } from "../../generateNodeId.js";
 import type { NodeExtractionContext } from "./NodeExtractionContext.js";
 import { normalizeTypeText } from "./normalizeTypeText.js";
@@ -16,8 +20,8 @@ import { normalizeTypeText } from "./normalizeTypeText.js";
 export const extractObjectLiteralMethodNodes = (
   sourceFile: SourceFile,
   context: NodeExtractionContext,
-): Extracted<FunctionNode>[] => {
-  const functions: Extracted<FunctionNode>[] = [];
+): Extracted<FunctionNode | SyntheticTypeNode>[] => {
+  const nodes: Extracted<FunctionNode | SyntheticTypeNode>[] = [];
   const variableStatements = sourceFile.getVariableStatements();
 
   for (const statement of variableStatements) {
@@ -26,16 +30,45 @@ export const extractObjectLiteralMethodNodes = (
 
     for (const decl of declarations) {
       const initializer = decl.getInitializer();
-
-      // Only process object literal expressions
-      if (!initializer || !Node.isObjectLiteralExpression(initializer)) {
+      if (!initializer) {
         continue;
       }
 
-      const objectName = decl.getName();
+      let objectLiteral: ObjectLiteralExpression | undefined;
+      let parentName = "";
 
-      // Extract methods from the object literal
-      for (const property of initializer.getProperties()) {
+      if (Node.isObjectLiteralExpression(initializer)) {
+        objectLiteral = initializer;
+        parentName = decl.getName();
+      } else if (
+        Node.isArrowFunction(initializer) ||
+        Node.isFunctionExpression(initializer)
+      ) {
+        const body = initializer.getBody();
+        const unwrapped = Node.isParenthesizedExpression(body)
+          ? body.getExpression()
+          : body;
+        if (Node.isObjectLiteralExpression(unwrapped)) {
+          objectLiteral = unwrapped;
+          parentName = `ReturnType<typeof ${decl.getName()}>`;
+          nodes.push({
+            id: generateNodeId(context.filePath, "SyntheticType", parentName),
+            type: "SyntheticType",
+            name: parentName,
+            package: context.package,
+            filePath: context.filePath,
+            startLine: unwrapped.getStartLineNumber(),
+            endLine: unwrapped.getEndLineNumber(),
+            exported: isExported,
+          });
+        }
+      }
+
+      if (!objectLiteral) {
+        continue;
+      }
+
+      for (const property of objectLiteral.getProperties()) {
         // Method shorthand: { method() { } }
         if (Node.isMethodDeclaration(property)) {
           const methodName = property.getName();
@@ -48,11 +81,11 @@ export const extractObjectLiteralMethodNodes = (
           );
           const isAsync = property.isAsync();
 
-          functions.push({
+          const methodNode: Extracted<FunctionNode> = {
             id: generateNodeId(
               context.filePath,
               "Function",
-              `${objectName}.${methodName}`,
+              `${parentName}.${methodName}`,
             ),
             type: "Function",
             name: methodName,
@@ -64,7 +97,8 @@ export const extractObjectLiteralMethodNodes = (
             parameters,
             returnType,
             async: isAsync,
-          });
+          };
+          nodes.push(methodNode);
         }
 
         // Arrow function property: { method: () => { } }
@@ -85,11 +119,11 @@ export const extractObjectLiteralMethodNodes = (
             );
             const isAsync = propInitializer.isAsync();
 
-            functions.push({
+            const methodNode: Extracted<FunctionNode> = {
               id: generateNodeId(
                 context.filePath,
                 "Function",
-                `${objectName}.${methodName}`,
+                `${parentName}.${methodName}`,
               ),
               type: "Function",
               name: methodName,
@@ -101,12 +135,13 @@ export const extractObjectLiteralMethodNodes = (
               parameters,
               returnType,
               async: isAsync,
-            });
+            };
+            nodes.push(methodNode);
           }
         }
       }
     }
   }
 
-  return functions;
+  return nodes;
 };

@@ -5,14 +5,32 @@ import { extractSymbol } from "./extractSymbol.js";
  * Returns: Map<nodeId, displayName>
  *
  * When multiple nodes share the same name, they get #1, #2 suffixes.
+ * When aliasMap is provided, replaces ReturnType<typeof X> prefixes with alias names.
+ *
+ * @example
+ * buildDisplayNames(["src/s.ts:Function:ReturnType<typeof createService>.doSomething"],
+ *   new Map([["ReturnType<typeof createService>", "Service"]]));
+ * // Map { "src/s.ts:Function:..." => "Service.doSomething" }
  */
-export const buildDisplayNames = (nodeIds: string[]): Map<string, string> => {
+export const buildDisplayNames = (
+  nodeIds: string[],
+  aliasMap?: Map<string, string>,
+): Map<string, string> => {
   const displayNames = new Map<string, string>();
   const nameCount = new Map<string, string[]>(); // name → [nodeId, ...]
 
   // First pass: count names
   for (const nodeId of nodeIds) {
-    const name = extractSymbol(nodeId);
+    let name = extractSymbol(nodeId);
+    if (aliasMap) {
+      for (const [syntheticName, aliasName] of aliasMap) {
+        if (name === syntheticName) {
+          name = aliasName;
+        } else if (name.startsWith(`${syntheticName}.`)) {
+          name = name.replace(syntheticName, aliasName);
+        }
+      }
+    }
     const existing = nameCount.get(name);
     if (existing) {
       existing.push(nodeId);

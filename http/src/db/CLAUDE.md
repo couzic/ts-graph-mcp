@@ -7,7 +7,7 @@ Persistence layer for the TypeScript code graph. Provides read/write interfaces 
 ## Key Exports
 
 ### Types (`Types.ts`)
-- `Node` - Discriminated union of all node types (Function, Class, Method, Interface, TypeAlias, Variable)
+- `Node` - Discriminated union of all node types (Function, Class, Method, Interface, TypeAlias, Variable, SyntheticType)
 - `Extracted<T>` / `ExtractedNode` - Node without `contentHash` and `snippet` (returned by extractors, enriched into full `Node` by `indexFile`)
 - `Edge` - Relationship between nodes with type-specific metadata
 - `Subgraph` - A center node with its neighbors and connecting edges

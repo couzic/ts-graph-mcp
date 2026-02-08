@@ -219,6 +219,22 @@ const extractFromTypeReference = (
   // For built-in wrappers (Array<User>, Promise<User>, Partial<User>),
   // extract the inner type
   if (BUILT_IN_TYPES.has(name)) {
+    // typeof X inside built-in wrapper (e.g. ReturnType<typeof fn>)
+    // targets the SyntheticType node, not the function itself
+    const typeArgs = typeNode.getTypeArguments();
+    if (typeArgs.length === 1 && typeArgs[0] && Node.isTypeQuery(typeArgs[0])) {
+      const exprName = typeArgs[0].getExprName().getText();
+      const valueEntry = typeMap.get(exprName);
+      if (valueEntry) {
+        const filePath = valueEntry.slice(0, valueEntry.indexOf(":"));
+        const syntheticName = `${name}<typeof ${exprName}>`;
+        return {
+          targetId: generateNodeId(filePath, "SyntheticType", syntheticName),
+          edgeType: "ALIAS_FOR",
+        };
+      }
+    }
+
     const innerNames = extractInnerTypes(typeNode, typeMap);
     if (innerNames.length > 0 && innerNames[0]) {
       const targetId = typeMap.get(innerNames[0]);
@@ -291,6 +307,12 @@ const extractSimpleTypeNames = (
     names.push(...innerNames);
   }
 
+  // typeof X — references a value (function/variable), not a type
+  if (Node.isTypeQuery(typeNode)) {
+    const exprName = typeNode.getExprName().getText();
+    names.push(exprName);
+  }
+
   return names;
 };
 
@@ -321,6 +343,25 @@ const buildCombinedTypeMap = (
     if (name) {
       map.set(name, generateNodeId(context.filePath, "Class", name));
     }
+  }
+
+  // Local functions
+  for (const func of sourceFile.getFunctions()) {
+    const name = func.getName();
+    if (name) {
+      map.set(name, generateNodeId(context.filePath, "Function", name));
+    }
+  }
+
+  // Local variables (arrow functions, values referenced via typeof)
+  for (const decl of sourceFile.getVariableDeclarations()) {
+    const name = decl.getName();
+    const init = decl.getInitializer();
+    const nodeType =
+      init && (Node.isArrowFunction(init) || Node.isFunctionExpression(init))
+        ? "Function"
+        : "Variable";
+    map.set(name, generateNodeId(context.filePath, nodeType, name));
   }
 
   // Imported types

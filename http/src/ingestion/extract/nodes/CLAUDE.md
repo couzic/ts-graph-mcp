@@ -17,6 +17,7 @@ import { extractNodes } from "./extract/nodes/extractNodes.js";
 | `extractFunctionNodes.ts` | `Function` | `parameters[]`, `returnType`, `async` |
 | `extractArrowFunctionNodes.ts` | `Function` | Arrow functions assigned to variables |
 | `extractObjectLiteralMethodNodes.ts` | `Function` | Methods in object literals (`const obj = { method() {} }`) |
+| `extractObjectLiteralMethodNodes.ts` | `SyntheticType` | Factory return types (`const create = () => ({ ... })`) |
 | `extractClassNodes.ts` | `Class` | `extends`, `implements[]` |
 | `extractMethodNodes.ts` | `Method` | `parameters[]`, `returnType`, `async`, `visibility`, `static` |
 | `extractInterfaceNodes.ts` | `Interface` | `extends[]` |
