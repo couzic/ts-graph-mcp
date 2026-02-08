@@ -5,7 +5,6 @@
 
 import type { ChildProcess } from "node:child_process";
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type {
@@ -16,7 +15,7 @@ import type {
 } from "./types.js";
 
 const DELAY_BETWEEN_RUNS_MS = 2000;
-const HEALTH_CHECK_TIMEOUT_MS = 30000;
+const HEALTH_CHECK_TIMEOUT_MS = 120000;
 const HEALTH_CHECK_INTERVAL_MS = 500;
 
 /**
@@ -189,20 +188,6 @@ export async function runBenchmarkIteration(
       turnLimitExceeded: false,
       result: error instanceof Error ? error.message : String(error),
     };
-  }
-}
-
-/**
- * Check that the database exists before running benchmarks.
- */
-export function checkDatabase(projectRoot: string, dbPath: string): void {
-  const fullPath = join(projectRoot, dbPath);
-  if (!existsSync(fullPath)) {
-    console.error("ERROR: Database not found at", fullPath);
-    console.error("");
-    console.error("Run setup first. From project root:");
-    console.error("  npm run benchmark:setup");
-    process.exit(1);
   }
 }
 

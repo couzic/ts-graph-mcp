@@ -168,19 +168,18 @@ step02:
 
 ```bash
 # From project root
-npm run benchmark:setup    # Pre-index (run once)
-npm run benchmark          # Default: 1 run, 6 concurrent
-npm run benchmark:full     # 3 runs per prompt/scenario
+npm run benchmark:call-chain   # Single project
+npm run benchmark:all          # All projects
 
 # Adjust runs and concurrency
-npm run benchmark -- --runs 5           # 5 runs per prompt/scenario
-npm run benchmark -- --concurrency 5    # 5 concurrent
-npm run benchmark -- --sequential       # One at a time
+npm run benchmark:call-chain -- --runs 5           # 5 runs per prompt/scenario
+npm run benchmark:call-chain -- --concurrency 5    # 5 concurrent
+npm run benchmark:call-chain -- --sequential       # One at a time
 ```
 
 ### How It Works
 
-1. **Setup** pre-indexes the test project into a SQLite database
+1. **Runner** starts the HTTP server (which indexes the project on startup)
 2. **Runner** spawns Claude CLI as subprocess with controlled tool access
 3. **Scenarios** compare WITH MCP tools vs WITHOUT (file reading only)
 4. **Metrics** captured: duration, cost, turns, token usage, answer validation
@@ -195,9 +194,8 @@ benchmark/
 │   ├── types.ts       # BenchmarkConfig, BenchmarkPrompt, etc.
 │   ├── scenarios.ts   # WITH/WITHOUT MCP configs
 │   ├── report.ts      # Report generator
-│   ├── runner.ts      # Claude CLI subprocess handling
-│   ├── setup.ts       # Shared setup script
-│   └── run.ts         # Shared runner script
+│   ├── runner.ts      # Claude CLI execution, HTTP server management
+│   └── run.ts         # Main orchestrator (CLI entry)
 └── results/           # All benchmark results
     └── <project>/     # Results organized by project name
 ```
@@ -207,7 +205,7 @@ benchmark/
 sample-project/
 ├── .mcp.json              # MCP server config (for WITH MCP scenario)
 ├── .no-mcp.json           # Empty config (for WITHOUT MCP scenario)
-├── .ts-graph-mcp/graph.db     # Pre-indexed database (created by setup)
+├── ts-graph-mcp.config.json   # Server config (port, packages)
 ├── tsconfig.json
 ├── src/
 └── benchmark/
@@ -260,7 +258,6 @@ sample-project/
    export const config: BenchmarkConfig = {
      projectName: "my-project",
      projectRoot: import.meta.dirname + "/..",
-     tsconfig: "tsconfig.json",
    };
 
    export const prompts: BenchmarkPrompt[] = [
@@ -274,12 +271,7 @@ sample-project/
    ];
    ```
 
-3. **Run setup** to pre-index:
-   ```bash
-   npx tsx benchmark/lib/setup.ts sample-projects/my-project
-   ```
-
-4. **Run benchmarks**:
+3. **Run benchmarks**:
    ```bash
    npx tsx benchmark/lib/run.ts sample-projects/my-project
    ```

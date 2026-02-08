@@ -25,7 +25,6 @@ import { appendRuns, loadHistory } from "./history.js";
 import { formatReportMarkdown, generateReport } from "./report.js";
 import { shouldRunScenario } from "./runDecision.js";
 import {
-  checkDatabase,
   runBenchmarkIteration,
   saveResults,
   startHttpServer,
@@ -41,7 +40,6 @@ import type {
 
 const DEFAULT_RUNS = 1;
 const DEFAULT_CONCURRENCY = 6;
-const DEFAULT_DB_PATH = ".ts-graph-mcp/graph.db";
 const DEFAULT_MIN_RUNS = 5;
 
 interface RunnerOptions {
@@ -166,12 +164,7 @@ export async function runBenchmarks(
   prompts: BenchmarkPrompt[],
   options: RunnerOptions,
 ): Promise<void> {
-  const dbPath = config.dbPath ?? DEFAULT_DB_PATH;
-
-  // Check database exists
-  checkDatabase(config.projectRoot, dbPath);
-
-  // Start HTTP server (required for MCP tools)
+  // Start HTTP server (handles indexing on startup)
   const serverResult = await startHttpServer(config.projectRoot);
   if (!serverResult) {
     console.error("");

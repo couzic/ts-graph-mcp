@@ -5,12 +5,10 @@ Measures MCP tool effectiveness by comparing Claude Code performance WITH vs WIT
 ## Quick Start
 
 ```bash
-# Setup (index the test project)
-npm run benchmark:setup sample-projects/monorepo
-
-# Run benchmarks
-npm run benchmark sample-projects/monorepo
+npm run benchmark:monorepo
 ```
+
+The HTTP server starts automatically, indexes the project, and runs benchmarks once ready.
 
 ## Key Concepts
 
@@ -38,19 +36,19 @@ npm run benchmark sample-projects/monorepo
 
 ```
 benchmark/
-├── lib/                    # Shared benchmark library
-│   ├── run.ts              # Main orchestrator (CLI entry)
-│   ├── runner.ts           # Claude CLI execution
-│   ├── history.ts          # History file I/O
-│   ├── runDecision.ts      # Skip logic for WITHOUT_MCP
+├── lib/                         # Shared benchmark library
+│   ├── run.ts                   # Main orchestrator (CLI entry)
+│   ├── runner.ts                # Claude CLI execution, HTTP server management
+│   ├── history.ts               # History file I/O
+│   ├── runDecision.ts           # Skip logic for WITHOUT_MCP
 │   ├── historicalComparison.ts  # Compare vs historical averages
-│   ├── report.ts           # Report generation
-│   ├── scenarios.ts        # WITH/WITHOUT MCP configs
-│   └── types.ts            # Type definitions
-└── results/                # Output directory
+│   ├── report.ts                # Report generation
+│   ├── scenarios.ts             # WITH/WITHOUT MCP configs
+│   └── types.ts                 # Type definitions
+└── results/                     # Output directory
     └── <project>/
-        ├── history.json    # Persistent run history
-        └── run-*.json      # Individual run snapshots
+        ├── history.json         # Persistent run history
+        └── run-*.json           # Individual run snapshots
 ```
 
 ## Adding a Test Project
@@ -63,7 +61,6 @@ import type { BenchmarkConfig, BenchmarkPrompt } from "../../benchmark/lib/index
 export const config: BenchmarkConfig = {
   projectName: "my-project",
   projectRoot: import.meta.dirname + "/..",
-  tsconfig: "tsconfig.json",
 };
 
 export const prompts: BenchmarkPrompt[] = [

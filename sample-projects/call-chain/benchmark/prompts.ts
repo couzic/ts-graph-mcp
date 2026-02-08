@@ -19,7 +19,6 @@ import type {
 export const config: BenchmarkConfig = {
   projectName: "call-chain",
   projectRoot: `${import.meta.dirname}/..`,
-  tsconfig: "tsconfig.json",
 };
 
 export const prompts: BenchmarkPrompt[] = [

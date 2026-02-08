@@ -12,14 +12,6 @@ export interface BenchmarkConfig {
   projectName: string;
   /** Absolute path to the test project root */
   projectRoot: string;
-  /** Relative path to tsconfig.json from projectRoot */
-  tsconfig: string;
-  /** Module name for the project config (defaults to projectName) */
-  moduleName?: string;
-  /** Package name for the project config (defaults to "main") */
-  packageName?: string;
-  /** Relative path to database from projectRoot (defaults to ".ts-graph-mcp/graph.db") */
-  dbPath?: string;
 }
 
 export interface ClaudeJsonOutput {

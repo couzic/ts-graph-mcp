@@ -22,7 +22,6 @@ import type {
 export const config: BenchmarkConfig = {
   projectName: "monorepo",
   projectRoot: `${import.meta.dirname}/..`,
-  tsconfig: "tsconfig.json",
 };
 
 export const prompts: BenchmarkPrompt[] = [

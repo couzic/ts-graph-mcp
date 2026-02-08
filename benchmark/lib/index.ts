@@ -23,7 +23,6 @@
  *
  * Then run:
  * ```bash
- * npx tsx benchmark/lib/setup.ts sample-projects/my-project
  * npx tsx benchmark/lib/run.ts sample-projects/my-project
  * ```
  */
@@ -35,5 +34,4 @@ export { runBenchmarks } from "./run.js";
 export * from "./runDecision.js";
 export * from "./runner.js";
 export * from "./scenarios.js";
-export { setupBenchmark } from "./setup.js";
 export * from "./types.js";
