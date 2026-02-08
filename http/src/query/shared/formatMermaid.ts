@@ -90,7 +90,8 @@ export const formatMermaid = (
 
   const getDisplayName = (nodeId: string): string => {
     const baseName = displayNames.get(nodeId) ?? extractSymbol(nodeId);
-    return formatDisplayName(nodeId, baseName, displayContext);
+    const name = formatDisplayName(nodeId, baseName, displayContext);
+    return name.replace(/</g, "&lt;").replace(/>/g, "&gt;");
   };
 
   // Mermaid requires valid identifiers - replace special chars

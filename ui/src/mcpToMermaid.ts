@@ -69,10 +69,11 @@ export const mcpToMermaid = (mcpOutput: string): string => {
  */
 const sanitizeNodeId = (id: string): string => {
   // Replace dots and special chars with underscores for the ID
-  // but keep the original as the display label
-  if (id.includes(".") || id.includes(":") || id.includes("-")) {
-    const safeId = id.replace(/[.:-]/g, "_");
-    return `${safeId}["${id}"]`;
+  // but keep the original as the display label (with angle brackets escaped)
+  if (/[.:\-<>]/.test(id)) {
+    const safeId = id.replace(/[^a-zA-Z0-9_]/g, "_");
+    const safeLabel = id.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    return `${safeId}["${safeLabel}"]`;
   }
   return id;
 };

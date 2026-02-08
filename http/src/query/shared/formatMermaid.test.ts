@@ -477,5 +477,20 @@ describe("formatMermaid", () => {
       expect(result).toContain('["fnA"]');
       expect(result).toContain('["fnB"]');
     });
+
+    it("escapes angle brackets in generic type display names", () => {
+      const edges: GraphEdge[] = [
+        {
+          source: "src/edge.ts:Function:edge",
+          target: "src/edge.ts:SyntheticType:ReturnType<typeof edge>",
+          type: "RETURNS",
+        },
+      ];
+
+      const result = formatMermaid(edges);
+
+      expect(result).not.toContain("<typeof");
+      expect(result).toContain("&lt;typeof edge&gt;");
+    });
   });
 });

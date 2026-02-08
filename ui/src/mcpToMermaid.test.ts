@@ -72,4 +72,16 @@ User.save --CALLS--> Database.insert
     const result = mcpToMermaid(mcp);
     expect(result).toContain("NoEdges");
   });
+
+  it("escapes angle brackets in generic type names", () => {
+    const mcp = `## Graph
+
+edge --RETURNS--> ReturnType<typeof edge>
+
+## Nodes`;
+
+    const result = mcpToMermaid(mcp);
+    expect(result).not.toContain("<typeof");
+    expect(result).toContain("&lt;typeof edge&gt;");
+  });
 });
