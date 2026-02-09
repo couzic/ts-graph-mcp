@@ -1,5 +1,37 @@
 # Known Issues
 
+## Topic Not Combined with FROM/TO Traversals
+
+**Impact:** Medium (feature gap)
+
+**Problem:** When a topic is submitted AND a from/to endpoint is set, the topic
+is silently ignored. The UI query logic in `ui/src/appVertexConfig.ts` treats
+topic search as standalone only — it fires only when both endpoints are null.
+
+The backend `POST /api/graph/search` accepts `topic` alongside `from`/`to`, but
+the UI never sends them together.
+
+**Current behavior (UI):**
+
+| Topic | FROM | TO  | Result                      |
+| ----- | ---- | --- | --------------------------- |
+| set   | -    | -   | Semantic search (topic)     |
+| set   | set  | -   | Forward traversal (topic ignored) |
+| set   | -    | set | Backward traversal (topic ignored) |
+| set   | set  | set | Path finding (topic ignored) |
+
+**Goal:** Support combined queries — topic should act as a semantic filter when
+used alongside from/to endpoints. For example: "starting from handleRequest,
+find calls related to validation".
+
+**Affected files:**
+
+- `ui/src/appVertexConfig.ts` — query dispatch logic (lines 214-264)
+- `ui/src/ApiService.ts` — `searchGraph()` needs to accept optional `topic`
+- `http/src/query/` — backend query handlers need to support topic filtering
+
+---
+
 ## Branded Types Not Enforced
 
 **Impact:** Low (type safety)

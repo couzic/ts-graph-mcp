@@ -60,11 +60,12 @@ const HealthBadge = () => {
 };
 
 const MainContent = () => {
-  const { fromEndpoint, toEndpoint, topic, outputFormat, mermaidDirection, maxNodes, fromSearchQuery, toSearchQuery } =
+  const { fromEndpoint, toEndpoint, topicInput, submittedTopic, outputFormat, mermaidDirection, maxNodes, fromSearchQuery, toSearchQuery } =
     useVertexState(appVertex, [
       "fromEndpoint",
       "toEndpoint",
-      "topic",
+      "topicInput",
+      "submittedTopic",
       "outputFormat",
       "mermaidDirection",
       "maxNodes",
@@ -103,8 +104,18 @@ const MainContent = () => {
     graph.dispatch(appActions.swapEndpoints());
   };
 
-  const handleTopicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    graph.dispatch(appActions.setTopic(e.target.value));
+  const handleTopicInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    graph.dispatch(appActions.setTopicInput(e.target.value));
+  };
+
+  const handleSubmitTopic = () => {
+    graph.dispatch(appActions.submitTopic());
+  };
+
+  const handleTopicKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleSubmitTopic();
+    }
   };
 
   const handleFormatChange = (format: OutputFormat) => {
@@ -123,13 +134,19 @@ const MainContent = () => {
     <main style={mainStyle}>
       <section style={topicSectionStyle}>
         <label style={topicLabelStyle}>Topic (semantic search)</label>
-        <input
-          type="text"
-          value={topic}
-          onChange={handleTopicChange}
-          placeholder="e.g., user authentication, validation, database queries..."
-          style={topicInputStyle}
-        />
+        <div style={topicRowStyle}>
+          <input
+            type="text"
+            value={topicInput}
+            onChange={handleTopicInputChange}
+            onKeyDown={handleTopicKeyDown}
+            placeholder="e.g., user authentication, validation, database queries..."
+            style={topicInputStyle}
+          />
+          <button onClick={handleSubmitTopic} style={topicSearchButtonStyle}>
+            Search
+          </button>
+        </div>
       </section>
 
       <section style={selectorsStyle}>
@@ -182,7 +199,7 @@ const MainContent = () => {
             mermaidDirection={mermaidDirection}
             hasFromEndpoint={fromEndpoint !== null}
             hasToEndpoint={toEndpoint !== null}
-            hasTopic={topic.trim().length > 0}
+            hasTopic={submittedTopic.trim().length > 0}
           />
         </Suspense>
       </section>
@@ -302,7 +319,13 @@ const topicLabelStyle: React.CSSProperties = {
   fontWeight: 500,
 };
 
+const topicRowStyle: React.CSSProperties = {
+  display: "flex",
+  gap: "0.5rem",
+};
+
 const topicInputStyle: React.CSSProperties = {
+  flex: 1,
   padding: "0.5rem 0.75rem",
   fontSize: "0.875rem",
   backgroundColor: "#2a2a2a",
@@ -310,6 +333,17 @@ const topicInputStyle: React.CSSProperties = {
   borderRadius: "4px",
   color: "#fff",
   outline: "none",
+};
+
+const topicSearchButtonStyle: React.CSSProperties = {
+  padding: "0.5rem 1rem",
+  fontSize: "0.875rem",
+  fontWeight: 500,
+  backgroundColor: "#333",
+  border: "1px solid #646cff",
+  borderRadius: "4px",
+  color: "#fff",
+  cursor: "pointer",
 };
 
 const selectorsStyle: React.CSSProperties = {

@@ -59,7 +59,7 @@ vertex.loadableState$.subscribe(state => {
 ## UI Components
 
 ### Topic Input
-Text field for semantic/topic search. When filled (with FROM/TO empty), triggers `searchByTopic` API.
+Text field for semantic/topic search. When submitted via Enter or Search button (with FROM/TO empty), triggers `searchByTopic` API.
 
 ### FROM/TO Selectors
 Creatable select components that support two modes:

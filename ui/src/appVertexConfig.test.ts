@@ -311,14 +311,30 @@ describe("appVertexConfig", () => {
       expect(vertex.currentState.queryResult).toEqual(dependentsResult);
     });
 
-    it("fetches semantic search when only topic is specified", () => {
+    it("fetches semantic search when topic is submitted", () => {
       const topicResult = toGraphResult("## Symbols matching 'auth'");
 
-      graph.dispatch(appActions.setTopic("auth"));
+      graph.dispatch(appActions.setTopicInput("auth"));
+      graph.dispatch(appActions.submitTopic());
       vi.advanceTimersByTime(400);
       receivedTopic$.next(topicResult);
 
       expect(vertex.currentState.queryResult).toEqual(topicResult);
+    });
+
+    it("does not fetch when topic is typed but not submitted", () => {
+      graph.dispatch(appActions.setTopicInput("auth"));
+      vi.advanceTimersByTime(400);
+
+      expect(vertex.currentState.queryResult).toBeNull();
+    });
+
+    it("does not fetch when submitted topic is whitespace only", () => {
+      graph.dispatch(appActions.setTopicInput("   "));
+      graph.dispatch(appActions.submitTopic());
+      vi.advanceTimersByTime(400);
+
+      expect(vertex.currentState.queryResult).toBeNull();
     });
   });
 

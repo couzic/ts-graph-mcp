@@ -17,7 +17,8 @@ export type MermaidDirection = "LR" | "TD";
 type AppState = {
   fromEndpoint: GraphEndpoint | null;
   toEndpoint: GraphEndpoint | null;
-  topic: string;
+  topicInput: string;
+  submittedTopic: string;
   outputFormat: OutputFormat;
   mermaidDirection: MermaidDirection;
   maxNodes: number;
@@ -65,7 +66,8 @@ const filterOutSelected = (
 const initialState: AppState = {
   fromEndpoint: null,
   toEndpoint: null,
-  topic: "",
+  topicInput: "",
+  submittedTopic: "",
   outputFormat: "mcp",
   mermaidDirection: "LR",
   maxNodes: 50,
@@ -90,8 +92,11 @@ const appSlice = createSlice({
         addToHistory(state, action.payload);
       }
     },
-    setTopic: (state, action: PayloadAction<string>) => {
-      state.topic = action.payload;
+    setTopicInput: (state, action: PayloadAction<string>) => {
+      state.topicInput = action.payload;
+    },
+    submitTopic: (state) => {
+      state.submittedTopic = state.topicInput;
     },
     setOutputFormat: (state, action: PayloadAction<OutputFormat>) => {
       state.outputFormat = action.payload;
@@ -207,7 +212,7 @@ const buildVertexConfig = (dependencies: { apiService: () => ApiService }) =>
         },
       )
       .loadFromFields$(
-        ["fromEndpoint", "toEndpoint", "topic", "maxNodes", "outputFormat"],
+        ["fromEndpoint", "toEndpoint", "submittedTopic", "maxNodes", "outputFormat"],
         {
           queryResult: (fields$) =>
             fields$.pipe(
@@ -216,14 +221,14 @@ const buildVertexConfig = (dependencies: { apiService: () => ApiService }) =>
                 ({
                   fromEndpoint,
                   toEndpoint,
-                  topic,
+                  submittedTopic,
                   maxNodes,
                   outputFormat,
                 }) => {
                   const format = outputFormat;
                   // Topic only → semantic search
-                  if (topic.trim() && !fromEndpoint && !toEndpoint) {
-                    return apiService.searchByTopic(topic, maxNodes, format);
+                  if (submittedTopic.trim() && !fromEndpoint && !toEndpoint) {
+                    return apiService.searchByTopic(submittedTopic, maxNodes, format);
                   }
                   // FROM only → dependenciesOf (what does this call?)
                   if (fromEndpoint && !toEndpoint) {
