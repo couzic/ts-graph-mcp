@@ -1,9 +1,9 @@
+import type { GraphSearchResult } from "./ApiService.js";
 import type { MermaidDirection, OutputFormat } from "./graph.js";
-import { mcpToMermaid } from "./mcpToMermaid.js";
 import { MermaidRenderer } from "./MermaidRenderer.js";
 
 type QueryResultsProps = {
-  result: string | null;
+  result: GraphSearchResult | null;
   format: OutputFormat;
   mermaidDirection: MermaidDirection;
   hasFromEndpoint: boolean;
@@ -60,9 +60,9 @@ export const QueryResults = ({
         <span style={formatBadgeStyle}>{format.toUpperCase()}</span>
       </div>
       {format === "mermaid" ? (
-        <MermaidRenderer syntax={mcpToMermaid(result)} direction={mermaidDirection} />
+        <MermaidRenderer syntax={result.result} direction={mermaidDirection} />
       ) : (
-        <pre style={resultStyle}>{result}</pre>
+        <pre style={resultStyle}>{result.result}</pre>
       )}
     </div>
   );

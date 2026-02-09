@@ -1,70 +1,52 @@
 import type Database from "better-sqlite3";
 import { collectNodeIds } from "../shared/collectNodeIds.js";
-import {
-  enrichNodesWithCallSites,
-  formatToolOutput,
-} from "../shared/formatToolOutput.js";
-import { loadNodeSnippets } from "../shared/loadNodeSnippets.js";
 import type { GraphEdgeWithCallSites } from "../shared/parseEdgeRows.js";
+import { messageResult, type QueryResult } from "../shared/QueryResult.js";
 import { queryAliasMap } from "../shared/queryAliasMap.js";
 import { queryNodeInfos } from "../shared/queryNodeInfos.js";
+import { queryNodeMetadata } from "../shared/queryNodeMetadata.js";
 
 /**
- * Input for formatting a filtered traversal result.
+ * Input for building a QueryResult from filtered traversal edges.
  */
-export interface FormatFilteredTraversalInput {
-  /** Database connection */
+export interface FilteredTraversalInput {
   db: Database.Database;
-  /** Edges in the traversal (already filtered) */
   edges: GraphEdgeWithCallSites[];
-  /** Node ID of the starting point (to exclude from Nodes section) */
   startNodeId: string;
-  /** Maximum nodes in output */
   maxNodes?: number;
-  /** Message to prepend (e.g., resolution message) */
   prependMessage?: string;
 }
 
 /**
- * Format a filtered traversal result into the standard tool output format.
+ * Build a QueryResult from filtered traversal edges.
  *
- * This is used when edges have been filtered (e.g., by topic) and need to be
- * formatted into the Graph + Nodes sections.
+ * Used when edges have been filtered (e.g., by topic) and need to be
+ * packaged as a QueryResult.
  */
-export const formatFilteredTraversal = (
-  input: FormatFilteredTraversalInput,
-): string => {
+export const buildFilteredTraversalResult = (
+  input: FilteredTraversalInput,
+): QueryResult => {
   const { db, edges, startNodeId, maxNodes, prependMessage } = input;
 
   if (edges.length === 0) {
     const noResults = "No results found matching the filter.";
-    return prependMessage ? `${prependMessage}\n\n${noResults}` : noResults;
+    return messageResult(
+      prependMessage ? `${prependMessage}\n\n${noResults}` : noResults,
+    );
   }
 
-  // Collect node IDs from filtered edges
   const nodeIds = collectNodeIds(edges);
-
-  // Query alias map for display simplification
   const aliasMap = queryAliasMap(db, nodeIds);
-
-  // Exclude start node from Nodes section (already known to the agent)
+  const metadataByNodeId = queryNodeMetadata(db, nodeIds);
   const nodeIdsToQuery = nodeIds.filter((id) => id !== startNodeId);
-
-  // Query node information
   const nodes = queryNodeInfos(db, nodeIdsToQuery);
 
-  // Enrich with call sites BEFORE loading snippets
-  const enrichedNodes = enrichNodesWithCallSites(nodes, edges);
-
-  const nodesWithSnippets = loadNodeSnippets(enrichedNodes, nodes.length);
-
-  // Format output
-  const output = formatToolOutput({
+  return {
     edges,
-    nodes: nodesWithSnippets,
-    maxNodes,
+    nodes,
     aliasMap,
-  });
-
-  return prependMessage ? `${prependMessage}\n\n${output}` : output;
+    metadataByNodeId,
+    maxNodes,
+    message: prependMessage,
+  };
 };

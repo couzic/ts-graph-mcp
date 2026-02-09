@@ -178,3 +178,18 @@ export interface HealthResponse {
 
 // Output format for API
 export type OutputFormat = "mcp" | "mermaid" | "md";
+
+// Graph search API request body
+export type GraphSearchEndpoint = {
+  query?: string;
+  symbol?: string;
+  file_path?: string;
+};
+
+export type GraphSearchRequest = {
+  topic?: string;
+  from?: GraphSearchEndpoint;
+  to?: GraphSearchEndpoint;
+  max_nodes?: number;
+  format?: OutputFormat;
+};

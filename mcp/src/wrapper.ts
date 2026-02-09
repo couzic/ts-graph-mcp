@@ -161,12 +161,19 @@ Edge types in output: CALLS, REFERENCES, EXTENDS, IMPLEMENTS, INCLUDES`,
       },
     },
     async ({ topic, from, to, max_nodes }) => {
-      const body = { topic, from, to, max_nodes };
+      const body = { topic, from, to, max_nodes, format: "mcp" };
       const result = await httpPostRequest(port, "/api/graph/search", body);
 
+      if (!result.ok) {
+        return {
+          content: [{ type: "text", text: result.text }],
+          isError: true,
+        };
+      }
+
+      const parsed = JSON.parse(result.text) as { result: string };
       return {
-        content: [{ type: "text", text: result.text }],
-        isError: !result.ok,
+        content: [{ type: "text", text: parsed.result }],
       };
     },
   );

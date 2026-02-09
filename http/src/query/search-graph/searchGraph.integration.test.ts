@@ -15,7 +15,11 @@ import {
 } from "../../search/createSearchIndex.js";
 import { populateSearchIndex } from "../../search/populateSearchIndex.js";
 import type { SearchDocument } from "../../search/SearchTypes.js";
+import { formatMcpFromResult } from "../shared/formatFromResult.js";
+import type { QueryResult } from "../shared/QueryResult.js";
 import { searchGraph } from "./searchGraph.js";
+
+const toMcp = (result: QueryResult): string => formatMcpFromResult(result);
 
 const fn = (name: string, file = "src/test.ts"): FunctionNode => ({
   id: `${file}:Function:${name}`,
@@ -56,7 +60,7 @@ describe(searchGraph.name, () => {
 
   it("returns error when no constraints provided", async () => {
     const result = await searchGraph(db, {}, { embeddingProvider });
-    expect(result).toContain("At least one of");
+    expect(toMcp(result)).toContain("At least one of");
   });
 
   describe("forward traversal (from only)", () => {
@@ -74,9 +78,9 @@ describe(searchGraph.name, () => {
         { embeddingProvider },
       );
 
-      expect(result).toContain("fnA");
-      expect(result).toContain("fnB");
-      expect(result).toContain("CALLS");
+      expect(toMcp(result)).toContain("fnA");
+      expect(toMcp(result)).toContain("fnB");
+      expect(toMcp(result)).toContain("CALLS");
     });
   });
 
@@ -95,9 +99,9 @@ describe(searchGraph.name, () => {
         { embeddingProvider },
       );
 
-      expect(result).toContain("fnA");
-      expect(result).toContain("fnB");
-      expect(result).toContain("CALLS");
+      expect(toMcp(result)).toContain("fnA");
+      expect(toMcp(result)).toContain("fnB");
+      expect(toMcp(result)).toContain("CALLS");
     });
   });
 
@@ -120,9 +124,9 @@ describe(searchGraph.name, () => {
         { embeddingProvider },
       );
 
-      expect(result).toContain("fnA");
-      expect(result).toContain("fnB");
-      expect(result).toContain("fnC");
+      expect(toMcp(result)).toContain("fnA");
+      expect(toMcp(result)).toContain("fnB");
+      expect(toMcp(result)).toContain("fnC");
     });
   });
 
@@ -140,7 +144,7 @@ describe(searchGraph.name, () => {
         { embeddingProvider },
       );
 
-      expect(result).toContain("requires embeddings");
+      expect(toMcp(result)).toContain("requires embeddings");
     });
 
     it("returns graph format when topic symbols have connections", async () => {
@@ -172,11 +176,11 @@ describe(searchGraph.name, () => {
       );
 
       // Should contain graph structure
-      expect(result).toContain("## Graph");
-      expect(result).toContain("validateInput");
-      expect(result).toContain("validateOutput");
-      expect(result).toContain("CALLS");
-      expect(result).not.toContain("processData");
+      expect(toMcp(result)).toContain("## Graph");
+      expect(toMcp(result)).toContain("validateInput");
+      expect(toMcp(result)).toContain("validateOutput");
+      expect(toMcp(result)).toContain("CALLS");
+      expect(toMcp(result)).not.toContain("processData");
     });
 
     it("returns flat list when topic symbols have no connections", async () => {
@@ -198,9 +202,9 @@ describe(searchGraph.name, () => {
       );
 
       // Should indicate no connections
-      expect(result).toContain("No connections found");
-      expect(result).toContain("validateInput");
-      expect(result).toContain("validateOutput");
+      expect(toMcp(result)).toContain("No connections found");
+      expect(toMcp(result)).toContain("validateInput");
+      expect(toMcp(result)).toContain("validateOutput");
     });
 
     it("returns message when no symbols match topic", async () => {
@@ -220,7 +224,7 @@ describe(searchGraph.name, () => {
         { searchIndex, embeddingProvider },
       );
 
-      expect(result).toContain("No symbols found matching");
+      expect(toMcp(result)).toContain("No symbols found matching");
     });
   });
 
@@ -239,7 +243,7 @@ describe(searchGraph.name, () => {
         { searchIndex, embeddingProvider },
       );
 
-      expect(result).toContain("No symbols found matching query");
+      expect(toMcp(result)).toContain("No symbols found matching query");
     });
 
     it("returns helpful error when to.query resolves no symbols", async () => {
@@ -250,7 +254,7 @@ describe(searchGraph.name, () => {
         { searchIndex, embeddingProvider },
       );
 
-      expect(result).toContain("No symbols found matching query");
+      expect(toMcp(result)).toContain("No symbols found matching query");
     });
 
     it("returns multiple matching symbols for from.query", async () => {
@@ -280,9 +284,9 @@ describe(searchGraph.name, () => {
       );
 
       // Should return BOTH matching symbols as start nodes
-      expect(result).toContain("validateInput");
-      expect(result).toContain("validateOutput");
-      expect(result).toContain("processData");
+      expect(toMcp(result)).toContain("validateInput");
+      expect(toMcp(result)).toContain("validateOutput");
+      expect(toMcp(result)).toContain("processData");
     });
 
     it("returns multiple matching symbols for to.query", async () => {
@@ -312,9 +316,9 @@ describe(searchGraph.name, () => {
       );
 
       // Should return BOTH matching symbols as end nodes
-      expect(result).toContain("saveUser");
-      expect(result).toContain("saveOrder");
-      expect(result).toContain("handleRequest");
+      expect(toMcp(result)).toContain("saveUser");
+      expect(toMcp(result)).toContain("saveOrder");
+      expect(toMcp(result)).toContain("handleRequest");
     });
 
     it("resolves from.query to symbol via search (single match)", async () => {
@@ -337,8 +341,8 @@ describe(searchGraph.name, () => {
         { searchIndex, embeddingProvider },
       );
 
-      expect(result).toContain("handleUserRequest");
-      expect(result).toContain("saveToDatabase");
+      expect(toMcp(result)).toContain("handleUserRequest");
+      expect(toMcp(result)).toContain("saveToDatabase");
     });
 
     it("resolves to.query to symbol via search (single match)", async () => {
@@ -361,8 +365,8 @@ describe(searchGraph.name, () => {
         { searchIndex, embeddingProvider },
       );
 
-      expect(result).toContain("handleRequest");
-      expect(result).toContain("validateUserInput");
+      expect(toMcp(result)).toContain("handleRequest");
+      expect(toMcp(result)).toContain("validateUserInput");
     });
   });
 
@@ -397,7 +401,7 @@ describe(searchGraph.name, () => {
       );
 
       // Now falls back to semantic search result instead of failing
-      expect(result).toContain("createWriter --CALLS--> doSomething");
+      expect(toMcp(result)).toContain("createWriter --CALLS--> doSomething");
     });
 
     it("falls back to semantic search for backward traversal when no exact match", async () => {
@@ -424,7 +428,7 @@ describe(searchGraph.name, () => {
       );
 
       // Now falls back to semantic search result instead of failing
-      expect(result).toContain("processFiles --CALLS--> sourceMap");
+      expect(toMcp(result)).toContain("processFiles --CALLS--> sourceMap");
     });
 
     it("prefers exact symbol match over partial token match", async () => {
@@ -453,8 +457,8 @@ describe(searchGraph.name, () => {
       );
 
       // Should use exact match "indexProject", not partial match "reindexFiles"
-      expect(result).toContain("indexProject");
-      expect(result).toContain("indexProject --CALLS--> writeToDb");
+      expect(toMcp(result)).toContain("indexProject");
+      expect(toMcp(result)).toContain("indexProject --CALLS--> writeToDb");
     });
 
     it("falls back to semantic search when query terms partially match", async () => {
@@ -481,7 +485,7 @@ describe(searchGraph.name, () => {
       );
 
       // Falls back to semantic search, finding "handleRequest" as best match
-      expect(result).toContain("handleRequest --CALLS--> saveData");
+      expect(toMcp(result)).toContain("handleRequest --CALLS--> saveData");
     });
   });
 
@@ -533,8 +537,8 @@ describe(searchGraph.name, () => {
         { searchIndex, embeddingProvider },
       );
 
-      expect(result).toContain("processUserData");
-      expect(result).toContain("saveToStorage");
+      expect(toMcp(result)).toContain("processUserData");
+      expect(toMcp(result)).toContain("saveToStorage");
     });
   });
 });

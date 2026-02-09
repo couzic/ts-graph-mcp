@@ -17,10 +17,14 @@ import {
 import { indexProject } from "../../http/src/ingestion/indexProject.js";
 import { silentLogger } from "../../http/src/logging/SilentTsGraphLogger.js";
 import { searchGraph } from "../../http/src/query/search-graph/searchGraph.js";
+import { formatMcpFromResult } from "../../http/src/query/shared/formatFromResult.js";
+import type { QueryResult } from "../../http/src/query/shared/QueryResult.js";
 import {
   createSearchIndex,
   type SearchIndexWrapper,
 } from "../../http/src/search/createSearchIndex.js";
+
+const toMcp = (result: QueryResult): string => formatMcpFromResult(result);
 
 /**
  * E2E tests for search recall in clean-architecture sample project.
@@ -78,9 +82,9 @@ describe("search recall E2E tests", () => {
       );
 
       // Exact token match: "Provider" in symbol name
-      expect(result).toContain("ProviderService");
-      expect(result).toContain("ProviderRepository");
-      expect(result).toContain("ProviderController");
+      expect(toMcp(result)).toContain("ProviderService");
+      expect(toMcp(result)).toContain("ProviderRepository");
+      expect(toMcp(result)).toContain("ProviderController");
     });
 
     it("returns graph format with connected symbols", async () => {
@@ -92,8 +96,8 @@ describe("search recall E2E tests", () => {
 
       // With graph format, connected symbols are included
       // Provider-related symbols call each other, so graph shows edges
-      expect(result).toContain("## Graph");
-      expect(result).toContain("CALLS");
+      expect(toMcp(result)).toContain("## Graph");
+      expect(toMcp(result)).toContain("CALLS");
     });
 
     it("finds plural form with plural query", async () => {
@@ -103,7 +107,7 @@ describe("search recall E2E tests", () => {
         { searchIndex, embeddingProvider },
       );
 
-      expect(result).toContain("ManageProvidersCommand");
+      expect(toMcp(result)).toContain("ManageProvidersCommand");
     });
 
     it("finds symbols by camelCase split word", async () => {
@@ -113,8 +117,8 @@ describe("search recall E2E tests", () => {
         { searchIndex, embeddingProvider },
       );
 
-      expect(result).toContain("setAsDefault");
-      expect(result).toContain("SetDefaultProviderCommand");
+      expect(toMcp(result)).toContain("setAsDefault");
+      expect(toMcp(result)).toContain("SetDefaultProviderCommand");
     });
 
     it("finds all audit-related symbols", async () => {
@@ -124,8 +128,8 @@ describe("search recall E2E tests", () => {
         { searchIndex, embeddingProvider },
       );
 
-      expect(result).toContain("AuditService");
-      expect(result).toContain("AuditRepository");
+      expect(toMcp(result)).toContain("AuditService");
+      expect(toMcp(result)).toContain("AuditRepository");
     });
 
     it("finds methods by exact name", async () => {
@@ -135,7 +139,7 @@ describe("search recall E2E tests", () => {
         { searchIndex, embeddingProvider },
       );
 
-      expect(result).toContain("enable");
+      expect(toMcp(result)).toContain("enable");
     });
 
     it("finds controller symbols", async () => {
@@ -145,8 +149,8 @@ describe("search recall E2E tests", () => {
         { searchIndex, embeddingProvider },
       );
 
-      expect(result).toContain("AdminController");
-      expect(result).toContain("ProviderController");
+      expect(toMcp(result)).toContain("AdminController");
+      expect(toMcp(result)).toContain("ProviderController");
     });
   });
 
@@ -159,7 +163,7 @@ describe("search recall E2E tests", () => {
       );
 
       // Semantic search should find "enable" even without exact word match
-      expect(result).toContain("enable");
+      expect(toMcp(result)).toContain("enable");
     });
 
     it("finds audit via concept 'logging'", async () => {
@@ -170,7 +174,7 @@ describe("search recall E2E tests", () => {
       );
 
       // Semantic search should associate "logging" with "audit"
-      expect(result).toContain("AuditService");
+      expect(toMcp(result)).toContain("AuditService");
     });
 
     it("finds config via concept 'settings'", async () => {
@@ -180,7 +184,7 @@ describe("search recall E2E tests", () => {
         { searchIndex, embeddingProvider },
       );
 
-      expect(result).toContain("ConfigService");
+      expect(toMcp(result)).toContain("ConfigService");
     });
 
     it("finds repository via concept 'data access layer'", async () => {
@@ -191,7 +195,7 @@ describe("search recall E2E tests", () => {
       );
 
       // Semantic search: "data access layer" doesn't appear in code but relates to repositories
-      expect(result).toMatch(/Repository/);
+      expect(toMcp(result)).toMatch(/Repository/);
     });
 
     it("finds commands via concept 'action'", async () => {
@@ -201,7 +205,7 @@ describe("search recall E2E tests", () => {
         { searchIndex, embeddingProvider },
       );
 
-      expect(result).toMatch(/Command/);
+      expect(toMcp(result)).toMatch(/Command/);
     });
   });
 
@@ -215,9 +219,9 @@ describe("search recall E2E tests", () => {
       );
 
       // Verify unfiltered result includes both audit and non-audit symbols
-      expect(unfilteredResult).toContain("AuditService");
-      expect(unfilteredResult).toContain("ProviderRepository");
-      expect(unfilteredResult).toContain("ConfigService");
+      expect(toMcp(unfilteredResult)).toContain("AuditService");
+      expect(toMcp(unfilteredResult)).toContain("ProviderRepository");
+      expect(toMcp(unfilteredResult)).toContain("ConfigService");
 
       // With topic filter: only audit-related symbols should appear
       const filteredResult = await searchGraph(
@@ -227,12 +231,12 @@ describe("search recall E2E tests", () => {
       );
 
       // Should find audit-related symbols
-      expect(filteredResult).toContain("AuditService");
-      expect(filteredResult).toContain("AuditRepository");
+      expect(toMcp(filteredResult)).toContain("AuditService");
+      expect(toMcp(filteredResult)).toContain("AuditRepository");
 
       // Should NOT include provider/config symbols (not audit-related)
-      expect(filteredResult).not.toContain("ProviderRepository");
-      expect(filteredResult).not.toContain("ConfigService");
+      expect(toMcp(filteredResult)).not.toContain("ProviderRepository");
+      expect(toMcp(filteredResult)).not.toContain("ConfigService");
     });
 
     it("filters backward traversal by topic", async () => {
@@ -245,7 +249,7 @@ describe("search recall E2E tests", () => {
       );
 
       // Should find AuditService (semantically related to logging)
-      expect(result).toContain("AuditService");
+      expect(toMcp(result)).toContain("AuditService");
     });
 
     it.skip("filters path finding by topic", async () => {
@@ -262,7 +266,7 @@ describe("search recall E2E tests", () => {
       );
 
       // Path should go through audit-related nodes
-      expect(result).toContain("AuditService");
+      expect(toMcp(result)).toContain("AuditService");
     });
   });
 
@@ -275,8 +279,8 @@ describe("search recall E2E tests", () => {
       );
 
       // Should resolve to the command and find its dependencies
-      expect(result).toContain("SetDefaultProviderCommand");
-      expect(result).toContain("ProviderService");
+      expect(toMcp(result)).toContain("SetDefaultProviderCommand");
+      expect(toMcp(result)).toContain("ProviderService");
     });
 
     it("resolves to.query to find dependents", async () => {
@@ -287,7 +291,7 @@ describe("search recall E2E tests", () => {
       );
 
       // Should find callers of ProviderService
-      expect(result).toContain("ProviderService");
+      expect(toMcp(result)).toContain("ProviderService");
     });
   });
 });

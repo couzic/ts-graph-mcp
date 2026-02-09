@@ -4,12 +4,8 @@ import {
   formatDisambiguationMessage,
 } from "../shared/classMethodFallback.js";
 import { collectNodeIds } from "../shared/collectNodeIds.js";
-import { formatMermaid } from "../shared/formatMermaid.js";
-import {
-  enrichNodesWithCallSites,
-  formatToolOutput,
-} from "../shared/formatToolOutput.js";
-import { loadNodeSnippets } from "../shared/loadNodeSnippets.js";
+import { formatQueryResult } from "../shared/formatFromResult.js";
+import { messageResult, type QueryResult } from "../shared/QueryResult.js";
 import type { QueryOptions } from "../shared/QueryTypes.js";
 import { queryAliasMap } from "../shared/queryAliasMap.js";
 import { queryNodeInfos } from "../shared/queryNodeInfos.js";
@@ -18,9 +14,84 @@ import { queryDependentEdges } from "../shared/queryTraversalEdges.js";
 import { resolveSymbol } from "../shared/symbolNotFound.js";
 
 /**
- * Find all code that depends on a symbol (reverse dependencies).
- *
- * "Who depends on this symbol?"
+ * Find all code that depends on a symbol (reverse dependencies) — returns structured data.
+ */
+export const dependentsData = (
+  db: Database.Database,
+  filePath: string | undefined,
+  symbol: string,
+  options: { maxNodes?: number } = {},
+): QueryResult => {
+  const resolution = resolveSymbol(db, filePath, symbol);
+  if (!resolution.success) {
+    return messageResult(resolution.error);
+  }
+
+  const nodeId = resolution.nodeId;
+  const resolutionMessage = resolution.message;
+  const filePathWasResolved = resolution.filePathWasResolved ?? false;
+
+  let edges = queryDependentEdges(db, nodeId);
+  let currentNodeId = nodeId;
+  let fallbackMessage: string | undefined;
+
+  if (edges.length === 0) {
+    const fallback = attemptClassMethodFallback(db, nodeId);
+
+    if (fallback.type === "single-method") {
+      // biome-ignore lint/style/noNonNullAssertion: split after includes check
+      const className = symbol.includes(".") ? symbol.split(".")[0]! : symbol;
+      fallbackMessage = `Resolved '${className}' to ${className}.${fallback.methodName}`;
+      currentNodeId = fallback.methodId;
+      edges = queryDependentEdges(db, currentNodeId);
+    } else if (fallback.type === "multiple-methods") {
+      // biome-ignore lint/style/noNonNullAssertion: split after includes check
+      const className = symbol.includes(".") ? symbol.split(".")[0]! : symbol;
+      const disambiguation = formatDisambiguationMessage(
+        className,
+        fallback.methods,
+      );
+      return messageResult(
+        resolutionMessage
+          ? `${resolutionMessage}\n\n${disambiguation}`
+          : disambiguation,
+      );
+    }
+  }
+
+  const combinedMessage = [resolutionMessage, fallbackMessage]
+    .filter(Boolean)
+    .join("\n\n");
+
+  if (edges.length === 0) {
+    const noResults = "No dependents found.";
+    return messageResult(
+      combinedMessage ? `${combinedMessage}\n\n${noResults}` : noResults,
+    );
+  }
+
+  const nodeIds = collectNodeIds(edges);
+  const aliasMap = queryAliasMap(db, nodeIds);
+  const metadataByNodeId = queryNodeMetadata(db, nodeIds);
+
+  const nodeIdsToQuery = filePathWasResolved
+    ? nodeIds
+    : nodeIds.filter((id) => id !== currentNodeId);
+  const nodes = queryNodeInfos(db, nodeIdsToQuery);
+
+  return {
+    edges,
+    nodes,
+    aliasMap,
+    metadataByNodeId,
+    maxNodes: options.maxNodes,
+    message: combinedMessage || undefined,
+  };
+};
+
+/**
+ * Test-only convenience wrapper around `dependentsData` + `formatQueryResult`.
+ * Production code uses `dependentsData` directly via `searchGraph`.
  */
 export function dependentsOf(
   db: Database.Database,
@@ -28,96 +99,6 @@ export function dependentsOf(
   symbol: string,
   options: QueryOptions = {},
 ): string {
-  // Resolve symbol (handles exact match + method name auto-resolution)
-  const resolution = resolveSymbol(db, filePath, symbol);
-  if (!resolution.success) {
-    return resolution.error;
-  }
-
-  const nodeId = resolution.nodeId;
-  const resolutionMessage = resolution.message;
-  const filePathWasResolved = resolution.filePathWasResolved ?? false;
-
-  // Query edges
-  let edges = queryDependentEdges(db, nodeId);
-  let currentNodeId = nodeId;
-  let fallbackMessage: string | undefined;
-
-  // If no dependents found, attempt class method fallback
-  if (edges.length === 0) {
-    const fallback = attemptClassMethodFallback(db, nodeId);
-
-    if (fallback.type === "single-method") {
-      // Auto-resolve to the single method with dependents
-      // biome-ignore lint/style/noNonNullAssertion: split after includes check
-      const className = symbol.includes(".") ? symbol.split(".")[0]! : symbol;
-      fallbackMessage = `Resolved '${className}' to ${className}.${fallback.methodName}`;
-      currentNodeId = fallback.methodId;
-      edges = queryDependentEdges(db, currentNodeId);
-    } else if (fallback.type === "multiple-methods") {
-      // Return disambiguation message
-      // biome-ignore lint/style/noNonNullAssertion: split after includes check
-      const className = symbol.includes(".") ? symbol.split(".")[0]! : symbol;
-      const disambiguation = formatDisambiguationMessage(
-        className,
-        fallback.methods,
-      );
-      return resolutionMessage
-        ? `${resolutionMessage}\n\n${disambiguation}`
-        : disambiguation;
-    }
-  }
-
-  // Combine resolution messages
-  const combinedMessage = [resolutionMessage, fallbackMessage]
-    .filter(Boolean)
-    .join("\n\n");
-
-  if (edges.length === 0) {
-    const noResults = "No dependents found.";
-    return combinedMessage ? `${combinedMessage}\n\n${noResults}` : noResults;
-  }
-
-  // Collect all node IDs from edges
-  const nodeIds = collectNodeIds(edges);
-
-  // Query alias map for display simplification
-  const aliasMap = queryAliasMap(db, nodeIds);
-
-  // For mermaid format, skip node loading and return graph only
-  if (options.format === "mermaid") {
-    const metadataByNodeId = queryNodeMetadata(db, nodeIds);
-    const output = formatMermaid(edges, {
-      maxNodes: options.maxNodes,
-      metadataByNodeId,
-      aliasMap,
-    });
-    return combinedMessage ? `${combinedMessage}\n\n${output}` : output;
-  }
-
-  // Query node information
-  // When file_path was auto-resolved, include input node so agent sees which file was resolved
-  // Otherwise, exclude it from the query (exclusion happens here for MCP text output)
-  const nodeIdsToQuery = filePathWasResolved
-    ? nodeIds
-    : nodeIds.filter((id) => id !== currentNodeId);
-  const nodes = queryNodeInfos(db, nodeIdsToQuery);
-
-  // Enrich with call sites BEFORE loading snippets
-  // (so extractSnippet can truncate around call sites)
-  const enrichedNodes = enrichNodesWithCallSites(nodes, edges);
-
-  const nodesWithSnippets = loadNodeSnippets(enrichedNodes, nodes.length);
-
-  // Format output (pure)
-  // Exclusion already happened at query time (nodeIdsToQuery)
-  const output = formatToolOutput({
-    edges,
-    nodes: nodesWithSnippets,
-    maxNodes: options.maxNodes,
-    aliasMap,
-  });
-
-  // Prepend resolution message if symbol was auto-resolved
-  return combinedMessage ? `${combinedMessage}\n\n${output}` : output;
+  const result = dependentsData(db, filePath, symbol, options);
+  return formatQueryResult(result, options.format);
 }

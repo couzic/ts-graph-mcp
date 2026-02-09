@@ -3,13 +3,9 @@ import {
   attemptClassMethodFallback,
   formatDisambiguationMessage,
 } from "../shared/classMethodFallback.js";
-import { formatMermaid } from "../shared/formatMermaid.js";
-import {
-  type EdgeWithCallSites,
-  enrichNodesWithCallSites,
-  formatToolOutput,
-} from "../shared/formatToolOutput.js";
-import { loadNodeSnippets } from "../shared/loadNodeSnippets.js";
+import { formatQueryResult } from "../shared/formatFromResult.js";
+import type { EdgeWithCallSites } from "../shared/formatToolOutput.js";
+import { messageResult, type QueryResult } from "../shared/QueryResult.js";
 import type { QueryOptions } from "../shared/QueryTypes.js";
 import { queryAliasMap } from "../shared/queryAliasMap.js";
 import { queryNodeInfos } from "../shared/queryNodeInfos.js";
@@ -23,28 +19,22 @@ export interface SymbolRef {
 }
 
 /**
- * Find how two symbols connect through the code graph.
- *
- * "How does A reach B?"
- *
- * Bidirectional search: Finds the path regardless of which direction you specify.
- * The arrows in the output show the actual direction.
+ * Find how two symbols connect — returns structured data.
  */
-export function pathsBetween(
+export const pathsBetweenData = (
   db: Database.Database,
   from: SymbolRef,
   to: SymbolRef,
-  options: QueryOptions = {},
-): string {
-  // Resolve both symbols (handles exact match + method name auto-resolution)
+  options: { maxNodes?: number } = {},
+): QueryResult => {
   const fromResolution = resolveSymbol(db, from.file_path, from.symbol);
   if (!fromResolution.success) {
-    return fromResolution.error;
+    return messageResult(fromResolution.error);
   }
 
   const toResolution = resolveSymbol(db, to.file_path, to.symbol);
   if (!toResolution.success) {
-    return toResolution.error;
+    return messageResult(toResolution.error);
   }
 
   let fromId = fromResolution.nodeId;
@@ -52,7 +42,6 @@ export function pathsBetween(
   const fromFilePathWasResolved = fromResolution.filePathWasResolved ?? false;
   const toFilePathWasResolved = toResolution.filePathWasResolved ?? false;
 
-  // Collect resolution messages
   const resolutionMessages: string[] = [];
   if (fromResolution.message) {
     resolutionMessages.push(fromResolution.message);
@@ -61,7 +50,6 @@ export function pathsBetween(
     resolutionMessages.push(toResolution.message);
   }
 
-  // Attempt class method fallback for 'from' symbol
   const fromFallback = attemptClassMethodFallback(db, fromId);
   if (fromFallback.type === "multiple-methods") {
     const className = from.symbol.includes(".")
@@ -71,8 +59,8 @@ export function pathsBetween(
       resolutionMessages.length > 0
         ? `${resolutionMessages.join("\n")}\n\n`
         : "";
-    return (
-      prefix + formatDisambiguationMessage(className, fromFallback.methods)
+    return messageResult(
+      prefix + formatDisambiguationMessage(className, fromFallback.methods),
     );
   }
   if (fromFallback.type === "single-method") {
@@ -85,7 +73,6 @@ export function pathsBetween(
     fromId = fromFallback.methodId;
   }
 
-  // Attempt class method fallback for 'to' symbol
   const toFallback = attemptClassMethodFallback(db, toId);
   if (toFallback.type === "multiple-methods") {
     const className = to.symbol.includes(".")
@@ -95,7 +82,9 @@ export function pathsBetween(
       resolutionMessages.length > 0
         ? `${resolutionMessages.join("\n")}\n\n`
         : "";
-    return prefix + formatDisambiguationMessage(className, toFallback.methods);
+    return messageResult(
+      prefix + formatDisambiguationMessage(className, toFallback.methods),
+    );
   }
   if (toFallback.type === "single-method") {
     const className = to.symbol.includes(".")
@@ -108,31 +97,35 @@ export function pathsBetween(
   }
 
   const resolutionPrefix =
-    resolutionMessages.length > 0 ? `${resolutionMessages.join("\n")}\n\n` : "";
+    resolutionMessages.length > 0 ? resolutionMessages.join("\n") : undefined;
 
-  // Same-node check
   if (fromId === toId) {
-    return `${resolutionPrefix}Invalid query: source and target are the same symbol.`;
+    const msg = "Invalid query: source and target are the same symbol.";
+    return messageResult(
+      resolutionPrefix ? `${resolutionPrefix}\n\n${msg}` : msg,
+    );
   }
 
-  // Try forward path (from → to)
   let paths = queryPath(db, fromId, toId, { maxPaths: 1 });
-
-  // If no path, try reverse (bidirectional search)
   if (paths.length === 0) {
     paths = queryPath(db, toId, fromId, { maxPaths: 1 });
   }
 
   if (paths.length === 0) {
-    return `${resolutionPrefix}No path found.`;
+    const msg = "No path found.";
+    return messageResult(
+      resolutionPrefix ? `${resolutionPrefix}\n\n${msg}` : msg,
+    );
   }
 
   const path = paths[0];
   if (!path) {
-    return `${resolutionPrefix}No path found.`;
+    const msg = "No path found.";
+    return messageResult(
+      resolutionPrefix ? `${resolutionPrefix}\n\n${msg}` : msg,
+    );
   }
 
-  // Convert path edges to EdgeWithCallSites format
   const graphEdges: EdgeWithCallSites[] = path.edges.map((e) => ({
     source: e.source,
     target: e.target,
@@ -140,22 +133,9 @@ export function pathsBetween(
     callSites: e.callSites,
   }));
 
-  // Query alias map for display simplification
   const aliasMap = queryAliasMap(db, path.nodes);
+  const metadataByNodeId = queryNodeMetadata(db, path.nodes);
 
-  // For mermaid format, skip node loading and return graph only
-  if (options.format === "mermaid") {
-    const metadataByNodeId = queryNodeMetadata(db, path.nodes);
-    const output = formatMermaid(graphEdges, {
-      maxNodes: options.maxNodes,
-      metadataByNodeId,
-      aliasMap,
-    });
-    return resolutionPrefix + output;
-  }
-
-  // Get intermediate node IDs
-  // When file_path was auto-resolved, include that endpoint so agent sees which file was resolved
   const excludeIds = new Set<string>();
   if (!fromFilePathWasResolved) {
     excludeIds.add(fromId);
@@ -165,25 +145,28 @@ export function pathsBetween(
   }
 
   const nodeIdsToQuery = path.nodes.filter((id) => !excludeIds.has(id));
-
-  // Query node information
   const nodes = queryNodeInfos(db, nodeIdsToQuery);
 
-  // Enrich with call sites BEFORE loading snippets
-  // (so extractSnippet can truncate around call sites)
-  const enrichedNodes = enrichNodesWithCallSites(nodes, graphEdges);
-
-  const nodesWithSnippets = loadNodeSnippets(enrichedNodes, nodes.length);
-
-  // Format output (pure)
-  // Exclusion already happened at query time (nodeIdsToQuery)
-  const output = formatToolOutput({
+  return {
     edges: graphEdges,
-    nodes: nodesWithSnippets,
-    maxNodes: options.maxNodes,
+    nodes,
     aliasMap,
-  });
+    metadataByNodeId,
+    maxNodes: options.maxNodes,
+    message: resolutionPrefix,
+  };
+};
 
-  // Prepend resolution messages if any symbols were auto-resolved
-  return resolutionPrefix + output;
+/**
+ * Test-only convenience wrapper around `pathsBetweenData` + `formatQueryResult`.
+ * Production code uses `pathsBetweenData` directly via `searchGraph`.
+ */
+export function pathsBetween(
+  db: Database.Database,
+  from: SymbolRef,
+  to: SymbolRef,
+  options: QueryOptions = {},
+): string {
+  const result = pathsBetweenData(db, from, to, options);
+  return formatQueryResult(result, options.format);
 }

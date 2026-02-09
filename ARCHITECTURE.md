@@ -144,8 +144,12 @@ Content-Type: application/json
   "topic": "validation",           // Semantic search (optional)
   "from": { "symbol": "handleRequest", "file_path": "src/api.ts" },
   "to": { "symbol": "saveData", "file_path": "src/db.ts" },
-  "max_nodes": 50
+  "max_nodes": 50,
+  "format": "mcp"                  // "mcp" (default) or "mermaid"
 }
+
+Response:
+{ "result": "## Graph\n\nhandleRequest --CALLS--> ..." }
 ```
 
 Query patterns:

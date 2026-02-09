@@ -206,36 +206,57 @@ const buildVertexConfig = (dependencies: { apiService: () => ApiService }) =>
             ),
         },
       )
-      .loadFromFields$(["fromEndpoint", "toEndpoint", "topic", "maxNodes"], {
-        queryResult: (fields$) =>
-          fields$.pipe(
-            debounceTime(300),
-            switchMap(({ fromEndpoint, toEndpoint, topic, maxNodes }) => {
-              // Topic only → semantic search
-              if (topic.trim() && !fromEndpoint && !toEndpoint) {
-                return apiService.searchByTopic(topic, maxNodes);
-              }
-              // FROM only → dependenciesOf (what does this call?)
-              if (fromEndpoint && !toEndpoint) {
-                return apiService.searchGraph({ from: fromEndpoint, maxNodes });
-              }
-              // TO only → dependentsOf (who calls this?)
-              if (!fromEndpoint && toEndpoint) {
-                return apiService.searchGraph({ to: toEndpoint, maxNodes });
-              }
-              // Both → pathsBetween
-              if (fromEndpoint && toEndpoint) {
-                return apiService.searchGraph({
-                  from: fromEndpoint,
-                  to: toEndpoint,
+      .loadFromFields$(
+        ["fromEndpoint", "toEndpoint", "topic", "maxNodes", "outputFormat"],
+        {
+          queryResult: (fields$) =>
+            fields$.pipe(
+              debounceTime(300),
+              switchMap(
+                ({
+                  fromEndpoint,
+                  toEndpoint,
+                  topic,
                   maxNodes,
-                });
-              }
-              // Neither selected
-              return of(null);
-            }),
-          ),
-      }),
+                  outputFormat,
+                }) => {
+                  const format = outputFormat;
+                  // Topic only → semantic search
+                  if (topic.trim() && !fromEndpoint && !toEndpoint) {
+                    return apiService.searchByTopic(topic, maxNodes, format);
+                  }
+                  // FROM only → dependenciesOf (what does this call?)
+                  if (fromEndpoint && !toEndpoint) {
+                    return apiService.searchGraph({
+                      from: fromEndpoint,
+                      maxNodes,
+                      format,
+                    });
+                  }
+                  // TO only → dependentsOf (who calls this?)
+                  if (!fromEndpoint && toEndpoint) {
+                    return apiService.searchGraph({
+                      to: toEndpoint,
+                      maxNodes,
+                      format,
+                    });
+                  }
+                  // Both → pathsBetween
+                  if (fromEndpoint && toEndpoint) {
+                    return apiService.searchGraph({
+                      from: fromEndpoint,
+                      to: toEndpoint,
+                      maxNodes,
+                      format,
+                    });
+                  }
+                  // Neither selected
+                  return of(null);
+                },
+              ),
+            ),
+        },
+      ),
   );
 
 export const appVertexConfig = buildVertexConfig({

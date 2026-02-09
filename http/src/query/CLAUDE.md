@@ -64,20 +64,27 @@ interface.
 **Note:** Topic filtering for path finding (`{ topic, from, to }`) is not yet
 implemented.
 
-**Internal functions.** The `dependenciesOf`, `dependentsOf`, and `pathsBetween`
-functions are internal implementations called by `searchGraph`. They're also
-used directly by e2e tests.
+**Internal functions.** The core query functions are `dependenciesData`,
+`dependentsData`, and `pathsBetweenData` — they return structured `QueryResult`
+objects. `searchGraph` calls these directly. The convenience wrappers
+`dependenciesOf`, `dependentsOf`, and `pathsBetween` format the result into a
+string and are used by e2e tests and the HTTP API.
 
 ## searchGraph API
 
 ```typescript
-searchGraph(db, {
+// Returns structured QueryResult (not a formatted string)
+const result: QueryResult = await searchGraph(db, {
   // At least one required:
   topic?: string,           // Filter to focus on relevant nodes
   from?: GraphEndpoint,     // Start node(s)
   to?: GraphEndpoint,       // End node(s)
   max_nodes?: number        // Output limit (default: 50)
 }, options)
+
+// Format separately (done by HTTP server or MCP wrapper)
+const text = formatQueryResult(result, "mcp")     // MCP text format
+const mermaid = formatQueryResult(result, "mermaid") // Mermaid diagram
 
 type GraphEndpoint = {
   query?: string,    // Lexical + semantic search (can return multiple nodes)

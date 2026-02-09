@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import path, { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import type { GraphSearchRequest } from "@ts-graph/shared";
 import type Database from "better-sqlite3";
 import express from "express";
 import type { ProjectConfig } from "./config/Config.schemas.js";
@@ -24,6 +25,7 @@ import { type WatchHandle, watchProject } from "./ingestion/watchProject.js";
 import { consoleLogger } from "./logging/ConsoleTsGraphLogger.js";
 import type { TsGraphLogger } from "./logging/TsGraphLogger.js";
 import { searchGraph } from "./query/search-graph/searchGraph.js";
+import { formatQueryResult } from "./query/shared/formatFromResult.js";
 import {
   createSearchIndex,
   type SearchIndexWrapper,
@@ -316,12 +318,8 @@ export const startHttpServer = async (
   // Graph search endpoint
   app.use(express.json());
   app.post("/api/graph/search", async (req, res) => {
-    const { topic, from, to, max_nodes } = req.body as {
-      topic?: string;
-      from?: { query?: string; symbol?: string; file_path?: string };
-      to?: { query?: string; symbol?: string; file_path?: string };
-      max_nodes?: number;
-    };
+    const { topic, from, to, max_nodes, format } =
+      req.body as GraphSearchRequest;
 
     if (!topic && !from && !to) {
       res
@@ -335,7 +333,7 @@ export const startHttpServer = async (
       { topic, from, to, max_nodes },
       { searchIndex, embeddingProvider },
     );
-    res.type("text/plain").send(result);
+    res.json({ result: formatQueryResult(result, format) });
   });
 
   // SPA fallback - serve index.html for all other routes

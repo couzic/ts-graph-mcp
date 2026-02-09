@@ -199,10 +199,10 @@ export function anotherFunction(): number { return 42; }
         body: JSON.stringify({ topic: "lookup" }),
       },
     );
-    const graphResult = await graphResponse.text();
+    const graphJson = (await graphResponse.json()) as { result: string };
 
     // Semantic search should find the function via vector similarity
-    expect(graphResult).toContain("searchableFunction");
+    expect(graphJson.result).toContain("searchableFunction");
   });
 });
 
@@ -311,10 +311,10 @@ export function authenticateSession(token: string): boolean {
         body: JSON.stringify({ topic: "login" }),
       },
     );
-    const firstRunResult = await firstRunResponse.text();
+    const firstRunJson = (await firstRunResponse.json()) as { result: string };
 
     // Should find authentication-related symbols via semantic similarity
-    expect(firstRunResult).toContain("validateUserCredentials");
+    expect(firstRunJson.result).toContain("validateUserCredentials");
 
     // Step 3: Stop the server
     await serverHandle.close();
@@ -332,10 +332,10 @@ export function authenticateSession(token: string): boolean {
         body: JSON.stringify({ topic: "login" }),
       },
     );
-    const restartResult = await restartResponse.text();
+    const restartJson = (await restartResponse.json()) as { result: string };
 
     // This will FAIL if embeddings aren't restored from cache
-    expect(restartResult).toContain("validateUserCredentials");
+    expect(restartJson.result).toContain("validateUserCredentials");
 
     // Clean up
     await serverHandle.close();

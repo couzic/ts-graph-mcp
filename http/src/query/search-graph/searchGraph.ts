@@ -1,16 +1,17 @@
 import type Database from "better-sqlite3";
 import type { EmbeddingProvider } from "../../embedding/EmbeddingTypes.js";
 import type { SearchIndexWrapper } from "../../search/createSearchIndex.js";
-import { dependenciesOf } from "../dependencies-of/dependenciesOf.js";
-import { dependentsOf } from "../dependents-of/dependentsOf.js";
-import { pathsBetween } from "../paths-between/pathsBetween.js";
+import { dependenciesData } from "../dependencies-of/dependenciesOf.js";
+import { dependentsData } from "../dependents-of/dependentsOf.js";
+import { pathsBetweenData } from "../paths-between/pathsBetween.js";
 import type { GraphEdgeWithCallSites } from "../shared/parseEdgeRows.js";
-import type { QueryOptions } from "../shared/QueryTypes.js";
+import { messageResult, type QueryResult } from "../shared/QueryResult.js";
+
 import {
   filterEdgesToTopicRelevant,
   filterNodesByTopic,
 } from "./filterByTopic.js";
-import { formatFilteredTraversal } from "./formatFilteredTraversal.js";
+import { buildFilteredTraversalResult } from "./formatFilteredTraversal.js";
 import type { GraphEndpoint, SearchGraphInput } from "./SearchGraphTypes.js";
 import {
   queryDependencies,
@@ -21,7 +22,9 @@ import {
 /**
  * Options for searchGraph including optional search index.
  */
-export interface SearchGraphOptions extends QueryOptions {
+export interface SearchGraphOptions {
+  /** Maximum nodes to include in output */
+  maxNodes?: number;
   /** Search index for semantic queries (optional - degrades gracefully if missing) */
   searchIndex?: SearchIndexWrapper;
   /** Embedding provider for hybrid/vector search */
@@ -93,7 +96,7 @@ const queryMultipleFromEndpoints = (
   db: Database.Database,
   endpoints: ResolvedEndpoint[],
   maxNodes?: number,
-): string => {
+): QueryResult => {
   // Query edges for each endpoint
   const allEdges: GraphEdgeWithCallSites[] = [];
 
@@ -112,10 +115,10 @@ const queryMultipleFromEndpoints = (
   ];
 
   if (uniqueEdges.length === 0) {
-    return "No dependencies found for matching symbols.";
+    return messageResult("No dependencies found for matching symbols.");
   }
 
-  return formatFilteredTraversal({
+  return buildFilteredTraversalResult({
     db,
     edges: uniqueEdges,
     startNodeId: "", // No single start - include all
@@ -131,7 +134,7 @@ const queryMultipleToEndpoints = (
   db: Database.Database,
   endpoints: ResolvedEndpoint[],
   maxNodes?: number,
-): string => {
+): QueryResult => {
   // Query edges for each endpoint
   const allEdges: GraphEdgeWithCallSites[] = [];
 
@@ -150,10 +153,10 @@ const queryMultipleToEndpoints = (
   ];
 
   if (uniqueEdges.length === 0) {
-    return "No dependents found for matching symbols.";
+    return messageResult("No dependents found for matching symbols.");
   }
 
-  return formatFilteredTraversal({
+  return buildFilteredTraversalResult({
     db,
     edges: uniqueEdges,
     startNodeId: "", // No single start - include all
@@ -173,7 +176,7 @@ const traverseWithTopicFilter = async (
   searchIndex: SearchIndexWrapper,
   embeddingProvider: EmbeddingProvider,
   maxNodes?: number,
-): Promise<string> => {
+): Promise<QueryResult> => {
   // Query raw edges
   const queryResult =
     direction === "dependencies"
@@ -181,14 +184,14 @@ const traverseWithTopicFilter = async (
       : queryDependents(db, filePath, symbol);
 
   if (!queryResult.success) {
-    return queryResult.error;
+    return messageResult(queryResult.error);
   }
 
   const { edges, nodeIds, nodeId, message } = queryResult;
 
   if (edges.length === 0) {
     const noResults = `No ${direction} found.`;
-    return message ? `${message}\n\n${noResults}` : noResults;
+    return messageResult(message ? `${message}\n\n${noResults}` : noResults);
   }
 
   // Find topic-relevant nodes
@@ -208,11 +211,11 @@ const traverseWithTopicFilter = async (
 
   if (filteredEdges.length === 0) {
     const noResults = `No ${direction} found matching topic "${topic}".`;
-    return message ? `${message}\n\n${noResults}` : noResults;
+    return messageResult(message ? `${message}\n\n${noResults}` : noResults);
   }
 
-  // Format the filtered result
-  return formatFilteredTraversal({
+  // Build structured result
+  return buildFilteredTraversalResult({
     db,
     edges: filteredEdges,
     startNodeId: nodeId,
@@ -223,12 +226,6 @@ const traverseWithTopicFilter = async (
 
 /**
  * Unified graph search tool that combines semantic search with graph traversal.
- *
- * Query patterns:
- * - `{ from: { symbol: "X" } }` → forward traversal (what does X depend on?)
- * - `{ to: { symbol: "X" } }` → backward traversal (who depends on X?)
- * - `{ from: { symbol: "A" }, to: { symbol: "B" } }` → path finding (how does A reach B?)
- * - `{ topic: "validation" }` → semantic search for related symbols
  *
  * @example
  * // What does handleRequest call?
@@ -247,10 +244,12 @@ export const searchGraph = async (
   db: Database.Database,
   input: SearchGraphInput,
   options: SearchGraphOptions,
-): Promise<string> => {
+): Promise<QueryResult> => {
   // Validate input - at least one constraint required
   if (!input.topic && !input.from && !input.to) {
-    return "Error: At least one of 'topic', 'from', or 'to' is required.";
+    return messageResult(
+      "Error: At least one of 'topic', 'from', or 'to' is required.",
+    );
   }
 
   const maxNodes = input.max_nodes ?? options.maxNodes;
@@ -278,11 +277,11 @@ export const searchGraph = async (
     const from = fromResolved[0]!;
     // biome-ignore lint/style/noNonNullAssertion: length checked above
     const to = toResolved[0]!;
-    return pathsBetween(
+    return pathsBetweenData(
       db,
       { file_path: from.file_path, symbol: from.symbol },
       { file_path: to.file_path, symbol: to.symbol },
-      { ...options, maxNodes },
+      { maxNodes },
     );
   }
 
@@ -314,8 +313,7 @@ export const searchGraph = async (
     // Single endpoint: standard traversal
     // biome-ignore lint/style/noNonNullAssertion: length checked above
     const from = fromResolved[0]!;
-    return dependenciesOf(db, from.file_path, from.symbol, {
-      ...options,
+    return dependenciesData(db, from.file_path, from.symbol, {
       maxNodes,
     });
   }
@@ -348,8 +346,7 @@ export const searchGraph = async (
     // Single endpoint: standard traversal
     // biome-ignore lint/style/noNonNullAssertion: length checked above
     const to = toResolved[0]!;
-    return dependentsOf(db, to.file_path, to.symbol, {
-      ...options,
+    return dependentsData(db, to.file_path, to.symbol, {
       maxNodes,
     });
   }
@@ -357,7 +354,9 @@ export const searchGraph = async (
   // Case 4: Semantic search (topic only, or query-based from/to without search index)
   if (input.topic) {
     if (!searchIndex) {
-      return "Semantic search requires embeddings. Run the server to enable semantic search.";
+      return messageResult(
+        "Semantic search requires embeddings. Run the server to enable semantic search.",
+      );
     }
 
     const vector = await embeddingProvider.embedQuery(input.topic);
@@ -368,7 +367,7 @@ export const searchGraph = async (
     });
 
     if (results.length === 0) {
-      return `No symbols found matching topic: "${input.topic}"`;
+      return messageResult(`No symbols found matching topic: "${input.topic}"`);
     }
 
     // Extract node IDs from search results
@@ -383,11 +382,13 @@ export const searchGraph = async (
         (r) =>
           `${r.symbol} (${r.nodeType}) - ${r.file} [score: ${r.score.toFixed(3)}]`,
       );
-      return `## Symbols matching "${input.topic}"\n\nNo connections found between symbols.\n\n${lines.join("\n")}`;
+      return messageResult(
+        `## Symbols matching "${input.topic}"\n\nNo connections found between symbols.\n\n${lines.join("\n")}`,
+      );
     }
 
-    // Format as graph
-    return formatFilteredTraversal({
+    // Build structured result
+    return buildFilteredTraversalResult({
       db,
       edges,
       startNodeId: "", // No single start node - include all
@@ -397,16 +398,24 @@ export const searchGraph = async (
 
   // Query-based from/to without search index
   if ((input.from?.query || input.to?.query) && !searchIndex) {
-    return "Semantic search requires embeddings. Run the server to enable semantic search.";
+    return messageResult(
+      "Semantic search requires embeddings. Run the server to enable semantic search.",
+    );
   }
 
   // Query-based from/to that failed to resolve (no matching symbols found)
   if (input.from?.query && fromResolved.length === 0) {
-    return `No symbols found matching query: "${input.from.query}". Try a more specific query or use Topic search.`;
+    return messageResult(
+      `No symbols found matching query: "${input.from.query}". Try a more specific query or use Topic search.`,
+    );
   }
   if (input.to?.query && toResolved.length === 0) {
-    return `No symbols found matching query: "${input.to.query}". Try a more specific query or use Topic search.`;
+    return messageResult(
+      `No symbols found matching query: "${input.to.query}". Try a more specific query or use Topic search.`,
+    );
   }
 
-  return "Error: Invalid query. Provide either exact symbols or search queries.";
+  return messageResult(
+    "Error: Invalid query. Provide either exact symbols or search queries.",
+  );
 };

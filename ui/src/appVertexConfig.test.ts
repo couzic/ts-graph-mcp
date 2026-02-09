@@ -2,7 +2,7 @@ import assert from "node:assert";
 import { Subject } from "rxjs";
 import { createGraph, type Graph, type Vertex } from "verdux";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { HealthResponse } from "./ApiService.js";
+import type { GraphSearchResult, HealthResponse } from "./ApiService.js";
 import { appActions, createAppVertexConfig } from "./appVertexConfig.js";
 import {
   type GraphEndpoint,
@@ -15,21 +15,21 @@ describe("appVertexConfig", () => {
   let vertex: Vertex<ReturnType<typeof createAppVertexConfig>>;
   let receivedHealth$: Subject<HealthResponse>;
   let receivedSymbols$: Subject<SymbolOption[]>;
-  let receivedSearch$: Subject<string>;
-  let receivedTopic$: Subject<string>;
+  let receivedSearch$: Subject<GraphSearchResult>;
+  let receivedTopic$: Subject<GraphSearchResult>;
 
   beforeEach(() => {
     vi.useFakeTimers();
     receivedHealth$ = new Subject<HealthResponse>();
     receivedSymbols$ = new Subject<SymbolOption[]>();
-    receivedSearch$ = new Subject<string>();
-    receivedTopic$ = new Subject<string>();
+    receivedSearch$ = new Subject<GraphSearchResult>();
+    receivedTopic$ = new Subject<GraphSearchResult>();
     const vertexConfig = createAppVertexConfig({
       apiService: () => ({
         getHealth: () => receivedHealth$,
         searchSymbols: () => receivedSymbols$,
         searchGraph: () => receivedSearch$,
-        searchByTopic: () => receivedTopic$,
+        searchByTopic: (_topic, _maxNodes, _format) => receivedTopic$,
       }),
     });
     graph = createGraph({
@@ -221,6 +221,10 @@ describe("appVertexConfig", () => {
       type: "Function",
     };
 
+    const toGraphResult = (result: string): GraphSearchResult => ({
+      result,
+    });
+
     it("returns null when no endpoint or topic is specified", () => {
       vi.advanceTimersByTime(400);
 
@@ -228,7 +232,9 @@ describe("appVertexConfig", () => {
     });
 
     it("fetches dependencies when only fromEndpoint is selected", () => {
-      const dependenciesResult = "## Graph\nstart --CALLS--> dep1";
+      const dependenciesResult = toGraphResult(
+        "## Graph\nstart --CALLS--> dep1",
+      );
 
       graph.dispatch(appActions.setFromEndpoint(fromEndpoint));
       vi.advanceTimersByTime(400);
@@ -238,7 +244,7 @@ describe("appVertexConfig", () => {
     });
 
     it("fetches dependents when only toEndpoint is selected", () => {
-      const dependentsResult = "## Graph\ncaller --CALLS--> end";
+      const dependentsResult = toGraphResult("## Graph\ncaller --CALLS--> end");
 
       graph.dispatch(appActions.setToEndpoint(toEndpoint));
       vi.advanceTimersByTime(400);
@@ -248,7 +254,9 @@ describe("appVertexConfig", () => {
     });
 
     it("fetches pathsBetween when both fromEndpoint and toEndpoint are selected", () => {
-      const pathsResult = "## Graph\nstart --CALLS--> middle --CALLS--> end";
+      const pathsResult = toGraphResult(
+        "## Graph\nstart --CALLS--> middle --CALLS--> end",
+      );
 
       graph.dispatch(appActions.setFromEndpoint(fromEndpoint));
       graph.dispatch(appActions.setToEndpoint(toEndpoint));
@@ -261,7 +269,7 @@ describe("appVertexConfig", () => {
     it("returns null when endpoints are cleared", () => {
       graph.dispatch(appActions.setFromEndpoint(fromEndpoint));
       vi.advanceTimersByTime(400);
-      receivedSearch$.next("some result");
+      receivedSearch$.next(toGraphResult("some result"));
 
       graph.dispatch(appActions.clearFromEndpoint());
       vi.advanceTimersByTime(400);
@@ -270,8 +278,10 @@ describe("appVertexConfig", () => {
     });
 
     it("switches to dependencies when toEndpoint is cleared", () => {
-      const pathsResult = "## Graph\nstart --CALLS--> end";
-      const dependenciesResult = "## Graph\nstart --CALLS--> dep1";
+      const pathsResult = toGraphResult("## Graph\nstart --CALLS--> end");
+      const dependenciesResult = toGraphResult(
+        "## Graph\nstart --CALLS--> dep1",
+      );
 
       graph.dispatch(appActions.setFromEndpoint(fromEndpoint));
       graph.dispatch(appActions.setToEndpoint(toEndpoint));
@@ -286,8 +296,8 @@ describe("appVertexConfig", () => {
     });
 
     it("switches to dependents when fromEndpoint is cleared", () => {
-      const pathsResult = "## Graph\nstart --CALLS--> end";
-      const dependentsResult = "## Graph\ncaller --CALLS--> end";
+      const pathsResult = toGraphResult("## Graph\nstart --CALLS--> end");
+      const dependentsResult = toGraphResult("## Graph\ncaller --CALLS--> end");
 
       graph.dispatch(appActions.setFromEndpoint(fromEndpoint));
       graph.dispatch(appActions.setToEndpoint(toEndpoint));
@@ -302,7 +312,7 @@ describe("appVertexConfig", () => {
     });
 
     it("fetches semantic search when only topic is specified", () => {
-      const topicResult = "## Symbols matching 'auth'";
+      const topicResult = toGraphResult("## Symbols matching 'auth'");
 
       graph.dispatch(appActions.setTopic("auth"));
       vi.advanceTimersByTime(400);
