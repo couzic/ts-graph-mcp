@@ -24,6 +24,12 @@ export interface ProjectRegistry {
    * @returns The owning Project, or undefined if not in any registered package
    */
   getProjectForFile(absolutePath: string): Project | undefined;
+
+  /**
+   * Get the Project instance for a given tsconfig path.
+   * @param absoluteTsConfigPath - Absolute path to tsconfig.json
+   */
+  getProjectForTsConfig(absoluteTsConfigPath: string): Project | undefined;
 }
 
 interface PackageEntry {
@@ -48,6 +54,7 @@ export const createProjectRegistry = (
   projectRoot: string,
 ): ProjectRegistry => {
   const entries: PackageEntry[] = [];
+  const projectsByTsConfig = new Map<string, Project>();
   const configuredPackageNames = extractConfiguredPackageNames(
     config,
     projectRoot,
@@ -67,6 +74,7 @@ export const createProjectRegistry = (
       pathPrefix: toPathPrefix(packageRoot),
       project,
     });
+    projectsByTsConfig.set(absoluteTsConfigPath, project);
   }
 
   // Sort by path length descending so more specific paths match first
@@ -82,6 +90,10 @@ export const createProjectRegistry = (
         }
       }
       return undefined;
+    },
+
+    getProjectForTsConfig(absoluteTsConfigPath: string): Project | undefined {
+      return projectsByTsConfig.get(absoluteTsConfigPath);
     },
   };
 };

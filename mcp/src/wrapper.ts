@@ -107,8 +107,11 @@ Examples:
 - { from: { symbol: "A" }, to: { symbol: "B" } } → how does A reach B?
 - { from: { symbol: "A", file_path: "path/to/A.ts" } } → precise lookup (avoids disambiguation)
 - { topic: "validation" } → find symbols related to validation
+- { topic: "validation", from: { symbol: "handleRequest" } } → dependencies of handleRequest filtered by validation
 
-Edge types in output: CALLS, REFERENCES, EXTENDS, IMPLEMENTS, INCLUDES`,
+Note: topic + from + to (path finding with topic filter) is not yet supported — topic is ignored for path queries.
+
+Edge types in output: CALLS, REFERENCES, EXTENDS, IMPLEMENTS, INCLUDES, TAKES, RETURNS, HAS_TYPE, HAS_PROPERTY, DERIVES_FROM, ALIAS_FOR`,
       inputSchema: {
         topic: z
           .string()

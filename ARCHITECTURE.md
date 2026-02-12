@@ -326,12 +326,16 @@ The schema omits FK constraints intentionally:
 
 One unified tool for all graph queries:
 
-| Query Pattern      | Input                  | Question                    |
-| ------------------ | ---------------------- | --------------------------- |
-| Forward traversal  | `{ from: { symbol } }` | "What does this depend on?" |
-| Backward traversal | `{ to: { symbol } }`   | "Who depends on this?"      |
-| Path finding       | `{ from, to }`         | "How does A reach B?"       |
-| Semantic search    | `{ topic }`            | "Find code related to X"    |
+| Query Pattern       | Input                  | Question                                   |
+| ------------------- | ---------------------- | ------------------------------------------ |
+| Forward traversal   | `{ from: { symbol } }` | "What does this depend on?"                |
+| Backward traversal  | `{ to: { symbol } }`   | "Who depends on this?"                     |
+| Path finding        | `{ from, to }`         | "How does A reach B?"                      |
+| Semantic search     | `{ topic }`            | "Find code related to X"                   |
+| Filtered traversal  | `{ topic, from }`      | "What X-related code does this depend on?" |
+
+**Note:** `topic` + `from` + `to` (path finding with topic filter) is not yet
+supported — `topic` is silently ignored for path queries.
 
 See [`http/src/query/CLAUDE.md`](http/src/query/CLAUDE.md) for implementation
 details.

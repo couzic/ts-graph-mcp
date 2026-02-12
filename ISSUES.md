@@ -1,15 +1,13 @@
 # Known Issues
 
-## Topic Not Combined with FROM/TO Traversals
+## UI Does Not Send Topic with FROM/TO
 
 **Impact:** Medium (feature gap)
 
-**Problem:** When a topic is submitted AND a from/to endpoint is set, the topic
-is silently ignored. The UI query logic in `ui/src/appVertexConfig.ts` treats
-topic search as standalone only — it fires only when both endpoints are null.
-
-The backend `POST /api/graph/search` accepts `topic` alongside `from`/`to`, but
-the UI never sends them together.
+**Problem:** The backend supports `{ topic, from }` and `{ topic, to }` (filtered
+traversal), but the UI never sends them together. The UI query logic in
+`ui/src/appVertexConfig.ts` treats topic search as standalone only — it fires
+only when both endpoints are null.
 
 **Current behavior (UI):**
 
@@ -20,15 +18,13 @@ the UI never sends them together.
 | set   | -    | set | Backward traversal (topic ignored) |
 | set   | set  | set | Path finding (topic ignored) |
 
-**Goal:** Support combined queries — topic should act as a semantic filter when
-used alongside from/to endpoints. For example: "starting from handleRequest,
-find calls related to validation".
+**Goal:** UI should send topic alongside from/to to enable filtered traversals
+(e.g., "starting from handleRequest, find calls related to validation").
 
 **Affected files:**
 
-- `ui/src/appVertexConfig.ts` — query dispatch logic (lines 214-264)
+- `ui/src/appVertexConfig.ts` — query dispatch logic
 - `ui/src/ApiService.ts` — `searchGraph()` needs to accept optional `topic`
-- `http/src/query/` — backend query handlers need to support topic filtering
 
 ---
 
@@ -303,9 +299,9 @@ export const EDGE_TYPES: EdgeType[] = [
 **Impact:** Low (performance)
 
 **Problem:** `buildWorkspaceMap()` is called every time `createProject()` is
-invoked. In `http/src/ingestion/ProjectRegistry.ts`, `indexProject`,
-`syncOnStartup`, and `watchProject`, each creates projects independently,
-rebuilding the workspace map each time.
+invoked. `syncOnStartup` reuses Projects from the registry via
+`getProjectForTsConfig()`, but `watchProject` still creates fresh projects
+independently, rebuilding the workspace map each time.
 
 For large monorepos with many packages, this adds overhead: parsing all
 `package.json` files, expanding workspace globs, inferring source entries from

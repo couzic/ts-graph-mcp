@@ -212,7 +212,13 @@ const buildVertexConfig = (dependencies: { apiService: () => ApiService }) =>
         },
       )
       .loadFromFields$(
-        ["fromEndpoint", "toEndpoint", "submittedTopic", "maxNodes", "outputFormat"],
+        [
+          "fromEndpoint",
+          "toEndpoint",
+          "submittedTopic",
+          "maxNodes",
+          "outputFormat",
+        ],
         {
           queryResult: (fields$) =>
             fields$.pipe(
@@ -228,7 +234,11 @@ const buildVertexConfig = (dependencies: { apiService: () => ApiService }) =>
                   const format = outputFormat;
                   // Topic only → semantic search
                   if (submittedTopic.trim() && !fromEndpoint && !toEndpoint) {
-                    return apiService.searchByTopic(submittedTopic, maxNodes, format);
+                    return apiService.searchByTopic(
+                      submittedTopic,
+                      maxNodes,
+                      format,
+                    );
                   }
                   // FROM only → dependenciesOf (what does this call?)
                   if (fromEndpoint && !toEndpoint) {

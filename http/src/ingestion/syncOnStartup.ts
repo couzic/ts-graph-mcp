@@ -6,9 +6,7 @@ import type { EmbeddingProvider } from "../embedding/EmbeddingTypes.js";
 import { openEmbeddingCache } from "../embedding/embeddingCache.js";
 import type { TsGraphLogger } from "../logging/TsGraphLogger.js";
 import type { SearchIndexWrapper } from "../search/createSearchIndex.js";
-import { createProject } from "./createProject.js";
 import type { EdgeExtractionContext } from "./extract/edges/EdgeExtractionContext.js";
-import { extractConfiguredPackageNames } from "./extractConfiguredPackageNames.js";
 import { indexFile } from "./indexFile.js";
 import {
   compareManifest,
@@ -16,7 +14,10 @@ import {
   saveManifest,
   updateManifestEntry,
 } from "./manifest.js";
-import { createProjectRegistry } from "./ProjectRegistry.js";
+import {
+  createProjectRegistry,
+  type ProjectRegistry,
+} from "./ProjectRegistry.js";
 
 /**
  * Result of startup sync operation.
@@ -44,12 +45,12 @@ interface FileContext {
 
 /**
  * Build a map of relative file paths to their package context.
- * Uses ts-morph to discover files from tsconfig, same as indexProject.
+ * Reuses ts-morph Projects from the registry to avoid redundant project creation.
  */
 const buildFileContextMap = (
   config: ProjectConfig,
   projectRoot: string,
-  configuredPackageNames: Set<string>,
+  projectRegistry: ProjectRegistry,
 ): Map<string, FileContext> => {
   const contextMap = new Map<string, FileContext>();
 
@@ -57,12 +58,10 @@ const buildFileContextMap = (
     const absoluteTsConfigPath = join(projectRoot, pkg.tsconfig);
     const packageRoot = dirname(absoluteTsConfigPath);
 
-    // Create ts-morph project to discover files from tsconfig (workspace-aware resolution)
-    const project = createProject({
-      tsConfigFilePath: absoluteTsConfigPath,
-      workspaceRoot: projectRoot,
-      configuredPackageNames,
-    });
+    const project = projectRegistry.getProjectForTsConfig(absoluteTsConfigPath);
+    if (!project) {
+      continue;
+    }
 
     // Filter source files like indexProject does
     const sourceFiles = project.getSourceFiles().filter((sf) => {
@@ -121,11 +120,6 @@ export const syncOnStartup = async (
       ? openEmbeddingCache(options.cacheDir, options.modelName)
       : undefined;
 
-  const configuredPackageNames = extractConfiguredPackageNames(
-    config,
-    options.projectRoot,
-  );
-
   // Create project registry for cross-package resolution
   const projectRegistry = createProjectRegistry(config, options.projectRoot);
 
@@ -133,7 +127,7 @@ export const syncOnStartup = async (
   const fileContextMap = buildFileContextMap(
     config,
     options.projectRoot,
-    configuredPackageNames,
+    projectRegistry,
   );
   const currentFiles = Array.from(fileContextMap.keys());
 
@@ -186,11 +180,10 @@ export const syncOnStartup = async (
 
   // Process each tsconfig group
   for (const [tsconfigPath, files] of filesByTsconfig) {
-    const project = createProject({
-      tsConfigFilePath: tsconfigPath,
-      workspaceRoot: options.projectRoot,
-      configuredPackageNames,
-    });
+    const project = projectRegistry.getProjectForTsConfig(tsconfigPath);
+    if (!project) {
+      continue;
+    }
 
     for (const relativePath of files) {
       const context = fileContextMap.get(relativePath);

@@ -100,6 +100,9 @@ Unified search combining semantic search with graph traversal.
 // How does A reach B? (path finding)
 { from: { symbol: "handleRequest" }, to: { symbol: "saveUser" } }
 
+// Filtered traversal: dependencies of handleRequest related to validation
+{ topic: "validation", from: { symbol: "handleRequest" } }
+
 // Semantic endpoint resolution
 { from: { query: "user input handling" }, to: { symbol: "Database.save" } }
 ```
@@ -108,13 +111,15 @@ Unified search combining semantic search with graph traversal.
 
 | Parameter   | Required | Description                                                        |
 | ----------- | -------- | ------------------------------------------------------------------ |
-| `topic`     | No*      | Semantic search for a concept (standalone mode)                    |
+| `topic`     | No*      | Semantic filter — standalone or combined with `from`/`to`          |
 | `from`      | No*      | Start point: `{ symbol }` or `{ query }` with optional `file_path` |
 | `to`        | No*      | End point: `{ symbol }` or `{ query }` with optional `file_path`   |
 | `max_nodes` | No       | Output limit (default: 50)                                         |
 
-*At least one of `topic`, `from`, or `to` is required. Currently `topic` only
-works in standalone mode — it is not combined with `from`/`to` traversals.
+*At least one of `topic`, `from`, or `to` is required. `topic` works standalone
+or as a filter on `from`/`to` traversals (e.g., `{ topic, from }` returns only
+topic-relevant dependencies). Path finding with topic filter (`from` + `to` +
+`topic`) is not yet supported — `topic` is silently ignored for path queries.
 
 ### Example Output
 
