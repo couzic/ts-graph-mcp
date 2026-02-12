@@ -6,18 +6,14 @@ import { dependentsData } from "../dependents-of/dependentsOf.js";
 import { pathsBetweenData } from "../paths-between/pathsBetween.js";
 import type { GraphEdgeWithCallSites } from "../shared/parseEdgeRows.js";
 import { messageResult, type QueryResult } from "../shared/QueryResult.js";
-
+import { connectSeeds } from "./connectSeeds.js";
 import {
   filterEdgesToTopicRelevant,
   filterNodesByTopic,
 } from "./filterByTopic.js";
 import { buildFilteredTraversalResult } from "./formatFilteredTraversal.js";
 import type { GraphEndpoint, SearchGraphInput } from "./SearchGraphTypes.js";
-import {
-  queryDependencies,
-  queryDependents,
-  queryEdgesBetweenNodes,
-} from "./traverseGraph.js";
+import { queryDependencies, queryDependents } from "./traverseGraph.js";
 
 /**
  * Options for searchGraph including optional search index.
@@ -373,8 +369,8 @@ export const searchGraph = async (
     // Extract node IDs from search results
     const nodeIds = results.map((r) => r.id);
 
-    // Query edges between topic-relevant nodes
-    const edges = queryEdgesBetweenNodes(db, nodeIds);
+    // Find connecting paths between topic-relevant nodes (including bridge nodes)
+    const edges = connectSeeds(db, nodeIds);
 
     // If no edges found, return as flat list (isolated symbols)
     if (edges.length === 0) {

@@ -152,6 +152,20 @@ describe("search recall E2E tests", () => {
       expect(toMcp(result)).toContain("AdminController");
       expect(toMcp(result)).toContain("ProviderController");
     });
+
+    it("finds bridge nodes connecting topic-matched seeds", async () => {
+      const result = await searchGraph(
+        db,
+        { topic: "controller" },
+        { searchIndex, embeddingProvider },
+      );
+
+      const output = toMcp(result);
+      // Both controllers call SetDefaultProviderCommand.execute,
+      // which doesn't match "controller" but bridges the two seeds
+      expect(output).toContain("## Graph");
+      expect(output).toContain("SetDefaultProviderCommand");
+    });
   });
 
   describe("semantic recall (hybrid with embeddings)", () => {

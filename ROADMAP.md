@@ -118,6 +118,28 @@ should filter to prefer paths that go through topic-relevant intermediate nodes.
 
 ---
 
+### Semantic Ranking of Bridge Paths
+
+**Impact: Medium | Effort: Low**
+
+When `connectSeeds` finds multiple paths between topic-matched seeds, prefer
+paths where intermediate (bridge) nodes are more relevant to the topic.
+
+**Current state:** `connectSeeds` uses multi-source BFS to find meeting points
+between seeds. All paths to meeting points are included regardless of how
+relevant the intermediates are to the topic.
+
+**The Problem:** A path through `sanitizeInput()` is more useful than a path
+through `logger.log()` when the topic is "validation" — but both are treated
+equally.
+
+**Solution:** After `connectSeeds` returns edges, score bridge nodes (non-seeds)
+against the topic using the search index. When multiple paths exist between the
+same pair of seeds, prefer the path with higher average topic relevance on its
+intermediates. If only one path exists, keep it regardless of relevance.
+
+---
+
 ### Separate Runtime and Compile-time Sections
 
 **Impact: High | Effort: Medium**

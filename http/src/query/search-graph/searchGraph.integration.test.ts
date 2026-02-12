@@ -207,6 +207,46 @@ describe(searchGraph.name, () => {
       expect(toMcp(result)).toContain("validateOutput");
     });
 
+    it("finds bridge nodes connecting topic-matched seeds", async () => {
+      const writer = createSqliteWriter(db);
+      // validateInput and validateOutput match "validate"
+      // processData does NOT match, but bridges the two seeds
+      await writer.addNodes([
+        fn("validateInput"),
+        fn("processData"),
+        fn("validateOutput"),
+      ]);
+      await writer.addEdges([
+        calls(
+          "src/test.ts:Function:validateInput",
+          "src/test.ts:Function:processData",
+        ),
+        calls(
+          "src/test.ts:Function:processData",
+          "src/test.ts:Function:validateOutput",
+        ),
+      ]);
+
+      await populateSearchIndex({
+        db,
+        searchIndex,
+        embeddingCache,
+        embeddingProvider,
+      });
+
+      const result = await searchGraph(
+        db,
+        { topic: "validate" },
+        { searchIndex, embeddingProvider },
+      );
+
+      const output = toMcp(result);
+      expect(output).toContain("## Graph");
+      expect(output).toContain("validateInput");
+      expect(output).toContain("processData");
+      expect(output).toContain("validateOutput");
+    });
+
     it("returns message when no symbols match topic", async () => {
       const writer = createSqliteWriter(db);
       await writer.addNodes([fn("processData")]);

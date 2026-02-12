@@ -1,12 +1,7 @@
-import { EDGE_TYPES } from "@ts-graph/shared";
 import type Database from "better-sqlite3";
 import { attemptClassMethodFallback } from "../shared/classMethodFallback.js";
 import { collectNodeIds } from "../shared/collectNodeIds.js";
-import {
-  type EdgeRowWithCallSites,
-  type GraphEdgeWithCallSites,
-  parseEdgeRows,
-} from "../shared/parseEdgeRows.js";
+import type { GraphEdgeWithCallSites } from "../shared/parseEdgeRows.js";
 import {
   queryDependencyEdges,
   queryDependentEdges,
@@ -125,46 +120,4 @@ export const queryDependents = (
     nodeId,
     message,
   };
-};
-
-/**
- * Filter edges to keep only those where both source and target are in the allowed set.
- */
-export const filterEdgesByNodes = <
-  T extends { source: string; target: string },
->(
-  edges: T[],
-  allowedNodeIds: Set<string>,
-): T[] => {
-  return edges.filter(
-    (edge) =>
-      allowedNodeIds.has(edge.source) && allowedNodeIds.has(edge.target),
-  );
-};
-
-/**
- * Query edges between a set of nodes.
- * Returns edges where both source and target are in the provided set.
- */
-export const queryEdgesBetweenNodes = (
-  db: Database.Database,
-  nodeIds: string[],
-): GraphEdgeWithCallSites[] => {
-  if (nodeIds.length === 0) {
-    return [];
-  }
-
-  const placeholders = nodeIds.map(() => "?").join(", ");
-  const edgeTypesPlaceholder = EDGE_TYPES.map(() => "?").join(", ");
-
-  const sql = `
-    SELECT source, target, type, call_sites FROM edges
-    WHERE source IN (${placeholders})
-      AND target IN (${placeholders})
-      AND type IN (${edgeTypesPlaceholder})
-  `;
-
-  const params = [...nodeIds, ...nodeIds, ...EDGE_TYPES];
-  const rows = db.prepare<unknown[], EdgeRowWithCallSites>(sql).all(...params);
-  return parseEdgeRows(rows);
 };
