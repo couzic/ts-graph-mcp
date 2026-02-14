@@ -349,6 +349,21 @@ export function getPath(): string {
       }
     });
 
+    it("throws when tsconfig does not exist on disk", async () => {
+      const config: ProjectConfig = {
+        packages: [{ name: "ghost", tsconfig: "./nonexistent/tsconfig.json" }],
+      };
+
+      const writer = createMockWriter();
+      await expect(
+        indexProject(config, writer, {
+          projectRoot: TEST_DIR,
+          logger: silentLogger,
+          embeddingProvider,
+        }),
+      ).rejects.toThrow();
+    });
+
     it("handles cross-package edges without foreign key errors", async () => {
       // This test demonstrates the bug: when package A imports from package B,
       // and we process all of A before B, the edges from A to B fail because

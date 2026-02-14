@@ -141,7 +141,8 @@ export const createEmbeddingProvider = async (
 
     // Create pool of embedding contexts with distributed threads
     const numCpus = cpus().length;
-    const threadsPerContext = Math.max(1, Math.floor(numCpus / poolSize));
+    const availableCpus = Math.max(1, numCpus - 2);
+    const threadsPerContext = Math.max(1, Math.floor(availableCpus / poolSize));
 
     const createdContexts: LlamaEmbeddingContext[] = [];
     try {

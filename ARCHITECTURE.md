@@ -230,7 +230,7 @@ flowchart TD
     end
 
     subgraph Package["Package Processing"]
-        B --> C[Create ts-morph Project]
+        B --> C[Get Project from registry]
         C --> D[Get source files]
         D --> E{For each file<br/>parallel}
     end
@@ -273,8 +273,8 @@ Embedding generation uses a pool of `LlamaEmbeddingContext` instances in
 CPU-only mode. GPU (Vulkan) has a global lock that serializes all operations;
 CPU-only enables true parallelism.
 
-Default: 4 contexts × 4 threads = 16 total threads (~1.5x speedup on 16-core
-machine).
+Default: 4 contexts, threads per context = floor((numCpus - 2) / 4). Two CPUs
+are reserved for the system. On a 16-core machine: 4 × 3 = 12 threads.
 
 ### Cross-File Resolution
 

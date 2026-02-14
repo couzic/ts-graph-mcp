@@ -9,8 +9,10 @@ import {
   remove,
   save,
   search,
+  searchVector,
 } from "@orama/orama";
 import type { NodeType } from "@ts-graph/shared";
+import { computeHybridScore } from "./computeHybridScore.js";
 import type {
   SearchDocument,
   SearchOptions,
@@ -181,24 +183,75 @@ const buildWrapper = (
       };
 
       if (options?.vector) {
-        const vectorParams = {
-          ...baseParams,
-          mode: "hybrid" as const,
+        // Run BM25 and vector searches separately
+        const bm25Results = await search(db, baseParams);
+        const vectorResults = await searchVector(db, {
+          mode: "vector" as const,
           vector: {
             value: Array.from(options.vector),
             property: "embedding",
           },
-          similarity: options?.similarityThreshold ?? 0.5,
-        };
+          similarity: 0,
+          limit,
+        });
 
-        const results = await search(db, vectorParams);
-        return results.hits.map((hit) => ({
-          id: hit.document.id,
-          symbol: hit.document.symbol,
-          file: hit.document.file,
-          nodeType: hit.document.nodeType as NodeType,
-          score: hit.score,
-        }));
+        // Merge by document ID
+        const merged = new Map<
+          string,
+          {
+            bm25Score: number;
+            cosineScore: number;
+            doc: { id: string; symbol: string; file: string; nodeType: string };
+          }
+        >();
+
+        const maxBm25 =
+          bm25Results.hits.length > 0
+            ? Math.max(...bm25Results.hits.map((h) => h.score))
+            : 0;
+
+        for (const hit of bm25Results.hits) {
+          merged.set(hit.document.id, {
+            bm25Score: hit.score,
+            cosineScore: 0,
+            doc: hit.document,
+          });
+        }
+
+        for (const hit of vectorResults.hits) {
+          const existing = merged.get(hit.document.id);
+          if (existing) {
+            existing.cosineScore = hit.score;
+          } else {
+            merged.set(hit.document.id, {
+              bm25Score: 0,
+              cosineScore: hit.score,
+              doc: hit.document,
+            });
+          }
+        }
+
+        const results: SearchResult[] = [];
+        for (const entry of merged.values()) {
+          const hybridScore = computeHybridScore(
+            entry.bm25Score,
+            maxBm25,
+            entry.cosineScore,
+          );
+          // Filter out results with zero hybrid score (e.g., no BM25 match and low cosine)
+          if (hybridScore > 0) {
+            results.push({
+              id: entry.doc.id,
+              symbol: entry.doc.symbol,
+              file: entry.doc.file,
+              nodeType: entry.doc.nodeType as NodeType,
+              score: hybridScore,
+            });
+          }
+        }
+
+        results.sort((a, b) => b.score - a.score);
+        return results.slice(0, limit);
       }
 
       // Fulltext only (no vector provided)

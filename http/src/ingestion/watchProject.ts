@@ -161,26 +161,22 @@ export const watchProject = (
 
   /**
    * Check if a file is part of the tsconfig compilation.
-   * Creates a fresh Project to ensure accurate file discovery.
    */
   const isValidTsconfigFile = (
     tsconfigPath: string,
     absolutePath: string,
   ): boolean => {
-    const project = createProject({
-      tsConfigFilePath: tsconfigPath,
-      workspaceRoot: projectRoot,
-      configuredPackageNames,
-    });
-    const sourceFiles = project.getSourceFiles();
-    return sourceFiles.some((sf) => {
-      const path = sf.getFilePath();
-      return (
-        path === absolutePath &&
-        !path.includes("node_modules") &&
-        !path.endsWith(".d.ts")
-      );
-    });
+    const project = projectRegistry.getProjectForTsConfig(tsconfigPath);
+    if (!project) {
+      return false;
+    }
+    if (project.getSourceFile(absolutePath)) {
+      return true;
+    }
+    // New file: chokidar + resolveFileContext already filter by extension and package root
+    return (
+      !absolutePath.includes("node_modules") && !absolutePath.endsWith(".d.ts")
+    );
   };
 
   /**

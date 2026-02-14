@@ -159,13 +159,13 @@ but lacks:
 
 ---
 
-### Watcher: Fresh Project Per File (Intentional)
+### Watcher: Fresh Project Per File for Extraction
 
 **Impact:** Low (performance)
 
 **Current behavior:** `http/src/ingestion/watchProject.ts` creates a fresh
-ts-morph `Project` for each file change (twice: once for tsconfig validation,
-once for extraction).
+ts-morph `Project` for each file change in `reindexFile`. Tsconfig validation
+(`isValidTsconfigFile`) now uses the `ProjectRegistry`.
 
 **Why:** Cached Projects don't know about files added since cache creation. When
 files are added/modified concurrently, cross-file import resolution fails with
@@ -294,14 +294,14 @@ export const EDGE_TYPES: EdgeType[] = [
 
 ---
 
-### Workspace Map Rebuilt Per createProject() Call
+### Workspace Map Rebuilt Per createProject() Call in Watcher
 
 **Impact:** Low (performance)
 
 **Problem:** `buildWorkspaceMap()` is called every time `createProject()` is
-invoked. `syncOnStartup` reuses Projects from the registry via
-`getProjectForTsConfig()`, but `watchProject` still creates fresh projects
-independently, rebuilding the workspace map each time.
+invoked. `indexProject` and `syncOnStartup` reuse Projects from the
+`ProjectRegistry`, but `reindexFile` in `watchProject` still calls
+`createProject()` directly, rebuilding the workspace map each time.
 
 For large monorepos with many packages, this adds overhead: parsing all
 `package.json` files, expanding workspace globs, inferring source entries from

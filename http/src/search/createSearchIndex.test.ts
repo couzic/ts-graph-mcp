@@ -1,3 +1,4 @@
+import { create, insert, searchVector } from "@orama/orama";
 import { describe, expect, it } from "vitest";
 import {
   createSearchIndex,
@@ -178,6 +179,96 @@ describe(createSearchIndex.name, () => {
     expect(results.length).toBeGreaterThan(0);
   });
 
+  describe("hybrid search merge logic", () => {
+    it("merges document appearing in both BM25 and vector results", async () => {
+      const index = await createSearchIndex({ vectorDimensions: DIMS });
+
+      // "validateCart" will match BM25 for "validate" AND vector for "validate"
+      await index.add(doc("validateCart"));
+      // "processOrder" won't match BM25 for "validate"
+      await index.add(doc("processOrder"));
+
+      const queryVector = simpleEmbeddingFunction("validateCart", DIMS);
+      const results = await index.search("validate", { vector: queryVector });
+
+      // validateCart should appear with a combined score (BM25 + cosine)
+      const validateResult = results.find((r) => r.symbol === "validateCart");
+      expect(validateResult).toBeDefined();
+    });
+
+    it("returns results sorted by hybrid score descending", async () => {
+      const index = await createSearchIndex({ vectorDimensions: DIMS });
+
+      await index.addBatch([
+        doc("validateA"),
+        doc("validateB"),
+        doc("validateC"),
+      ]);
+
+      const queryVector = simpleEmbeddingFunction("validateA", DIMS);
+      const results = await index.search("validate", { vector: queryVector });
+
+      for (let i = 1; i < results.length; i++) {
+        // biome-ignore lint/style/noNonNullAssertion: index bounds checked
+        expect(results[i - 1]!.score).toBeGreaterThanOrEqual(results[i]!.score);
+      }
+    });
+
+    it("filters out zero-score results", async () => {
+      const index = await createSearchIndex({ vectorDimensions: DIMS });
+
+      // Add docs with very different names — "zzz" won't match BM25 for "validate"
+      // and with simple embedding function, cosine will likely be below threshold
+      await index.add(doc("validateCart"));
+      await index.add(doc("zzz", "src/test.ts", "unrelated content"));
+
+      const queryVector = simpleEmbeddingFunction("validateCart", DIMS);
+      const results = await index.search("validate", { vector: queryVector });
+
+      // All returned results must have score > 0
+      for (const result of results) {
+        expect(result.score).toBeGreaterThan(0);
+      }
+    });
+
+    it("includes vector-only results when cosine is high enough", async () => {
+      const index = await createSearchIndex({ vectorDimensions: DIMS });
+
+      // "processOrder" won't match BM25 for "validate"
+      // but we give it an embedding very similar to the query vector
+      const queryVector = simpleEmbeddingFunction("processOrder", DIMS);
+      await index.add(doc("processOrder"));
+      await index.add(doc("validateCart"));
+
+      // Search for "validate" with vector similar to "processOrder"
+      // validateCart matches BM25, processOrder matches vector
+      const results = await index.search("validate", { vector: queryVector });
+
+      // Both could appear (depends on cosine threshold)
+      // At minimum, the BM25-matched one should appear
+      expect(results.some((r) => r.symbol === "validateCart")).toBe(true);
+    });
+
+    it("respects limit in hybrid search", async () => {
+      const index = await createSearchIndex({ vectorDimensions: DIMS });
+
+      await index.addBatch([
+        doc("validateA"),
+        doc("validateB"),
+        doc("validateC"),
+        doc("validateD"),
+      ]);
+
+      const queryVector = simpleEmbeddingFunction("validate", DIMS);
+      const results = await index.search("validate", {
+        vector: queryVector,
+        limit: 2,
+      });
+
+      expect(results.length).toBeLessThanOrEqual(2);
+    });
+  });
+
   it("addBatch inserts documents both with and without embeddings", async () => {
     const index = await createSearchIndex({ vectorDimensions: DIMS });
 
@@ -193,5 +284,72 @@ describe(createSearchIndex.name, () => {
 
     const count = await index.count();
     expect(count).toBe(2);
+  });
+});
+
+/**
+ * Build a normalized vector with a known cosine similarity to [1, 0, 0, ...].
+ * For normalized vectors, cosine = dot product, so we set v[0] = targetCosine
+ * and v[1] = sqrt(1 - targetCosine^2) to keep the vector unit-length.
+ */
+const vectorWithCosine = (targetCosine: number, dims: number): number[] => {
+  const vec = new Array(dims).fill(0);
+  vec[0] = targetCosine;
+  vec[1] = Math.sqrt(1 - targetCosine * targetCosine);
+  return vec;
+};
+
+describe("Orama searchVector similarity parameter", () => {
+  const queryVector = new Array(DIMS).fill(0);
+  queryVector[0] = 1; // unit vector along first axis
+
+  it("excludes documents below the similarity threshold", async () => {
+    const db = create({
+      schema: {
+        id: "string",
+        embedding: `vector[${DIMS}]`,
+      } as const,
+    });
+
+    // cosine 0.9 — above 0.6
+    await insert(db, { id: "high", embedding: vectorWithCosine(0.9, DIMS) });
+    // cosine 0.5 — below 0.6
+    await insert(db, { id: "low", embedding: vectorWithCosine(0.5, DIMS) });
+
+    const results = await searchVector(db, {
+      mode: "vector" as const,
+      vector: { value: queryVector, property: "embedding" },
+      similarity: 0.6,
+      limit: 10,
+    });
+
+    const ids = results.hits.map((h) => h.document.id);
+    expect(ids).toContain("high");
+    expect(ids).not.toContain("low");
+  });
+
+  it("includes documents at or above the similarity threshold", async () => {
+    const db = create({
+      schema: {
+        id: "string",
+        embedding: `vector[${DIMS}]`,
+      } as const,
+    });
+
+    await insert(db, { id: "at-06", embedding: vectorWithCosine(0.6, DIMS) });
+    await insert(db, { id: "at-08", embedding: vectorWithCosine(0.8, DIMS) });
+    await insert(db, { id: "at-03", embedding: vectorWithCosine(0.3, DIMS) });
+
+    const results = await searchVector(db, {
+      mode: "vector" as const,
+      vector: { value: queryVector, property: "embedding" },
+      similarity: 0.6,
+      limit: 10,
+    });
+
+    const ids = results.hits.map((h) => h.document.id);
+    expect(ids).toContain("at-06");
+    expect(ids).toContain("at-08");
+    expect(ids).not.toContain("at-03");
   });
 });

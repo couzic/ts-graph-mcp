@@ -5,39 +5,20 @@ import type { SearchIndexWrapper } from "../../search/createSearchIndex.js";
  * Result of filtering node IDs by topic relevance.
  */
 export interface TopicFilterResult {
-  /** Node IDs that are directly topic-relevant (above threshold) */
+  /** Node IDs that are directly topic-relevant (non-zero hybrid score) */
   topicRelevantNodes: Set<string>;
   /** Score for each node ID (for debugging/ranking) */
   scoresByNodeId: Map<string, number>;
 }
 
 /**
- * Default threshold for topic relevance.
- * Nodes scoring below this are excluded.
- *
- * Set to 0.5 to filter out loosely-related results.
- * In testing, true topic matches score > 0.6, while
- * unrelated results score 0.3-0.4.
- */
-const DEFAULT_TOPIC_THRESHOLD = 0.5;
-
-/**
  * Find topic-relevant nodes from a set of node IDs.
- *
- * Searches for the topic and returns nodes that appear in search results
- * with a score above the threshold.
- *
- * @param nodeIds - Node IDs to check (from graph traversal)
- * @param topic - Topic to filter by (e.g., "audit", "validation")
- * @param searchIndex - Search index for topic matching
- * @param threshold - Minimum score to be considered topic-relevant (default: 0.3)
  */
 export const filterNodesByTopic = async (
   nodeIds: string[],
   topic: string,
   searchIndex: SearchIndexWrapper,
   embeddingProvider: EmbeddingProvider,
-  threshold = DEFAULT_TOPIC_THRESHOLD,
 ): Promise<TopicFilterResult> => {
   const vector = await embeddingProvider.embedQuery(topic);
 
@@ -52,11 +33,11 @@ export const filterNodesByTopic = async (
     scoresByNodeId.set(result.id, result.score);
   }
 
-  // Find nodes that are directly topic-relevant (above threshold)
+  // Find nodes that are directly topic-relevant (non-zero score)
   const topicRelevantNodes = new Set<string>();
   for (const nodeId of nodeIds) {
     const score = scoresByNodeId.get(nodeId);
-    if (score !== undefined && score >= threshold) {
+    if (score !== undefined && score > 0) {
       topicRelevantNodes.add(nodeId);
     }
   }

@@ -47,6 +47,4 @@ export interface SearchOptions {
   filePattern?: string;
   /** Query vector for hybrid search (BM25 + vector). If omitted, fulltext only. */
   vector?: Float32Array;
-  /** Similarity threshold for vector search (0-1, default: 0.5) */
-  similarityThreshold?: number;
 }

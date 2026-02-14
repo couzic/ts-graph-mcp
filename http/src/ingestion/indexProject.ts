@@ -9,9 +9,7 @@ import type { EmbeddingProvider } from "../embedding/EmbeddingTypes.js";
 import { openEmbeddingCache } from "../embedding/embeddingCache.js";
 import type { TsGraphLogger } from "../logging/TsGraphLogger.js";
 import type { SearchIndexWrapper } from "../search/createSearchIndex.js";
-import { createProject } from "./createProject.js";
 import type { EdgeExtractionContext } from "./extract/edges/EdgeExtractionContext.js";
-import { extractConfiguredPackageNames } from "./extractConfiguredPackageNames.js";
 import type { EmbeddingCache } from "./indexFile.js";
 import { indexFile } from "./indexFile.js";
 import {
@@ -82,10 +80,6 @@ export const indexProject = async (
 
   // Create project registry for cross-package resolution
   const projectRegistry = createProjectRegistry(config, options.projectRoot);
-  const configuredPackageNames = extractConfiguredPackageNames(
-    config,
-    options.projectRoot,
-  );
 
   // Process each package, streaming nodes and edges to DB
   for (const pkg of config.packages) {
@@ -96,7 +90,6 @@ export const indexProject = async (
         options.projectRoot,
         dbWriter,
         projectRegistry,
-        configuredPackageNames,
         options.logger,
         options.searchIndex,
         options.embeddingProvider,
@@ -163,7 +156,6 @@ const processPackage = async (
   projectRoot: string,
   dbWriter: DbWriter,
   projectRegistry: ProjectRegistry,
-  configuredPackageNames: Set<string>,
   logger: TsGraphLogger,
   searchIndex: SearchIndexWrapper | undefined,
   embeddingProvider: EmbeddingProvider,
@@ -178,12 +170,21 @@ const processPackage = async (
   const absoluteTsConfigPath = resolve(projectRoot, tsconfigPath);
   const packageRoot = dirname(absoluteTsConfigPath);
 
-  // Create ts-morph project with tsconfig (workspace-aware resolution)
-  const project = createProject({
-    tsConfigFilePath: absoluteTsConfigPath,
-    workspaceRoot: projectRoot,
-    configuredPackageNames,
-  });
+  const project = projectRegistry.getProjectForTsConfig(absoluteTsConfigPath);
+  if (!project) {
+    return {
+      filesProcessed: 0,
+      filesIndexed: [],
+      nodesAdded: 0,
+      edgesAdded: 0,
+      errors: [
+        {
+          file: tsconfigPath,
+          message: `No Project found in registry for ${tsconfigPath}`,
+        },
+      ],
+    };
+  }
 
   // Filter source files:
   // - Only include files within this package's directory tree

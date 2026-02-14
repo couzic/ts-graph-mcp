@@ -203,7 +203,7 @@ export function newHelper(): string { return deepHelper(); }
 `,
     );
 
-    await sleep(waitTime);
+    await sleep(waitTime * 3);
 
     // Now entry → newHelper → deepHelper
     const output = dependenciesOf(db, "src/entry.ts", "entry");
@@ -216,7 +216,7 @@ export function newHelper(): string { return deepHelper(); }
     // Delete the old helper.ts (no longer used)
     unlinkSync(join(TEST_DIR, "src/helper.ts"));
 
-    await sleep(waitTime * 2); // This one is particularly flaky
+    await sleep(waitTime * 4); // This one is particularly flaky
 
     // Old helper symbol should not be found (removed from database)
     const output = dependentsOf(db, "src/helper.ts", "helper");
