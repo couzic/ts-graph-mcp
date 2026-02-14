@@ -1,9 +1,14 @@
+import assert from "node:assert";
 import { create, insert, searchVector } from "@orama/orama";
 import { describe, expect, it } from "vitest";
+import type { EmbeddingProvider } from "../embedding/EmbeddingTypes.js";
+import type { EmbeddingCacheConnection } from "../embedding/embeddingCache.js";
+import { cosineSimilarity } from "./cosineSimilarity.js";
 import {
   createSearchIndex,
   preprocessForBM25,
   restoreSearchIndex,
+  type SearchIndexOptions,
 } from "./createSearchIndex.js";
 import type { SearchDocument } from "./SearchTypes.js";
 
@@ -284,6 +289,226 @@ describe(createSearchIndex.name, () => {
 
     const count = await index.count();
     expect(count).toBe(2);
+  });
+});
+
+/**
+ * Create a fake in-memory embedding cache for testing.
+ */
+const createFakeCache = (): EmbeddingCacheConnection & {
+  store: Map<string, Float32Array>;
+} => {
+  const store = new Map<string, Float32Array>();
+  return {
+    store,
+    get(hash: string) {
+      return store.get(hash);
+    },
+    getBatch(hashes: string[]) {
+      const result = new Map<string, Float32Array>();
+      for (const hash of hashes) {
+        const vec = store.get(hash);
+        if (vec) {
+          result.set(hash, vec);
+        }
+      }
+      return result;
+    },
+    set(hash: string, vector: Float32Array) {
+      store.set(hash, vector);
+    },
+    close() {},
+  };
+};
+
+/**
+ * Create a fake embedding provider that uses simpleEmbeddingFunction.
+ */
+const createFakeProvider = (dims: number): EmbeddingProvider => ({
+  async initialize() {},
+  async embedQuery(text: string) {
+    return simpleEmbeddingFunction(text, dims);
+  },
+  async embedDocument(text: string) {
+    return simpleEmbeddingFunction(text, dims);
+  },
+  async dispose() {},
+});
+
+/**
+ * Build a normalized vector with a known cosine to a reference vector [1, 0, 0, ...].
+ * Used to control exactly which docs pass the vector similarity threshold.
+ */
+const embeddingWithCosine = (
+  targetCosine: number,
+  dims: number,
+): Float32Array => {
+  const vec = new Float32Array(dims);
+  vec[0] = targetCosine;
+  vec[1] = Math.sqrt(1 - targetCosine * targetCosine);
+  return vec;
+};
+
+/** Reference query vector: unit vector along first axis. */
+const queryVec = (dims: number): Float32Array => {
+  const vec = new Float32Array(dims);
+  vec[0] = 1;
+  return vec;
+};
+
+describe("cosine backfill for BM25-only hits", () => {
+  /**
+   * Test setup:
+   * - Query vector: [1, 0, 0, ...] (unit vector)
+   * - "validateCart": matches BM25 + cosine 0.9 → appears in both BM25 and vector
+   * - "bm25OnlyDoc": matches BM25 (via content "validate") + cosine 0.4
+   *   → excluded from vector results (below 0.6 threshold)
+   *   → backfill should compute real cosine from cache
+   */
+  const setupBackfillIndex = async (
+    backfillDeps: {
+      cache?: ReturnType<typeof createFakeCache>;
+      providerDims?: number;
+      skipCache?: boolean;
+    } = {},
+  ) => {
+    const cache = backfillDeps.cache ?? createFakeCache();
+    const dims = backfillDeps.providerDims ?? DIMS;
+    const provider = createFakeProvider(dims);
+
+    // The BM25-only doc's embedding (cosine 0.4 to query → below 0.6 threshold)
+    const bm25OnlyEmbedding = embeddingWithCosine(0.4, dims);
+    const bm25OnlyHash = "hash-bm25only";
+
+    if (!backfillDeps.skipCache) {
+      cache.set(bm25OnlyHash, bm25OnlyEmbedding);
+    }
+
+    const nodeData = new Map<
+      string,
+      { contentHash: string; snippet: string }
+    >();
+    nodeData.set("src/test.ts:bm25OnlyDoc", {
+      contentHash: bm25OnlyHash,
+      snippet: "function bm25OnlyDoc() { validate(); }",
+    });
+
+    const options: SearchIndexOptions = {
+      vectorDimensions: dims,
+      openCache: () => cache,
+      embeddingProvider: provider,
+      getNodeEmbeddingData: (ids: string[]) => {
+        const result = new Map<
+          string,
+          { contentHash: string; snippet: string }
+        >();
+        for (const id of ids) {
+          const data = nodeData.get(id);
+          if (data) {
+            result.set(id, data);
+          }
+        }
+        return result;
+      },
+    };
+
+    const index = await createSearchIndex(options);
+
+    // Matches BM25 for "validate" AND vector (cosine 0.9 > 0.6)
+    await index.add({
+      id: "src/test.ts:validateCart",
+      symbol: "validateCart",
+      file: "src/test.ts",
+      nodeType: "Function",
+      content: "",
+      embedding: embeddingWithCosine(0.9, dims),
+    });
+
+    // Matches BM25 for "validate" (via content), but cosine 0.4 < 0.6
+    // → excluded from Orama vector results → BM25-only hit → needs backfill
+    await index.add({
+      id: "src/test.ts:bm25OnlyDoc",
+      symbol: "bm25OnlyDoc",
+      file: "src/test.ts",
+      nodeType: "Function",
+      content: "validate something",
+      embedding: bm25OnlyEmbedding,
+    });
+
+    return { index, cache, bm25OnlyEmbedding, query: queryVec(dims) };
+  };
+
+  it("backfills cosine score for BM25-only hits from embedding cache", async () => {
+    const { index, query, bm25OnlyEmbedding } = await setupBackfillIndex();
+
+    const results = await index.search("validate", { vector: query });
+
+    const bm25Only = results.find((r) => r.symbol === "bm25OnlyDoc");
+    assert(bm25Only !== undefined);
+
+    // With backfill, score includes real cosine (0.4), not just BM25 * 0.5
+    const expectedCosine = cosineSimilarity(query, bm25OnlyEmbedding);
+    expect(expectedCosine).toBeCloseTo(0.4, 1);
+    // hybridScore = normalizedBm25 * 0.5 + 0.4 * 0.5 = normalizedBm25 * 0.5 + 0.2
+    expect(bm25Only.score).toBeGreaterThan(0.2);
+  });
+
+  it("computes embedding via provider on cache miss", async () => {
+    const cache = createFakeCache();
+    const { index } = await setupBackfillIndex({ cache, skipCache: true });
+
+    const results = await index.search("validate", {
+      vector: queryVec(DIMS),
+    });
+
+    const bm25Only = results.find((r) => r.symbol === "bm25OnlyDoc");
+    assert(bm25Only !== undefined);
+    expect(bm25Only.score).toBeGreaterThan(0);
+
+    // Provider should have generated and stored the embedding in cache
+    expect(cache.store.has("hash-bm25only")).toBe(true);
+  });
+
+  it("skips backfill when dependencies are not provided", async () => {
+    // No backfill deps → cosine stays 0 for BM25-only hits
+    const index = await createSearchIndex({ vectorDimensions: DIMS });
+
+    await index.add({
+      id: "src/test.ts:validateCart",
+      symbol: "validateCart",
+      file: "src/test.ts",
+      nodeType: "Function",
+      content: "",
+      embedding: embeddingWithCosine(0.9, DIMS),
+    });
+
+    await index.add({
+      id: "src/test.ts:bm25OnlyDoc",
+      symbol: "bm25OnlyDoc",
+      file: "src/test.ts",
+      nodeType: "Function",
+      content: "validate something",
+      embedding: embeddingWithCosine(0.4, DIMS),
+    });
+
+    const withBackfill = await setupBackfillIndex();
+    const backfillResults = await withBackfill.index.search("validate", {
+      vector: queryVec(DIMS),
+    });
+
+    const noBackfillResults = await index.search("validate", {
+      vector: queryVec(DIMS),
+    });
+
+    const withScore = backfillResults.find((r) => r.symbol === "bm25OnlyDoc");
+    const withoutScore = noBackfillResults.find(
+      (r) => r.symbol === "bm25OnlyDoc",
+    );
+    assert(withScore !== undefined);
+    assert(withoutScore !== undefined);
+
+    // Backfilled version should have a higher score (includes real cosine)
+    expect(withScore.score).toBeGreaterThan(withoutScore.score);
   });
 });
 

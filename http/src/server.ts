@@ -246,7 +246,39 @@ export const startHttpServer = async (
   await embeddingProvider.initialize();
 
   // Create fresh search index (rebuilt from SQLite + embedding cache on startup)
-  const searchIndex = await createSearchIndex({ vectorDimensions });
+  // dbHolder.ref is set after indexAndOpenDb returns.
+  // Safe because search() is only called after the server is up.
+  const dbHolder: { ref: Database.Database | null } = { ref: null };
+  const searchIndex = await createSearchIndex({
+    vectorDimensions,
+    openCache: () => openEmbeddingCache(cacheDir, presetName),
+    embeddingProvider,
+    getNodeEmbeddingData: (ids: string[]) => {
+      const result = new Map<
+        string,
+        { contentHash: string; snippet: string }
+      >();
+      if (!dbHolder.ref) {
+        return result;
+      }
+      const placeholders = ids.map(() => "?").join(",");
+      const rows = dbHolder.ref
+        .prepare<
+          string[],
+          { id: string; content_hash: string; snippet: string }
+        >(
+          `SELECT id, content_hash, snippet FROM nodes WHERE id IN (${placeholders})`,
+        )
+        .all(...ids);
+      for (const row of rows) {
+        result.set(row.id, {
+          contentHash: row.content_hash,
+          snippet: row.snippet,
+        });
+      }
+      return result;
+    },
+  });
 
   // Index project and keep DB open (unified: SQLite + search index)
   const { db, indexedFiles, manifest, config } = await indexAndOpenDb(
@@ -258,6 +290,7 @@ export const startHttpServer = async (
     searchIndex,
     embeddingProvider,
   );
+  dbHolder.ref = db;
 
   // Track indexed files count (updated after sync)
   const currentIndexedFiles = indexedFiles;

@@ -12,7 +12,10 @@ import {
   searchVector,
 } from "@orama/orama";
 import type { NodeType } from "@ts-graph/shared";
+import type { EmbeddingProvider } from "../embedding/EmbeddingTypes.js";
+import type { EmbeddingCacheConnection } from "../embedding/embeddingCache.js";
 import { computeHybridScore } from "./computeHybridScore.js";
+import { cosineSimilarity } from "./cosineSimilarity.js";
 import type {
   SearchDocument,
   SearchOptions,
@@ -46,6 +49,14 @@ export interface SearchIndexWrapper {
 export interface SearchIndexOptions {
   /** Vector dimensions (e.g., 384, 768, 1024). */
   vectorDimensions: number;
+  /** Open an embedding cache connection for cosine backfill. */
+  openCache?: () => EmbeddingCacheConnection;
+  /** Embedding provider for cache miss fallback. */
+  embeddingProvider?: EmbeddingProvider;
+  /** Batch lookup node embedding data (contentHash + snippet) by node IDs. */
+  getNodeEmbeddingData?: (
+    ids: string[],
+  ) => Map<string, { contentHash: string; snippet: string }>;
 }
 
 /**
@@ -77,6 +88,7 @@ type SearchIndex = Orama<SearchSchema>;
 const buildWrapper = (
   db: SearchIndex,
   docsByFile: Map<string, Set<string>>,
+  options: SearchIndexOptions,
 ): SearchIndexWrapper => {
   const trackDoc = (doc: SearchDocument) => {
     const ids = docsByFile.get(doc.file) ?? new Set();
@@ -162,18 +174,18 @@ const buildWrapper = (
 
     async search(
       query: string,
-      options?: SearchOptions,
+      searchOptions?: SearchOptions,
     ): Promise<SearchResult[]> {
-      const limit = options?.limit ?? 10;
+      const limit = searchOptions?.limit ?? 10;
 
       const where: Record<string, string | string[]> = {};
-      if (options?.nodeTypes && options.nodeTypes.length > 0) {
+      if (searchOptions?.nodeTypes && searchOptions.nodeTypes.length > 0) {
         // biome-ignore lint/complexity/useLiteralKeys: index signature
-        where["nodeType"] = options.nodeTypes;
+        where["nodeType"] = searchOptions.nodeTypes;
       }
-      if (options?.filePattern) {
+      if (searchOptions?.filePattern) {
         // biome-ignore lint/complexity/useLiteralKeys: index signature
-        where["file"] = options.filePattern;
+        where["file"] = searchOptions.filePattern;
       }
 
       const baseParams = {
@@ -182,20 +194,22 @@ const buildWrapper = (
         ...(Object.keys(where).length > 0 ? { where } : {}),
       };
 
-      if (options?.vector) {
-        // Run BM25 and vector searches separately
-        const bm25Results = await search(db, baseParams);
-        const vectorResults = await searchVector(db, {
-          mode: "vector" as const,
-          vector: {
-            value: Array.from(options.vector),
-            property: "embedding",
-          },
-          similarity: 0,
-          limit,
-        });
+      if (searchOptions?.vector) {
+        // Run BM25 (wide net) and vector (caller's limit, similarity floor) in parallel
+        const [bm25Results, vectorResults] = await Promise.all([
+          search(db, { ...baseParams, limit: 1000 }),
+          searchVector(db, {
+            mode: "vector" as const,
+            vector: {
+              value: Array.from(searchOptions.vector),
+              property: "embedding",
+            },
+            similarity: 0.6,
+            limit,
+          }),
+        ]);
 
-        // Merge by document ID
+        // Merge by document ID (union)
         const merged = new Map<
           string,
           {
@@ -231,6 +245,68 @@ const buildWrapper = (
           }
         }
 
+        // Backfill cosine for BM25-only hits
+        const bm25OnlyIds: string[] = [];
+        for (const [id, entry] of merged) {
+          if (entry.bm25Score > 0 && entry.cosineScore === 0) {
+            bm25OnlyIds.push(id);
+          }
+        }
+
+        if (
+          bm25OnlyIds.length > 0 &&
+          options.openCache &&
+          options.embeddingProvider &&
+          options.getNodeEmbeddingData
+        ) {
+          const nodeData = options.getNodeEmbeddingData(bm25OnlyIds);
+          const hashes = [...nodeData.values()]
+            .map((d) => d.contentHash)
+            .filter(Boolean);
+
+          const cache = options.openCache();
+          try {
+            const cachedEmbeddings = cache.getBatch(hashes);
+
+            // Build hash→embedding map, computing missing ones
+            const embeddingByHash = new Map<string, Float32Array>(
+              cachedEmbeddings,
+            );
+            for (const [, data] of nodeData) {
+              if (data.contentHash && !embeddingByHash.has(data.contentHash)) {
+                const embedding = await options.embeddingProvider.embedDocument(
+                  data.snippet,
+                );
+                cache.set(data.contentHash, embedding);
+                embeddingByHash.set(data.contentHash, embedding);
+              }
+            }
+
+            // Compute cosine for each BM25-only hit
+            for (const id of bm25OnlyIds) {
+              const data = nodeData.get(id);
+              if (!data) {
+                console.warn(
+                  `[ts-graph] Orama/SQLite desync: node "${id}" found in search index but not in nodes table`,
+                );
+                continue;
+              }
+              const entry = merged.get(id);
+              if (data.contentHash && entry) {
+                const embedding = embeddingByHash.get(data.contentHash);
+                if (embedding) {
+                  entry.cosineScore = cosineSimilarity(
+                    searchOptions.vector,
+                    embedding,
+                  );
+                }
+              }
+            }
+          } finally {
+            cache.close();
+          }
+        }
+
         const results: SearchResult[] = [];
         for (const entry of merged.values()) {
           const hybridScore = computeHybridScore(
@@ -238,7 +314,6 @@ const buildWrapper = (
             maxBm25,
             entry.cosineScore,
           );
-          // Filter out results with zero hybrid score (e.g., no BM25 match and low cosine)
           if (hybridScore > 0) {
             results.push({
               id: entry.doc.id,
@@ -296,7 +371,7 @@ export const createSearchIndex = async (
   } as const;
 
   const db = create({ schema }) as SearchIndex;
-  return buildWrapper(db, docsByFile);
+  return buildWrapper(db, docsByFile, options);
 };
 
 /**
@@ -333,5 +408,5 @@ export const restoreSearchIndex = async (
     docsByFile.set(file, ids);
   }
 
-  return buildWrapper(db, docsByFile);
+  return buildWrapper(db, docsByFile, options);
 };

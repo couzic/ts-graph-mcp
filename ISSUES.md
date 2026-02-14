@@ -91,6 +91,25 @@ phrases.
 
 ---
 
+## Hardcoded Vector Similarity Threshold
+
+**Impact:** Low (correctness across models)
+
+**Problem:** The hybrid search uses a hardcoded `0.6` cosine similarity floor
+when querying Orama's vector search. This threshold is model-dependent —
+different embedding models have different similarity distributions. A `0.6` floor
+that works well for `nomic-embed-text-v1.5` may be too aggressive or too lenient
+for other presets (`qwen3-0.6b`, `jina-embeddings-v2-base-code`).
+
+**Current state:** Threshold is hardcoded in the `search` method of
+`http/src/search/createSearchIndex.ts`. The config already supports switching
+embedding models via `embedding.preset`, but the threshold doesn't follow.
+
+**Fix approach:** Make the threshold configurable per model, either via the
+config file or as a property of the embedding preset.
+
+---
+
 ## Technical Debt
 
 ---

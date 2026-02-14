@@ -2,22 +2,8 @@ import { describe, expect, it } from "vitest";
 import { computeHybridScore } from "./computeHybridScore.js";
 
 describe(computeHybridScore.name, () => {
-  describe("noise rejection", () => {
-    it("rejects low cosine when document has no BM25 match (cosine-only query)", () => {
-      expect(computeHybridScore(0, 0, 0.59)).toBe(0);
-    });
-
-    it("rejects low cosine when document has no BM25 match (other docs have BM25)", () => {
-      expect(computeHybridScore(0, 5, 0.55)).toBe(0);
-    });
-
-    it("does NOT reject when document has BM25 match, even with low cosine", () => {
-      expect(computeHybridScore(3, 5, 0.55)).toBeGreaterThan(0);
-    });
-  });
-
   describe("cosine-only (no BM25 in query)", () => {
-    it("returns halved cosine score when above threshold", () => {
+    it("returns halved cosine score", () => {
       expect(computeHybridScore(0, 0, 0.7)).toBe(0.35);
     });
 
