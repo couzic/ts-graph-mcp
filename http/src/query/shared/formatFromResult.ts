@@ -1,4 +1,3 @@
-import type { OutputFormat } from "@ts-graph/shared";
 import { formatMermaid } from "./formatMermaid.js";
 import {
   enrichNodesWithCallSites,
@@ -36,40 +35,34 @@ export const formatMcpFromResult = (result: QueryResult): string => {
 
 /**
  * Format a QueryResult as Mermaid diagram syntax.
+ * Returns one string per connected component.
  *
  * @example
  * const result = dependenciesData(db, filePath, symbol);
- * const mermaid = formatMermaidFromResult(result);
+ * const diagrams = formatMermaidFromResult(result);
+ * // diagrams: string[] — one mermaid graph per connected component
  */
-export const formatMermaidFromResult = (result: QueryResult): string => {
+export const formatMermaidFromResult = (
+  result: QueryResult,
+  direction?: "LR" | "TD",
+): string[] => {
   const { edges, metadataByNodeId, aliasMap, maxNodes, message } = result;
 
   if (edges.length === 0) {
-    return message ?? "graph LR\n  empty[No data]";
+    const dir = direction ?? "LR";
+    return [message ?? `graph ${dir}\n  empty[No data]`];
   }
 
-  const output = formatMermaid(edges, {
+  const diagrams = formatMermaid(edges, {
     maxNodes,
     metadataByNodeId,
     aliasMap,
+    direction,
   });
 
-  return message ? `${message}\n\n${output}` : output;
-};
-
-/**
- * Format a QueryResult using the specified output format.
- *
- * @example
- * const result = dependenciesData(db, filePath, symbol);
- * return formatQueryResult(result, options.format);
- */
-export const formatQueryResult = (
-  result: QueryResult,
-  format?: OutputFormat,
-): string => {
-  if (format === "mermaid") {
-    return formatMermaidFromResult(result);
+  if (message && diagrams.length > 0) {
+    diagrams[0] = `${message}\n\n${diagrams[0]}`;
   }
-  return formatMcpFromResult(result);
+
+  return diagrams;
 };

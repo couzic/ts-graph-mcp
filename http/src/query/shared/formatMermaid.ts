@@ -15,54 +15,89 @@ export type MermaidOptions = {
   maxNodes?: number;
   metadataByNodeId?: Map<string, NodeMetadata>;
   aliasMap?: Map<string, string>;
+  direction?: "LR" | "TD";
 };
 
 /**
- * Format edges into mermaid flowchart syntax.
+ * Find connected components in an undirected graph via BFS.
  *
  * @example
- * // Input edges: A --CALLS--> B, B --CALLS--> C
- * // Output:
- * // graph LR
- * //   A -->|CALLS| B
- * //   B -->|CALLS| C
+ * // Two disconnected edges: A→B, C→D
+ * findConnectedComponents([{source:"A",target:"B",...}, {source:"C",target:"D",...}])
+ * // Returns [[edge_AB], [edge_CD]]
  */
-export const formatMermaid = (
+export const findConnectedComponents = (edges: GraphEdge[]): GraphEdge[][] => {
+  // Build undirected adjacency list: node → edge objects touching that node
+  const adjacency = new Map<string, GraphEdge[]>();
+  for (const edge of edges) {
+    const sourceAdj = adjacency.get(edge.source);
+    if (sourceAdj) {
+      sourceAdj.push(edge);
+    } else {
+      adjacency.set(edge.source, [edge]);
+    }
+    const targetAdj = adjacency.get(edge.target);
+    if (targetAdj) {
+      targetAdj.push(edge);
+    } else {
+      adjacency.set(edge.target, [edge]);
+    }
+  }
+
+  const visitedNodes = new Set<string>();
+  const visitedEdges = new Set<GraphEdge>();
+  const components: GraphEdge[][] = [];
+
+  for (const startNode of adjacency.keys()) {
+    if (visitedNodes.has(startNode)) {
+      continue;
+    }
+
+    const componentEdges: GraphEdge[] = [];
+    const queue: string[] = [startNode];
+    visitedNodes.add(startNode);
+
+    while (queue.length > 0) {
+      const node = queue.shift() as string;
+      const nodeEdges = adjacency.get(node) ?? [];
+      for (const edge of nodeEdges) {
+        if (visitedEdges.has(edge)) {
+          continue;
+        }
+        visitedEdges.add(edge);
+        componentEdges.push(edge);
+        const neighbor = edge.source === node ? edge.target : edge.source;
+        if (!visitedNodes.has(neighbor)) {
+          visitedNodes.add(neighbor);
+          queue.push(neighbor);
+        }
+      }
+    }
+
+    if (componentEdges.length > 0) {
+      components.push(componentEdges);
+    }
+  }
+
+  return components;
+};
+
+/**
+ * Format a single connected component's edges into mermaid flowchart syntax.
+ */
+const formatSingleGraph = (
   edges: GraphEdge[],
   options?: MermaidOptions,
 ): string => {
-  if (edges.length === 0) {
-    return "graph LR\n  empty[No data]";
-  }
-
-  const maxNodes = options?.maxNodes ?? DEFAULT_MAX_NODES;
-
-  // Count total nodes and apply truncation if needed
-  const allNodeIds = new Set<string>();
-  for (const edge of edges) {
-    allNodeIds.add(edge.source);
-    allNodeIds.add(edge.target);
-  }
-  const totalNodeCount = allNodeIds.size;
-
-  let workingEdges = edges;
-  let truncationComment = "";
-
-  if (totalNodeCount > maxNodes) {
-    const { truncatedEdges } = truncateEdges(edges, maxNodes);
-    workingEdges = truncatedEdges;
-    truncationComment = `%% (${maxNodes}/${totalNodeCount} nodes displayed)\n`;
-  }
-
-  // Collect node IDs from working edges
+  // Collect node IDs
   const workingNodeIds = new Set<string>();
-  for (const edge of workingEdges) {
+  for (const edge of edges) {
     workingNodeIds.add(edge.source);
     workingNodeIds.add(edge.target);
   }
 
   // Build display names with disambiguation
-  const effectiveAliasMap = options?.aliasMap ?? buildAliasMap(workingEdges);
+  const effectiveAliasMap = options?.aliasMap ?? buildAliasMap(edges);
   const displayNames = buildDisplayNames(
     [...workingNodeIds],
     effectiveAliasMap,
@@ -70,7 +105,7 @@ export const formatMermaid = (
 
   // Build context for type-aware display names
   const includesTargets = new Set<string>();
-  for (const edge of workingEdges) {
+  for (const edge of edges) {
     if (edge.type === "INCLUDES") {
       includesTargets.add(edge.target);
     }
@@ -108,8 +143,6 @@ export const formatMermaid = (
     nodeIdMap.set(nodeId, `${sanitized}_${idCounter++}`);
   }
 
-  const lines: string[] = [`${truncationComment}graph LR`];
-
   // Determine grouping strategy: package (if multiple) or file (fallback)
   const uniquePackages = new Set<string>();
   if (metadataByNodeId) {
@@ -140,6 +173,20 @@ export const formatMermaid = (
     }
   }
 
+  // Check if any group will produce a subgraph (2+ symbols)
+  let hasSubgraphs = false;
+  for (const nodeIds of nodesByGroup.values()) {
+    if (nodeIds.length > 1) {
+      hasSubgraphs = true;
+      break;
+    }
+  }
+
+  // With subgraphs: parent TD (hardcoded)
+  // Without subgraphs: LR (UI option controls this)
+  const direction = options?.direction ?? (hasSubgraphs ? "TD" : "LR");
+  const lines: string[] = [`graph ${direction}`];
+
   // Add subgraphs with node definitions
   // Only wrap in subgraph if group has 2+ symbols
   let subgraphCounter = 0;
@@ -161,11 +208,62 @@ export const formatMermaid = (
   }
 
   // Add edges
-  for (const edge of workingEdges) {
+  for (const edge of edges) {
     const sourceId = nodeIdMap.get(edge.source);
     const targetId = nodeIdMap.get(edge.target);
     lines.push(`  ${sourceId} -->|${edge.type}| ${targetId}`);
   }
 
   return lines.join("\n");
+};
+
+/**
+ * Format edges into mermaid flowchart syntax.
+ * Returns one string per connected component.
+ *
+ * @example
+ * // Connected graph → single-element array
+ * formatMermaid([{source:"A",target:"B",...}])
+ * // ["graph LR\n  A -->|CALLS| B"]
+ *
+ * // Disconnected components → one element per component
+ * formatMermaid([{source:"A",target:"B",...}, {source:"C",target:"D",...}])
+ * // ["graph LR\n  A -->|CALLS| B", "graph LR\n  C -->|CALLS| D"]
+ */
+export const formatMermaid = (
+  edges: GraphEdge[],
+  options?: MermaidOptions,
+): string[] => {
+  if (edges.length === 0) {
+    return [`graph ${options?.direction ?? "LR"}\n  empty[No data]`];
+  }
+
+  const maxNodes = options?.maxNodes ?? DEFAULT_MAX_NODES;
+
+  // Count total nodes and apply truncation if needed
+  const allNodeIds = new Set<string>();
+  for (const edge of edges) {
+    allNodeIds.add(edge.source);
+    allNodeIds.add(edge.target);
+  }
+  const totalNodeCount = allNodeIds.size;
+
+  let workingEdges = edges;
+
+  if (totalNodeCount > maxNodes) {
+    const { truncatedEdges } = truncateEdges(edges, maxNodes);
+    workingEdges = truncatedEdges;
+  }
+
+  // Split into connected components
+  const components = findConnectedComponents(workingEdges);
+
+  if (components.length === 0) {
+    return [`graph ${options?.direction ?? "LR"}\n  empty[No data]`];
+  }
+
+  // Format each component as a separate mermaid diagram
+  return components.map((componentEdges) =>
+    formatSingleGraph(componentEdges, options),
+  );
 };

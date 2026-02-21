@@ -199,9 +199,9 @@ export function anotherFunction(): number { return 42; }
         body: JSON.stringify({ topic: "searchable" }),
       },
     );
-    const graphJson = (await graphResponse.json()) as { result: string };
+    const graphJson = (await graphResponse.json()) as { result: string[] };
 
-    expect(graphJson.result).toContain("searchableFunction");
+    expect(graphJson.result.join("\n")).toContain("searchableFunction");
   });
 });
 
@@ -310,10 +310,12 @@ export function authenticateSession(token: string): boolean {
         body: JSON.stringify({ topic: "login" }),
       },
     );
-    const firstRunJson = (await firstRunResponse.json()) as { result: string };
+    const firstRunJson = (await firstRunResponse.json()) as {
+      result: string[];
+    };
 
     // Should find authentication-related symbols via semantic similarity
-    expect(firstRunJson.result).toContain("validateUserCredentials");
+    expect(firstRunJson.result.join("\n")).toContain("validateUserCredentials");
 
     // Step 3: Stop the server
     await serverHandle.close();
@@ -331,10 +333,12 @@ export function authenticateSession(token: string): boolean {
         body: JSON.stringify({ topic: "login" }),
       },
     );
-    const restartJson = (await restartResponse.json()) as { result: string };
+    const restartJson = (await restartResponse.json()) as {
+      result: string[];
+    };
 
     // This will FAIL if embeddings aren't restored from cache
-    expect(restartJson.result).toContain("validateUserCredentials");
+    expect(restartJson.result.join("\n")).toContain("validateUserCredentials");
 
     // Clean up
     await serverHandle.close();

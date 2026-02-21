@@ -147,7 +147,7 @@ fnA --CALLS--> fnB`);
       expect(result).toContain("## Nodes");
     });
 
-    it("skips Nodes section when node count exceeds maxNodes", () => {
+    it("omits Nodes section when no nodes provided", () => {
       const input: FormatInput = {
         edges: [
           {
@@ -175,7 +175,7 @@ fnA --CALLS--> fnB`);
       expect(result).toContain("## Graph");
       expect(result).not.toContain("## Nodes");
       expect(result).toContain(
-        "(2/4 nodes displayed. Nodes section skipped. Use max_nodes param for full output.)",
+        "(2 nodes displayed. Use max_nodes param for full output.)",
       );
     });
 
@@ -217,8 +217,100 @@ fnA --CALLS--> fnB`);
       expect(result).not.toContain("fnD");
       expect(result).not.toContain("fnE");
       expect(result).toContain(
-        "(3/5 nodes displayed. Nodes section skipped. Use max_nodes param for full output.)",
+        "(3 nodes displayed. Use max_nodes param for full output.)",
       );
+    });
+
+    it("includes Nodes section for kept nodes after truncation", () => {
+      // Graph has 5 nodes, maxNodes=3 → truncated to 3 nodes
+      // 3 nodes is under NO_SNIPPET_THRESHOLD (30), so Nodes section with snippets should appear
+      const input: FormatInput = {
+        edges: [
+          {
+            source: "src/a.ts:Function:fnA",
+            target: "src/b.ts:Function:fnB",
+            type: "CALLS",
+          },
+          {
+            source: "src/b.ts:Function:fnB",
+            target: "src/c.ts:Function:fnC",
+            type: "CALLS",
+          },
+          {
+            source: "src/c.ts:Function:fnC",
+            target: "src/d.ts:Function:fnD",
+            type: "CALLS",
+          },
+          {
+            source: "src/d.ts:Function:fnD",
+            target: "src/e.ts:Function:fnE",
+            type: "CALLS",
+          },
+        ],
+        nodes: [
+          {
+            id: "src/b.ts:Function:fnB",
+            name: "fnB",
+            type: "Function",
+            filePath: "src/b.ts",
+            startLine: 1,
+            endLine: 3,
+            snippet: "function fnB() {\n  return fnC();\n}",
+            locs: [
+              { line: 1, code: "function fnB() {" },
+              { line: 2, code: "  return fnC();" },
+              { line: 3, code: "}" },
+            ],
+          },
+        ],
+        maxNodes: 3,
+      };
+
+      const result = formatToolOutput(input);
+
+      // Truncated to 3 nodes (fnA, fnB, fnC) — should still show Nodes section
+      expect(result).toContain("## Nodes");
+      expect(result).toContain("fnB:");
+      expect(result).toContain("snippet:");
+      expect(result).toContain("(3 nodes displayed");
+    });
+
+    it("forwards aliasMap to truncated output", () => {
+      // Graph: fnA -> fnB -> SyntheticMethod -> fnD -> fnE (5 nodes, maxNodes: 3)
+      const input: FormatInput = {
+        edges: [
+          {
+            source: "src/a.ts:Function:fnA",
+            target: "src/b.ts:Function:fnB",
+            type: "CALLS",
+          },
+          {
+            source: "src/b.ts:Function:fnB",
+            target: "src/c.ts:Function:ReturnType<typeof createService>.doWork",
+            type: "CALLS",
+          },
+          {
+            source: "src/c.ts:Function:ReturnType<typeof createService>.doWork",
+            target: "src/d.ts:Function:fnD",
+            type: "CALLS",
+          },
+          {
+            source: "src/d.ts:Function:fnD",
+            target: "src/e.ts:Function:fnE",
+            type: "CALLS",
+          },
+        ],
+        nodes: [],
+        maxNodes: 3,
+        aliasMap: new Map([["ReturnType<typeof createService>", "Service"]]),
+      };
+
+      const result = formatToolOutput(input);
+
+      // Alias should appear in the truncated graph section
+      expect(result).toContain("Service.doWork");
+      expect(result).not.toContain("ReturnType<typeof createService>");
+      expect(result).toContain("(3 nodes displayed");
     });
 
     it("uses default maxNodes of 50 when not specified", () => {
@@ -243,7 +335,7 @@ fnA --CALLS--> fnB`);
       // 51 nodes > 50 default, so should be truncated
       expect(result).not.toContain("## Nodes");
       expect(result).toContain(
-        "(50/51 nodes displayed. Nodes section skipped. Use max_nodes param for full output.)",
+        "(50 nodes displayed. Use max_nodes param for full output.)",
       );
     });
   });

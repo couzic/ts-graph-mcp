@@ -2,7 +2,11 @@ import assert from "node:assert";
 import { Subject } from "rxjs";
 import { createGraph, type Graph, type Vertex } from "verdux";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { GraphSearchResult, HealthResponse } from "./ApiService.js";
+import type {
+  GraphSearchResult,
+  HealthResponse,
+  SearchGraphParams,
+} from "./ApiService.js";
 import { appActions, createAppVertexConfig } from "./appVertexConfig.js";
 import {
   type GraphEndpoint,
@@ -17,6 +21,10 @@ describe("appVertexConfig", () => {
   let receivedSymbols$: Subject<SymbolOption[]>;
   let receivedSearch$: Subject<GraphSearchResult>;
   let receivedTopic$: Subject<GraphSearchResult>;
+  let lastSearchGraphParams: SearchGraphParams | undefined;
+  let lastSearchByTopicParams:
+    | { topic: string; maxNodes: number; format: string; direction?: string }
+    | undefined;
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -24,12 +32,20 @@ describe("appVertexConfig", () => {
     receivedSymbols$ = new Subject<SymbolOption[]>();
     receivedSearch$ = new Subject<GraphSearchResult>();
     receivedTopic$ = new Subject<GraphSearchResult>();
+    lastSearchGraphParams = undefined;
+    lastSearchByTopicParams = undefined;
     const vertexConfig = createAppVertexConfig({
       apiService: () => ({
         getHealth: () => receivedHealth$,
         searchSymbols: () => receivedSymbols$,
-        searchGraph: () => receivedSearch$,
-        searchByTopic: (_topic, _maxNodes, _format) => receivedTopic$,
+        searchGraph: (params: SearchGraphParams) => {
+          lastSearchGraphParams = params;
+          return receivedSearch$;
+        },
+        searchByTopic: (topic, maxNodes, format, direction) => {
+          lastSearchByTopicParams = { topic, maxNodes, format, direction };
+          return receivedTopic$;
+        },
       }),
     });
     graph = createGraph({
@@ -222,7 +238,7 @@ describe("appVertexConfig", () => {
     };
 
     const toGraphResult = (result: string): GraphSearchResult => ({
-      result,
+      result: [result],
     });
 
     it("returns null when no endpoint or topic is specified", () => {
@@ -335,6 +351,47 @@ describe("appVertexConfig", () => {
       vi.advanceTimersByTime(400);
 
       expect(vertex.currentState.queryResult).toBeNull();
+    });
+
+    it("passes direction to searchGraph when format is mermaid", () => {
+      graph.dispatch(appActions.setOutputFormat("mermaid"));
+      graph.dispatch(appActions.setMermaidDirection("TD"));
+      graph.dispatch(appActions.setFromEndpoint(fromEndpoint));
+      vi.advanceTimersByTime(400);
+
+      assert(lastSearchGraphParams !== undefined);
+      expect(lastSearchGraphParams.direction).toBe("TD");
+    });
+
+    it("does not pass direction to searchGraph when format is mcp", () => {
+      graph.dispatch(appActions.setOutputFormat("mcp"));
+      graph.dispatch(appActions.setMermaidDirection("TD"));
+      graph.dispatch(appActions.setFromEndpoint(fromEndpoint));
+      vi.advanceTimersByTime(400);
+
+      assert(lastSearchGraphParams !== undefined);
+      expect(lastSearchGraphParams.direction).toBeUndefined();
+    });
+
+    it("passes direction to searchByTopic when format is mermaid", () => {
+      graph.dispatch(appActions.setOutputFormat("mermaid"));
+      graph.dispatch(appActions.setMermaidDirection("LR"));
+      graph.dispatch(appActions.setTopicInput("auth"));
+      graph.dispatch(appActions.submitTopic());
+      vi.advanceTimersByTime(400);
+
+      assert(lastSearchByTopicParams !== undefined);
+      expect(lastSearchByTopicParams.direction).toBe("LR");
+    });
+
+    it("does not pass direction to searchByTopic when format is mcp", () => {
+      graph.dispatch(appActions.setOutputFormat("mcp"));
+      graph.dispatch(appActions.setTopicInput("auth"));
+      graph.dispatch(appActions.submitTopic());
+      vi.advanceTimersByTime(400);
+
+      assert(lastSearchByTopicParams !== undefined);
+      expect(lastSearchByTopicParams.direction).toBeUndefined();
     });
   });
 

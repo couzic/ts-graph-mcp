@@ -192,4 +192,5 @@ export type GraphSearchRequest = {
   to?: GraphSearchEndpoint;
   max_nodes?: number;
   format?: OutputFormat;
+  direction?: "LR" | "TD";
 };

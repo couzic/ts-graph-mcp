@@ -9,7 +9,7 @@ export type HealthResponse = {
 };
 
 export type GraphSearchResult = {
-  result: string;
+  result: string[];
 };
 
 type ApiEndpoint = { symbol: string; file_path: string } | { query: string };
@@ -21,11 +21,12 @@ const toApiEndpoint = (endpoint: GraphEndpoint): ApiEndpoint => {
   return { query: endpoint.query };
 };
 
-type SearchGraphParams = {
+export type SearchGraphParams = {
   from?: GraphEndpoint;
   to?: GraphEndpoint;
   maxNodes: number;
   format: string;
+  direction?: string;
 };
 
 export const createApiService = () => ({
@@ -34,7 +35,12 @@ export const createApiService = () => ({
   searchSymbols: (query: string) =>
     ajax.getJSON<SymbolOption[]>(`/api/symbols?q=${encodeURIComponent(query)}`),
 
-  searchByTopic: (topic: string, maxNodes: number, format: string) =>
+  searchByTopic: (
+    topic: string,
+    maxNodes: number,
+    format: string,
+    direction?: string,
+  ) =>
     ajax<GraphSearchResult>({
       url: "/api/graph/search",
       method: "POST",
@@ -43,11 +49,12 @@ export const createApiService = () => ({
         topic,
         max_nodes: maxNodes,
         format,
+        ...(direction ? { direction } : {}),
       }),
       responseType: "json",
     }).pipe(map((r) => r.response)),
 
-  searchGraph: ({ from, to, maxNodes, format }: SearchGraphParams) =>
+  searchGraph: ({ from, to, maxNodes, format, direction }: SearchGraphParams) =>
     ajax<GraphSearchResult>({
       url: "/api/graph/search",
       method: "POST",
@@ -57,6 +64,7 @@ export const createApiService = () => ({
         ...(to ? { to: toApiEndpoint(to) } : {}),
         max_nodes: maxNodes,
         format,
+        ...(direction ? { direction } : {}),
       }),
       responseType: "json",
     }).pipe(map((r) => r.response)),

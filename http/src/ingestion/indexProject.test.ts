@@ -12,6 +12,10 @@ import {
 import type { Edge, Node } from "../db/Types.js";
 import { createFakeEmbeddingProvider } from "../embedding/createFakeEmbeddingProvider.js";
 import { silentLogger } from "../logging/SilentTsGraphLogger.js";
+import {
+  createSearchIndex,
+  type SearchIndexWrapper,
+} from "../search/createSearchIndex.js";
 import { indexProject } from "./indexProject.js";
 
 /**
@@ -24,7 +28,10 @@ function nodeExists(db: Database.Database, nodeId: string): boolean {
 }
 
 const TEST_DIR = "/tmp/ts-graph-rag-ingestion-test";
-const embeddingProvider = createFakeEmbeddingProvider({ dimensions: 3 });
+const vectorDimensions = 3;
+const embeddingProvider = createFakeEmbeddingProvider({
+  dimensions: vectorDimensions,
+});
 
 // Mock DbWriter that collects all written data
 const createMockWriter = (): DbWriter & {
@@ -82,11 +89,14 @@ const createMockWriter = (): DbWriter & {
 };
 
 describe("Ingestion", () => {
-  beforeEach(() => {
+  let searchIndex: SearchIndexWrapper;
+
+  beforeEach(async () => {
     if (existsSync(TEST_DIR)) {
       rmSync(TEST_DIR, { recursive: true });
     }
     mkdirSync(TEST_DIR, { recursive: true });
+    searchIndex = await createSearchIndex({ vectorDimensions });
   });
 
   afterEach(() => {
@@ -138,6 +148,7 @@ describe("Ingestion", () => {
         projectRoot: TEST_DIR,
         logger: silentLogger,
         embeddingProvider,
+        searchIndex,
       });
 
       expect(result.filesProcessed).toBeGreaterThanOrEqual(2);
@@ -171,6 +182,7 @@ describe("Ingestion", () => {
         projectRoot: TEST_DIR,
         logger: silentLogger,
         embeddingProvider,
+        searchIndex,
       });
 
       // Should still process valid files
@@ -200,6 +212,7 @@ describe("Ingestion", () => {
         clearFirst: true,
         logger: silentLogger,
         embeddingProvider,
+        searchIndex,
       });
 
       expect(writer.cleared).toBe(true);
@@ -266,6 +279,7 @@ export function helper(): void {
           projectRoot: TEST_DIR,
           logger: silentLogger,
           embeddingProvider,
+          searchIndex,
         });
 
         // Should have no errors - cross-file edges should work
@@ -337,6 +351,7 @@ export function getPath(): string {
           projectRoot: TEST_DIR,
           logger: silentLogger,
           embeddingProvider,
+          searchIndex,
         });
 
         // Should have no errors - edges to external deps should be filtered out
@@ -360,6 +375,7 @@ export function getPath(): string {
           projectRoot: TEST_DIR,
           logger: silentLogger,
           embeddingProvider,
+          searchIndex,
         }),
       ).rejects.toThrow();
     });
@@ -437,6 +453,7 @@ export function formatDate(date: Date): string {
           projectRoot: TEST_DIR,
           logger: silentLogger,
           embeddingProvider,
+          searchIndex,
         });
 
         // Should have no errors - cross-package edges should work

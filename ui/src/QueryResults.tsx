@@ -1,11 +1,10 @@
 import type { GraphSearchResult } from "./ApiService.js";
-import type { MermaidDirection, OutputFormat } from "./graph.js";
+import type { OutputFormat } from "./graph.js";
 import { MermaidRenderer } from "./MermaidRenderer.js";
 
 type QueryResultsProps = {
   result: GraphSearchResult | null;
   format: OutputFormat;
-  mermaidDirection: MermaidDirection;
   hasFromEndpoint: boolean;
   hasToEndpoint: boolean;
   hasTopic: boolean;
@@ -21,7 +20,6 @@ const queryTypeBySelection: Record<string, string> = {
 export const QueryResults = ({
   result,
   format,
-  mermaidDirection,
   hasFromEndpoint,
   hasToEndpoint,
   hasTopic,
@@ -60,9 +58,11 @@ export const QueryResults = ({
         <span style={formatBadgeStyle}>{format.toUpperCase()}</span>
       </div>
       {format === "mermaid" ? (
-        <MermaidRenderer syntax={result.result} direction={mermaidDirection} />
+        result.result.map((syntax, i) => (
+          <MermaidRenderer key={i} syntax={syntax} />
+        ))
       ) : (
-        <pre style={resultStyle}>{result.result}</pre>
+        <pre style={resultStyle}>{result.result[0]}</pre>
       )}
     </div>
   );

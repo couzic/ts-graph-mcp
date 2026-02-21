@@ -83,8 +83,8 @@ const result: QueryResult = await searchGraph(db, {
 }, options)
 
 // Format separately (done by HTTP server or MCP wrapper)
-const text = formatQueryResult(result, "mcp")     // MCP text format
-const mermaid = formatQueryResult(result, "mermaid") // Mermaid diagram
+const text = formatMcpFromResult(result)
+const diagrams = formatMermaidFromResult(result)
 
 type GraphEndpoint = {
   query?: string,    // Lexical + semantic search (can return multiple nodes)
@@ -133,7 +133,8 @@ step02:
 
 - **Discovered nodes only**: Query inputs are excluded
 - **Read tool compatible**: Includes `offset` and `limit`
-- **Snippets**: Included when ≤30 nodes, omitted for 31-50 nodes
+- **Snippets**: Included when ≤30 nodes, omitted above
+- **Always shown**: Nodes section is included even after truncation
 
 ## Edge Types
 

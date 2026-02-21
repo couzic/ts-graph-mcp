@@ -34,8 +34,8 @@ export interface IndexProjectOptions {
   clearFirst?: boolean;
   /** Logger for progress reporting */
   logger: TsGraphLogger;
-  /** Search index for unified indexing (optional) */
-  searchIndex?: SearchIndexWrapper;
+  /** Search index for unified indexing */
+  searchIndex: SearchIndexWrapper;
   /** Embedding provider for semantic search */
   embeddingProvider: EmbeddingProvider;
 }
@@ -157,7 +157,7 @@ const processPackage = async (
   dbWriter: DbWriter,
   projectRegistry: ProjectRegistry,
   logger: TsGraphLogger,
-  searchIndex: SearchIndexWrapper | undefined,
+  searchIndex: SearchIndexWrapper,
   embeddingProvider: EmbeddingProvider,
   embeddingCache: EmbeddingCache | undefined,
 ): Promise<PackageProcessResult> => {

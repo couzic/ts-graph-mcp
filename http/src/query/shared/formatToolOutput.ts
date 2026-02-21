@@ -41,8 +41,8 @@ export interface FormatInput {
  *
  * Flow:
  * 1. Count unique nodes and check against maxNodes limit
- * 2. If over limit: truncate graph (BFS order), skip Nodes section
- * 3. If under limit: format full Graph + Nodes sections
+ * 2. If over limit: truncate to first maxNodes nodes (BFS order), include Nodes for kept nodes
+ * 3. Snippets included when ≤30 nodes, omitted above
  *
  * @param input - Edges, nodes, and optional maxNodes limit
  * @returns Formatted output string (Graph + optionally Nodes sections)
@@ -60,7 +60,7 @@ export const formatToolOutput = (input: FormatInput): string => {
 
   // Check if truncation is needed
   if (totalNodeCount > maxNodes) {
-    return formatTruncatedOutput(edges, totalNodeCount, maxNodes);
+    return formatTruncatedOutput(edges, nodes, maxNodes, input.aliasMap);
   }
 
   // Full output path (under maxNodes limit)
@@ -147,23 +147,36 @@ export const truncateEdges = <T extends GraphEdge>(
 };
 
 /**
- * Format truncated output with Graph section only.
+ * Format truncated output with Graph + Nodes sections for kept nodes.
  * Truncates to first maxNodes nodes in BFS traversal order.
  */
 const formatTruncatedOutput = (
   edges: EdgeWithCallSites[],
-  totalNodeCount: number,
+  nodes: NodeInfo[],
   maxNodes: number,
+  aliasMap?: Map<string, string>,
 ): string => {
   const { truncatedEdges } = truncateEdges(edges, maxNodes);
 
-  // Format truncated graph
-  const { text: graphSection } = formatGraph(truncatedEdges);
+  // Filter nodes to only those kept after truncation
+  const keptNodeIds = new Set<string>();
+  for (const edge of truncatedEdges) {
+    keptNodeIds.add(edge.source);
+    keptNodeIds.add(edge.target);
+  }
+  const keptNodes = nodes.filter((n) => keptNodeIds.has(n.id));
+  const includeSnippets = keptNodeIds.size <= NO_SNIPPET_THRESHOLD;
 
-  // Build output with truncation message
-  const message = `(${maxNodes}/${totalNodeCount} nodes displayed. Nodes section skipped. Use max_nodes param for full output.)`;
+  const fullOutput = formatFullOutput(
+    truncatedEdges,
+    keptNodes,
+    includeSnippets,
+    aliasMap,
+  );
 
-  return `## Graph\n\n${graphSection}\n\n${message}`;
+  const message = `(${maxNodes} nodes displayed. Use max_nodes param for full output.)`;
+
+  return `${fullOutput}\n\n${message}`;
 };
 
 /**

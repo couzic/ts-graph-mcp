@@ -88,6 +88,7 @@ Uses ts-morph for type-aware TypeScript parsing:
 ```typescript
 const result = await indexProject(config, dbWriter, {
   projectRoot: "/path/to/project",
+  searchIndex,        // Required: search index for unified indexing
   embeddingProvider,  // Required: embedding provider for semantic search
   clearFirst: true    // Optional: clear DB first
 });

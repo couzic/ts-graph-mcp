@@ -6,7 +6,8 @@ import {
   closeDatabase,
   openDatabase,
 } from "../../db/sqlite/sqliteConnection.utils.js";
-import { dependenciesOf } from "./dependenciesOf.js";
+import { formatMermaidFromResult } from "../shared/formatFromResult.js";
+import { dependenciesData } from "./dependenciesOf.js";
 
 describe("mermaid start node type-aware display", () => {
   let db: Database;
@@ -59,13 +60,13 @@ describe("mermaid start node type-aware display", () => {
   });
 
   it("includes parentheses for start node function in mermaid output", () => {
-    const output = dependenciesOf(db, "src/api.ts", "handleRequest", {
-      format: "mermaid",
-    });
+    const result = dependenciesData(db, "src/api.ts", "handleRequest");
+    const diagrams = formatMermaidFromResult(result);
 
+    const joined = diagrams.join("\n");
     // Start node (handleRequest) should show "()" since it's a Function
-    expect(output).toContain('["handleRequest()"]');
+    expect(joined).toContain('["handleRequest()"]');
     // Target node should also show "()"
-    expect(output).toContain('["saveData()"]');
+    expect(joined).toContain('["saveData()"]');
   });
 });

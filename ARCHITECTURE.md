@@ -145,11 +145,12 @@ Content-Type: application/json
   "from": { "symbol": "handleRequest", "file_path": "src/api.ts" },
   "to": { "symbol": "saveData", "file_path": "src/db.ts" },
   "max_nodes": 50,
-  "format": "mcp"                  // "mcp" (default) or "mermaid"
+  "format": "mcp",                 // "mcp" (default) or "mermaid"
+  "direction": "LR"                // Optional: "LR" or "TD" (mermaid only)
 }
 
 Response:
-{ "result": "## Graph\n\nhandleRequest --CALLS--> ..." }
+{ "result": ["## Graph\n\nhandleRequest --CALLS--> ..."] }
 ```
 
 Query patterns:
@@ -355,8 +356,10 @@ details.
 based on node count:
 
 - **1-30 nodes**: Full output with snippets
-- **31-50 nodes**: Metadata only (snippets omitted to reduce noise)
-- **51+ nodes**: Graph truncated, Nodes section skipped entirely
+- **31+ nodes**: Metadata only (snippets omitted to reduce noise)
+
+When the graph exceeds `max_nodes`, it is truncated to the first `max_nodes`
+nodes in BFS order. The Nodes section is always included for the kept nodes.
 
 ### Symbol Resolution
 

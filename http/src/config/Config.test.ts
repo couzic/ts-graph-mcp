@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   PackageConfigSchema,
   ProjectConfigSchema,
+  ServerConfigSchema,
   StorageConfigSchema,
   WatchConfigSchema,
 } from "./Config.schemas.js";
@@ -126,6 +127,13 @@ describe("ConfigSchema", () => {
       expect(() =>
         WatchConfigSchema.parse({ polling: true, debounce: true }),
       ).toThrow(/mutually exclusive|cannot.*both/i);
+    });
+  });
+
+  describe("ServerConfigSchema", () => {
+    it("rejects server config without port", () => {
+      const result = ServerConfigSchema.safeParse({});
+      expect(result.success).toBe(false);
     });
   });
 

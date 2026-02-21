@@ -218,6 +218,7 @@ const buildVertexConfig = (dependencies: { apiService: () => ApiService }) =>
           "submittedTopic",
           "maxNodes",
           "outputFormat",
+          "mermaidDirection",
         ],
         {
           queryResult: (fields$) =>
@@ -230,14 +231,18 @@ const buildVertexConfig = (dependencies: { apiService: () => ApiService }) =>
                   submittedTopic,
                   maxNodes,
                   outputFormat,
+                  mermaidDirection,
                 }) => {
                   const format = outputFormat;
+                  const direction =
+                    format === "mermaid" ? mermaidDirection : undefined;
                   // Topic only → semantic search
                   if (submittedTopic.trim() && !fromEndpoint && !toEndpoint) {
                     return apiService.searchByTopic(
                       submittedTopic,
                       maxNodes,
                       format,
+                      direction,
                     );
                   }
                   // FROM only → dependenciesOf (what does this call?)
@@ -246,6 +251,7 @@ const buildVertexConfig = (dependencies: { apiService: () => ApiService }) =>
                       from: fromEndpoint,
                       maxNodes,
                       format,
+                      direction,
                     });
                   }
                   // TO only → dependentsOf (who calls this?)
@@ -254,6 +260,7 @@ const buildVertexConfig = (dependencies: { apiService: () => ApiService }) =>
                       to: toEndpoint,
                       maxNodes,
                       format,
+                      direction,
                     });
                   }
                   // Both → pathsBetween
@@ -263,6 +270,7 @@ const buildVertexConfig = (dependencies: { apiService: () => ApiService }) =>
                       to: toEndpoint,
                       maxNodes,
                       format,
+                      direction,
                     });
                   }
                   // Neither selected

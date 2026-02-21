@@ -12,6 +12,7 @@ import { createFakeEmbeddingProvider } from "../../../../http/src/embedding/crea
 import { indexProject } from "../../../../http/src/ingestion/indexProject.js";
 import { silentLogger } from "../../../../http/src/logging/SilentTsGraphLogger.js";
 import { dependenciesOf } from "../../../../http/src/query/dependencies-of/dependenciesOf.js";
+import { createSearchIndex } from "../../../../http/src/search/createSearchIndex.js";
 
 describe("small gaps E2E - gap indicator threshold", () => {
   let db: Database;
@@ -27,10 +28,12 @@ describe("small gaps E2E - gap indicator threshold", () => {
     };
     const writer = createSqliteWriter(db);
     const embeddingProvider = createFakeEmbeddingProvider({ dimensions: 3 });
+    const searchIndex = await createSearchIndex({ vectorDimensions: 3 });
     await indexProject(config, writer, {
       projectRoot,
       logger: silentLogger,
       embeddingProvider,
+      searchIndex,
     });
   });
 

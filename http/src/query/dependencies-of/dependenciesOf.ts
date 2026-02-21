@@ -4,9 +4,8 @@ import {
   formatDisambiguationMessage,
 } from "../shared/classMethodFallback.js";
 import { collectNodeIds } from "../shared/collectNodeIds.js";
-import { formatQueryResult } from "../shared/formatFromResult.js";
+import { formatMcpFromResult } from "../shared/formatFromResult.js";
 import { messageResult, type QueryResult } from "../shared/QueryResult.js";
-import type { QueryOptions } from "../shared/QueryTypes.js";
 import { queryAliasMap } from "../shared/queryAliasMap.js";
 import { queryNodeInfos } from "../shared/queryNodeInfos.js";
 import { queryNodeMetadata } from "../shared/queryNodeMetadata.js";
@@ -90,15 +89,15 @@ export const dependenciesData = (
 };
 
 /**
- * Test-only convenience wrapper around `dependenciesData` + `formatQueryResult`.
+ * Test-only convenience wrapper around `dependenciesData` + `formatMcpFromResult`.
  * Production code uses `dependenciesData` directly via `searchGraph`.
  */
 export function dependenciesOf(
   db: Database.Database,
   filePath: string | undefined,
   symbol: string,
-  options: QueryOptions = {},
+  options: { maxNodes?: number } = {},
 ): string {
   const result = dependenciesData(db, filePath, symbol, options);
-  return formatQueryResult(result, options.format);
+  return formatMcpFromResult(result);
 }

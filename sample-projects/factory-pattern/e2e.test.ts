@@ -11,6 +11,7 @@ import { createFakeEmbeddingProvider } from "../../http/src/embedding/createFake
 import { indexProject } from "../../http/src/ingestion/indexProject.js";
 import { silentLogger } from "../../http/src/logging/SilentTsGraphLogger.js";
 import { dependenciesOf } from "../../http/src/query/dependencies-of/dependenciesOf.js";
+import { createSearchIndex } from "../../http/src/search/createSearchIndex.js";
 
 /**
  * E2E tests for factory function pattern.
@@ -37,10 +38,12 @@ describe("factory pattern E2E tests", () => {
     };
     const writer = createSqliteWriter(db);
     const embeddingProvider = createFakeEmbeddingProvider({ dimensions: 3 });
+    const searchIndex = await createSearchIndex({ vectorDimensions: 3 });
     await indexProject(config, writer, {
       projectRoot,
       logger: silentLogger,
       embeddingProvider,
+      searchIndex,
     });
   });
 

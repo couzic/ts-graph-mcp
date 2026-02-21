@@ -25,7 +25,10 @@ import { type WatchHandle, watchProject } from "./ingestion/watchProject.js";
 import { consoleLogger } from "./logging/ConsoleTsGraphLogger.js";
 import type { TsGraphLogger } from "./logging/TsGraphLogger.js";
 import { searchGraph } from "./query/search-graph/searchGraph.js";
-import { formatQueryResult } from "./query/shared/formatFromResult.js";
+import {
+  formatMcpFromResult,
+  formatMermaidFromResult,
+} from "./query/shared/formatFromResult.js";
 import {
   createSearchIndex,
   type SearchIndexWrapper,
@@ -351,7 +354,7 @@ export const startHttpServer = async (
   // Graph search endpoint
   app.use(express.json());
   app.post("/api/graph/search", async (req, res) => {
-    const { topic, from, to, max_nodes, format } =
+    const { topic, from, to, max_nodes, format, direction } =
       req.body as GraphSearchRequest;
 
     if (!topic && !from && !to) {
@@ -366,7 +369,11 @@ export const startHttpServer = async (
       { topic, from, to, max_nodes },
       { searchIndex, embeddingProvider },
     );
-    res.json({ result: formatQueryResult(result, format) });
+    if (format === "mermaid") {
+      res.json({ result: formatMermaidFromResult(result, direction) });
+    } else {
+      res.json({ result: [formatMcpFromResult(result)] });
+    }
   });
 
   // SPA fallback - serve index.html for all other routes

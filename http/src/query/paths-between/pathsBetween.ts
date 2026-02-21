@@ -3,10 +3,9 @@ import {
   attemptClassMethodFallback,
   formatDisambiguationMessage,
 } from "../shared/classMethodFallback.js";
-import { formatQueryResult } from "../shared/formatFromResult.js";
+import { formatMcpFromResult } from "../shared/formatFromResult.js";
 import type { EdgeWithCallSites } from "../shared/formatToolOutput.js";
 import { messageResult, type QueryResult } from "../shared/QueryResult.js";
-import type { QueryOptions } from "../shared/QueryTypes.js";
 import { queryAliasMap } from "../shared/queryAliasMap.js";
 import { queryNodeInfos } from "../shared/queryNodeInfos.js";
 import { queryNodeMetadata } from "../shared/queryNodeMetadata.js";
@@ -158,15 +157,15 @@ export const pathsBetweenData = (
 };
 
 /**
- * Test-only convenience wrapper around `pathsBetweenData` + `formatQueryResult`.
+ * Test-only convenience wrapper around `pathsBetweenData` + `formatMcpFromResult`.
  * Production code uses `pathsBetweenData` directly via `searchGraph`.
  */
 export function pathsBetween(
   db: Database.Database,
   from: SymbolRef,
   to: SymbolRef,
-  options: QueryOptions = {},
+  options: { maxNodes?: number } = {},
 ): string {
   const result = pathsBetweenData(db, from, to, options);
-  return formatQueryResult(result, options.format);
+  return formatMcpFromResult(result);
 }

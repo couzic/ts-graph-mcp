@@ -14,6 +14,7 @@ import { silentLogger } from "../../../../http/src/logging/SilentTsGraphLogger.j
 import { dependenciesOf } from "../../../../http/src/query/dependencies-of/dependenciesOf.js";
 import { dependentsOf } from "../../../../http/src/query/dependents-of/dependentsOf.js";
 import { pathsBetween } from "../../../../http/src/query/paths-between/pathsBetween.js";
+import { createSearchIndex } from "../../../../http/src/search/createSearchIndex.js";
 
 describe("long functions E2E - snippet truncation", () => {
   let db: Database;
@@ -29,10 +30,12 @@ describe("long functions E2E - snippet truncation", () => {
     };
     const writer = createSqliteWriter(db);
     const embeddingProvider = createFakeEmbeddingProvider({ dimensions: 3 });
+    const searchIndex = await createSearchIndex({ vectorDimensions: 3 });
     await indexProject(config, writer, {
       projectRoot,
       logger: silentLogger,
       embeddingProvider,
+      searchIndex,
     });
   });
 

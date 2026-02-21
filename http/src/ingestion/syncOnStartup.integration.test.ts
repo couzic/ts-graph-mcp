@@ -269,10 +269,12 @@ describe("syncOnStartup cross-package resolution", () => {
         dimensions: vectorDimensions,
       });
 
+      const searchIndex = await createSearchIndex({ vectorDimensions });
       await indexProject(config, writer, {
         projectRoot,
         logger: silentLogger,
         embeddingProvider,
+        searchIndex,
       });
 
       const baselineOutput = dependenciesOf(

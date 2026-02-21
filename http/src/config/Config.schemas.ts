@@ -63,8 +63,8 @@ export const WatchConfigSchema = z
   });
 
 export const ServerConfigSchema = z.object({
-  /** HTTP server port (default: finds available port) */
-  port: z.number().int().positive().optional(),
+  /** HTTP server port (required — no default) */
+  port: z.number().int().positive(),
   /** Bind address (default: '127.0.0.1' for security) */
   host: z.string().optional(),
 });

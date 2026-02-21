@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   formatMcpFromResult,
   formatMermaidFromResult,
-  formatQueryResult,
 } from "./formatFromResult.js";
 import type { QueryResult } from "./QueryResult.js";
 
@@ -65,36 +64,30 @@ describe(formatMcpFromResult.name, () => {
 
 describe(formatMermaidFromResult.name, () => {
   it("returns fallback diagram for empty edges without message", () => {
-    expect(formatMermaidFromResult(emptyResult)).toBe(
+    expect(formatMermaidFromResult(emptyResult)).toEqual([
       "graph LR\n  empty[No data]",
-    );
+    ]);
   });
 
   it("returns message for empty edges with message", () => {
-    expect(formatMermaidFromResult(resultWithMessage)).toBe(
+    expect(formatMermaidFromResult(resultWithMessage)).toEqual([
       "Resolved to MyClass.myMethod",
-    );
+    ]);
   });
 
   it("formats mermaid diagram for non-empty edges", () => {
     const output = formatMermaidFromResult(resultWithEdges);
-    expect(output).toContain("graph LR");
-    expect(output).toContain("CALLS");
-  });
-});
-
-describe(formatQueryResult.name, () => {
-  it("dispatches to MCP format by default", () => {
-    expect(formatQueryResult(emptyResult)).toBe("");
+    expect(output).toHaveLength(1);
+    expect(output[0]).toContain("graph LR");
+    expect(output[0]).toContain("CALLS");
   });
 
-  it('dispatches to MCP format for "mcp"', () => {
-    expect(formatQueryResult(emptyResult, "mcp")).toBe("");
-  });
-
-  it('dispatches to Mermaid format for "mermaid"', () => {
-    expect(formatQueryResult(emptyResult, "mermaid")).toBe(
-      "graph LR\n  empty[No data]",
-    );
+  it("prepends message to first diagram element", () => {
+    const result: QueryResult = {
+      ...resultWithEdges,
+      message: "Note: resolved",
+    };
+    const output = formatMermaidFromResult(result);
+    expect(output[0]).toMatch(/^Note: resolved\n\n/);
   });
 });

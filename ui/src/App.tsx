@@ -196,7 +196,6 @@ const MainContent = () => {
         <Suspense fallback={<ResultsLoading />}>
           <ResultsContent
             outputFormat={outputFormat}
-            mermaidDirection={mermaidDirection}
             hasFromEndpoint={fromEndpoint !== null}
             hasToEndpoint={toEndpoint !== null}
             hasTopic={submittedTopic.trim().length > 0}
@@ -213,19 +212,17 @@ const ResultsLoading = () => (
 
 type ResultsContentProps = {
   outputFormat: OutputFormat;
-  mermaidDirection: MermaidDirection;
   hasFromEndpoint: boolean;
   hasToEndpoint: boolean;
   hasTopic: boolean;
 };
 
-const ResultsContent = ({ outputFormat, mermaidDirection, hasFromEndpoint, hasToEndpoint, hasTopic }: ResultsContentProps) => {
+const ResultsContent = ({ outputFormat, hasFromEndpoint, hasToEndpoint, hasTopic }: ResultsContentProps) => {
   const { queryResult } = useVertexState(appVertex, ["queryResult"]);
   return (
     <QueryResults
       result={queryResult}
       format={outputFormat}
-      mermaidDirection={mermaidDirection}
       hasFromEndpoint={hasFromEndpoint}
       hasToEndpoint={hasToEndpoint}
       hasTopic={hasTopic}

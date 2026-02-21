@@ -20,6 +20,7 @@ import { createFakeEmbeddingProvider } from "../embedding/createFakeEmbeddingPro
 import { silentLogger } from "../logging/SilentTsGraphLogger.js";
 import { dependenciesOf } from "../query/dependencies-of/dependenciesOf.js";
 import { dependentsOf } from "../query/dependents-of/dependentsOf.js";
+import { createSearchIndex } from "../search/createSearchIndex.js";
 import { indexProject } from "./indexProject.js";
 import { type IndexManifest, saveManifest } from "./manifest.js";
 import {
@@ -127,11 +128,13 @@ export function entry(): string { return helper(); }
       packages: [{ name: "main", tsconfig: "tsconfig.json" }],
     };
 
+    const searchIndex = await createSearchIndex({ vectorDimensions: 3 });
     const writer = createSqliteWriter(db);
     await indexProject(projectConfig, writer, {
       projectRoot: TEST_DIR,
       logger: silentLogger,
       embeddingProvider,
+      searchIndex,
     });
 
     // Create initial manifest

@@ -1,10 +1,8 @@
 import mermaid from "mermaid";
 import { useEffect, useRef, useState } from "react";
-import type { MermaidDirection } from "./graph.js";
 
 type MermaidRendererProps = {
   syntax: string;
-  direction: MermaidDirection;
 };
 
 // Initialize mermaid with dark theme
@@ -26,7 +24,7 @@ mermaid.initialize({
   },
 });
 
-export const MermaidRenderer = ({ syntax, direction }: MermaidRendererProps) => {
+export const MermaidRenderer = ({ syntax }: MermaidRendererProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,11 +36,8 @@ export const MermaidRenderer = ({ syntax, direction }: MermaidRendererProps) => 
 
       try {
         setError(null);
-        // Apply direction by replacing graph directive (handles optional comment prefix)
-        const directedSyntax = syntax.replace(/graph \w+/, `graph ${direction}`);
-        // Generate unique ID for each render
         const id = `mermaid-${Date.now()}`;
-        const { svg } = await mermaid.render(id, directedSyntax);
+        const { svg } = await mermaid.render(id, syntax);
         containerRef.current.innerHTML = svg;
       } catch (err) {
         const message = err instanceof Error ? err.message : "Failed to render diagram";
@@ -54,7 +49,7 @@ export const MermaidRenderer = ({ syntax, direction }: MermaidRendererProps) => 
     };
 
     renderDiagram();
-  }, [syntax, direction]);
+  }, [syntax]);
 
   if (error) {
     return (
@@ -93,7 +88,7 @@ const diagramStyle: React.CSSProperties = {
   display: "flex",
   justifyContent: "center",
   alignItems: "flex-start",
-  minHeight: "200px",
+  minHeight: "400px",
 };
 
 const errorStyle: React.CSSProperties = {

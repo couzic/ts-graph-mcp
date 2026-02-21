@@ -13,6 +13,7 @@ import { silentLogger } from "../../http/src/logging/SilentTsGraphLogger.js";
 import { dependenciesOf } from "../../http/src/query/dependencies-of/dependenciesOf.js";
 import { dependentsOf } from "../../http/src/query/dependents-of/dependentsOf.js";
 import { pathsBetween } from "../../http/src/query/paths-between/pathsBetween.js";
+import { createSearchIndex } from "../../http/src/search/createSearchIndex.js";
 
 /**
  * E2E tests for yarn-pnp-monorepo sample project.
@@ -42,10 +43,12 @@ describe("yarn-pnp-monorepo E2E tests", () => {
     const config = loadConfig(`${projectRoot}/ts-graph-mcp.config.json`);
     const writer = createSqliteWriter(db);
     const embeddingProvider = createFakeEmbeddingProvider({ dimensions: 3 });
+    const searchIndex = await createSearchIndex({ vectorDimensions: 3 });
     await indexProject(config, writer, {
       projectRoot,
       logger: silentLogger,
       embeddingProvider,
+      searchIndex,
     });
   });
 
