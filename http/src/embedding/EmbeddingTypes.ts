@@ -29,8 +29,6 @@ export interface EmbeddingConfig {
   queryPrefix?: string;
   /** Document prefix */
   documentPrefix?: string;
-  /** Number of parallel embedding contexts (default: 4) */
-  poolSize?: number;
 }
 
 /**

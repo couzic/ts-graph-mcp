@@ -150,7 +150,7 @@ Content-Type: application/json
 }
 
 Response:
-{ "result": ["## Graph\n\nhandleRequest --CALLS--> ..."] }
+{ "result": "## Graph\n\nhandleRequest --CALLS--> ..." }
 ```
 
 Query patterns:
@@ -267,15 +267,6 @@ Streaming architecture — processes one file at a time:
 2. **Extract Edges** using import map for cross-file resolution → write to DB
 
 Memory efficient: O(1) per file, scales to any codebase size.
-
-### Embedding Parallelism
-
-Embedding generation uses a pool of `LlamaEmbeddingContext` instances in
-CPU-only mode. GPU (Vulkan) has a global lock that serializes all operations;
-CPU-only enables true parallelism.
-
-Default: 4 contexts, threads per context = floor((numCpus - 2) / 4). Two CPUs
-are reserved for the system. On a 16-core machine: 4 × 3 = 12 threads.
 
 ### Cross-File Resolution
 

@@ -1,4 +1,3 @@
-import { cpus } from "node:os";
 import {
   getLlama,
   type Llama,
@@ -27,19 +26,8 @@ export interface CreateEmbeddingProviderOptions {
   onProgress?: DownloadProgress;
 }
 
-const DEFAULT_POOL_SIZE = 4;
-
-interface PooledContext {
-  context: LlamaEmbeddingContext;
-  busy: boolean;
-}
-
 /**
- * Create an embedding provider using node-llama-cpp with context pooling.
- *
- * Uses CPU-only mode with multiple embedding contexts for parallel processing.
- * Vulkan GPU has a global lock that prevents parallelism, so CPU mode is faster
- * for batch embedding generation.
+ * Create an embedding provider using node-llama-cpp.
  *
  * @example
  * const provider = await createEmbeddingProvider({
@@ -52,7 +40,6 @@ export const createEmbeddingProvider = async (
 ): Promise<EmbeddingProvider> => {
   const config = options.config ?? {};
   const modelsDir = options.modelsDir ?? ".ts-graph-mcp/models";
-  const poolSize = config.poolSize ?? DEFAULT_POOL_SIZE;
 
   // Resolve preset or use explicit config
   const preset = config.preset ?? DEFAULT_PRESET;
@@ -71,54 +58,17 @@ export const createEmbeddingProvider = async (
 
   let llama: Llama | null = null;
   let model: LlamaModel | null = null;
-  let contextPool: PooledContext[] = [];
+  let context: LlamaEmbeddingContext | null = null;
   let initialized = false;
 
-  // Queue for callers waiting for an available context
-  const waitQueue: Array<(ctx: LlamaEmbeddingContext) => void> = [];
-
   /**
-   * Acquire an idle context from the pool, or wait if all are busy.
-   */
-  const acquireContext = (): Promise<LlamaEmbeddingContext> => {
-    const idle = contextPool.find((pc) => !pc.busy);
-    if (idle) {
-      idle.busy = true;
-      return Promise.resolve(idle.context);
-    }
-    return new Promise((resolve) => {
-      waitQueue.push(resolve);
-    });
-  };
-
-  /**
-   * Release a context back to the pool.
-   */
-  const releaseContext = (context: LlamaEmbeddingContext): void => {
-    const pooledCtx = contextPool.find((pc) => pc.context === context);
-    if (!pooledCtx) {
-      return;
-    }
-
-    const next = waitQueue.shift();
-    if (next) {
-      // Direct handoff to waiting caller, context stays busy
-      next(pooledCtx.context);
-    } else {
-      pooledCtx.busy = false;
-    }
-  };
-
-  /**
-   * Initialize the embedding model and context pool (lazy).
+   * Initialize the embedding model and context (lazy).
    */
   const initialize = async (): Promise<void> => {
     if (initialized) {
       return;
     }
 
-    // Use CPU-only mode to enable parallel embedding generation.
-    // Vulkan GPU has a global lock that serializes all operations.
     llama = await getLlama({
       logLevel: LlamaLogLevel.error,
       logger: () => {},
@@ -139,70 +89,34 @@ export const createEmbeddingProvider = async (
     // Load model with mmap (Direct I/O fails on some systems)
     model = await llama.loadModel({ modelPath, useDirectIo: false });
 
-    // Create pool of embedding contexts with distributed threads
-    const numCpus = cpus().length;
-    const availableCpus = Math.max(1, numCpus - 2);
-    const threadsPerContext = Math.max(1, Math.floor(availableCpus / poolSize));
-
-    const createdContexts: LlamaEmbeddingContext[] = [];
-    try {
-      for (let i = 0; i < poolSize; i++) {
-        const context = await model.createEmbeddingContext({
-          threads: threadsPerContext,
-        });
-        createdContexts.push(context);
-      }
-      contextPool = createdContexts.map((ctx) => ({
-        context: ctx,
-        busy: false,
-      }));
-      initialized = true;
-    } catch (e) {
-      // Cleanup on partial failure
-      for (const ctx of createdContexts) {
-        await ctx.dispose();
-      }
-      throw e;
-    }
+    context = await model.createEmbeddingContext();
+    initialized = true;
   };
 
-  /**
-   * Generate embedding using a pooled context.
-   */
-  const embedWithPool = async (
-    text: string,
-    prefix: string,
-  ): Promise<Float32Array> => {
+  const embed = async (text: string, prefix: string): Promise<Float32Array> => {
     await initialize();
-    const context = await acquireContext();
-    try {
-      const input = prefix ? `${prefix}${text}` : text;
-      const embedding = await context.getEmbeddingFor(input);
-      return new Float32Array(embedding.vector);
-    } finally {
-      releaseContext(context);
-    }
+    const input = prefix ? `${prefix}${text}` : text;
+    // biome-ignore lint/style/noNonNullAssertion: initialized guarantees context is set
+    const embedding = await context!.getEmbeddingFor(input);
+    return new Float32Array(embedding.vector);
   };
 
   return {
     initialize,
 
     async embedQuery(text: string): Promise<Float32Array> {
-      return embedWithPool(text, queryPrefix);
+      return embed(text, queryPrefix);
     },
 
     async embedDocument(text: string): Promise<Float32Array> {
-      return embedWithPool(text, documentPrefix);
+      return embed(text, documentPrefix);
     },
 
     async dispose(): Promise<void> {
-      // Dispose all contexts in the pool
-      for (const pc of contextPool) {
-        await pc.context.dispose();
+      if (context) {
+        await context.dispose();
+        context = null;
       }
-      contextPool = [];
-      waitQueue.length = 0;
-
       if (model) {
         await model.dispose();
         model = null;

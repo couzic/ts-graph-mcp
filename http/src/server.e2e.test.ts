@@ -199,9 +199,9 @@ export function anotherFunction(): number { return 42; }
         body: JSON.stringify({ topic: "searchable" }),
       },
     );
-    const graphJson = (await graphResponse.json()) as { result: string[] };
+    const graphJson = (await graphResponse.json()) as { result: string };
 
-    expect(graphJson.result.join("\n")).toContain("searchableFunction");
+    expect(graphJson.result).toContain("searchableFunction");
   });
 });
 

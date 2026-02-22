@@ -107,19 +107,22 @@ export const indexFile = async (
       snippet: extractSourceSnippet(sourceText, node),
     }));
 
-    // Generate embeddings in parallel
-    const embedResults = await Promise.all(
-      nodeSnippets.map(({ node, snippet }) =>
-        embedWithFallback(
-          node.type,
-          node.name,
-          node.filePath,
-          snippet,
-          embeddingProvider,
-          embeddingCache,
-        ),
-      ),
-    );
+    // Generate embeddings sequentially
+    const embedResults: Array<{
+      contentHash: string;
+      embedding?: Float32Array;
+    }> = [];
+    for (const { node, snippet } of nodeSnippets) {
+      const result = await embedWithFallback(
+        node.type,
+        node.name,
+        node.filePath,
+        snippet,
+        embeddingProvider,
+        embeddingCache,
+      );
+      embedResults.push(result);
+    }
 
     // Enrich extracted nodes with snippet + contentHash to produce full Nodes
     const nodes: Node[] = nodeSnippets.map(({ node, snippet }, i) => ({

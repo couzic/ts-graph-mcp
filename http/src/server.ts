@@ -379,7 +379,7 @@ export const startHttpServer = async (
     if (format === "mermaid") {
       res.json({ result: formatMermaidFromResult(result, direction) });
     } else {
-      res.json({ result: [formatMcpFromResult(result)] });
+      res.json({ result: formatMcpFromResult(result) });
     }
   });
 

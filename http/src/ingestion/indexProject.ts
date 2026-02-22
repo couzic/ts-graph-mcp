@@ -1,7 +1,4 @@
-import { cpus } from "node:os";
 import { dirname, relative, resolve } from "node:path";
-import { from, lastValueFrom } from "rxjs";
-import { mergeMap, tap, toArray } from "rxjs/operators";
 import type { ProjectConfig } from "../config/Config.schemas.js";
 import type { DbWriter } from "../db/DbWriter.js";
 import type { IndexResult } from "../db/Types.js";
@@ -16,9 +13,6 @@ import {
   createProjectRegistry,
   type ProjectRegistry,
 } from "./ProjectRegistry.js";
-
-/** Default concurrency based on CPU cores (minimum 2) */
-const DEFAULT_CONCURRENCY = Math.max(2, cpus().length);
 
 /**
  * Options for indexing an entire project.
@@ -209,61 +203,33 @@ const processPackage = async (
   // Start progress tracking for this package
   logger.startProgress(sourceFiles.length, packageName);
 
-  // Process files with controlled concurrency using RxJS
-  const results = await lastValueFrom(
-    from(sourceFiles).pipe(
-      mergeMap(async (sourceFile) => {
-        const absolutePath = sourceFile.getFilePath();
-        const relativePath = relative(projectRoot, absolutePath);
-        const context: EdgeExtractionContext = {
-          filePath: relativePath,
-          package: packageName,
-          projectRegistry,
-        };
+  // Process files sequentially
+  for (const sourceFile of sourceFiles) {
+    const absolutePath = sourceFile.getFilePath();
+    const relativePath = relative(projectRoot, absolutePath);
+    const context: EdgeExtractionContext = {
+      filePath: relativePath,
+      package: packageName,
+      projectRegistry,
+    };
 
-        try {
-          const result = await indexFile(sourceFile, context, dbWriter, {
-            searchIndex,
-            embeddingProvider,
-            embeddingCache,
-          });
-          return {
-            success: true as const,
-            relativePath,
-            nodesAdded: result.nodesAdded,
-            edgesAdded: result.edgesAdded,
-          };
-        } catch (e) {
-          const message = `Failed to index ${relativePath}: ${(e as Error).message}`;
-          logger.error(message);
-          return {
-            success: false as const,
-            relativePath,
-            message,
-          };
-        }
-      }, DEFAULT_CONCURRENCY),
-      tap(() => {
-        filesProcessed++;
-        logger.updateProgress(filesProcessed);
-      }),
-      toArray(),
-    ),
-    { defaultValue: [] },
-  );
-
-  // Aggregate results
-  for (const result of results) {
-    if (result.success) {
+    try {
+      const result = await indexFile(sourceFile, context, dbWriter, {
+        searchIndex,
+        embeddingProvider,
+        embeddingCache,
+      });
       nodesAdded += result.nodesAdded;
       edgesAdded += result.edgesAdded;
-      filesIndexed.push(result.relativePath);
-    } else {
-      errors.push({
-        file: result.relativePath,
-        message: result.message,
-      });
+      filesIndexed.push(relativePath);
+    } catch (e) {
+      const message = `Failed to index ${relativePath}: ${(e as Error).message}`;
+      logger.error(message);
+      errors.push({ file: relativePath, message });
     }
+
+    filesProcessed++;
+    logger.updateProgress(filesProcessed);
   }
 
   // Complete progress for this package
