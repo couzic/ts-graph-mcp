@@ -27,7 +27,8 @@ Database-agnostic edge query function for use in integration tests:
 #### `DbWriter` (`DbWriter.ts`)
 Write operations used by Ingestion Module:
 - `addNodes()` / `addEdges()` - Batch upsert operations
-- `removeFileNodes()` - Delete all nodes from a file (for re-indexing)
+- `removeFileNodes()` - Delete nodes and outgoing edges from a file (for re-indexing)
+- `deleteFile()` - Delete nodes and all edges (outgoing + incoming) from a file (for permanent deletion)
 - `clearAll()` - Nuclear option: delete everything
 
 ### SQLite Implementation (`sqlite/`)
@@ -66,10 +67,13 @@ Common edge metadata (call_count, call_sites, context, reference_context) stored
 Default max depth is 100 for most traversals (1 for type usage). Recursive CTEs prevent infinite loops and cycle detection is built-in.
 
 ### Edge Cleanup (No FK Constraints)
-Edges are explicitly deleted before nodes in `removeFileNodes()`. The schema intentionally has **no foreign key constraints** on the edges table. This design enables:
+Two deletion methods exist:
+- `removeFileNodes()` — deletes outgoing edges only (for re-indexing: incoming edges stay valid since nodes will be recreated)
+- `deleteFile()` — deletes both outgoing and incoming edges (for permanent file deletion: no orphaned edges left behind)
+
+The schema intentionally has **no foreign key constraints** on the edges table. This design enables:
 - Parallel package indexing (no ordering dependencies)
 - Backend-agnostic code (Neo4j/Memgraph don't use FK constraints)
-- Dangling edges are harmless (queries use JOINs which filter them out)
 
 ### Upsert Semantics
 Both `addNodes()` and `addEdges()` use upsert (insert or update). This allows re-indexing files without manual cleanup.

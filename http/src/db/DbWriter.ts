@@ -25,13 +25,23 @@ export interface DbWriter {
   addEdges(edges: Edge[]): Promise<void>;
 
   /**
-   * Remove all nodes (and their edges) from a file.
-   * Used for incremental re-indexing.
+   * Remove all nodes and outgoing edges from a file.
+   * Used for incremental re-indexing (file still exists, will be re-indexed).
+   * Incoming edges are preserved since the file's nodes will be recreated.
    * Idempotent (no error if file not indexed).
    *
    * @param filePath - Relative file path
    */
   removeFileNodes(filePath: string): Promise<void>;
+
+  /**
+   * Remove all nodes and all edges (outgoing + incoming) from a file.
+   * Used when a file is permanently deleted from the project.
+   * Idempotent (no error if file not indexed).
+   *
+   * @param filePath - Relative file path
+   */
+  deleteFile(filePath: string): Promise<void>;
 
   /**
    * Clear the entire graph.

@@ -141,7 +141,7 @@ export const syncOnStartup = async (
   // Remove deleted files
   for (const relativePath of deleted) {
     try {
-      await writer.removeFileNodes(relativePath);
+      await writer.deleteFile(relativePath);
       if (options.searchIndex) {
         await options.searchIndex.removeByFile(relativePath);
       }
