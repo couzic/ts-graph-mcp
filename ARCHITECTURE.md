@@ -333,10 +333,6 @@ One unified tool for all graph queries:
 | Backward traversal  | `{ to: { symbol } }`   | "Who depends on this?"                     |
 | Path finding        | `{ from, to }`         | "How does A reach B?"                      |
 | Semantic search     | `{ topic }`            | "Find code related to X"                   |
-| Filtered traversal  | `{ topic, from }`      | "What X-related code does this depend on?" |
-
-**Note:** `topic` + `from` + `to` (path finding with topic filter) is not yet
-supported — `topic` is silently ignored for path queries.
 
 See [`http/src/query/CLAUDE.md`](http/src/query/CLAUDE.md) for implementation
 details.
@@ -349,8 +345,8 @@ details.
 - `query` — Natural language (uses semantic search)
 - `file_path` — Include when known to avoid disambiguation
 
-**`topic`** (optional): Semantic filter for domain/concern (e.g., "validation",
-"authentication").
+**`topic`** (optional): Standalone semantic search (e.g., "validation",
+"authentication"). Not combinable with `from`/`to`.
 
 **`max_nodes`** (optional, default: 50): Controls output size. Output adapts
 based on node count:

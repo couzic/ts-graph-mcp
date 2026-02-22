@@ -361,6 +361,68 @@ describe(searchGraph.name, () => {
       expect(toMcp(result)).toContain("handleRequest");
     });
 
+    it("finds paths between multiple resolved endpoints (from.query + to.query)", async () => {
+      const writer = createSqliteWriter(db);
+      // Two "validate" functions and two "save" functions
+      const validateA = fn("validateInput", "src/input.ts");
+      const validateB = fn("validateOutput", "src/output.ts");
+      const saveA = fn("saveUser", "src/user.ts");
+      const saveB = fn("saveOrder", "src/order.ts");
+      const middle = fn("processData");
+
+      await writer.addNodes([validateA, validateB, saveA, saveB, middle]);
+      // validateInput -> processData -> saveUser (path exists)
+      // validateOutput has no path to any save function
+      await writer.addEdges([
+        calls(validateA.id, middle.id),
+        calls(middle.id, saveA.id),
+      ]);
+      await populateSearchIndex({
+        db,
+        searchIndex,
+        embeddingCache,
+        embeddingProvider,
+      });
+
+      const result = await searchGraph(
+        db,
+        { from: { query: "validate" }, to: { query: "save" } },
+        { searchIndex, embeddingProvider },
+      );
+
+      const output = toMcp(result);
+      expect(output).toContain("## Graph");
+      expect(output).toContain("validateInput");
+      expect(output).toContain("processData");
+      expect(output).toContain("saveUser");
+    });
+
+    it("returns message when no paths exist between resolved endpoints", async () => {
+      const writer = createSqliteWriter(db);
+      // Multiple validate and save functions, but no edges connecting them
+      const validateA = fn("validateInput", "src/input.ts");
+      const validateB = fn("validateOutput", "src/output.ts");
+      const saveA = fn("saveUser", "src/user.ts");
+      const saveB = fn("saveOrder", "src/order.ts");
+
+      await writer.addNodes([validateA, validateB, saveA, saveB]);
+      // No edges — no paths between any combination
+      await populateSearchIndex({
+        db,
+        searchIndex,
+        embeddingCache,
+        embeddingProvider,
+      });
+
+      const result = await searchGraph(
+        db,
+        { from: { query: "validate" }, to: { query: "save" } },
+        { searchIndex, embeddingProvider },
+      );
+
+      expect(toMcp(result)).toContain("No paths found between matching symbols");
+    });
+
     it("resolves from.query to symbol via search (single match)", async () => {
       const writer = createSqliteWriter(db);
       const nodeA = fn("handleUserRequest");

@@ -38,7 +38,7 @@ interface.
 | `from: { query }`  | Lexical + semantic search → multiple start nodes        |
 | `to: { symbol }`   | Exact end node                                          |
 | `to: { query }`    | Lexical + semantic search → multiple end nodes          |
-| `topic`            | Filter applied to whole graph → focus on relevant nodes |
+| `topic`            | Standalone semantic search (not combinable with from/to) |
 
 **`query` vs `symbol`:**
 
@@ -47,7 +47,7 @@ interface.
 
 **`topic` vs `query`:**
 
-- `topic` = filter applied to the traversal results (focus attention)
+- `topic` = standalone semantic search (find code by concept)
 - `query` = find start/end nodes for traversal
 
 ### Query Patterns
@@ -58,11 +58,7 @@ interface.
 | Backward traversal       | `{ to: { symbol } }`   | "Who depends on this?"                     |
 | Path finding             | `{ from, to }`         | "How does A reach B?"                      |
 | Loose search + traversal | `{ from: { query } }`  | "Find X and show dependencies"             |
-| Topic filter             | `{ topic }`            | "Focus on code related to X"               |
-| Filtered traversal       | `{ topic, from }`      | "What X-related code does this depend on?" |
-
-**Note:** Topic filtering for path finding (`{ topic, from, to }`) is not yet
-implemented.
+| Semantic search          | `{ topic }`            | "Find code related to X"                   |
 
 **Internal functions.** The core query functions are `dependenciesData`,
 `dependentsData`, and `pathsBetweenData` — they return structured `QueryResult`
@@ -76,7 +72,7 @@ string and are used by e2e tests and the HTTP API.
 // Returns structured QueryResult (not a formatted string)
 const result: QueryResult = await searchGraph(db, {
   // At least one required:
-  topic?: string,           // Filter to focus on relevant nodes
+  topic?: string,           // Standalone semantic search (not combinable with from/to)
   from?: GraphEndpoint,     // Start node(s)
   to?: GraphEndpoint,       // End node(s)
   max_nodes?: number        // Output limit (default: 50)
@@ -98,7 +94,7 @@ type GraphEndpoint = {
 1. If `from` + `to` both provided → path finding
 2. If only `from` provided → forward traversal (show dependencies)
 3. If only `to` provided → backward traversal (show dependents)
-4. If `topic` provided → filter results to topic-relevant nodes
+4. If only `topic` provided → standalone semantic search
 
 ## Output Format
 

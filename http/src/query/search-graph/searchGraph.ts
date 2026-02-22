@@ -7,10 +7,6 @@ import { pathsBetweenData } from "../paths-between/pathsBetween.js";
 import type { GraphEdgeWithCallSites } from "../shared/parseEdgeRows.js";
 import { messageResult, type QueryResult } from "../shared/QueryResult.js";
 import { connectSeeds } from "./connectSeeds.js";
-import {
-  filterEdgesToTopicRelevant,
-  filterNodesByTopic,
-} from "./filterByTopic.js";
 import { buildFilteredTraversalResult } from "./formatFilteredTraversal.js";
 import type { GraphEndpoint, SearchGraphInput } from "./SearchGraphTypes.js";
 import { queryDependencies, queryDependents } from "./traverseGraph.js";
@@ -35,6 +31,14 @@ interface ResolvedEndpoint {
   file_path?: string;
 }
 
+const deduplicateEdges = (
+  edges: GraphEdgeWithCallSites[],
+): GraphEdgeWithCallSites[] => {
+  const key = (e: GraphEdgeWithCallSites) =>
+    `${e.source}->${e.target}:${e.type}`;
+  return [...new Map(edges.map((e) => [key(e), e])).values()];
+};
+
 /**
  * Resolve a GraphEndpoint to symbol(s).
  * - `symbol` parameter: exact match, returns single result
@@ -52,36 +56,31 @@ const resolveEndpoint = async (
     return [];
   }
 
-  // Exact symbol takes precedence - returns single result
-  if (endpoint.symbol) {
+  // Exact symbol — returns single result
+  if ("symbol" in endpoint) {
     return [{ symbol: endpoint.symbol, file_path: endpoint.file_path }];
   }
 
-  // Query performs lexical + semantic search - returns multiple results
-  if (endpoint.query) {
-    if (!searchIndex) {
-      return [];
-    }
-
-    const vector = await embeddingProvider.embedQuery(endpoint.query);
-
-    const results = await searchIndex.search(endpoint.query, {
-      limit,
-      vector,
-    });
-
-    if (results.length === 0) {
-      return [];
-    }
-
-    // Return all matching results
-    return results.map((result) => ({
-      symbol: result.symbol,
-      file_path: result.file,
-    }));
+  // Query — lexical + semantic search, returns multiple results
+  if (!searchIndex) {
+    return [];
   }
 
-  return [];
+  const vector = await embeddingProvider.embedQuery(endpoint.query);
+
+  const results = await searchIndex.search(endpoint.query, {
+    limit,
+    vector,
+  });
+
+  if (results.length === 0) {
+    return [];
+  }
+
+  return results.map((result) => ({
+    symbol: result.symbol,
+    file_path: result.file,
+  }));
 };
 
 /**
@@ -103,12 +102,7 @@ const queryMultipleFromEndpoints = (
     }
   }
 
-  // Deduplicate edges
-  const edgeKey = (e: GraphEdgeWithCallSites) =>
-    `${e.source}->${e.target}:${e.type}`;
-  const uniqueEdges = [
-    ...new Map(allEdges.map((e) => [edgeKey(e), e])).values(),
-  ];
+  const uniqueEdges = deduplicateEdges(allEdges);
 
   if (uniqueEdges.length === 0) {
     return messageResult("No dependencies found for matching symbols.");
@@ -117,7 +111,45 @@ const queryMultipleFromEndpoints = (
   return buildFilteredTraversalResult({
     db,
     edges: uniqueEdges,
-    startNodeId: "", // No single start - include all
+    maxNodes,
+  });
+};
+
+/**
+ * Query paths between multiple from×to endpoint combinations and merge results.
+ * Used when from.query and/or to.query resolve to multiple symbols.
+ */
+const queryMultiplePathsBetween = (
+  db: Database.Database,
+  fromEndpoints: ResolvedEndpoint[],
+  toEndpoints: ResolvedEndpoint[],
+  maxNodes?: number,
+): QueryResult => {
+  const allEdges: GraphEdgeWithCallSites[] = [];
+
+  for (const from of fromEndpoints) {
+    for (const to of toEndpoints) {
+      const result = pathsBetweenData(
+        db,
+        { file_path: from.file_path, symbol: from.symbol },
+        { file_path: to.file_path, symbol: to.symbol },
+        { maxNodes },
+      );
+      if (result.edges) {
+        allEdges.push(...result.edges);
+      }
+    }
+  }
+
+  const uniqueEdges = deduplicateEdges(allEdges);
+
+  if (uniqueEdges.length === 0) {
+    return messageResult("No paths found between matching symbols.");
+  }
+
+  return buildFilteredTraversalResult({
+    db,
+    edges: uniqueEdges,
     maxNodes,
   });
 };
@@ -141,12 +173,7 @@ const queryMultipleToEndpoints = (
     }
   }
 
-  // Deduplicate edges
-  const edgeKey = (e: GraphEdgeWithCallSites) =>
-    `${e.source}->${e.target}:${e.type}`;
-  const uniqueEdges = [
-    ...new Map(allEdges.map((e) => [edgeKey(e), e])).values(),
-  ];
+  const uniqueEdges = deduplicateEdges(allEdges);
 
   if (uniqueEdges.length === 0) {
     return messageResult("No dependents found for matching symbols.");
@@ -155,68 +182,7 @@ const queryMultipleToEndpoints = (
   return buildFilteredTraversalResult({
     db,
     edges: uniqueEdges,
-    startNodeId: "", // No single start - include all
     maxNodes,
-  });
-};
-
-/**
- * Traverse the graph and filter results by topic relevance.
- */
-const traverseWithTopicFilter = async (
-  db: Database.Database,
-  direction: "dependencies" | "dependents",
-  filePath: string | undefined,
-  symbol: string,
-  topic: string,
-  searchIndex: SearchIndexWrapper,
-  embeddingProvider: EmbeddingProvider,
-  maxNodes?: number,
-): Promise<QueryResult> => {
-  // Query raw edges
-  const queryResult =
-    direction === "dependencies"
-      ? queryDependencies(db, filePath, symbol)
-      : queryDependents(db, filePath, symbol);
-
-  if (!queryResult.success) {
-    return messageResult(queryResult.error);
-  }
-
-  const { edges, nodeIds, nodeId, message } = queryResult;
-
-  if (edges.length === 0) {
-    const noResults = `No ${direction} found.`;
-    return messageResult(message ? `${message}\n\n${noResults}` : noResults);
-  }
-
-  // Find topic-relevant nodes
-  const { topicRelevantNodes } = await filterNodesByTopic(
-    nodeIds,
-    topic,
-    searchIndex,
-    embeddingProvider,
-  );
-
-  // Filter edges to keep only those leading to topic-relevant targets
-  const filteredEdges = filterEdgesToTopicRelevant(
-    edges,
-    topicRelevantNodes,
-    nodeId,
-  );
-
-  if (filteredEdges.length === 0) {
-    const noResults = `No ${direction} found matching topic "${topic}".`;
-    return messageResult(message ? `${message}\n\n${noResults}` : noResults);
-  }
-
-  // Build structured result
-  return buildFilteredTraversalResult({
-    db,
-    edges: filteredEdges,
-    startNodeId: nodeId,
-    maxNodes,
-    prependMessage: message,
   });
 };
 
@@ -236,119 +202,24 @@ const traverseWithTopicFilter = async (
  *   to: { symbol: "saveUser" }
  * })
  */
+/**
+ * Type guard for topic-based search input.
+ */
+const isTopicSearch = (
+  input: SearchGraphInput,
+): input is { topic: string; max_nodes?: number } => "topic" in input;
+
 export const searchGraph = async (
   db: Database.Database,
   input: SearchGraphInput,
   options: SearchGraphOptions,
 ): Promise<QueryResult> => {
-  // Validate input - at least one constraint required
-  if (!input.topic && !input.from && !input.to) {
-    return messageResult(
-      "Error: At least one of 'topic', 'from', or 'to' is required.",
-    );
-  }
-
   const maxNodes = input.max_nodes ?? options.maxNodes;
   const searchIndex = options.searchIndex;
   const embeddingProvider = options.embeddingProvider;
 
-  // Resolve endpoints (exact symbol or lexical + semantic search)
-  // Returns arrays: symbol = single result, query = multiple results
-  const fromResolved = await resolveEndpoint(
-    input.from,
-    searchIndex,
-    embeddingProvider,
-  );
-  const toResolved = await resolveEndpoint(
-    input.to,
-    searchIndex,
-    embeddingProvider,
-  );
-
-  // Case 1: Both from and to resolved → path finding
-  // For now, use first match from each (path finding with multiple endpoints is complex)
-  // (topic filtering for paths not yet implemented)
-  if (fromResolved.length > 0 && toResolved.length > 0) {
-    // biome-ignore lint/style/noNonNullAssertion: length checked above
-    const from = fromResolved[0]!;
-    // biome-ignore lint/style/noNonNullAssertion: length checked above
-    const to = toResolved[0]!;
-    return pathsBetweenData(
-      db,
-      { file_path: from.file_path, symbol: from.symbol },
-      { file_path: to.file_path, symbol: to.symbol },
-      { maxNodes },
-    );
-  }
-
-  // Case 2: Only from resolved → forward traversal (dependencies)
-  // If query returned multiple results, merge dependencies from all
-  if (fromResolved.length > 0) {
-    // If topic is provided AND search index is available, filter by topic
-    if (input.topic && searchIndex) {
-      // For now, use single endpoint for topic filtering
-      // biome-ignore lint/style/noNonNullAssertion: length checked above
-      const from = fromResolved[0]!;
-      return traverseWithTopicFilter(
-        db,
-        "dependencies",
-        from.file_path,
-        from.symbol,
-        input.topic,
-        searchIndex,
-        embeddingProvider,
-        maxNodes,
-      );
-    }
-
-    // Multiple from endpoints: query dependencies for each, merge results
-    if (fromResolved.length > 1 && input.from?.query) {
-      return queryMultipleFromEndpoints(db, fromResolved, maxNodes);
-    }
-
-    // Single endpoint: standard traversal
-    // biome-ignore lint/style/noNonNullAssertion: length checked above
-    const from = fromResolved[0]!;
-    return dependenciesData(db, from.file_path, from.symbol, {
-      maxNodes,
-    });
-  }
-
-  // Case 3: Only to resolved → backward traversal (dependents)
-  // If query returned multiple results, merge dependents from all
-  if (toResolved.length > 0) {
-    // If topic is provided AND search index is available, filter by topic
-    if (input.topic && searchIndex) {
-      // For now, use single endpoint for topic filtering
-      // biome-ignore lint/style/noNonNullAssertion: length checked above
-      const to = toResolved[0]!;
-      return traverseWithTopicFilter(
-        db,
-        "dependents",
-        to.file_path,
-        to.symbol,
-        input.topic,
-        searchIndex,
-        embeddingProvider,
-        maxNodes,
-      );
-    }
-
-    // Multiple to endpoints: query dependents for each, merge results
-    if (toResolved.length > 1 && input.to?.query) {
-      return queryMultipleToEndpoints(db, toResolved, maxNodes);
-    }
-
-    // Single endpoint: standard traversal
-    // biome-ignore lint/style/noNonNullAssertion: length checked above
-    const to = toResolved[0]!;
-    return dependentsData(db, to.file_path, to.symbol, {
-      maxNodes,
-    });
-  }
-
-  // Case 4: Semantic search (topic only, or query-based from/to without search index)
-  if (input.topic) {
+  // Case 0: Semantic search (topic only)
+  if (isTopicSearch(input)) {
     if (!searchIndex) {
       return messageResult(
         "Semantic search requires embeddings. Run the server to enable semantic search.",
@@ -366,13 +237,9 @@ export const searchGraph = async (
       return messageResult(`No symbols found matching topic: "${input.topic}"`);
     }
 
-    // Extract node IDs from search results
     const nodeIds = results.map((r) => r.id);
-
-    // Find connecting paths between topic-relevant nodes (including bridge nodes)
     const edges = connectSeeds(db, nodeIds);
 
-    // If no edges found, return as flat list (isolated symbols)
     if (edges.length === 0) {
       const lines = results.map(
         (r) =>
@@ -383,31 +250,83 @@ export const searchGraph = async (
       );
     }
 
-    // Build structured result
     return buildFilteredTraversalResult({
       db,
       edges,
-      startNodeId: "", // No single start node - include all
       maxNodes,
     });
   }
 
-  // Query-based from/to without search index
-  if ((input.from?.query || input.to?.query) && !searchIndex) {
+  // From here, input is { from?, to?, max_nodes? }
+  const { from, to } = input;
+
+  if (!from && !to) {
+    return messageResult(
+      "Error: At least one of 'topic', 'from', or 'to' is required.",
+    );
+  }
+
+  // Query-based endpoints require search index
+  if (((from && "query" in from) || (to && "query" in to)) && !searchIndex) {
     return messageResult(
       "Semantic search requires embeddings. Run the server to enable semantic search.",
     );
   }
 
-  // Query-based from/to that failed to resolve (no matching symbols found)
-  if (input.from?.query && fromResolved.length === 0) {
-    return messageResult(
-      `No symbols found matching query: "${input.from.query}". Try a more specific query or use Topic search.`,
+  // Resolve endpoints
+  const fromResolved = await resolveEndpoint(
+    from,
+    searchIndex,
+    embeddingProvider,
+  );
+  const toResolved = await resolveEndpoint(to, searchIndex, embeddingProvider);
+
+  // Case 1: Both from and to resolved → path finding
+  if (fromResolved.length > 0 && toResolved.length > 0) {
+    if (fromResolved.length > 1 || toResolved.length > 1) {
+      return queryMultiplePathsBetween(db, fromResolved, toResolved, maxNodes);
+    }
+    // biome-ignore lint/style/noNonNullAssertion: length checked above
+    const f = fromResolved[0]!;
+    // biome-ignore lint/style/noNonNullAssertion: length checked above
+    const t = toResolved[0]!;
+    return pathsBetweenData(
+      db,
+      { file_path: f.file_path, symbol: f.symbol },
+      { file_path: t.file_path, symbol: t.symbol },
+      { maxNodes },
     );
   }
-  if (input.to?.query && toResolved.length === 0) {
+
+  // Case 2: Only from resolved → forward traversal
+  if (fromResolved.length > 0) {
+    if (fromResolved.length > 1 && from && "query" in from) {
+      return queryMultipleFromEndpoints(db, fromResolved, maxNodes);
+    }
+    // biome-ignore lint/style/noNonNullAssertion: length checked above
+    const f = fromResolved[0]!;
+    return dependenciesData(db, f.file_path, f.symbol, { maxNodes });
+  }
+
+  // Case 3: Only to resolved → backward traversal
+  if (toResolved.length > 0) {
+    if (toResolved.length > 1 && to && "query" in to) {
+      return queryMultipleToEndpoints(db, toResolved, maxNodes);
+    }
+    // biome-ignore lint/style/noNonNullAssertion: length checked above
+    const t = toResolved[0]!;
+    return dependentsData(db, t.file_path, t.symbol, { maxNodes });
+  }
+
+  // Query-based endpoints that resolved to nothing
+  if (from && "query" in from) {
     return messageResult(
-      `No symbols found matching query: "${input.to.query}". Try a more specific query or use Topic search.`,
+      `No symbols found matching query: "${from.query}". Try a more specific query or use Topic search.`,
+    );
+  }
+  if (to && "query" in to) {
+    return messageResult(
+      `No symbols found matching query: "${to.query}". Try a more specific query or use Topic search.`,
     );
   }
 
