@@ -12,7 +12,8 @@ import { queryNodeMetadata } from "../shared/queryNodeMetadata.js";
 export interface FilteredTraversalInput {
   db: Database.Database;
   edges: GraphEdgeWithCallSites[];
-  startNodeId: string;
+  /** Node ID to exclude from the Nodes section (caller already knows it) */
+  startNodeId?: string;
   maxNodes?: number;
   prependMessage?: string;
 }
@@ -38,7 +39,9 @@ export const buildFilteredTraversalResult = (
   const nodeIds = collectNodeIds(edges);
   const aliasMap = queryAliasMap(db, nodeIds);
   const metadataByNodeId = queryNodeMetadata(db, nodeIds);
-  const nodeIdsToQuery = nodeIds.filter((id) => id !== startNodeId);
+  const nodeIdsToQuery = startNodeId
+    ? nodeIds.filter((id) => id !== startNodeId)
+    : nodeIds;
   const nodes = queryNodeInfos(db, nodeIdsToQuery);
 
   return {

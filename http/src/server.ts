@@ -25,6 +25,7 @@ import { syncOnStartup } from "./ingestion/syncOnStartup.js";
 import { type WatchHandle, watchProject } from "./ingestion/watchProject.js";
 import { consoleLogger } from "./logging/ConsoleTsGraphLogger.js";
 import type { TsGraphLogger } from "./logging/TsGraphLogger.js";
+import type { SearchGraphInput } from "./query/search-graph/SearchGraphTypes.js";
 import { searchGraph } from "./query/search-graph/searchGraph.js";
 import {
   formatMcpFromResult,
@@ -373,7 +374,7 @@ export const startHttpServer = async (
 
     const result = await searchGraph(
       db,
-      { topic, from, to, max_nodes },
+      { topic, from, to, max_nodes } as SearchGraphInput,
       { searchIndex, embeddingProvider },
     );
     if (format === "mermaid") {

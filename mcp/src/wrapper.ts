@@ -97,7 +97,7 @@ When to use:
 IMPORTANT: Use this tool FIRST before reading files to trace dependencies. When you see an import and think "I need to read that file to trace the call chain" — use this tool instead. One query shows the entire chain with code snippets.
 
 Parameters:
-- topic: Filter to focus on relevant nodes
+- topic: Standalone semantic search (not combinable with from/to)
 - from: Start node(s) - what does this depend on?
 - to: End node(s) - what depends on this?
 
@@ -106,10 +106,8 @@ Examples:
 - { to: { symbol: "saveUser" } } → who calls saveUser?
 - { from: { symbol: "A" }, to: { symbol: "B" } } → how does A reach B?
 - { from: { symbol: "A", file_path: "path/to/A.ts" } } → precise lookup (avoids disambiguation)
+- { from: { query: "controller" }, to: { query: "repository" } } → paths from all controllers to all repositories
 - { topic: "validation" } → find symbols related to validation
-- { topic: "validation", from: { symbol: "handleRequest" } } → dependencies of handleRequest filtered by validation
-
-Note: topic + from + to (path finding with topic filter) is not yet supported — topic is ignored for path queries.
 
 Edge types in output: CALLS, REFERENCES, EXTENDS, IMPLEMENTS, INCLUDES, TAKES, RETURNS, HAS_TYPE, HAS_PROPERTY, DERIVES_FROM, ALIAS_FOR`,
       inputSchema: {
@@ -117,7 +115,7 @@ Edge types in output: CALLS, REFERENCES, EXTENDS, IMPLEMENTS, INCLUDES, TAKES, R
           .string()
           .optional()
           .describe(
-            "Semantic filter (natural language, e.g., 'cart validation')",
+            "Standalone semantic search (natural language, e.g., 'cart validation'). Not combinable with from/to.",
           ),
         from: z
           .object({

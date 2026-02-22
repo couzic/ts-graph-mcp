@@ -223,67 +223,6 @@ describe("search recall E2E tests", () => {
     });
   });
 
-  describe("topic as semantic filter", () => {
-    it("filters traversal results by topic relevance", async () => {
-      // Without topic filter: SetDefaultProviderCommand depends on many symbols
-      const unfilteredResult = await searchGraph(
-        db,
-        { from: { symbol: "SetDefaultProviderCommand" } },
-        { searchIndex, embeddingProvider },
-      );
-
-      // Verify unfiltered result includes both audit and non-audit symbols
-      expect(toMcp(unfilteredResult)).toContain("AuditService");
-      expect(toMcp(unfilteredResult)).toContain("ProviderRepository");
-      expect(toMcp(unfilteredResult)).toContain("ConfigService");
-
-      // With topic filter: only audit-related symbols should appear
-      const filteredResult = await searchGraph(
-        db,
-        { topic: "audit", from: { symbol: "SetDefaultProviderCommand" } },
-        { searchIndex, embeddingProvider },
-      );
-
-      // Should find audit-related symbols
-      expect(toMcp(filteredResult)).toContain("AuditService");
-      expect(toMcp(filteredResult)).toContain("AuditRepository");
-
-      // Should NOT include provider/config symbols (not audit-related)
-      expect(toMcp(filteredResult)).not.toContain("ProviderRepository");
-      expect(toMcp(filteredResult)).not.toContain("ConfigService");
-    });
-
-    it("filters backward traversal by topic", async () => {
-      // Who depends on AuditRepository.save, filtered by "logging" topic?
-      // Note: Must use method name since class fallback for dependents isn't implemented
-      const result = await searchGraph(
-        db,
-        { topic: "logging", to: { symbol: "AuditRepository.save" } },
-        { searchIndex, embeddingProvider },
-      );
-
-      // Should find AuditService (semantically related to logging)
-      expect(toMcp(result)).toContain("AuditService");
-    });
-
-    it.skip("filters path finding by topic", async () => {
-      // TODO: Topic filtering for paths not yet implemented
-      // Find path from AdminController to AuditRepository, filtered by "audit"
-      const result = await searchGraph(
-        db,
-        {
-          topic: "audit",
-          from: { symbol: "AdminController" },
-          to: { symbol: "AuditRepository" },
-        },
-        { searchIndex, embeddingProvider },
-      );
-
-      // Path should go through audit-related nodes
-      expect(toMcp(result)).toContain("AuditService");
-    });
-  });
-
   describe("query endpoint resolution", () => {
     it("resolves from.query to traverse dependencies", async () => {
       const result = await searchGraph(
@@ -306,6 +245,33 @@ describe("search recall E2E tests", () => {
 
       // Should find callers of ProviderService
       expect(toMcp(result)).toContain("ProviderService");
+    });
+
+    describe("path finding with from.query + to.query", () => {
+      it("finds paths using all resolved endpoints, not just the first match", async () => {
+        // "controller" matches both AdminController and ProviderController
+        // "repository" matches both ProviderRepository and AuditRepository
+        // Paths exist from both controllers to both repositories
+        // (through SetDefaultProviderCommand → ProviderService)
+        const result = await searchGraph(
+          db,
+          {
+            from: { query: "controller" },
+            to: { query: "repository" },
+          },
+          { searchIndex, embeddingProvider },
+        );
+
+        const output = toMcp(result);
+
+        // Both controllers should appear as start nodes
+        expect(output).toContain("AdminController");
+        expect(output).toContain("ProviderController");
+
+        // Both repositories should appear as end nodes
+        expect(output).toContain("ProviderRepository");
+        expect(output).toContain("AuditRepository");
+      });
     });
   });
 });

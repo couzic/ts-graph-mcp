@@ -106,18 +106,6 @@ edges).
 
 ---
 
-### Topic Filtering for Path Finding
-
-**Impact: Medium | Effort: Low**
-
-Extend topic filtering to work with path finding queries
-(`{ topic, from, to }`).
-
-Topic filtering is implemented for forward/backward traversal. Path finding
-should filter to prefer paths that go through topic-relevant intermediate nodes.
-
----
-
 ### Semantic Ranking of Bridge Paths
 
 **Impact: Medium | Effort: Low**
