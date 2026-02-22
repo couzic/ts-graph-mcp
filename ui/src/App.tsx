@@ -255,7 +255,6 @@ const DirectionToggle = ({ direction, onDirectionChange }: DirectionToggleProps)
 const appContainerStyle: React.CSSProperties = {
   display: "flex",
   flexDirection: "column",
-  height: "100vh",
   padding: "1rem",
   boxSizing: "border-box",
   fontFamily: "system-ui, -apple-system, sans-serif",

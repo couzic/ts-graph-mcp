@@ -3,7 +3,7 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     include: ["**/*e2e.test.ts"],
-    exclude: ["node_modules"],
+    exclude: ["node_modules", ".claude/worktrees/**"],
     globals: true,
     environment: "node",
     hookTimeout: 60000,

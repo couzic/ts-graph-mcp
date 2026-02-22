@@ -71,6 +71,7 @@ const buildFileContextMap = (
       }
       return (
         !absolutePath.includes("node_modules") &&
+        !absolutePath.includes("/.claude/worktrees/") &&
         !absolutePath.endsWith(".d.ts")
       );
     });

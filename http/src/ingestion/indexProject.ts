@@ -200,7 +200,9 @@ const processPackage = async (
       return false;
     }
     return (
-      !absolutePath.includes("node_modules") && !absolutePath.endsWith(".d.ts")
+      !absolutePath.includes("node_modules") &&
+      !absolutePath.includes("/.claude/worktrees/") &&
+      !absolutePath.endsWith(".d.ts")
     );
   });
 

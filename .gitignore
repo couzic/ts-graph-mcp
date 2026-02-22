@@ -38,3 +38,6 @@ benchmark/results/
 
 # Test temp directory
 .tmp/
+
+# Claude Code worktrees
+.claude/worktrees/

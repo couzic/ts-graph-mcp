@@ -175,7 +175,9 @@ export const watchProject = (
     }
     // New file: chokidar + resolveFileContext already filter by extension and package root
     return (
-      !absolutePath.includes("node_modules") && !absolutePath.endsWith(".d.ts")
+      !absolutePath.includes("node_modules") &&
+      !absolutePath.includes("/.claude/worktrees/") &&
+      !absolutePath.endsWith(".d.ts")
     );
   };
 
@@ -320,9 +322,11 @@ export const watchProject = (
 
     // Add the base filter function
     patterns.push((path: string, stats?: Stats): boolean => {
-      // Always traverse directories, but skip node_modules
+      // Always traverse directories, but skip node_modules and worktrees
       if (!stats?.isFile()) {
-        return path.includes("node_modules");
+        return (
+          path.includes("node_modules") || path.includes("/.claude/worktrees/")
+        );
       }
       // Ignore .d.ts files and non-TypeScript files
       if (path.endsWith(".d.ts")) return true;
