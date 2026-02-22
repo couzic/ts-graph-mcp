@@ -273,7 +273,7 @@ export const watchProject = (
   // Handle file deletion
   const handleUnlink = async (relativePath: string): Promise<void> => {
     try {
-      await writer.removeFileNodes(relativePath);
+      await writer.deleteFile(relativePath);
       if (searchIndex) {
         await searchIndex.removeByFile(relativePath);
       }

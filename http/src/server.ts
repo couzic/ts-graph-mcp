@@ -8,6 +8,7 @@ import type { ProjectConfig } from "./config/Config.schemas.js";
 import { loadConfigOrDetect } from "./config/configLoader.utils.js";
 import { getCacheDir, getSqliteDir } from "./config/getCacheDir.js";
 import { createSqliteWriter } from "./db/sqlite/createSqliteWriter.js";
+import { removeOrphanedEdges } from "./db/sqlite/removeOrphanedEdges.js";
 import { openDatabase } from "./db/sqlite/sqliteConnection.utils.js";
 import { createEmbeddingProvider } from "./embedding/createEmbeddingProvider.js";
 import type { EmbeddingProvider } from "./embedding/EmbeddingTypes.js";
@@ -294,6 +295,12 @@ export const startHttpServer = async (
     embeddingProvider,
   );
   dbHolder.ref = db;
+
+  // Clean up orphaned edges (targets pointing to deleted nodes)
+  const orphanedEdges = removeOrphanedEdges(db);
+  if (orphanedEdges > 0) {
+    logger.info(`Removed ${orphanedEdges} orphaned edges`);
+  }
 
   // Track indexed files count (updated after sync)
   const currentIndexedFiles = indexedFiles;

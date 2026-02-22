@@ -35,6 +35,9 @@ const createFakeDbWriter = (): DbWriter & {
     async removeFileNodes(_filePath: string) {
       // Not used in these tests
     },
+    async deleteFile(_filePath: string) {
+      // Not used in these tests
+    },
     async clearAll() {
       nodes.length = 0;
       edges.length = 0;

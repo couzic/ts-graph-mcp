@@ -79,6 +79,9 @@ const createMockWriter = (): DbWriter & {
         }
       }
     },
+    async deleteFile(filePath: string): Promise<void> {
+      await this.removeFileNodes(filePath);
+    },
     async clearAll(): Promise<void> {
       state.nodes.length = 0;
       state.edges.length = 0;
