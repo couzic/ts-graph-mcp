@@ -9,6 +9,10 @@ const createSourceFile = (code: string) => {
 
 const context = { filePath: "test.ts", package: "test-pkg" };
 
+/**
+ * @spec indexing::edges.has-property
+ * @spec graph-model::edges.has-property
+ */
 describe("extractHasPropertyEdges", () => {
   describe("class properties", () => {
     it("extracts HAS_PROPERTY edge for class property", () => {

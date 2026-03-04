@@ -6,6 +6,12 @@ import { normalizeTypeText } from "./normalizeTypeText.js";
 
 /**
  * Extract method nodes from a class.
+ *
+ * @spec indexing::nodes.method
+ * @spec graph-model::nodes.method-properties
+ * @spec graph-model::nodes.method-visibility-default
+ * @spec graph-model::nodes.method-not-exported
+ * @spec graph-model::node-id.hierarchical
  */
 export const extractMethodNodes = (
   classNode: ClassDeclaration,

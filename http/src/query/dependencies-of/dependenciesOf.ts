@@ -14,6 +14,10 @@ import { resolveSymbol } from "../shared/symbolNotFound.js";
 
 /**
  * Find all code that a symbol depends on (forward dependencies) — returns structured data.
+ *
+ * @spec tool::query.forward
+ * @spec tool::resolve.method-fallback
+ * @spec tool::resolve.class-disambiguation
  */
 export const dependenciesData = (
   db: Database.Database,

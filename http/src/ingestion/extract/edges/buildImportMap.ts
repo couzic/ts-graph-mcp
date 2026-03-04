@@ -40,6 +40,8 @@ export interface BuildImportMapOptions {
 /**
  * Build a map from imported symbol names to their target node IDs.
  *
+ * @spec indexing::re-export-transparency
+ *
  * This is the simplified version that doesn't require a global nodes array.
  * Instead, it constructs target node IDs directly from:
  * - Target file path (resolved by ts-morph)

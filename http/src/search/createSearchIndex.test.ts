@@ -35,12 +35,17 @@ const simpleEmbeddingFunction = (text: string, dims: number): Float32Array => {
 };
 
 describe(preprocessForBM25.name, () => {
+  /**
+   * @spec search::identifier-preprocessing
+   * @spec search.lexical::preprocessing-preserves-original
+   */
   it("includes both split and original", () => {
     expect(preprocessForBM25("validateCart")).toBe(
       "validate Cart validateCart",
     );
   });
 
+  /** @spec search.lexical::preprocessing-single-word-passthrough */
   it("handles single-word symbols", () => {
     expect(preprocessForBM25("validate")).toBe("validate");
   });
@@ -60,6 +65,10 @@ describe(createSearchIndex.name, () => {
     embedding: simpleEmbeddingFunction(name, DIMS),
   });
 
+  /**
+   * @spec search.lexical::bm25-algorithm
+   * @spec search.lexical::fulltext-only-mode
+   */
   it("indexes and searches documents", async () => {
     const index = await createSearchIndex({ vectorDimensions: DIMS });
 
@@ -72,6 +81,10 @@ describe(createSearchIndex.name, () => {
     expect(results[0]?.symbol).toBe("validateCart");
   });
 
+  /**
+   * @spec search::content-field-composition
+   * @spec search.lexical::content-field-composition
+   */
   it("finds camelCase symbols by split words", async () => {
     const index = await createSearchIndex({ vectorDimensions: DIMS });
 
@@ -93,6 +106,10 @@ describe(createSearchIndex.name, () => {
     expect(results).toHaveLength(0);
   });
 
+  /**
+   * @spec search::result-limit-custom
+   * @spec search.lexical::default-result-limit
+   */
   it("respects limit option", async () => {
     const index = await createSearchIndex({ vectorDimensions: DIMS });
 
@@ -107,6 +124,10 @@ describe(createSearchIndex.name, () => {
     expect(results).toHaveLength(2);
   });
 
+  /**
+   * @spec search::filter.node-type
+   * @spec search.lexical::node-type-filtering
+   */
   it("filters by nodeType", async () => {
     const index = await createSearchIndex({ vectorDimensions: DIMS });
 
@@ -119,6 +140,7 @@ describe(createSearchIndex.name, () => {
     expect(results[0]?.symbol).toBe("formatDate");
   });
 
+  /** @spec search::removal.by-id */
   it("removes document by ID", async () => {
     const index = await createSearchIndex({ vectorDimensions: DIMS });
 
@@ -131,6 +153,7 @@ describe(createSearchIndex.name, () => {
     expect(results).toHaveLength(0);
   });
 
+  /** @spec search::removal.by-file */
   it("removes all documents for a file", async () => {
     const index = await createSearchIndex({ vectorDimensions: DIMS });
 
@@ -154,6 +177,7 @@ describe(createSearchIndex.name, () => {
     expect(count).toBe(3);
   });
 
+  /** @spec search::index-persistence */
   it("exports and restores index", async () => {
     const original = await createSearchIndex({ vectorDimensions: DIMS });
 
@@ -170,6 +194,10 @@ describe(createSearchIndex.name, () => {
     expect(results[0]?.symbol).toBe("validateCart");
   });
 
+  /**
+   * @spec search::modes
+   * @spec search.hybrid::separate-searches
+   */
   it("performs hybrid search when vector is provided", async () => {
     const index = await createSearchIndex({ vectorDimensions: DIMS });
 
@@ -185,6 +213,7 @@ describe(createSearchIndex.name, () => {
   });
 
   describe("hybrid search merge logic", () => {
+    /** @spec search.hybrid::union-merge */
     it("merges document appearing in both BM25 and vector results", async () => {
       const index = await createSearchIndex({ vectorDimensions: DIMS });
 
@@ -201,6 +230,10 @@ describe(createSearchIndex.name, () => {
       expect(validateResult).toBeDefined();
     });
 
+    /**
+     * @spec search::result-ordering
+     * @spec search.hybrid::descending-sort
+     */
     it("returns results sorted by hybrid score descending", async () => {
       const index = await createSearchIndex({ vectorDimensions: DIMS });
 
@@ -219,6 +252,10 @@ describe(createSearchIndex.name, () => {
       }
     });
 
+    /**
+     * @spec search::zero-score-exclusion
+     * @spec search.hybrid::zero-score-filtering
+     */
     it("filters out zero-score results", async () => {
       const index = await createSearchIndex({ vectorDimensions: DIMS });
 
@@ -356,6 +393,7 @@ const queryVec = (dims: number): Float32Array => {
   return vec;
 };
 
+/** @spec search.hybrid::bm25-backfill */
 describe("cosine backfill for BM25-only hits", () => {
   /**
    * Test setup:
@@ -524,6 +562,10 @@ const vectorWithCosine = (targetCosine: number, dims: number): number[] => {
   return vec;
 };
 
+/**
+ * @spec search.semantic::similarity-floor
+ * @spec search.hybrid::vector-threshold
+ */
 describe("Orama searchVector similarity parameter", () => {
   const queryVector = new Array(DIMS).fill(0);
   queryVector[0] = 1; // unit vector along first axis

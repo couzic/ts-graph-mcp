@@ -69,6 +69,7 @@ describe(populateSearchIndex.name, () => {
     expect(await searchIndex.count()).toBe(0);
   });
 
+  /** @spec search::searchable-units */
   it("loads all nodes into search index", async () => {
     const writer = createSqliteWriter(db);
     await writer.addNodes([

@@ -16,6 +16,8 @@ export type { EdgeExtractionContext };
  *
  * All edge extractors now work directly from the AST using import maps
  * for cross-file resolution. No global nodes array needed.
+ *
+ * @spec graph-model::edge-types
  */
 export const extractEdges = (
   sourceFile: SourceFile,

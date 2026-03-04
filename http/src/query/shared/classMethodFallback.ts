@@ -87,6 +87,9 @@ export type ClassMethodFallbackResult =
  *
  * - Single method with dependencies → returns that method for auto-resolution
  * - Multiple methods → returns list for disambiguation
+ *
+ * @spec tool::resolve.method-fallback
+ * @spec tool::resolve.class-disambiguation
  */
 export const attemptClassMethodFallback = (
   db: Database.Database,
@@ -119,6 +122,8 @@ export const attemptClassMethodFallback = (
 
 /**
  * Format disambiguation message for multi-method classes.
+ *
+ * @spec tool::resolve.class-disambiguation
  */
 export const formatDisambiguationMessage = (
   className: string,

@@ -3,6 +3,7 @@ import { findConnectedComponents, formatMermaid } from "./formatMermaid.js";
 import type { GraphEdge } from "./GraphTypes.js";
 import type { NodeMetadata } from "./queryNodeMetadata.js";
 
+/** @spec tool::output.mermaid-structure */
 describe("formatMermaid", () => {
   it("returns empty state for no edges", () => {
     const result = formatMermaid([]);
@@ -76,6 +77,7 @@ describe("formatMermaid", () => {
     expect(result).toEqual([expected]);
   });
 
+  /** @spec tool::output.mermaid-subgraphs */
   it("uses subgraph only for files with multiple symbols", () => {
     const edges: GraphEdge[] = [
       {
@@ -151,6 +153,7 @@ describe("formatMermaid", () => {
     expect(result).toEqual([expected]);
   });
 
+  /** @spec tool::output.mermaid-direction */
   describe("direction option", () => {
     it("uses explicit LR direction on empty graph", () => {
       const result = formatMermaid([], { direction: "LR" });
@@ -551,6 +554,7 @@ describe("formatMermaid", () => {
     });
   });
 
+  /** @spec tool::output.mermaid-components */
   describe("connected components", () => {
     it("splits disconnected edges into separate diagrams", () => {
       const edges: GraphEdge[] = [

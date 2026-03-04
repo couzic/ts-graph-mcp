@@ -3,6 +3,10 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { extractArrowFunctionNodes } from "./extractArrowFunctionNodes.js";
 import type { NodeExtractionContext } from "./NodeExtractionContext.js";
 
+/**
+ * @spec indexing::nodes.arrow-function
+ * @spec graph-model::nodes.arrow-as-function
+ */
 describe(extractArrowFunctionNodes.name, () => {
   let project: Project;
 

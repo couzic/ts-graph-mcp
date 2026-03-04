@@ -34,6 +34,7 @@ const resultWithEdges: QueryResult = {
   metadataByNodeId: new Map(),
 };
 
+/** @spec tool::output.mcp-structure */
 describe(formatMcpFromResult.name, () => {
   it('returns "" for empty edges without message', () => {
     expect(formatMcpFromResult(emptyResult)).toBe("");
@@ -62,6 +63,7 @@ describe(formatMcpFromResult.name, () => {
   });
 });
 
+/** @spec tool::output.mermaid-structure */
 describe(formatMermaidFromResult.name, () => {
   it("returns fallback diagram for empty edges without message", () => {
     expect(formatMermaidFromResult(emptyResult)).toEqual([

@@ -2,6 +2,20 @@
  * Split camelCase and PascalCase identifiers into words.
  * Also handles snake_case and kebab-case.
  *
+ * @spec search::preprocessing.camel-case
+ * @spec search::preprocessing.pascal-case
+ * @spec search::preprocessing.acronym
+ * @spec search::preprocessing.snake-case
+ * @spec search::preprocessing.kebab-case
+ * @spec search::preprocessing.single-word
+ * @spec search.lexical::camelcase-splitting
+ * @spec search.lexical::pascalcase-splitting
+ * @spec search.lexical::acronym-splitting
+ * @spec search.lexical::snake-case-splitting
+ * @spec search.lexical::kebab-case-splitting
+ * @spec search.lexical::mixed-case-splitting
+ * @spec search.lexical::single-word-identity
+ *
  * @example
  * splitCamelCase('validateCart') // 'validate Cart'
  * splitCamelCase('XMLParser') // 'XML Parser'

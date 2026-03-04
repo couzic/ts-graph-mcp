@@ -10,6 +10,10 @@ const getFirstClass = (classes: ClassDeclaration[]): ClassDeclaration => {
   return first;
 };
 
+/**
+ * @spec indexing::nodes.method
+ * @spec graph-model::nodes.method-properties
+ */
 describe(extractMethodNodes.name, () => {
   let project: Project;
 
@@ -22,6 +26,9 @@ describe(extractMethodNodes.name, () => {
     package: "myapp",
   });
 
+  /** @spec graph-model::nodes.method-not-exported */
+  /** @spec graph-model::nodes.method-visibility-default */
+  /** @spec graph-model::node-id.hierarchical */
   it("extracts public method with parameters and return type", () => {
     const sourceFile = project.createSourceFile(
       "src/test.ts",

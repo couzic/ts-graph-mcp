@@ -19,6 +19,8 @@ export interface SymbolRef {
 
 /**
  * Find how two symbols connect — returns structured data.
+ *
+ * @spec tool::query.path
  */
 export const pathsBetweenData = (
   db: Database.Database,

@@ -4,6 +4,12 @@ import { generateNodeId } from "../../generateNodeId.js";
 import type { EdgeExtractionContext } from "./EdgeExtractionContext.js";
 import { extractInheritanceEdges } from "./extractInheritanceEdges.js";
 
+/**
+ * @spec indexing::edges.extends
+ * @spec indexing::edges.implements
+ * @spec graph-model::edges.extends
+ * @spec graph-model::edges.implements
+ */
 describe(extractInheritanceEdges.name, () => {
   const createProject = () => new Project({ useInMemoryFileSystem: true });
 

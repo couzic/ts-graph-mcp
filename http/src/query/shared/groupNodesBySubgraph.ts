@@ -4,6 +4,8 @@ import type { NodeMetadata } from "./queryNodeMetadata.js";
 /**
  * Group node IDs into subgraph buckets by package (if multiple) or file.
  *
+ * @spec tool::output.mermaid-subgraphs
+ *
  * @example
  * groupNodesBySubgraph(
  *   new Set(["src/a.ts:Function:fnA", "src/a.ts:Function:fnB", "src/b.ts:Function:fnC"]),

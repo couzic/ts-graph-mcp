@@ -13,6 +13,8 @@ const CACHE_DIR = ".ts-graph-mcp";
  * `node_modules/.cache/` because it doesn't search upward for package.json,
  * avoiding issues with nested projects using the parent's cache.
  *
+ * @spec configuration::cache-dir
+ *
  * @param projectRoot - The project root directory
  * @returns Absolute path to the cache directory
  */
@@ -36,6 +38,8 @@ export const getSqliteDir = (cacheDir: string): string => {
 
 /**
  * Get the default database path for a project.
+ *
+ * @spec configuration::storage.sqlite-path
  *
  * @param projectRoot - The project root directory
  * @returns Absolute path to .ts-graph-mcp/sqlite/graph.db

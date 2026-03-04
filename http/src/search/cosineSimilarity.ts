@@ -2,6 +2,9 @@
  * Compute cosine similarity between two vectors.
  * Works correctly regardless of whether vectors are normalized.
  *
+ * @spec search.semantic::cosine
+ * @spec search.semantic::cosine.magnitude-invariance
+ *
  * @example
  * const a = new Float32Array([1, 2, 3]);
  * const b = new Float32Array([4, 5, 6]);

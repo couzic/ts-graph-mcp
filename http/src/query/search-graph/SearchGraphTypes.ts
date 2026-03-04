@@ -20,6 +20,8 @@ export type GraphEndpoint =
 /**
  * Input parameters for searchGraph.
  *
+ * @spec tool::validation.topic-standalone
+ *
  * Query patterns:
  * - `{ from }` → forward traversal (show dependencies)
  * - `{ to }` → backward traversal (show dependents)

@@ -27,6 +27,7 @@ const insertEdge = (
   );
 };
 
+/** @spec tool::query.topic-bridge */
 describe("connectSeeds", () => {
   let db: Database.Database;
 

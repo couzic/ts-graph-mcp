@@ -8,6 +8,50 @@
 
 ## Near-term Enhancements
 
+### Spec ID Indexing (`@spec` in Graph Nodes)
+
+**Impact: Medium | Effort: Low**
+
+Index `@spec` JSDoc annotations as metadata on graph nodes.
+
+**The Problem:** The spec system requires every spec ID to be referenced via
+`@spec` in implementation code. Currently there's no way to query which specs a
+function implements, or which functions implement a given spec. The graph doesn't
+know about specs.
+
+**Goal:** Each graph node carries a list of spec IDs it implements. Enables:
+
+- "Which functions implement `indexing::re-export-transparency`?"
+- "Does this spec have any implementation references?"
+- Spec coverage reports from graph queries
+
+**Approach: position-based scanning.** For each extracted node (function, method,
+class), scan the body's descendants for any `JSDocableNode` with `@spec` tags.
+Since ts-morph's `JSDocableNode` includes `ExpressionStatement`, this catches
+annotations on both declarations and expression statements:
+
+```typescript
+// ✅ On a local declaration
+/** @spec server::startup.orphan-cleanup */
+const orphanedEdges = cleanOrphanedEdges(db);
+
+// ✅ On an expression statement (e.g., Express route)
+/** @spec server::api.health */
+app.get("/health", (_req, res) => { ... });
+```
+
+Both are attributed to the enclosing function node in the graph.
+
+**Implementation:**
+
+1. During node extraction, scan each function/method/class body for descendant
+   `JSDocableNode`s with `@spec` tags
+2. Collect spec IDs from the node's own JSDoc + all descendant `@spec` tags
+3. Store spec IDs as a node property (e.g., `specs: string[]`)
+4. Expose in search index for querying
+
+---
+
 ### Embedding Cache Cleanup
 
 **Impact: Medium | Effort: Low**

@@ -4,6 +4,10 @@ import { generateNodeId } from "../../generateNodeId.js";
 import type { EdgeExtractionContext } from "./EdgeExtractionContext.js";
 import { extractCallEdges } from "./extractCallEdges.js";
 
+/**
+ * @spec indexing::edges.calls
+ * @spec graph-model::edges.calls-metadata
+ */
 describe(extractCallEdges.name, () => {
   const createProject = () => new Project({ useInMemoryFileSystem: true });
 
@@ -34,6 +38,7 @@ export const calculate = (x: number, y: number): number => add(x, y);
     });
   });
 
+  /** @spec graph-model::edges.calls-metadata */
   it("collects call site line numbers for multiple calls", () => {
     const project = createProject();
     const sourceFile = project.createSourceFile(
@@ -162,6 +167,10 @@ export const caller = (): string => {
     });
   });
 
+  /**
+   * @spec indexing::re-export-transparency
+   * @spec graph-model::re-export-invisibility
+   */
   it("resolves calls through barrel file re-export", () => {
     const project = createProject();
 
@@ -196,6 +205,10 @@ export const display = (n: number) => formatValue(n);
     expect(edges[0]?.target).toBe("utils/helper.ts:Function:formatValue");
   });
 
+  /**
+   * @spec indexing::re-export-transparency
+   * @spec graph-model::re-export-invisibility
+   */
   it("resolves calls through nested barrel files", () => {
     const project = createProject();
 
@@ -753,6 +766,7 @@ export function validate(config: Config) {
     );
   });
 
+  /** @spec graph-model::edges.constructor-calls */
   it("extracts CALLS edges from constructor", () => {
     const project = createProject();
     const sourceFile = project.createSourceFile(
@@ -998,6 +1012,7 @@ export function process(value: string = getDefault()): string {
     });
   });
 
+  /** @spec indexing::monorepo.namespace-resolution */
   it("resolves namespace property call to actual function (Namespace.method())", () => {
     const project = createProject();
 
@@ -1036,6 +1051,7 @@ export function calculate(a: number, b: number) {
     expect(edges[0]?.target).toBe("math/operations.ts:Function:multiply");
   });
 
+  /** @spec indexing::monorepo.cross-package-edges */
   describe("cross-package namespace resolution with path aliases", () => {
     it("resolves Namespace.method() when barrel uses path alias requiring cross-package resolution", () => {
       // Scenario: Package A has path alias @/* -> src/*
@@ -1185,6 +1201,10 @@ export function calculate(a: number, b: number) {
     });
   });
 
+  /**
+   * @spec indexing::edges.includes
+   * @spec graph-model::edges.includes-jsx
+   */
   describe("JSX element usage", () => {
     const createJsxProject = () =>
       new Project({
@@ -1347,6 +1367,7 @@ export const handleRequest = () => {
     });
   });
 
+  /** @spec graph-model::edges.no-built-in-calls */
   describe("built-in method calls on imported constants", () => {
     it("does not create CALLS edge when calling built-in method on imported array", () => {
       const project = createProject();

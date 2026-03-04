@@ -9,6 +9,12 @@ const createSourceFile = (code: string) => {
 
 const context = { filePath: "test.ts", package: "test-pkg" };
 
+/**
+ * @spec indexing::edges.takes
+ * @spec indexing::edges.returns
+ * @spec graph-model::edges.takes
+ * @spec graph-model::edges.returns
+ */
 describe("extractTakesReturnsEdges", () => {
   describe("TAKES edges", () => {
     it("extracts TAKES edge for function parameter", () => {
@@ -47,6 +53,10 @@ describe("extractTakesReturnsEdges", () => {
       );
     });
 
+    /**
+     * @spec indexing::types.primitive-skipping
+     * @spec graph-model::edges.primitive-skipping
+     */
     it("skips primitive parameter types", () => {
       const sourceFile = createSourceFile(`
         function format(value: string, count: number): void { }
@@ -57,6 +67,12 @@ describe("extractTakesReturnsEdges", () => {
       expect(edges.filter((e) => e.type === "TAKES")).toHaveLength(0);
     });
 
+    /**
+     * @spec indexing::types.builtin-unwrapping
+     * @spec graph-model::edges.generic-unwrapping
+     * @spec graph-model::edges.built-in-filtering
+     * @spec graph-model::edges.array-element-type
+     */
     it("extracts inner type from generic wrapper", () => {
       const sourceFile = createSourceFile(`
         interface User { name: string }
@@ -70,6 +86,10 @@ describe("extractTakesReturnsEdges", () => {
       expect(returnsEdges[0]?.target).toBe("test.ts:Interface:User");
     });
 
+    /**
+     * @spec indexing::types.union-multiple-edges
+     * @spec graph-model::edges.union-handling
+     */
     it("extracts multiple edges for union types", () => {
       const sourceFile = createSourceFile(`
         interface User { name: string }
@@ -89,6 +109,7 @@ describe("extractTakesReturnsEdges", () => {
       );
     });
 
+    /** @spec graph-model::edges.null-undefined-skipping */
     it("skips null and undefined in unions", () => {
       const sourceFile = createSourceFile(`
         interface User { name: string }
@@ -195,6 +216,7 @@ describe("extractTakesReturnsEdges", () => {
     });
   });
 
+  /** @spec graph-model::edges.factory-returns-synthetic */
   describe("factory functions", () => {
     it("creates RETURNS edge from factory to SyntheticType", () => {
       const sourceFile = createSourceFile(`

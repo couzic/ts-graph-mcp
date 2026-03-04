@@ -45,6 +45,8 @@ const waitForSymbol = async (
  * through the HTTP API.
  *
  * This test will FAIL if the server doesn't start the file watcher.
+ *
+ * @spec server::startup.sequence
  */
 describe("HTTP server file watching E2E", () => {
   const TEST_DIR = mkdtempSync(join(tmpdir(), "server-e2e-test-"));
@@ -117,6 +119,7 @@ describe("HTTP server file watching E2E", () => {
     rmSync(TEST_DIR, { recursive: true, force: true });
   });
 
+  /** @spec server::api.symbol-search */
   it("indexes initial files", async () => {
     const response = await fetch(
       `http://localhost:${TEST_PORT}/api/symbols?q=entry`,
@@ -159,6 +162,7 @@ export function newFunction(): number { return 42; }
     expect(symbols[0]?.symbol).toBe("brandNew");
   });
 
+  /** @spec server::api.graph-search */
   it("uses embedding cache for reindexed files", async () => {
     // This test verifies that semantic search works after file changes.
     // The embedding cache should be used for unchanged content.

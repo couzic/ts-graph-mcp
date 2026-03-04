@@ -59,6 +59,13 @@ const BUILT_IN_TYPES = new Set([
 /**
  * Extract DERIVES_FROM and ALIAS_FOR edges from type alias declarations.
  *
+ * @spec indexing::edges.derives-from
+ * @spec indexing::edges.alias-for
+ * @spec graph-model::edges.derives-from
+ * @spec graph-model::edges.alias-for
+ * @spec graph-model::edges.alias-for-synthetic
+ * @spec graph-model::edges.intersection-handling
+ *
  * @example
  * type Person = User;           // Person --ALIAS_FOR--> User
  * type Customer = User & {...}; // Customer --DERIVES_FROM--> User

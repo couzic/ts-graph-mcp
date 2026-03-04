@@ -9,6 +9,7 @@ import {
 import { defineConfig } from "./defineConfig.js";
 
 describe("ConfigSchema", () => {
+  /** @spec configuration::packages */
   describe("PackageConfigSchema", () => {
     it("validates valid package config", () => {
       const config = {
@@ -19,12 +20,14 @@ describe("ConfigSchema", () => {
       expect(result).toEqual(config);
     });
 
+    /** @spec configuration::packages.name-non-empty */
     it("rejects empty name", () => {
       expect(() =>
         PackageConfigSchema.parse({ name: "", tsconfig: "./tsconfig.json" }),
       ).toThrow();
     });
 
+    /** @spec configuration::packages.tsconfig-non-empty */
     it("rejects empty tsconfig", () => {
       expect(() =>
         PackageConfigSchema.parse({ name: "core", tsconfig: "" }),
@@ -33,6 +36,7 @@ describe("ConfigSchema", () => {
   });
 
   describe("StorageConfigSchema", () => {
+    /** @spec configuration::storage.sqlite-path */
     it("validates sqlite storage with path", () => {
       const config = { type: "sqlite" as const, path: "./data/graph.db" };
       const result = StorageConfigSchema.parse(config);
@@ -42,12 +46,14 @@ describe("ConfigSchema", () => {
       }
     });
 
+    /** @spec configuration::storage.default-sqlite */
     it("validates sqlite storage without path (optional)", () => {
       const config = { type: "sqlite" as const };
       const result = StorageConfigSchema.parse(config);
       expect(result.type).toBe("sqlite");
     });
 
+    /** @spec configuration::storage.memgraph */
     it("validates memgraph storage with all options", () => {
       const config = {
         type: "memgraph" as const,
@@ -70,6 +76,7 @@ describe("ConfigSchema", () => {
       expect(result.type).toBe("memgraph");
     });
 
+    /** @spec configuration::storage.invalid-type */
     it("rejects invalid storage type", () => {
       expect(() => StorageConfigSchema.parse({ type: "postgres" })).toThrow();
     });
@@ -82,6 +89,7 @@ describe("ConfigSchema", () => {
   });
 
   describe("WatchConfigSchema", () => {
+    /** @spec configuration::watch.polling */
     it("validates polling config with all options", () => {
       const config = {
         polling: true,
@@ -114,6 +122,7 @@ describe("ConfigSchema", () => {
       expect(result.silent).toBe(true);
     });
 
+    /** @spec configuration::watch.optional */
     it("validates empty watch config (all optional)", () => {
       const result = WatchConfigSchema.parse({});
       expect(result).toEqual({});
@@ -123,6 +132,7 @@ describe("ConfigSchema", () => {
       expect(() => WatchConfigSchema.parse({ debounce: -100 })).toThrow();
     });
 
+    /** @spec configuration::watch.polling-debounce-exclusive */
     it("rejects polling with debounce enabled (mutually exclusive)", () => {
       expect(() =>
         WatchConfigSchema.parse({ polling: true, debounce: true }),
@@ -131,6 +141,7 @@ describe("ConfigSchema", () => {
   });
 
   describe("ServerConfigSchema", () => {
+    /** @spec configuration::server-port-required */
     it("rejects server config without port", () => {
       const result = ServerConfigSchema.safeParse({});
       expect(result.success).toBe(false);
@@ -172,6 +183,7 @@ describe("ConfigSchema", () => {
       expect(result.watch?.debounceInterval).toBe(100);
     });
 
+    /** @spec configuration::packages.min-one */
     it("rejects empty packages array", () => {
       expect(() => ProjectConfigSchema.parse({ packages: [] })).toThrow();
     });

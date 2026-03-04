@@ -31,6 +31,7 @@ const createMapCache = (): EmbeddingCacheConnection => {
 describe(embedWithFallback.name, () => {
   const provider = createFakeEmbeddingProvider({ dimensions });
 
+  /** @spec search.semantic::fallback.full */
   it("embeds full content when it fits", async () => {
     const result = await embedWithFallback(
       "Function",
@@ -44,6 +45,10 @@ describe(embedWithFallback.name, () => {
     expect(result.contentHash).toBeTruthy();
   });
 
+  /**
+   * @spec indexing::embedding.cache-reuse
+   * @spec search.semantic::cache.hit
+   */
   it("returns cached embedding on cache hit", async () => {
     const cache = createMapCache();
     const cachedVector = new Float32Array([1, 2, 3]);
@@ -73,6 +78,7 @@ describe(embedWithFallback.name, () => {
     expect(secondResult.embedding).toBe(cachedVector);
   });
 
+  /** @spec search.semantic::cache.miss */
   it("stores embedding in cache after generation", async () => {
     const cache = createMapCache();
 
@@ -90,6 +96,7 @@ describe(embedWithFallback.name, () => {
     expect(cached).toEqual(result.embedding);
   });
 
+  /** @spec search.semantic::fallback.truncation */
   it("falls back to truncation on context overflow", async () => {
     const smallProvider = createFakeEmbeddingProvider({
       dimensions,
@@ -109,6 +116,7 @@ describe(embedWithFallback.name, () => {
     expect(result.embedding).toHaveLength(dimensions);
   });
 
+  /** @spec search.semantic::fallback.stripped-class */
   it("tries stripped implementation for Class nodes before truncation", async () => {
     const embeddedContents: string[] = [];
     const smallProvider = createFakeEmbeddingProvider({
@@ -139,6 +147,7 @@ describe(embedWithFallback.name, () => {
     expect(strippedAttempt).toBeDefined();
   });
 
+  /** @spec search.semantic::fallback.stripped-class */
   it("skips class stripping for non-Class node types", async () => {
     const embeddedContents: string[] = [];
     const smallProvider = createFakeEmbeddingProvider({
@@ -161,6 +170,7 @@ describe(embedWithFallback.name, () => {
     expect(strippedAttempt).toBeUndefined();
   });
 
+  /** @spec search.semantic::fallback.metadata-only */
   it("falls back to metadata-only when snippet is too long to truncate", async () => {
     const embeddedContents: string[] = [];
     const tinyProvider = createFakeEmbeddingProvider({
@@ -186,6 +196,7 @@ describe(embedWithFallback.name, () => {
     expect(lastEmbed).toContain("// File: src/huge.ts");
   });
 
+  /** @spec search.semantic::fallback.propagate-errors */
   it("propagates non-overflow errors", async () => {
     const brokenProvider = createFakeEmbeddingProvider({ dimensions });
     brokenProvider.embedDocument = async () => {

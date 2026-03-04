@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { EdgeExtractionContext } from "./EdgeExtractionContext.js";
 import { extractEdges } from "./extractEdges.js";
 
+/** @spec graph-model::edge-types */
 describe(extractEdges.name, () => {
   const createProject = () => new Project({ useInMemoryFileSystem: true });
 

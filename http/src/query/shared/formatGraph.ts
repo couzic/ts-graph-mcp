@@ -18,6 +18,9 @@ export interface FormatGraphResult {
  * - Uses symbol names, not full IDs
  * - Disambiguates with #N when names collide
  *
+ * @spec tool::output.chain-compaction
+ * @spec tool::output.branch-splitting
+ *
  * @returns Object with formatted text and node order (for consistent Nodes section ordering)
  */
 export const formatGraph = (

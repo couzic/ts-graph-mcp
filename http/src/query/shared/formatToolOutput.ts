@@ -5,10 +5,18 @@ import { formatGraph } from "./formatGraph.js";
 import { formatNodes } from "./formatNodes.js";
 import type { GraphEdge, NodeInfo } from "./GraphTypes.js";
 
-/** Default maximum nodes before truncation */
+/**
+ * Default maximum nodes before truncation.
+ *
+ * @spec tool::output.max-nodes-default
+ */
 export const DEFAULT_MAX_NODES = 50;
 
-/** Threshold above which snippets are omitted (too much noise) */
+/**
+ * Threshold above which snippets are omitted (too much noise).
+ *
+ * @spec tool::output.snippet-threshold
+ */
 const NO_SNIPPET_THRESHOLD = 30;
 
 /**
@@ -43,6 +51,10 @@ export interface FormatInput {
  * 1. Count unique nodes and check against maxNodes limit
  * 2. If over limit: truncate to first maxNodes nodes (BFS order), include Nodes for kept nodes
  * 3. Snippets included when ≤30 nodes, omitted above
+ *
+ * @spec tool::output.mcp-structure
+ * @spec tool::output.truncation
+ * @spec tool::output.snippet-threshold
  *
  * @param input - Edges, nodes, and optional maxNodes limit
  * @returns Formatted output string (Graph + optionally Nodes sections)
@@ -124,6 +136,8 @@ const formatFullOutput = (
 /**
  * Truncate edges to include only the first maxNodes nodes.
  * Uses formatGraph's traversal order to determine which nodes to keep.
+ *
+ * @spec tool::output.truncation
  *
  * @example
  * // Given edges: A -> B -> C -> D -> E and maxNodes: 3

@@ -4,6 +4,9 @@ import type { Symbol as TsSymbol } from "ts-morph";
  * Follow alias chains to find the actual symbol definition.
  * Handles re-exports like `export * from './other'` and `export { foo } from './other'`.
  *
+ * @spec indexing::re-export-transparency
+ * @spec graph-model::re-export-invisibility
+ *
  * @example
  * // Given: export { clamp } from './helpers'
  * // followAliasChain(clampSymbol) returns the symbol from helpers.ts, not index.ts

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { computeHybridScore } from "./computeHybridScore.js";
 
 describe(computeHybridScore.name, () => {
+  /** @spec search.hybrid::vector-only-fallback */
   describe("cosine-only (no BM25 in query)", () => {
     it("returns halved cosine score", () => {
       expect(computeHybridScore(0, 0, 0.7)).toBe(0.35);
@@ -14,6 +15,7 @@ describe(computeHybridScore.name, () => {
     });
   });
 
+  /** @spec search.hybrid::cosine-consistency */
   describe("cosine weight is consistent", () => {
     it("cosine contribution is the same regardless of BM25 context", () => {
       const cosineOnly = computeHybridScore(0, 0, 0.7);
@@ -22,6 +24,9 @@ describe(computeHybridScore.name, () => {
     });
   });
 
+  /** @spec search.hybrid::bm25-normalization */
+  /** @spec search.hybrid::bm25-compression */
+  /** @spec search.hybrid::equal-weight */
   describe("hybrid (BM25 matches exist)", () => {
     it("BM25 match scores higher than same cosine without BM25", () => {
       const withBm25 = computeHybridScore(5, 10, 0.7);
@@ -42,6 +47,7 @@ describe(computeHybridScore.name, () => {
     });
   });
 
+  /** @spec search.hybrid::score-range */
   describe("score remains in 0-1 range", () => {
     it("max BM25 + max cosine does not exceed 1", () => {
       expect(computeHybridScore(10, 10, 1.0)).toBeLessThanOrEqual(1.0);

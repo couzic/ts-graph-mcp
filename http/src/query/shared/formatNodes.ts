@@ -64,6 +64,8 @@ const renderLOCs = (locs: LOC[], callSites?: CallSiteRange[]): string[] => {
  * - Renders snippets from node.locs if present
  * - Orders nodes by appearance in Graph section (if nodeOrder provided)
  *
+ * @spec tool::output.nodes-content
+ *
  * @param nodes - All nodes (with locs pre-loaded if snippets desired)
  * @param displayNames - Map of nodeId → display name
  * @param excludeIds - Node IDs to exclude (query inputs)

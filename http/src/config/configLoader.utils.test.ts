@@ -6,6 +6,7 @@ import {
 } from "./configLoader.utils.js";
 
 describe("configLoader.utils", () => {
+  /** @spec configuration::config-file */
   describe("CONFIG_FILE_NAME", () => {
     it("is ts-graph-mcp.config.json", () => {
       expect(CONFIG_FILE_NAME).toBe("ts-graph-mcp.config.json");
@@ -38,10 +39,12 @@ describe("configLoader.utils", () => {
       expect(result.watch?.debounceInterval).toBe(150);
     });
 
+    /** @spec configuration::validation.invalid-json */
     it("throws on invalid JSON", () => {
       expect(() => parseConfig("{ invalid }")).toThrow("Invalid JSON");
     });
 
+    /** @spec configuration::validation.invalid-structure */
     it("throws on invalid config structure (empty packages)", () => {
       expect(() => parseConfig(JSON.stringify({ packages: [] }))).toThrow();
     });
@@ -51,6 +54,7 @@ describe("configLoader.utils", () => {
     });
   });
 
+  /** @spec configuration::auto-detect */
   describe(createDefaultConfig.name, () => {
     it("creates config with package name", () => {
       const result = createDefaultConfig("./tsconfig.json", "my-project");

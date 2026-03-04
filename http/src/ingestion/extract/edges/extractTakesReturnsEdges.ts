@@ -54,6 +54,21 @@ const BUILT_IN_TYPES = new Set([
 /**
  * Extract TAKES and RETURNS edges from functions, methods, and object literal methods.
  *
+ * @spec indexing::edges.takes
+ * @spec indexing::edges.returns
+ * @spec graph-model::edges.takes
+ * @spec graph-model::edges.returns
+ * @spec graph-model::edges.factory-returns-synthetic
+ * @spec indexing::types.builtin-unwrapping
+ * @spec indexing::types.primitive-skipping
+ * @spec indexing::types.union-multiple-edges
+ * @spec graph-model::edges.generic-unwrapping
+ * @spec graph-model::edges.union-handling
+ * @spec graph-model::edges.primitive-skipping
+ * @spec graph-model::edges.built-in-filtering
+ * @spec graph-model::edges.null-undefined-skipping
+ * @spec graph-model::edges.array-element-type
+ *
  * @example
  * function login(user: User): Session { }
  * // login --TAKES--> User

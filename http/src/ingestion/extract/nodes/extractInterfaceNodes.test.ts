@@ -3,6 +3,10 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { extractInterfaceNodes } from "./extractInterfaceNodes.js";
 import type { NodeExtractionContext } from "./NodeExtractionContext.js";
 
+/**
+ * @spec indexing::nodes.interface
+ * @spec graph-model::nodes.interface-properties
+ */
 describe(extractInterfaceNodes.name, () => {
   let project: Project;
 

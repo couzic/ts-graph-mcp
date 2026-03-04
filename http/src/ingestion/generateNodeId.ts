@@ -6,6 +6,10 @@ import { normalizePath } from "./normalizePath.js";
  *
  * Format: `{path}:{type}:{symbol}`
  *
+ * @spec indexing::node-id-format
+ * @spec graph-model::node-id.format
+ * @spec graph-model::node-id.forward-slashes
+ *
  * @example
  * generateNodeId("src/utils.ts", "Function", "formatDate")
  * // => "src/utils.ts:Function:formatDate"

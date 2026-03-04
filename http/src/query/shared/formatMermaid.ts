@@ -21,6 +21,8 @@ export type MermaidOptions = {
 /**
  * Find connected components in an undirected graph via BFS.
  *
+ * @spec tool::output.mermaid-components
+ *
  * @example
  * // Two disconnected edges: A→B, C→D
  * findConnectedComponents([{source:"A",target:"B",...}, {source:"C",target:"D",...}])
@@ -201,6 +203,11 @@ const formatSingleGraph = (
 /**
  * Format edges into mermaid flowchart syntax.
  * Returns one string per connected component.
+ *
+ * @spec tool::output.mermaid-structure
+ * @spec tool::output.mermaid-components
+ * @spec tool::output.mermaid-subgraphs
+ * @spec tool::output.mermaid-direction
  *
  * @example
  * // Connected graph → single-element array

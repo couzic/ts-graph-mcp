@@ -63,6 +63,10 @@ export interface SearchIndexOptions {
  * Preprocess symbol name for BM25 indexing.
  * Combines split identifier with original for better matching.
  *
+ * @spec search::identifier-preprocessing
+ * @spec search.lexical::preprocessing-preserves-original
+ * @spec search.lexical::preprocessing-single-word-passthrough
+ *
  * @example
  * preprocessForBM25('validateCart') // 'validate Cart validateCart'
  */
@@ -71,6 +75,10 @@ export const preprocessForBM25 = (symbol: string): string => {
   return split === symbol ? symbol : `${split} ${symbol}`;
 };
 
+/**
+ * @spec search::index-schema
+ * @spec search.lexical::indexed-fields
+ */
 type SearchSchema = {
   id: "string";
   symbol: "string";
@@ -84,6 +92,20 @@ type SearchIndex = Orama<SearchSchema>;
 
 /**
  * Build the search wrapper methods.
+ *
+ * @spec search::content-field-composition
+ * @spec search::modes
+ * @spec search::result-limit-default
+ * @spec search::result-ordering
+ * @spec search::zero-score-exclusion
+ * @spec search::removal.by-id
+ * @spec search::removal.by-file
+ * @spec search.lexical::bm25-algorithm
+ * @spec search.lexical::content-field-composition
+ * @spec search.lexical::fulltext-only-mode
+ * @spec search.lexical::default-result-limit
+ * @spec search.lexical::node-type-filtering
+ * @spec search.lexical::file-path-filtering
  */
 const buildWrapper = (
   db: SearchIndex,
@@ -195,7 +217,8 @@ const buildWrapper = (
       };
 
       if (searchOptions?.vector) {
-        // Run BM25 (wide net) and vector (caller's limit, similarity floor) in parallel
+        /** @spec search.hybrid::separate-searches */
+        /** @spec search.hybrid::vector-threshold */
         const [bm25Results, vectorResults] = await Promise.all([
           search(db, { ...baseParams, limit: 1000 }),
           searchVector(db, {
@@ -209,7 +232,7 @@ const buildWrapper = (
           }),
         ]);
 
-        // Merge by document ID (union)
+        /** @spec search.hybrid::union-merge */
         const merged = new Map<
           string,
           {
@@ -245,7 +268,7 @@ const buildWrapper = (
           }
         }
 
-        // Backfill cosine for BM25-only hits
+        /** @spec search.hybrid::bm25-backfill */
         const bm25OnlyIds: string[] = [];
         for (const [id, entry] of merged) {
           if (entry.bm25Score > 0 && entry.cosineScore === 0) {
@@ -307,6 +330,8 @@ const buildWrapper = (
           }
         }
 
+        /** @spec search.hybrid::zero-score-filtering */
+        /** @spec search.hybrid::descending-sort */
         const results: SearchResult[] = [];
         for (const entry of merged.values()) {
           const hybridScore = computeHybridScore(
@@ -353,6 +378,9 @@ const buildWrapper = (
 /**
  * Create a new search index.
  *
+ * @spec search.semantic::similarity-floor
+ * @spec search.semantic::preset-dimensions
+ *
  * @example
  * const index = await createSearchIndex({ vectorDimensions: 384 });
  */
@@ -376,6 +404,8 @@ export const createSearchIndex = async (
 
 /**
  * Restore a search index from exported data.
+ *
+ * @spec search::index-persistence
  *
  * @example
  * const data = JSON.parse(fs.readFileSync('.ts-graph-mcp/search.json', 'utf8'));

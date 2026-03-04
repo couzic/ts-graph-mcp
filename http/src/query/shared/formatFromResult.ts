@@ -9,6 +9,8 @@ import type { QueryResult } from "./QueryResult.js";
 /**
  * Format a QueryResult as MCP text output (Graph + Nodes sections).
  *
+ * @spec tool::output.mcp-structure
+ *
  * @example
  * const result = dependenciesData(db, filePath, symbol);
  * const text = formatMcpFromResult(result);
@@ -36,6 +38,8 @@ export const formatMcpFromResult = (result: QueryResult): string => {
 /**
  * Format a QueryResult as Mermaid diagram syntax.
  * Returns one string per connected component.
+ *
+ * @spec tool::output.mermaid-structure
  *
  * @example
  * const result = dependenciesData(db, filePath, symbol);

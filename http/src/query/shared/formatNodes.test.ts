@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { formatNodes } from "./formatNodes.js";
 import type { NodeInfo } from "./GraphTypes.js";
 
+/** @spec tool::output.nodes-content */
 describe(formatNodes.name, () => {
   it("formats nodes with file location and snippet", () => {
     const nodes: NodeInfo[] = [

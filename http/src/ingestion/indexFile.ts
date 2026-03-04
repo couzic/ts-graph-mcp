@@ -72,6 +72,9 @@ export interface IndexFileOptions {
 /**
  * Index a single source file: extract nodes and edges, write to database and search index.
  *
+ * @spec indexing::streaming.per-file
+ * @spec indexing::embedding.generation
+ *
  * This is the core indexing primitive used by:
  * - indexProject (initial indexing)
  * - watchProject (incremental updates)

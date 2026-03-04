@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { groupNodesBySubgraph } from "./groupNodesBySubgraph.js";
 import type { NodeMetadata } from "./queryNodeMetadata.js";
 
+/** @spec tool::output.mermaid-subgraphs */
 describe(groupNodesBySubgraph.name, () => {
   describe("file grouping (no metadata)", () => {
     it("groups nodes from same file together", () => {

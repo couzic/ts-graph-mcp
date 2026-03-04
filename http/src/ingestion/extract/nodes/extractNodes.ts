@@ -12,6 +12,10 @@ import type { NodeExtractionContext } from "./NodeExtractionContext.js";
 
 /**
  * Extract all nodes from a source file.
+ *
+ * @spec graph-model::node-types
+ * @spec graph-model::nodes.no-property-nodes
+ * @spec indexing::nodes.no-properties
  */
 export const extractNodes = (
   sourceFile: SourceFile,

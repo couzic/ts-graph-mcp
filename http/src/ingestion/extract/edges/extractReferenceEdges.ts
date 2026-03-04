@@ -28,6 +28,9 @@ type ReferenceContext =
 /**
  * Extract REFERENCES edges.
  *
+ * @spec indexing::edges.references
+ * @spec graph-model::edges.references-contexts
+ *
  * REFERENCES captures when a function/variable is passed or stored rather than directly invoked:
  * - Callback arguments: array.map(fn)
  * - Object properties: { handler: fn }

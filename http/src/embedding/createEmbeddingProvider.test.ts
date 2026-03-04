@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_PRESET, EMBEDDING_PRESETS } from "./presets.js";
 
+/**
+ * @spec search.semantic::presets
+ * @spec configuration::embedding.presets
+ */
 describe("Embedding presets", () => {
+  /**
+   * @spec search.semantic::default-preset
+   * @spec configuration::embedding.default-preset
+   */
   it("has a default preset defined", () => {
     expect(DEFAULT_PRESET).toBeDefined();
     expect(EMBEDDING_PRESETS[DEFAULT_PRESET]).toBeDefined();
@@ -14,6 +22,7 @@ describe("Embedding presets", () => {
     }
   });
 
+  /** @spec search.semantic::preset-prefixes */
   it("presets with prefixes have both query and document prefix", () => {
     for (const [name, preset] of Object.entries(EMBEDDING_PRESETS)) {
       if (preset.queryPrefix || preset.documentPrefix) {

@@ -44,6 +44,9 @@ const deduplicateEdges = (
  * - `symbol` parameter: exact match, returns single result
  * - `query` parameter: lexical + semantic search, returns multiple results
  *
+ * @spec tool::resolve.exact
+ * @spec tool::query.loose-no-results
+ *
  * @returns Array of resolved endpoints (empty if not found)
  */
 const resolveEndpoint = async (
@@ -86,6 +89,8 @@ const resolveEndpoint = async (
 /**
  * Query dependencies for multiple from endpoints and merge results.
  * Used when from.query returns multiple matching symbols.
+ *
+ * @spec tool::query.loose-forward
  */
 const queryMultipleFromEndpoints = (
   db: Database.Database,
@@ -118,6 +123,8 @@ const queryMultipleFromEndpoints = (
 /**
  * Query paths between multiple from×to endpoint combinations and merge results.
  * Used when from.query and/or to.query resolve to multiple symbols.
+ *
+ * @spec tool::query.loose-path
  */
 const queryMultiplePathsBetween = (
   db: Database.Database,
@@ -157,6 +164,8 @@ const queryMultiplePathsBetween = (
 /**
  * Query dependents for multiple to endpoints and merge results.
  * Used when to.query returns multiple matching symbols.
+ *
+ * @spec tool::query.loose-backward
  */
 const queryMultipleToEndpoints = (
   db: Database.Database,
@@ -189,6 +198,15 @@ const queryMultipleToEndpoints = (
 /**
  * Unified graph search tool that combines semantic search with graph traversal.
  *
+ * @spec tool::query.forward
+ * @spec tool::query.backward
+ * @spec tool::query.path
+ * @spec tool::query.topic
+ * @spec tool::query.topic-connected
+ * @spec tool::query.topic-disconnected
+ * @spec tool::validation.required-param
+ * @spec tool::validation.search-index-required
+ *
  * @example
  * // What does handleRequest call?
  * searchGraph(db, { from: { symbol: "handleRequest" } })
@@ -204,6 +222,9 @@ const queryMultipleToEndpoints = (
  */
 /**
  * Type guard for topic-based search input.
+ *
+ * @spec tool::validation.topic-standalone
+ * @spec tool::validation.empty-topic
  */
 const isTopicSearch = (
   input: SearchGraphInput,

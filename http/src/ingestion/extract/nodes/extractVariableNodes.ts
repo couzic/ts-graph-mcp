@@ -19,6 +19,10 @@ const isCallableInitializer = (initializer: Node | undefined): boolean => {
 
 /**
  * Extract variable nodes from a source file.
+ *
+ * @spec indexing::nodes.variable
+ * @spec graph-model::nodes.variable-properties
+ * @spec graph-model::nodes.arrow-as-function
  */
 export const extractVariableNodes = (
   sourceFile: SourceFile,

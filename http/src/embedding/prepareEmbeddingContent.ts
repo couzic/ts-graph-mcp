@@ -2,6 +2,8 @@
  * Prepare content for embedding.
  * Includes metadata prefix and source snippet.
  *
+ * @spec search.semantic::content-preparation
+ *
  * @example
  * prepareEmbeddingContent("Function", "foo", "src/utils.ts", "function foo() {}") // "// Function: foo\n// File: src/utils.ts\n\nfunction foo() {}"
  */

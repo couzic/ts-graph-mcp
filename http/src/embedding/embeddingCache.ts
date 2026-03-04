@@ -6,6 +6,8 @@ import Database from "better-sqlite3";
 /**
  * Compute SHA-256 hash of content for cache key.
  *
+ * @spec search.semantic::cache.content-hash
+ *
  * @example
  * computeContentHash("function foo() {}") // "a1b2c3..."
  */
@@ -61,6 +63,11 @@ const initializeSchema = (db: Database.Database): void => {
 /**
  * Open or create an embedding cache database.
  * Creates the cache directory if it doesn't exist.
+ *
+ * @spec search.semantic::cache.model-isolation
+ * @spec search.semantic::cache.persistence
+ * @spec search.semantic::cache.batch
+ * @spec configuration::embedding-cache-dir
  *
  * @example
  * const cache = openEmbeddingCache(".ts-graph-mcp", "nomic-embed-text-v1.5");

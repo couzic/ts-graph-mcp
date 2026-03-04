@@ -6,6 +6,9 @@ import { normalizeTypeText } from "./normalizeTypeText.js";
 
 /**
  * Extract interface nodes from a source file.
+ *
+ * @spec indexing::nodes.interface
+ * @spec graph-model::nodes.interface-properties
  */
 export const extractInterfaceNodes = (
   sourceFile: SourceFile,

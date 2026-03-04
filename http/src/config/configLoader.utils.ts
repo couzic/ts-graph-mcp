@@ -5,6 +5,9 @@ import { type ProjectConfig, ProjectConfigSchema } from "./Config.schemas.js";
 /**
  * Read package name from package.json in the given directory.
  * Falls back to directory name if package.json missing or has no name.
+ *
+ * @spec configuration::auto-detect.package-name
+ * @spec configuration::auto-detect.dir-fallback
  */
 export const readPackageName = (directory: string): string => {
   const packageJsonPath = join(directory, "package.json");
@@ -51,6 +54,9 @@ export const createDefaultConfig = (
  * JSON-only for reliability — Node.js cannot dynamically import TypeScript
  * files without a loader (tsx/ts-node), which would break when users run
  * the compiled package via `npx ts-graph`.
+ *
+ * @spec configuration::config-file
+ * @spec configuration::json-only
  */
 export const CONFIG_FILE_NAME = "ts-graph-mcp.config.json" as const;
 
@@ -68,6 +74,9 @@ export const findConfigFile = (directory: string): string | null => {
 /**
  * Parse and validate config content.
  * Pure function - unit tested.
+ *
+ * @spec configuration::validation.invalid-json
+ * @spec configuration::validation.invalid-structure
  *
  * @param content - Raw JSON string from config file
  * @returns Validated project config
@@ -135,6 +144,9 @@ export type ConfigResult = {
  * 1. Explicit config file (ts-graph.config.json)
  * 2. Auto-detect tsconfig.json and generate default config
  * 3. Return null if neither found
+ *
+ * @spec configuration::auto-detect
+ * @spec configuration::auto-detect.none
  *
  * @param directory - Directory to search for config
  * @returns Config with source info, or null if no config possible

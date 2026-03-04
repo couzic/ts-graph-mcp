@@ -386,6 +386,8 @@ const resolveCallTarget = (
 /**
  * Resolve a JSX element tag to its component definition.
  *
+ * @spec graph-model::edges.includes-jsx
+ *
  * Handles:
  * - Simple JSX: `<MyComponent />` → looks up `MyComponent` in symbolMap
  * - Skips intrinsic elements: `<div>`, `<span>` (lowercase first letter)
@@ -444,6 +446,15 @@ const resolveJsxTarget = (
 
 /**
  * Extract CALLS edges between functions and methods.
+ *
+ * @spec indexing::edges.calls
+ * @spec indexing::edges.includes
+ * @spec indexing::monorepo.cross-package-edges
+ * @spec indexing::monorepo.namespace-resolution
+ * @spec graph-model::edges.calls-metadata
+ * @spec graph-model::edges.includes-jsx
+ * @spec graph-model::edges.constructor-calls
+ * @spec graph-model::edges.no-built-in-calls
  *
  * Uses a simplified approach that doesn't require a global nodes array:
  * - Local symbols: Extracted from the current file's AST

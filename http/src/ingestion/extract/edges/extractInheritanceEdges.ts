@@ -14,6 +14,11 @@ type SymbolMap = Map<string, string>;
 /**
  * Extract IMPLEMENTS and EXTENDS edges.
  *
+ * @spec indexing::edges.extends
+ * @spec indexing::edges.implements
+ * @spec graph-model::edges.extends
+ * @spec graph-model::edges.implements
+ *
  * Uses buildImportMap for cross-file resolution:
  * - Local symbols: Resolved to current file
  * - Imported symbols: Resolved via ts-morph + import map

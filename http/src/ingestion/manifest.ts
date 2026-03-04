@@ -138,6 +138,8 @@ export const populateManifest = (
 /**
  * Compare manifest with current filesystem state.
  * Returns lists of stale, deleted, and added files.
+ *
+ * @spec indexing::sync.manifest-detection
  */
 export const compareManifest = (
   manifest: IndexManifest,

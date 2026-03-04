@@ -6,6 +6,9 @@ import { normalizeTypeText } from "./normalizeTypeText.js";
 
 /**
  * Extract class nodes from a source file.
+ *
+ * @spec indexing::nodes.class
+ * @spec graph-model::nodes.class-properties
  */
 export const extractClassNodes = (
   sourceFile: SourceFile,

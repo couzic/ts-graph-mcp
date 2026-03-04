@@ -25,6 +25,7 @@ const toNodes = (extractedNodes: ExtractedNode[]): Node[] =>
       }) as Node,
   );
 
+/** @spec tool::resolve.not-found */
 describe("symbolNotFound", () => {
   let db: Database.Database;
   let writer: DbWriter;
@@ -256,6 +257,7 @@ describe("resolveSymbol", () => {
     package: "test-pkg",
   });
 
+  /** @spec tool::resolve.exact-with-file */
   it("returns success for exact match without message", async () => {
     const filePath = "src/utils.ts";
     const sourceFile = project.createSourceFile(
@@ -276,6 +278,7 @@ describe("resolveSymbol", () => {
     }
   });
 
+  /** @spec tool::resolve.exact-with-file */
   it("auto-resolves method name to ClassName.methodName", async () => {
     const filePath = "src/entity.ts";
     const sourceFile = project.createSourceFile(
@@ -322,6 +325,7 @@ describe("resolveSymbol", () => {
     }
   });
 
+  /** @spec tool::resolve.disambiguation */
   it("returns disambiguation when multiple matches found", async () => {
     // Index two classes with same method name
     const fileA = "src/user.ts";
@@ -354,6 +358,7 @@ describe("resolveSymbol", () => {
     }
   });
 
+  /** @spec tool::resolve.not-found */
   it("returns error when no matches found", async () => {
     // Index a file with different symbol
     const filePath = "src/utils.ts";
@@ -394,6 +399,7 @@ describe("resolveSymbol", () => {
     }
   });
 
+  /** @spec tool::resolve.auto-resolve */
   it("resolves symbol when file_path is undefined (single match)", async () => {
     const filePath = "src/utils.ts";
     const sourceFile = project.createSourceFile(
@@ -415,6 +421,7 @@ describe("resolveSymbol", () => {
     }
   });
 
+  /** @spec tool::resolve.disambiguation */
   it("returns disambiguation when file_path undefined and multiple matches", async () => {
     const fileA = "src/dateA.ts";
     const sourceA = project.createSourceFile(
@@ -442,6 +449,7 @@ describe("resolveSymbol", () => {
     }
   });
 
+  /** @spec tool::resolve.not-found */
   it("returns error when file_path undefined and symbol not found", async () => {
     const result = resolveSymbol(db, undefined, "nonExistent");
 

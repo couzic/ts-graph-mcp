@@ -9,6 +9,10 @@ const createSourceFile = (code: string) => {
 
 const context = { filePath: "test.ts", package: "test-pkg" };
 
+/**
+ * @spec indexing::edges.has-type
+ * @spec graph-model::edges.has-type
+ */
 describe("extractHasTypeEdges", () => {
   it("extracts HAS_TYPE edge for typed variable", () => {
     const sourceFile = createSourceFile(`
@@ -36,6 +40,7 @@ describe("extractHasTypeEdges", () => {
     expect(edges).toHaveLength(0);
   });
 
+  /** @spec indexing::types.primitive-skipping */
   it("skips primitive types", () => {
     const sourceFile = createSourceFile(`
       const name: string = "Alice";
@@ -48,6 +53,7 @@ describe("extractHasTypeEdges", () => {
     expect(edges).toHaveLength(0);
   });
 
+  /** @spec indexing::types.builtin-unwrapping */
   it("extracts inner type from generic wrapper", () => {
     const sourceFile = createSourceFile(`
       interface User { name: string }
@@ -60,6 +66,7 @@ describe("extractHasTypeEdges", () => {
     expect(edges[0]?.target).toBe("test.ts:Interface:User");
   });
 
+  /** @spec indexing::types.union-multiple-edges */
   it("extracts multiple edges for union types", () => {
     const sourceFile = createSourceFile(`
       interface User { name: string }

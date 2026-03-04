@@ -2,6 +2,11 @@ import { z } from "zod";
 
 // --- Schemas ---
 
+/**
+ * @spec configuration::packages
+ * @spec configuration::packages.name-non-empty
+ * @spec configuration::packages.tsconfig-non-empty
+ */
 export const PackageConfigSchema = z.object({
   /** Package name (unique within project) */
   name: z.string().min(1),
@@ -9,12 +14,14 @@ export const PackageConfigSchema = z.object({
   tsconfig: z.string().min(1),
 });
 
+/** @spec configuration::storage.sqlite-path */
 export const SqliteStorageSchema = z.object({
   type: z.literal("sqlite"),
   /** Path to database file (default: '.ts-graph-mcp/graph.db') */
   path: z.string().optional(),
 });
 
+/** @spec configuration::storage.memgraph */
 export const MemgraphStorageSchema = z.object({
   type: z.literal("memgraph"),
   /** Memgraph host (default: 'localhost') */
@@ -27,11 +34,20 @@ export const MemgraphStorageSchema = z.object({
   password: z.string().optional(),
 });
 
+/** @spec configuration::storage.invalid-type */
 export const StorageConfigSchema = z.discriminatedUnion("type", [
   SqliteStorageSchema,
   MemgraphStorageSchema,
 ]);
 
+/**
+ * @spec configuration::watch.optional
+ * @spec configuration::watch.polling
+ * @spec configuration::watch.exclude-directories
+ * @spec configuration::watch.exclude-files
+ * @spec configuration::watch.silent
+ * @spec configuration::watch.polling-debounce-exclusive
+ */
 export const WatchConfigSchema = z
   .object({
     // Polling (for WSL2/Docker/NFS)
@@ -62,6 +78,10 @@ export const WatchConfigSchema = z
     path: ["debounce"],
   });
 
+/**
+ * @spec configuration::server-port-required
+ * @spec configuration::server-host
+ */
 export const ServerConfigSchema = z.object({
   /** HTTP server port (required — no default) */
   port: z.number().int().positive(),
@@ -69,6 +89,11 @@ export const ServerConfigSchema = z.object({
   host: z.string().optional(),
 });
 
+/**
+ * @spec configuration::embedding.presets
+ * @spec configuration::embedding.explicit-model
+ * @spec configuration::embedding.unknown-preset
+ */
 export const EmbeddingConfigSchema = z.object({
   /** Embedding model preset (default: 'nomic-embed-text-v1.5') */
   preset: z
@@ -90,7 +115,12 @@ export const EmbeddingConfigSchema = z.object({
   documentPrefix: z.string().optional(),
 });
 
-/** Project configuration schema */
+/**
+ * Project configuration schema.
+ *
+ * @spec configuration::packages.min-one
+ * @spec configuration::storage.default-sqlite
+ */
 export const ProjectConfigSchema = z.object({
   /** Packages in the project */
   packages: z.array(PackageConfigSchema).min(1),

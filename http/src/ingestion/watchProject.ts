@@ -121,6 +121,15 @@ const resolveFileContext = (
  *
  * On file add/change: validates against tsconfig, removes old data, extracts new nodes/edges.
  * On file unlink: removes all nodes/edges for that file.
+ *
+ * @spec indexing::watch.change-detection
+ * @spec indexing::watch.tsconfig-validation
+ * @spec indexing::watch.unlink-cleanup
+ * @spec indexing::watch.debounce-batching
+ * @spec indexing::watch.polling-mode
+ * @spec configuration::watch.debounce-default
+ * @spec configuration::watch.debounce-interval-default
+ * @spec configuration::watch.polling-interval-default
  */
 export const watchProject = (
   db: Database.Database,

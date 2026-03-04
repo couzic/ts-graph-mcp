@@ -15,6 +15,8 @@ export type WorkspaceMap = Map<string, string>;
 /**
  * Build a workspace map for a monorepo by parsing package.json workspaces.
  *
+ * @spec indexing::monorepo.workspace-map
+ *
  * Maps each package name (from its package.json) to its source entry file path.
  * Handles glob patterns like `"libs/*"` and nested workspaces recursively.
  *

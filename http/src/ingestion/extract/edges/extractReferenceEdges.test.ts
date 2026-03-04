@@ -4,6 +4,10 @@ import { generateNodeId } from "../../generateNodeId.js";
 import type { EdgeExtractionContext } from "./EdgeExtractionContext.js";
 import { extractReferenceEdges } from "./extractReferenceEdges.js";
 
+/**
+ * @spec indexing::edges.references
+ * @spec graph-model::edges.references-contexts
+ */
 describe(extractReferenceEdges.name, () => {
   const createProject = () => new Project({ useInMemoryFileSystem: true });
 

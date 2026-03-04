@@ -6,6 +6,9 @@ import { normalizeTypeText } from "./normalizeTypeText.js";
 
 /**
  * Extract type alias nodes from a source file.
+ *
+ * @spec indexing::nodes.type-alias
+ * @spec graph-model::nodes.type-alias-properties
  */
 export const extractTypeAliasNodes = (
   sourceFile: SourceFile,

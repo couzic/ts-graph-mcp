@@ -19,6 +19,9 @@ const getVersion = (): string => {
 /**
  * Load port from config file.
  * Uses dynamic import to avoid bundling issues.
+ *
+ * @spec server::mcp.discovery
+ * @spec configuration::server-port-required
  */
 const loadPort = async (): Promise<number> => {
   const { loadConfigOrDetect } = await import(
@@ -36,6 +39,9 @@ const loadPort = async (): Promise<number> => {
 
 /**
  * Make HTTP POST request to the server.
+ *
+ * @spec server::mcp.tool-proxy
+ * @spec server::mcp.server-unreachable
  */
 const httpPostRequest = async (
   port: number,
@@ -63,6 +69,8 @@ const httpPostRequest = async (
  *
  * The HTTP server must be running separately.
  * If not running, tool calls return a clear error message.
+ *
+ * @spec server::mcp.tool-proxy
  *
  * @example
  * ```bash

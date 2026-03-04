@@ -3,6 +3,10 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { extractTypeAliasNodes } from "./extractTypeAliasNodes.js";
 import type { NodeExtractionContext } from "./NodeExtractionContext.js";
 
+/**
+ * @spec indexing::nodes.type-alias
+ * @spec graph-model::nodes.type-alias-properties
+ */
 describe(extractTypeAliasNodes.name, () => {
   let project: Project;
 

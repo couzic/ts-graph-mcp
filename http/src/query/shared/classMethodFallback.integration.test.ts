@@ -171,6 +171,7 @@ describe("attemptClassMethodFallback integration", () => {
   // Class ID: path:Class:ClassName
   // Method ID: path:Method:ClassName.methodName
 
+  /** @spec tool::resolve.method-fallback */
   it("returns single-method for class with one method that has deps", () => {
     const result = attemptClassMethodFallback(
       db,
@@ -205,6 +206,7 @@ describe("attemptClassMethodFallback integration", () => {
     });
   });
 
+  /** @spec tool::resolve.class-disambiguation */
   it("returns multiple-methods for class with multiple methods", () => {
     const result = attemptClassMethodFallback(
       db,

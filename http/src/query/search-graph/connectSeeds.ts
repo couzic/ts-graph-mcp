@@ -18,6 +18,8 @@ const DEFAULT_MAX_DEPTH = 4;
  * Nodes reachable from 2+ different seeds are "meeting points" —
  * all edges along paths to meeting points form the connected subgraph.
  *
+ * @spec tool::query.topic-bridge
+ *
  * @example
  * // Seeds {A, B} with graph A → X → B returns edges [A→X, X→B]
  * connectSeeds(db, ["src/a.ts:fnA", "src/b.ts:fnB"])

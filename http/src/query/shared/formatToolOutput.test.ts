@@ -4,6 +4,7 @@ import { formatToolOutput, truncateEdges } from "./formatToolOutput.js";
 import type { GraphEdge } from "./GraphTypes.js";
 
 describe("formatToolOutput", () => {
+  /** @spec tool::output.mcp-structure */
   it("formats a simple call chain with node snippets", () => {
     const input: FormatInput = {
       edges: [
@@ -75,6 +76,7 @@ fnB:
 fnA --CALLS--> fnB`);
   });
 
+  /** @spec tool::output.truncation */
   describe("maxNodes truncation", () => {
     it("shows full output when node count is under maxNodes", () => {
       const input: FormatInput = {
@@ -313,6 +315,7 @@ fnA --CALLS--> fnB`);
       expect(result).toContain("(3 nodes displayed");
     });
 
+    /** @spec tool::output.max-nodes-default */
     it("uses default maxNodes of 50 when not specified", () => {
       // Create a graph with exactly 51 nodes
       const edges = [];
@@ -340,6 +343,7 @@ fnA --CALLS--> fnB`);
     });
   });
 
+  /** @spec tool::output.snippet-threshold */
   describe("snippet threshold", () => {
     it("includes snippets when node count is at or below 30", () => {
       // Create a graph with exactly 30 nodes

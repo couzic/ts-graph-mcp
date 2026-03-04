@@ -27,6 +27,15 @@ interface EmbedResult {
  * Tries: full content → stripped (for Class) → truncated (halving until fits).
  * Never throws on context overflow — always returns an embedding.
  * Returns both the embedding and the hash of the content that was actually embedded.
+ *
+ * @spec search.semantic::fallback.full
+ * @spec search.semantic::fallback.stripped-class
+ * @spec search.semantic::fallback.truncation
+ * @spec search.semantic::fallback.metadata-only
+ * @spec search.semantic::fallback.propagate-errors
+ * @spec indexing::embedding.cache-reuse
+ * @spec search.semantic::cache.hit
+ * @spec search.semantic::cache.miss
  */
 export const embedWithFallback = async (
   nodeType: string,

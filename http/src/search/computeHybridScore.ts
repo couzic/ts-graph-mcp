@@ -1,5 +1,8 @@
+/** @spec search.hybrid::equal-weight */
 const BM25_WEIGHT = 0.5;
+/** @spec search.hybrid::equal-weight */
 const VECTOR_WEIGHT = 0.5;
+/** @spec search.hybrid::bm25-compression */
 const BM25_COMPRESSION = 0.3;
 
 /**
@@ -18,6 +21,13 @@ const BM25_COMPRESSION = 0.3;
  *
  * Raw BM25 scores vary wildly (3-26+). Power compression (score/max)^0.3
  * flattens the curve: 0.27 linear → 0.64 compressed.
+ *
+ * @spec search.hybrid::bm25-normalization
+ * @spec search.hybrid::bm25-compression
+ * @spec search.hybrid::equal-weight
+ * @spec search.hybrid::score-range
+ * @spec search.hybrid::vector-only-fallback
+ * @spec search.hybrid::cosine-consistency
  *
  * @example
  * computeHybridScore(6, 22, 0.67) // ~0.67 (mid-range BM25 + good cosine)

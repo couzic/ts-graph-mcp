@@ -29,6 +29,16 @@ export interface CreateEmbeddingProviderOptions {
 /**
  * Create an embedding provider using node-llama-cpp.
  *
+ * @spec search.semantic::unknown-preset
+ * @spec search.semantic::model-download
+ * @spec search.semantic::lazy-init
+ * @spec search.semantic::prefix.query
+ * @spec search.semantic::prefix.document
+ * @spec search.semantic::prefix.none
+ * @spec configuration::embedding.unknown-preset
+ * @spec configuration::embedding.explicit-model
+ * @spec configuration::models-dir
+ *
  * @example
  * const provider = await createEmbeddingProvider({
  *   modelsDir: '.ts-graph-mcp/models'

@@ -17,6 +17,7 @@ describe("embeddingCache", () => {
     rmSync(testDir, { recursive: true, force: true });
   });
 
+  /** @spec search.semantic::cache.content-hash */
   describe("computeContentHash", () => {
     it("returns consistent hash for same content", () => {
       const content = "function foo() { return 42; }";
@@ -37,6 +38,7 @@ describe("embeddingCache", () => {
     });
   });
 
+  /** @spec search.semantic::cache.model-isolation */
   describe("openEmbeddingCache", () => {
     it("creates embedding-cache directory if missing", () => {
       const cache = openEmbeddingCache(testDir, "nomic-embed");
@@ -68,6 +70,7 @@ describe("embeddingCache", () => {
     });
   });
 
+  /** @spec search.semantic::cache.hit */
   describe("get/set operations", () => {
     it("retrieves stored vector", () => {
       const cache = openEmbeddingCache(testDir, "nomic-embed");
@@ -128,6 +131,7 @@ describe("embeddingCache", () => {
     });
   });
 
+  /** @spec search.semantic::cache.batch */
   describe("getBatch", () => {
     it("retrieves multiple vectors in one call", () => {
       const cache = openEmbeddingCache(testDir, "nomic-embed");
@@ -171,7 +175,9 @@ describe("embeddingCache", () => {
     });
   });
 
+  /** @spec search.semantic::cache.persistence */
   describe("persistence", () => {
+    /** @spec search.semantic::cache.persistence */
     it("persists data across connections", () => {
       const cache1 = openEmbeddingCache(testDir, "qwen3-0.6b");
       cache1.set("abc123", new Float32Array([0.1, 0.2, 0.3, 0.4]));
@@ -194,6 +200,7 @@ describe("embeddingCache", () => {
       }
     });
 
+    /** @spec search.semantic::cache.model-isolation */
     it("isolates different models", () => {
       const cache1 = openEmbeddingCache(testDir, "model-a");
       cache1.set("hash1", new Float32Array([1.0, 2.0]));

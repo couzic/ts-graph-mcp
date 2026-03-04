@@ -45,6 +45,12 @@ const BUILT_IN_TYPES = new Set([
 /**
  * Extract HAS_TYPE edges from variable declarations.
  *
+ * @spec indexing::edges.has-type
+ * @spec indexing::types.builtin-unwrapping
+ * @spec indexing::types.primitive-skipping
+ * @spec indexing::types.union-multiple-edges
+ * @spec graph-model::edges.has-type
+ *
  * @example
  * const currentUser: User = { name: "Alice" };
  * // currentUser --HAS_TYPE--> User

@@ -58,16 +58,19 @@ describe(searchGraph.name, () => {
     closeDatabase(db);
   });
 
+  /** @spec tool::validation.required-param */
   it("returns error when no constraints provided", async () => {
     const result = await searchGraph(db, {}, { embeddingProvider });
     expect(toMcp(result)).toContain("At least one of");
   });
 
+  /** @spec tool::validation.empty-topic */
   it("treats empty topic string as no topic", async () => {
     const result = await searchGraph(db, { topic: "" }, { embeddingProvider });
     expect(toMcp(result)).toContain("At least one of");
   });
 
+  /** @spec tool::query.forward */
   describe("forward traversal (from only)", () => {
     it("finds dependencies via from.symbol", async () => {
       const writer = createSqliteWriter(db);
@@ -89,6 +92,7 @@ describe(searchGraph.name, () => {
     });
   });
 
+  /** @spec tool::query.backward */
   describe("backward traversal (to only)", () => {
     it("finds dependents via to.symbol", async () => {
       const writer = createSqliteWriter(db);
@@ -110,6 +114,7 @@ describe(searchGraph.name, () => {
     });
   });
 
+  /** @spec tool::query.path */
   describe("path finding (from and to)", () => {
     it("finds path between symbols", async () => {
       const writer = createSqliteWriter(db);
@@ -135,6 +140,7 @@ describe(searchGraph.name, () => {
     });
   });
 
+  /** @spec tool::query.topic */
   describe("semantic search (topic)", () => {
     let searchIndex: SearchIndexWrapper;
 
@@ -142,6 +148,7 @@ describe(searchGraph.name, () => {
       searchIndex = await createSearchIndex({ vectorDimensions });
     });
 
+    /** @spec tool::validation.search-index-required */
     it("returns guidance when search index not provided", async () => {
       const result = await searchGraph(
         db,
@@ -152,6 +159,7 @@ describe(searchGraph.name, () => {
       expect(toMcp(result)).toContain("requires embeddings");
     });
 
+    /** @spec tool::query.topic-connected */
     it("returns graph format when topic symbols have connections", async () => {
       const writer = createSqliteWriter(db);
       await writer.addNodes([
@@ -188,6 +196,7 @@ describe(searchGraph.name, () => {
       expect(toMcp(result)).not.toContain("processData");
     });
 
+    /** @spec tool::query.topic-disconnected */
     it("returns flat list when topic symbols have no connections", async () => {
       const writer = createSqliteWriter(db);
       await writer.addNodes([fn("validateInput"), fn("validateOutput")]);
@@ -212,6 +221,7 @@ describe(searchGraph.name, () => {
       expect(toMcp(result)).toContain("validateOutput");
     });
 
+    /** @spec tool::query.topic-bridge */
     it("finds bridge nodes connecting topic-matched seeds", async () => {
       const writer = createSqliteWriter(db);
       // validateInput and validateOutput match "validate"
@@ -280,6 +290,7 @@ describe(searchGraph.name, () => {
       searchIndex = await createSearchIndex({ vectorDimensions });
     });
 
+    /** @spec tool::query.loose-no-results */
     it("returns helpful error when from.query resolves no symbols", async () => {
       // searchIndex is empty — no documents match the query
       const result = await searchGraph(
@@ -291,6 +302,7 @@ describe(searchGraph.name, () => {
       expect(toMcp(result)).toContain("No symbols found matching query");
     });
 
+    /** @spec tool::query.loose-no-results */
     it("returns helpful error when to.query resolves no symbols", async () => {
       // searchIndex is empty — no documents match the query
       const result = await searchGraph(
@@ -302,6 +314,7 @@ describe(searchGraph.name, () => {
       expect(toMcp(result)).toContain("No symbols found matching query");
     });
 
+    /** @spec tool::query.loose-forward */
     it("returns multiple matching symbols for from.query", async () => {
       const writer = createSqliteWriter(db);
       // Multiple symbols matching "validate"
@@ -334,6 +347,7 @@ describe(searchGraph.name, () => {
       expect(toMcp(result)).toContain("processData");
     });
 
+    /** @spec tool::query.loose-backward */
     it("returns multiple matching symbols for to.query", async () => {
       const writer = createSqliteWriter(db);
       // Multiple symbols matching "save"
@@ -366,6 +380,7 @@ describe(searchGraph.name, () => {
       expect(toMcp(result)).toContain("handleRequest");
     });
 
+    /** @spec tool::query.loose-path */
     it("finds paths between multiple resolved endpoints (from.query + to.query)", async () => {
       const writer = createSqliteWriter(db);
       // Two "validate" functions and two "save" functions
@@ -402,6 +417,7 @@ describe(searchGraph.name, () => {
       expect(output).toContain("saveUser");
     });
 
+    /** @spec tool::query.loose-path */
     it("returns message when no paths exist between resolved endpoints", async () => {
       const writer = createSqliteWriter(db);
       // Multiple validate and save functions, but no edges connecting them
@@ -430,6 +446,7 @@ describe(searchGraph.name, () => {
       );
     });
 
+    /** @spec tool::query.loose-forward */
     it("resolves from.query to symbol via search (single match)", async () => {
       const writer = createSqliteWriter(db);
       const nodeA = fn("handleUserRequest");
@@ -454,6 +471,7 @@ describe(searchGraph.name, () => {
       expect(toMcp(result)).toContain("saveToDatabase");
     });
 
+    /** @spec tool::query.loose-backward */
     it("resolves to.query to symbol via search (single match)", async () => {
       const writer = createSqliteWriter(db);
       const nodeA = fn("handleRequest");

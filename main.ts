@@ -11,6 +11,7 @@
 
 const args = process.argv.slice(2);
 
+/** @spec server::cli.mode-dispatch */
 const isMcpMode = args.includes("--mcp");
 
 if (isMcpMode) {

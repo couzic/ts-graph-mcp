@@ -140,6 +140,7 @@ export const format = () => {};
     });
   });
 
+  /** @spec indexing::re-export-transparency */
   describe("re-export chain resolution", () => {
     it("follows named re-export to actual definition", () => {
       const project = createProject();

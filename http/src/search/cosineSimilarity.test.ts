@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { cosineSimilarity } from "./cosineSimilarity.js";
 
+/** @spec search.semantic::cosine */
 describe(cosineSimilarity.name, () => {
   it("returns 1 for identical vectors", () => {
     const v = new Float32Array([3, 4]);
@@ -18,6 +19,7 @@ describe(cosineSimilarity.name, () => {
     expect(cosineSimilarity(a, b)).toBeCloseTo(0);
   });
 
+  /** @spec search.semantic::cosine.magnitude-invariance */
   it("returns same result regardless of vector magnitude", () => {
     const a = new Float32Array([1, 2, 3]);
     const b = new Float32Array([4, 5, 6]);

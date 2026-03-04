@@ -4,6 +4,8 @@ const BACKSLASH_REGEX = /\\/g;
  * Normalize path separators to forward slashes.
  * Ensures consistent path comparison across Windows and Unix.
  *
+ * @spec graph-model::node-id.forward-slashes
+ *
  * @example
  * normalizePath("C:\\project\\src\\file.ts") // "C:/project/src/file.ts"
  */

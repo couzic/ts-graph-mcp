@@ -9,6 +9,7 @@ describe(formatGraph.name, () => {
     expect(result.nodeOrder).toEqual([]);
   });
 
+  /** @spec tool::output.chain-compaction */
   it("formats linear chain on single line", () => {
     const result = formatGraph([
       {
@@ -31,6 +32,7 @@ describe(formatGraph.name, () => {
     ]);
   });
 
+  /** @spec tool::output.branch-splitting */
   it("splits branches onto separate lines", () => {
     const result = formatGraph([
       {

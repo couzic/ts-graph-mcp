@@ -191,6 +191,9 @@ export interface ServerOptions {
 /**
  * Starts the HTTP server with REST API and static UI.
  *
+ * @spec server::startup.sequence
+ * @spec configuration::server-port-required
+ *
  * @example
  * ```bash
  * npx ts-graph           # Start server
@@ -202,6 +205,7 @@ export const startHttpServer = async (
   options: ServerOptions = {},
 ): Promise<ServerHandle> => {
   const logger = options.logger ?? consoleLogger;
+  /** @spec server::cli.reindex */
   const shouldReindex = args.includes("--reindex");
   const projectRoot = process.cwd();
   const cacheDir = getCacheDir(projectRoot);
@@ -297,7 +301,7 @@ export const startHttpServer = async (
   );
   dbHolder.ref = db;
 
-  // Clean up orphaned edges (targets pointing to deleted nodes)
+  /** @spec server::startup.orphan-cleanup */
   const orphanedEdges = removeOrphanedEdges(db);
   if (orphanedEdges > 0) {
     logger.info(`Removed ${orphanedEdges} orphaned edges`);
@@ -323,11 +327,11 @@ export const startHttpServer = async (
 
   const app = express();
 
-  // Serve static UI files (UI builds to dist/public, server is at dist/http/src)
+  /** @spec server::ui.spa */
   const publicDir = path.resolve(__dirname, "../../public");
   app.use(express.static(publicDir));
 
-  // Health check
+  /** @spec server::api.health */
   app.get("/health", (_req, res) => {
     res.json({
       status: "ok",
@@ -337,6 +341,7 @@ export const startHttpServer = async (
   });
 
   // API routes
+  /** @spec server::api.symbol-search */
   app.get("/api/symbols", (req, res) => {
     // biome-ignore lint/complexity/useLiteralKeys: index signature
     const query = req.query["q"] as string | undefined;
@@ -359,8 +364,12 @@ export const startHttpServer = async (
     res.json(results);
   });
 
-  // Graph search endpoint
   app.use(express.json());
+  /**
+   * @spec server::api.graph-search
+   * @spec server::api.graph-search-validation
+   * @spec server::api.graph-search-formats
+   */
   app.post("/api/graph/search", async (req, res) => {
     const { topic, from, to, max_nodes, format, direction } =
       req.body as GraphSearchRequest;
@@ -384,12 +393,12 @@ export const startHttpServer = async (
     }
   });
 
-  // SPA fallback - serve index.html for all other routes
+  /** @spec server::ui.spa-fallback */
   app.get("/{*path}", (_req, res) => {
     res.sendFile(path.join(publicDir, "index.html"));
   });
 
-  // Get port from config (required)
+  /** @spec server::startup.port-required */
   const port = config?.server?.port;
   if (!port) {
     logger.error(
@@ -403,6 +412,7 @@ export const startHttpServer = async (
     logger.info("Press CTRL+C to stop");
   });
 
+  /** @spec server::shutdown.sigint @spec server::shutdown.sigterm */
   const close = async (): Promise<void> => {
     if (watchHandle) {
       await watchHandle.close();

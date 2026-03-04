@@ -3,6 +3,9 @@ import type { NodeType } from "@ts-graph/shared";
 /**
  * Document stored in the search index.
  * Each symbol in the graph becomes a searchable document.
+ *
+ * @spec search::searchable-units
+ * @spec search::index-schema
  */
 export interface SearchDocument {
   /** Internal node ID (e.g., "src/utils.ts:formatDate") */
@@ -21,6 +24,8 @@ export interface SearchDocument {
 
 /**
  * Search result from hybrid search.
+ *
+ * @spec search::result-structure
  */
 export interface SearchResult {
   /** Node ID */
@@ -37,6 +42,15 @@ export interface SearchResult {
 
 /**
  * Options for search queries.
+ *
+ * @spec search::result-limit-default
+ * @spec search::result-limit-custom
+ * @spec search::filter.node-type
+ * @spec search::filter.file-path
+ * @spec search.lexical::default-result-limit
+ * @spec search.lexical::node-type-filtering
+ * @spec search.lexical::file-path-filtering
+ * @spec search.lexical::fulltext-only-mode
  */
 export interface SearchOptions {
   /** Maximum results to return (default: 10) */

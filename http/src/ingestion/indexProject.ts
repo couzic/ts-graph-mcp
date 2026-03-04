@@ -38,6 +38,10 @@ export interface IndexProjectOptions {
  * Index an entire project based on config.
  * Parses all packages defined in config.
  *
+ * @spec indexing::file-scope
+ * @spec indexing::excluded-files
+ * @spec indexing::streaming.per-file
+ *
  * Streams nodes and edges to the database per-file:
  * - For each file: extract nodes → write to DB → extract edges → write to DB
  * - No global accumulation needed since edge extractors use buildImportMap

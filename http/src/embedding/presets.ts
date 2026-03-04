@@ -5,6 +5,11 @@ import type { EmbeddingModelPreset } from "./EmbeddingTypes.js";
  *
  * All models are GGUF format for use with node-llama-cpp.
  * Presets balance quality vs size for typical developer machines.
+ *
+ * @spec search.semantic::presets
+ * @spec search.semantic::preset-dimensions
+ * @spec search.semantic::preset-prefixes
+ * @spec configuration::embedding.presets
  */
 export const EMBEDDING_PRESETS: Record<string, EmbeddingModelPreset> = {
   /**
@@ -54,5 +59,8 @@ export const EMBEDDING_PRESETS: Record<string, EmbeddingModelPreset> = {
 
 /**
  * Default preset to use when none specified.
+ *
+ * @spec search.semantic::default-preset
+ * @spec configuration::embedding.default-preset
  */
 export const DEFAULT_PRESET = "nomic-embed-text-v1.5";

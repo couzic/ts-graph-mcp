@@ -92,6 +92,11 @@ const buildFileContextMap = (
 /**
  * Sync the database with the filesystem on startup.
  *
+ * @spec indexing::sync.manifest-detection
+ * @spec indexing::sync.stale-reindex
+ * @spec indexing::sync.deleted-cleanup
+ * @spec indexing::sync.new-files
+ *
  * 1. Compare manifest with current filesystem state
  * 2. Remove nodes/edges for deleted files
  * 3. Reindex stale and new files

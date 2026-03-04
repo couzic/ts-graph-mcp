@@ -41,6 +41,8 @@ const isPollingStrategy = (watchFile: string | undefined): boolean => {
  *
  * Pure function — no I/O.
  *
+ * @spec configuration::watch.tsconfig-fallback
+ *
  * @param content - The raw JSON content of tsconfig.json
  * @returns Partial WatchConfig with fields from tsconfig watchOptions, or empty object if none
  */
@@ -87,6 +89,8 @@ export const parseTsconfigWatchOptions = (
  * explicitConfig > tsconfigOptions > defaults
  *
  * Pure function.
+ *
+ * @spec configuration::watch.explicit-overrides-tsconfig
  *
  * @param explicitConfig - User's explicit ts-graph-mcp.config.json watch settings
  * @param tsconfigOptions - Options derived from tsconfig.json watchOptions

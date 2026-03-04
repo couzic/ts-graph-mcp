@@ -4,6 +4,7 @@ import {
   parseTsconfigWatchOptions,
 } from "./readTsconfigWatchOptions.js";
 
+/** @spec configuration::watch.tsconfig-fallback */
 describe(parseTsconfigWatchOptions.name, () => {
   it("returns empty object for tsconfig without watchOptions", () => {
     const content = JSON.stringify({
@@ -115,6 +116,7 @@ describe(parseTsconfigWatchOptions.name, () => {
   });
 });
 
+/** @spec configuration::watch.explicit-overrides-tsconfig */
 describe(mergeWatchConfigs.name, () => {
   it("returns tsconfig options when no explicit config", () => {
     const tsconfigOptions = { polling: true, pollingInterval: 500 };

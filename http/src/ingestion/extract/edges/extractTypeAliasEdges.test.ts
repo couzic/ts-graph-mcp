@@ -9,6 +9,12 @@ const createSourceFile = (code: string) => {
 
 const context = { filePath: "test.ts", package: "test-pkg" };
 
+/**
+ * @spec indexing::edges.derives-from
+ * @spec indexing::edges.alias-for
+ * @spec graph-model::edges.derives-from
+ * @spec graph-model::edges.alias-for
+ */
 describe("extractTypeAliasEdges", () => {
   describe("ALIAS_FOR edges", () => {
     it("extracts ALIAS_FOR edge for direct type alias", () => {
@@ -38,6 +44,7 @@ describe("extractTypeAliasEdges", () => {
     });
   });
 
+  /** @spec graph-model::edges.intersection-handling */
   describe("DERIVES_FROM edges (intersection)", () => {
     it("extracts DERIVES_FROM edge for intersection type", () => {
       const sourceFile = createSourceFile(`
@@ -129,6 +136,7 @@ describe("extractTypeAliasEdges", () => {
     });
   });
 
+  /** @spec graph-model::edges.alias-for-synthetic */
   describe("ReturnType<typeof X>", () => {
     it("extracts ALIAS_FOR edge for ReturnType<typeof factory>", () => {
       const sourceFile = createSourceFile(`

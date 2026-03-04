@@ -12,6 +12,7 @@ export type SymbolName = string;
 /** Type alias for node IDs (format: `{path}:{type}:{symbol}`). */
 export type NodeId = string;
 
+/** @spec graph-model::node-types */
 export const NODE_TYPES = [
   "Function",
   "Class",
@@ -24,8 +25,10 @@ export const NODE_TYPES = [
 
 export type NodeType = (typeof NODE_TYPES)[number];
 
+/** @spec graph-model::edge-types */
 export const RUNTIME_EDGE_TYPES = ["CALLS", "REFERENCES", "USES_TYPE"] as const;
 
+/** @spec graph-model::edge-types */
 export const COMPILE_TIME_EDGE_TYPES = [
   "EXTENDS",
   "INCLUDES",
@@ -47,7 +50,7 @@ export type RuntimeEdgeType = (typeof RUNTIME_EDGE_TYPES)[number];
 export type CompileTimeEdgeType = (typeof COMPILE_TIME_EDGE_TYPES)[number];
 export type EdgeType = (typeof EDGE_TYPES)[number];
 
-// Call Site Range (line numbers where a call occurs)
+/** @spec graph-model::edges.calls-metadata */
 export interface CallSiteRange {
   /** Start line number (1-indexed) */
   start: number;
@@ -55,7 +58,7 @@ export interface CallSiteRange {
   end: number;
 }
 
-// Base Node (shared properties)
+/** @spec graph-model::nodes.base-properties */
 export interface BaseNode {
   /** Unique ID: "{relativePath}:{symbolPath}" e.g., "src/utils.ts:formatDate" */
   id: NodeId;
@@ -82,7 +85,7 @@ export interface BaseNode {
   exported: boolean;
 }
 
-// Node Variants (Discriminated Union)
+/** @spec graph-model::nodes.function-properties */
 export interface FunctionNode extends BaseNode {
   type: "Function";
   parameters?: Array<{ name: string; type?: string }>;
@@ -90,12 +93,14 @@ export interface FunctionNode extends BaseNode {
   async?: boolean;
 }
 
+/** @spec graph-model::nodes.class-properties */
 export interface ClassNode extends BaseNode {
   type: "Class";
   extends?: string;
   implements?: string[];
 }
 
+/** @spec graph-model::nodes.method-properties */
 export interface MethodNode extends BaseNode {
   type: "Method";
   parameters?: Array<{ name: string; type?: string }>;
@@ -105,16 +110,19 @@ export interface MethodNode extends BaseNode {
   static?: boolean;
 }
 
+/** @spec graph-model::nodes.interface-properties */
 export interface InterfaceNode extends BaseNode {
   type: "Interface";
   extends?: string[];
 }
 
+/** @spec graph-model::nodes.type-alias-properties */
 export interface TypeAliasNode extends BaseNode {
   type: "TypeAlias";
   aliasedType?: string;
 }
 
+/** @spec graph-model::nodes.variable-properties */
 export interface VariableNode extends BaseNode {
   type: "Variable";
   variableType?: string;
@@ -129,7 +137,7 @@ export type Node =
   | TypeAliasNode
   | VariableNode;
 
-// Edge
+/** @spec graph-model::edges.composite-key */
 export interface Edge {
   /** Source node ID */
   source: NodeId;

@@ -116,6 +116,12 @@ const findSymbolMatches = (
  *
  * When filePath is omitted, searches across all files.
  *
+ * @spec tool::resolve.exact
+ * @spec tool::resolve.exact-with-file
+ * @spec tool::resolve.auto-resolve
+ * @spec tool::resolve.disambiguation
+ * @spec tool::resolve.not-found
+ *
  * @example
  * // With file_path - exact match
  * resolveSymbol(db, 'src/entity.ts', 'getSituations')
@@ -234,6 +240,8 @@ export const resolveSymbol = (
  * 1. File not indexed → "File 'X' is not indexed."
  * 2. Symbol not in file → "Symbol 'X' not found. Available: ..." (up to 5 symbols, sorted by similarity)
  * 3. Symbol exists elsewhere → shows where the symbol was found
+ *
+ * @spec tool::resolve.not-found
  *
  * @example
  * symbolNotFound(db, 'src/utils.ts', 'formatDate')

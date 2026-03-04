@@ -46,6 +46,9 @@ const BUILT_IN_TYPES = new Set([
  * Extract HAS_PROPERTY edges from class properties, interface properties,
  * and object literal properties.
  *
+ * @spec indexing::edges.has-property
+ * @spec graph-model::edges.has-property
+ *
  * @example
  * class Service { user: User; }
  * // Service --HAS_PROPERTY--> User

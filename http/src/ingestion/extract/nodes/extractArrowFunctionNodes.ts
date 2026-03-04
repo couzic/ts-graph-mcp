@@ -7,6 +7,9 @@ import { normalizeTypeText } from "./normalizeTypeText.js";
 /**
  * Extract arrow functions and function expressions as Function nodes.
  *
+ * @spec indexing::nodes.arrow-function
+ * @spec graph-model::nodes.arrow-as-function
+ *
  * @example
  * const handler = (req: Request) => res.send("OK");
  * // Extracted as FunctionNode with name "handler"

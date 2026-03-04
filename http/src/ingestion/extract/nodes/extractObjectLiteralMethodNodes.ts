@@ -11,6 +11,12 @@ import { normalizeTypeText } from "./normalizeTypeText.js";
 /**
  * Extract methods from object literals as Function nodes.
  *
+ * @spec indexing::nodes.object-literal-method
+ * @spec indexing::nodes.factory-synthetic-type
+ * @spec graph-model::nodes.object-literal-methods
+ * @spec graph-model::nodes.synthetic-type-properties
+ * @spec graph-model::node-id.factory
+ *
  * @example
  * export const userService = {
  *   login(user: User): boolean { return true; }

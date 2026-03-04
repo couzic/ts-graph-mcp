@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { formatDisambiguationMessage } from "./classMethodFallback.js";
 
+/** @spec tool::resolve.class-disambiguation */
 describe(formatDisambiguationMessage.name, () => {
   it("formats single method with dependencies", () => {
     const result = formatDisambiguationMessage("MyClass", [

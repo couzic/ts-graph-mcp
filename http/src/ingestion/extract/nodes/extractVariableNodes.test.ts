@@ -3,6 +3,10 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { extractVariableNodes } from "./extractVariableNodes.js";
 import type { NodeExtractionContext } from "./NodeExtractionContext.js";
 
+/**
+ * @spec indexing::nodes.variable
+ * @spec graph-model::nodes.variable-properties
+ */
 describe(extractVariableNodes.name, () => {
   let project: Project;
 
@@ -85,6 +89,7 @@ describe(extractVariableNodes.name, () => {
     expect(variables[0]?.variableType).not.toMatch(/[\n\t]/);
   });
 
+  /** @spec graph-model::nodes.arrow-as-function */
   it("skips arrow functions (extracted as Function nodes instead)", () => {
     const sourceFile = project.createSourceFile(
       "src/test.ts",

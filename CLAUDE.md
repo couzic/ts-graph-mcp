@@ -46,16 +46,21 @@ Query tools live in `http/src/query/<tool>/` with shared formatting in
 | Document           | Purpose                                                      | Audience         |
 | ------------------ | ------------------------------------------------------------ | ---------------- |
 | `README.md`        | Practical usage: installation, configuration, examples       | **Users**        |
-| `ARCHITECTURE.md`  | Technical internals: data model, design decisions, code flow | **Contributors** |
+| `ARCHITECTURE.md`  | How components connect, design rationale, key files           | **Contributors** |
+| `specs/`           | Behavioral specs: what the system does (inputs/outputs)      | **Contributors** |
 | `ISSUES.md`        | Active bugs and tech debt                                    | Contributors     |
 | `ROADMAP.md`       | **Future work only** — planned features not yet implemented  | Contributors     |
 | Module `CLAUDE.md` | Must-know info for that module                               | Contributors     |
 
+**`ARCHITECTURE.md` does NOT describe behavior.** No edge types, query patterns,
+config schemas, output formats — those live in `specs/`. ARCHITECTURE.md covers:
+architecture diagrams, project structure, design rationale (the "why"), key file
+references, LSP overlap guidance, and limitations.
+
 **No history in docs.** ISSUES.md and ROADMAP.md describe current state and
 future work — never past. When work is done: delete the item entirely, don't add
 "Done" sections or checkboxes. Document completed features in the appropriate
-place: module `CLAUDE.md` > JSDoc > `ARCHITECTURE.md` (only for cross-cutting
-concerns).
+place: `specs/` (behavior) > module `CLAUDE.md` > JSDoc.
 
 ## Code Style
 

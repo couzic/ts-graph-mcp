@@ -18,7 +18,9 @@ function assertFunctionNode(
   assert("type" in node && node.type === "Function");
 }
 
+/** @spec indexing::nodes.object-literal-method */
 describe("extractObjectLiteralMethodNodes", () => {
+  /** @spec graph-model::nodes.object-literal-methods */
   it("extracts method from object literal", () => {
     const sourceFile = createSourceFile(`
       export const userService = {
@@ -121,6 +123,9 @@ describe("extractObjectLiteralMethodNodes", () => {
     expect(nodes[0]?.name).toBe("process");
   });
 
+  /** @spec indexing::nodes.factory-synthetic-type */
+  /** @spec graph-model::nodes.synthetic-type-properties */
+  /** @spec graph-model::node-id.factory */
   it("extracts SyntheticType node and method from factory function", () => {
     const sourceFile = createSourceFile(`
       export const createService = () => ({

@@ -16,6 +16,7 @@ describe(extractNodes.name, () => {
     package: "myapp",
   });
 
+  /** @spec graph-model::node-types */
   it("extracts all node types from a comprehensive source file", () => {
     const sourceFile = project.createSourceFile(
       "src/comprehensive.ts",
@@ -53,6 +54,7 @@ export function createUser(name: string): User {
     const nodes = extractNodes(sourceFile, context);
 
     // Should extract: Variable, TypeAlias, Interface, Class, Function, Method
+    /** @spec indexing::nodes.no-properties */
     // Properties are intentionally NOT extracted (they add noise to search and slow indexing)
     expect(nodes.length).toBe(6);
 

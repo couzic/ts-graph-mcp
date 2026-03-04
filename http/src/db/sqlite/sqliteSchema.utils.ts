@@ -12,6 +12,9 @@ import { DB_SCHEMA_VERSION, setDbSchemaVersion } from "../versions.js";
  * - Node properties stored as JSON for flexibility across node types
  * - Edges have composite unique key (source, target, type)
  * - Indexes optimized for common queries (by file, by type, traversals)
+ *
+ * @spec graph-model::edges.no-fk-constraints
+ * @spec graph-model::edges.composite-key
  */
 
 const NODES_TABLE = `
