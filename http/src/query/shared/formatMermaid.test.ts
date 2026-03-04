@@ -616,6 +616,32 @@ describe("formatMermaid", () => {
       expect(result[0]).toMatch(/^graph LR/);
       expect(result[1]).toMatch(/^graph LR/);
     });
+
+    it("uses consistent subgraphs across disconnected components sharing a file", () => {
+      // Two disconnected edges, both with a source from the same file (src/a.ts)
+      // src/a.ts has 2 symbols total (fnA, fnB) — should be a subgraph
+      // But each connected component only sees 1 symbol from src/a.ts
+      const edges: GraphEdge[] = [
+        {
+          source: "src/a.ts:Function:fnA",
+          target: "src/b.ts:Function:fnC",
+          type: "CALLS",
+        },
+        {
+          source: "src/a.ts:Function:fnB",
+          target: "src/c.ts:Function:fnD",
+          type: "CALLS",
+        },
+      ];
+
+      const result = formatMermaid(edges);
+
+      // Both diagrams should know that src/a.ts has 2 symbols globally
+      // and use a subgraph for it, even though each component only has 1
+      const joined = result.join("\n");
+      expect(joined).toContain("subgraph");
+      expect(joined).toContain("src/a.ts");
+    });
   });
 });
 

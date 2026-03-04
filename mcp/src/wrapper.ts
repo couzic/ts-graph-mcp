@@ -101,13 +101,22 @@ Parameters:
 - from: Start node(s) - what does this depend on?
 - to: End node(s) - what depends on this?
 
+from/to endpoint resolution:
+- symbol: Use when you know the exact function/class name. Direct DB lookup, single node.
+- query: Use when you don't know exact names. Searches by concept, returns multiple matches, then traverses each.
+- file_path: Optional disambiguator for both symbol and query.
+
+topic vs from/to with query — both use semantic search, but differ in what happens after:
+- topic: finds related symbols, then shows connections between those symbols (semantic neighborhood)
+- from/to with query: finds matching symbols, then shows what each symbol calls or is called by (dependency traversal)
+
 Examples:
 - { from: { symbol: "handleRequest" } } → what does handleRequest call?
 - { to: { symbol: "saveUser" } } → who calls saveUser?
 - { from: { symbol: "A" }, to: { symbol: "B" } } → how does A reach B?
 - { from: { symbol: "A", file_path: "path/to/A.ts" } } → precise lookup (avoids disambiguation)
 - { from: { query: "controller" }, to: { query: "repository" } } → paths from all controllers to all repositories
-- { topic: "validation" } → find symbols related to validation
+- { topic: "validation" } → find symbols related to validation and show how they connect
 
 Edge types in output: CALLS, REFERENCES, EXTENDS, IMPLEMENTS, INCLUDES, TAKES, RETURNS, HAS_TYPE, HAS_PROPERTY, DERIVES_FROM, ALIAS_FOR`,
       inputSchema: {
@@ -115,7 +124,7 @@ Edge types in output: CALLS, REFERENCES, EXTENDS, IMPLEMENTS, INCLUDES, TAKES, R
           .string()
           .optional()
           .describe(
-            "Standalone semantic search (natural language, e.g., 'cart validation'). Not combinable with from/to.",
+            "Find symbols related to a concept and show how they connect to each other (e.g., 'cart validation'). Standalone — not combinable with from/to.",
           ),
         from: z
           .object({
@@ -123,7 +132,7 @@ Edge types in output: CALLS, REFERENCES, EXTENDS, IMPLEMENTS, INCLUDES, TAKES, R
               .string()
               .optional()
               .describe(
-                "Lexical + semantic search (can return multiple nodes)",
+                "Search by concept when exact name is unknown (returns multiple matches, then traverses each)",
               ),
             symbol: z
               .string()
@@ -142,7 +151,7 @@ Edge types in output: CALLS, REFERENCES, EXTENDS, IMPLEMENTS, INCLUDES, TAKES, R
               .string()
               .optional()
               .describe(
-                "Lexical + semantic search (can return multiple nodes)",
+                "Search by concept when exact name is unknown (returns multiple matches, then traverses each)",
               ),
             symbol: z
               .string()
@@ -162,7 +171,13 @@ Edge types in output: CALLS, REFERENCES, EXTENDS, IMPLEMENTS, INCLUDES, TAKES, R
       },
     },
     async ({ topic, from, to, max_nodes }) => {
-      const body = { topic, from, to, max_nodes, format: "mcp" };
+      const body = {
+        ...(topic !== undefined && { topic }),
+        ...(from !== undefined && { from }),
+        ...(to !== undefined && { to }),
+        ...(max_nodes !== undefined && { max_nodes }),
+        format: "mcp",
+      };
       const result = await httpPostRequest(port, "/api/graph/search", body);
 
       if (!result.ok) {

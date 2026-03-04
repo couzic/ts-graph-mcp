@@ -82,12 +82,12 @@ describe(formatMermaidFromResult.name, () => {
     expect(output[0]).toContain("CALLS");
   });
 
-  it("prepends message to first diagram element", () => {
+  it("excludes message from diagram syntax", () => {
     const result: QueryResult = {
       ...resultWithEdges,
       message: "Note: resolved",
     };
     const output = formatMermaidFromResult(result);
-    expect(output[0]).toMatch(/^Note: resolved\n\n/);
+    expect(output[0]).toMatch(/^graph /);
   });
 });

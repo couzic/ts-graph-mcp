@@ -1,7 +1,6 @@
 import type { NodeType } from "@ts-graph/shared";
 import { buildAliasMap } from "./buildAliasMap.js";
 import { buildDisplayNames } from "./buildDisplayNames.js";
-import { extractFilePath } from "./extractFilePath.js";
 import { extractSymbol } from "./extractSymbol.js";
 import {
   type DisplayNameContext,
@@ -9,6 +8,7 @@ import {
 } from "./formatDisplayName.js";
 import { DEFAULT_MAX_NODES, truncateEdges } from "./formatToolOutput.js";
 import type { GraphEdge } from "./GraphTypes.js";
+import { groupNodesBySubgraph } from "./groupNodesBySubgraph.js";
 import type { NodeMetadata } from "./queryNodeMetadata.js";
 
 export type MermaidOptions = {
@@ -84,12 +84,15 @@ export const findConnectedComponents = (edges: GraphEdge[]): GraphEdge[][] => {
 
 /**
  * Format a single connected component's edges into mermaid flowchart syntax.
+ * Uses globalGrouping (computed from ALL edges across components) to determine
+ * which groups become subgraphs, ensuring consistent grouping across diagrams.
  */
 const formatSingleGraph = (
   edges: GraphEdge[],
+  globalGrouping: Map<string, string[]>,
   options?: MermaidOptions,
 ): string => {
-  // Collect node IDs
+  // Collect node IDs for this component
   const workingNodeIds = new Set<string>();
   for (const edge of edges) {
     workingNodeIds.add(edge.source);
@@ -139,64 +142,42 @@ const formatSingleGraph = (
   for (const nodeId of workingNodeIds) {
     const displayName = getDisplayName(nodeId);
     const sanitized = sanitizeId(displayName);
-    // Add counter suffix to ensure uniqueness
     nodeIdMap.set(nodeId, `${sanitized}_${idCounter++}`);
   }
 
-  // Determine grouping strategy: package (if multiple) or file (fallback)
-  const uniquePackages = new Set<string>();
-  if (metadataByNodeId) {
-    for (const nodeId of workingNodeIds) {
-      const meta = metadataByNodeId.get(nodeId);
-      if (meta) {
-        uniquePackages.add(meta.package);
-      }
-    }
-  }
-  const usePackageGrouping = uniquePackages.size > 1;
-
-  // Group nodes by package or file
-  const nodesByGroup = new Map<string, string[]>();
-  for (const nodeId of workingNodeIds) {
-    let groupKey: string;
-    if (usePackageGrouping && metadataByNodeId) {
-      groupKey =
-        metadataByNodeId.get(nodeId)?.package ?? extractFilePath(nodeId);
-    } else {
-      groupKey = extractFilePath(nodeId);
-    }
-    const existing = nodesByGroup.get(groupKey);
-    if (existing) {
-      existing.push(nodeId);
-    } else {
-      nodesByGroup.set(groupKey, [nodeId]);
+  // Build this component's groups, filtered from global grouping
+  // A group is a subgraph if it has 2+ symbols GLOBALLY
+  const componentGroups = new Map<string, string[]>();
+  for (const [groupKey, globalNodeIds] of globalGrouping) {
+    const localNodeIds = globalNodeIds.filter((id) => workingNodeIds.has(id));
+    if (localNodeIds.length > 0) {
+      componentGroups.set(groupKey, localNodeIds);
     }
   }
 
-  // Check if any group will produce a subgraph (2+ symbols)
+  // Check if any group is a subgraph (2+ symbols globally)
   let hasSubgraphs = false;
-  for (const nodeIds of nodesByGroup.values()) {
-    if (nodeIds.length > 1) {
+  for (const [groupKey] of componentGroups) {
+    const globalSize = globalGrouping.get(groupKey)?.length ?? 0;
+    if (globalSize > 1) {
       hasSubgraphs = true;
       break;
     }
   }
 
-  // With subgraphs: parent TD (hardcoded)
-  // Without subgraphs: LR (UI option controls this)
   const direction = options?.direction ?? (hasSubgraphs ? "TD" : "LR");
   const lines: string[] = [`graph ${direction}`];
 
-  // Add subgraphs with node definitions
-  // Only wrap in subgraph if group has 2+ symbols
+  // Render nodes, wrapping in subgraph if the group has 2+ symbols globally
   let subgraphCounter = 0;
-  for (const [groupKey, nodeIds] of nodesByGroup) {
-    const useSubgraph = nodeIds.length > 1;
+  for (const [groupKey, localNodeIds] of componentGroups) {
+    const globalSize = globalGrouping.get(groupKey)?.length ?? 0;
+    const useSubgraph = globalSize > 1;
     if (useSubgraph) {
       const subgraphId = `sg_${subgraphCounter++}`;
       lines.push(`  subgraph ${subgraphId}["${groupKey}"]`);
     }
-    for (const nodeId of nodeIds) {
+    for (const nodeId of localNodeIds) {
       const sanitizedId = nodeIdMap.get(nodeId);
       const displayName = getDisplayName(nodeId);
       const indent = useSubgraph ? "    " : "  ";
@@ -255,6 +236,17 @@ export const formatMermaid = (
     workingEdges = truncatedEdges;
   }
 
+  // Compute global grouping from ALL edges (before splitting into components)
+  const allWorkingNodeIds = new Set<string>();
+  for (const edge of workingEdges) {
+    allWorkingNodeIds.add(edge.source);
+    allWorkingNodeIds.add(edge.target);
+  }
+  const globalGrouping = groupNodesBySubgraph(
+    allWorkingNodeIds,
+    options?.metadataByNodeId,
+  );
+
   // Split into connected components
   const components = findConnectedComponents(workingEdges);
 
@@ -264,6 +256,6 @@ export const formatMermaid = (
 
   // Format each component as a separate mermaid diagram
   return components.map((componentEdges) =>
-    formatSingleGraph(componentEdges, options),
+    formatSingleGraph(componentEdges, globalGrouping, options),
   );
 };

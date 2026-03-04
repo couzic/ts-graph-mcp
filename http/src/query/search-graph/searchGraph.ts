@@ -207,7 +207,8 @@ const queryMultipleToEndpoints = (
  */
 const isTopicSearch = (
   input: SearchGraphInput,
-): input is { topic: string; max_nodes?: number } => "topic" in input;
+): input is { topic: string; max_nodes?: number } =>
+  "topic" in input && typeof input.topic === "string" && input.topic.length > 0;
 
 export const searchGraph = async (
   db: Database.Database,

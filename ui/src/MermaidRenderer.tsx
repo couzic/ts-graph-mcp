@@ -1,6 +1,8 @@
 import mermaid from "mermaid";
 import { useEffect, useRef, useState } from "react";
 
+let nextMermaidId = 0;
+
 type MermaidRendererProps = {
   syntax: string;
 };
@@ -36,7 +38,7 @@ export const MermaidRenderer = ({ syntax }: MermaidRendererProps) => {
 
       try {
         setError(null);
-        const id = `mermaid-${Date.now()}`;
+        const id = `mermaid-${nextMermaidId++}`;
         const { svg } = await mermaid.render(id, syntax);
         containerRef.current.innerHTML = svg;
       } catch (err) {
@@ -88,7 +90,6 @@ const diagramStyle: React.CSSProperties = {
   display: "flex",
   justifyContent: "center",
   alignItems: "flex-start",
-  minHeight: "400px",
 };
 
 const errorStyle: React.CSSProperties = {

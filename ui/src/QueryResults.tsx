@@ -57,12 +57,14 @@ export const QueryResults = ({
         <span style={queryTypeStyle}>{queryType}</span>
         <span style={formatBadgeStyle}>{format.toUpperCase()}</span>
       </div>
-      {format === "mermaid" ? (
+      {format === "mermaid" && Array.isArray(result.result) ? (
         result.result.map((syntax, i) => (
           <MermaidRenderer key={i} syntax={syntax} />
         ))
       ) : (
-        <pre style={resultStyle}>{result.result[0]}</pre>
+        <pre style={resultStyle}>
+          {Array.isArray(result.result) ? result.result[0] : result.result}
+        </pre>
       )}
     </div>
   );

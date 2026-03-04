@@ -9,7 +9,7 @@ export type HealthResponse = {
 };
 
 export type GraphSearchResult = {
-  result: string[];
+  result: string | string[];
 };
 
 type ApiEndpoint = { symbol: string; file_path: string } | { query: string };

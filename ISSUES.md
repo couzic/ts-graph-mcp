@@ -1,5 +1,74 @@
 # Known Issues
 
+## Graph Truncation Uses Depth-First Order
+
+**Impact:** Medium (output quality)
+
+**Problem:** When `max_nodes` truncates the graph, it keeps nodes in depth-first
+order (determined by `formatGraph`'s `buildChain` in
+`http/src/query/shared/formatGraph.ts`). This follows one branch all the way to
+its leaves before visiting sibling branches.
+
+**Why it matters:** If a root node calls 5 functions and the first one has a deep
+chain of 40 nodes, truncation at `max_nodes=50` shows that entire deep chain but
+may miss the other 4 direct calls entirely. The user gets a narrow deep view
+instead of a broad overview of the immediate neighborhood.
+
+**Example:**
+
+```
+A calls B, C, D, E
+B calls F, F calls G, G calls H...  (deep chain)
+
+DFS truncation (current): A, B, F, G, H, ... (follows B's chain, may never show C, D, E)
+BFS truncation (desired): A, B, C, D, E, F, G, H, ... (all direct calls first, then deeper)
+```
+
+**Fix approach:** Change `nodeOrder` in `formatGraph.ts` to use breadth-first
+traversal. The `buildChain` rendering logic (how lines are printed) can stay
+depth-first for readability — only the `nodeOrder` array (used for truncation
+decisions) needs to change to BFS.
+
+**Key files:**
+
+- `http/src/query/shared/formatGraph.ts` — `buildChain` produces `nodeOrder`
+- `http/src/query/shared/formatToolOutput.ts` — uses `nodeOrder` for truncation
+
+---
+
+## Traversal Depth Limits and `direct` Param
+
+**Impact:** Medium (performance + usability)
+
+**Problem:** Traversal queries (`from`-only or `to`-only) explore the full
+reachable subgraph up to depth 100. This is wasteful — agents commonly want
+direct callers (depth 1) or a reasonable neighborhood, not 100 hops deep.
+
+**Changes needed:**
+
+1. **Traversal depth: fixed at 20.** Reduce from 100 in
+   `http/src/query/shared/constants.ts` (`MAX_DEPTH`). 20 hops covers any
+   realistic call chain without wasting compute.
+
+2. **Path-finding depth: fixed at 100.** Keep high in
+   `http/src/query/paths-between/query.ts`. Path finding has a specific target —
+   if a path exists at depth 50, the caller needs to know. 100 is a safety
+   ceiling to prevent infinite loops, not a practical limit.
+
+3. **Add `direct: true` param to `searchGraph`.** When set, traversal uses depth
+   1 — returns only immediate callers/callees. Ignored for path finding
+   (`from` + `to`). This is the most common agent use case: "who directly calls
+   this function?"
+
+**Key files:**
+
+- `http/src/query/shared/constants.ts` — `MAX_DEPTH` (currently 100 → 20)
+- `http/src/query/paths-between/query.ts` — `DEFAULT_MAX_DEPTH` (currently 20 → 100)
+- `http/src/query/search-graph/searchGraph.ts` — add `direct` param handling
+- `mcp/src/wrapper.ts` — add `direct` to tool description
+
+---
+
 ## Branded Types Not Enforced
 
 **Impact:** Low (type safety)
@@ -105,23 +174,6 @@ during tests.
 logger where appropriate. Consider whether `watchProject` should also accept an
 injected logger instead of a `silent` boolean.
 
----
-
-### Magic Numbers for Traversal Depth Limits
-
-**Impact:** Low (maintainability)
-
-Hardcoded depth limit in query file:
-
-- `http/src/query/paths-between/query.ts` — `maxDepth = 20`
-
-**Fix approach:**
-
-Create `http/src/query/shared/queryConstants.ts`:
-
-```typescript
-export const MAX_PATH_LENGTH = 20;
-```
 
 ---
 

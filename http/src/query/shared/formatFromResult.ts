@@ -60,9 +60,5 @@ export const formatMermaidFromResult = (
     direction,
   });
 
-  if (message && diagrams.length > 0) {
-    diagrams[0] = `${message}\n\n${diagrams[0]}`;
-  }
-
   return diagrams;
 };

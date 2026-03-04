@@ -63,6 +63,11 @@ describe(searchGraph.name, () => {
     expect(toMcp(result)).toContain("At least one of");
   });
 
+  it("treats empty topic string as no topic", async () => {
+    const result = await searchGraph(db, { topic: "" }, { embeddingProvider });
+    expect(toMcp(result)).toContain("At least one of");
+  });
+
   describe("forward traversal (from only)", () => {
     it("finds dependencies via from.symbol", async () => {
       const writer = createSqliteWriter(db);
@@ -420,7 +425,9 @@ describe(searchGraph.name, () => {
         { searchIndex, embeddingProvider },
       );
 
-      expect(toMcp(result)).toContain("No paths found between matching symbols");
+      expect(toMcp(result)).toContain(
+        "No paths found between matching symbols",
+      );
     });
 
     it("resolves from.query to symbol via search (single match)", async () => {
