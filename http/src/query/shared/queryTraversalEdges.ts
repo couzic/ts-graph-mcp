@@ -10,6 +10,8 @@ import {
 /**
  * Query all forward dependencies from a source node.
  * Returns all edges in the reachable subgraph with call site information.
+ *
+ * @spec tool::query.bidirectional-implements-extends
  */
 export const queryDependencyEdges = (
   db: Database.Database,
@@ -22,9 +24,17 @@ export const queryDependencyEdges = (
       SELECT target, 1 FROM edges
       WHERE source = ? AND type IN (${edgeTypesPlaceholder})
       UNION
-      SELECT e.target, d.depth + 1 FROM edges e
-      JOIN deps d ON e.source = d.id
-      WHERE e.type IN (${edgeTypesPlaceholder}) AND d.depth < ?
+      SELECT source, 1 FROM edges
+      WHERE target = ? AND type IN ('IMPLEMENTS', 'EXTENDS')
+      UNION
+      SELECT
+        CASE WHEN e.source = d.id THEN e.target ELSE e.source END,
+        d.depth + 1
+      FROM edges e
+      JOIN deps d ON
+        (e.source = d.id AND e.type IN (${edgeTypesPlaceholder}))
+        OR (e.target = d.id AND e.type IN ('IMPLEMENTS', 'EXTENDS'))
+      WHERE d.depth < ?
     )
     SELECT DISTINCT e.source, e.target, e.type, e.call_sites
     FROM edges e
@@ -36,6 +46,7 @@ export const queryDependencyEdges = (
   const params = [
     sourceId,
     ...EDGE_TYPES,
+    sourceId,
     ...EDGE_TYPES,
     MAX_DEPTH,
     sourceId,
@@ -49,6 +60,8 @@ export const queryDependencyEdges = (
 /**
  * Query all reverse dependencies (callers/dependents) of a target node.
  * Returns all edges in the reachable subgraph with call site information.
+ *
+ * @spec tool::query.bidirectional-implements-extends
  */
 export const queryDependentEdges = (
   db: Database.Database,
@@ -61,13 +74,22 @@ export const queryDependentEdges = (
       SELECT source, 1 FROM edges
       WHERE target = ? AND type IN (${edgeTypesPlaceholder})
       UNION
-      SELECT e.source, c.depth + 1 FROM edges e
-      JOIN callers c ON e.target = c.id
-      WHERE e.type IN (${edgeTypesPlaceholder}) AND c.depth < ?
+      SELECT target, 1 FROM edges
+      WHERE source = ? AND type IN ('IMPLEMENTS', 'EXTENDS')
+      UNION
+      SELECT
+        CASE WHEN e.target = c.id THEN e.source ELSE e.target END,
+        c.depth + 1
+      FROM edges e
+      JOIN callers c ON
+        (e.target = c.id AND e.type IN (${edgeTypesPlaceholder}))
+        OR (e.source = c.id AND e.type IN ('IMPLEMENTS', 'EXTENDS'))
+      WHERE c.depth < ?
     )
     SELECT DISTINCT e.source, e.target, e.type, e.call_sites
     FROM edges e
-    WHERE e.source IN (SELECT id FROM callers)
+    WHERE (e.source IN (SELECT id FROM callers)
+           OR (e.source = ? AND e.type IN ('IMPLEMENTS', 'EXTENDS')))
       AND (e.target = ? OR e.target IN (SELECT id FROM callers))
       AND e.type IN (${edgeTypesPlaceholder})
   `;
@@ -75,8 +97,10 @@ export const queryDependentEdges = (
   const params = [
     targetId,
     ...EDGE_TYPES,
+    targetId,
     ...EDGE_TYPES,
     MAX_DEPTH,
+    targetId,
     targetId,
     ...EDGE_TYPES,
   ];

@@ -50,7 +50,7 @@ export function queryPath(
   const maxDepth = options.maxDepth ?? DEFAULT_MAX_DEPTH;
   const maxPaths = options.maxPaths ?? DEFAULT_MAX_PATHS;
 
-  // BFS to find shortest paths using recursive CTE with path tracking
+  /** @spec tool::query.bidirectional-implements-extends */
   const sql = `
 		WITH RECURSIVE path_search(node_id, path_nodes, path_length) AS (
 			SELECT ?, json_array(?), 0
@@ -58,16 +58,19 @@ export function queryPath(
 			UNION ALL
 
 			SELECT
-				e.target,
-				json_insert(p.path_nodes, '$[#]', e.target),
+				CASE WHEN e.source = p.node_id THEN e.target ELSE e.source END,
+				json_insert(p.path_nodes, '$[#]',
+					CASE WHEN e.source = p.node_id THEN e.target ELSE e.source END),
 				p.path_length + 1
 			FROM edges e
-			JOIN path_search p ON e.source = p.node_id
+			JOIN path_search p ON
+				e.source = p.node_id
+				OR (e.target = p.node_id AND e.type IN ('IMPLEMENTS', 'EXTENDS'))
 			WHERE p.path_length < ?
 				AND json_array_length(p.path_nodes) <= ?
 				AND NOT EXISTS (
 					SELECT 1 FROM json_each(p.path_nodes)
-					WHERE json_each.value = e.target
+					WHERE json_each.value = CASE WHEN e.source = p.node_id THEN e.target ELSE e.source END
 				)
 		)
 		SELECT path_nodes, path_length
@@ -92,12 +95,20 @@ export function queryPath(
     for (let i = 0; i < nodes.length - 1; i++) {
       const from = nodes[i];
       const to = nodes[i + 1];
-      if (from === undefined || to === undefined) continue;
-      const edgeRow = db
+      if (from === undefined || to === undefined) { continue; }
+      let edgeRow = db
         .prepare<[string, string], EdgeRow>(
           "SELECT * FROM edges WHERE source = ? AND target = ? LIMIT 1",
         )
         .get(from, to);
+      // Try reverse direction for IMPLEMENTS/EXTENDS (bidirectional traversal)
+      if (!edgeRow) {
+        edgeRow = db
+          .prepare<[string, string], EdgeRow>(
+            "SELECT * FROM edges WHERE source = ? AND target = ? AND type IN ('IMPLEMENTS', 'EXTENDS') LIMIT 1",
+          )
+          .get(to, from);
+      }
       if (edgeRow) {
         edges.push(rowToEdge(edgeRow));
       }

@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import type { EdgeType } from "@ts-graph/shared";
 import { computeBfsOrder } from "./computeBfsOrder.js";
 
-const edge = (source: string, target: string): { source: string; target: string; type: EdgeType } => ({
+const edge = (source: string, target: string, type: EdgeType = "CALLS"): { source: string; target: string; type: EdgeType } => ({
   source,
   target,
-  type: "CALLS",
+  type,
 });
 
 /** @spec tool::output.truncation */
@@ -72,5 +72,49 @@ describe("computeBfsOrder", () => {
     const edges = [edge("A", "C"), edge("B", "C")];
     const order = computeBfsOrder(edges);
     expect(order).toEqual(["A", "B", "C"]);
+  });
+
+  /** @spec tool::query.edge-priority-truncation */
+  it("treats IMPLEMENTS edges as bidirectional in adjacency", () => {
+    // F --TAKES--> I, C --IMPLEMENTS--> I
+    // Without bidirectional: C is a root (no incoming), visited early
+    // With bidirectional: I has reverse adjacency to C, so C is visited after I
+    const edges = [
+      edge("F", "I", "TAKES"),
+      edge("C", "I", "IMPLEMENTS"),
+    ];
+    const order = computeBfsOrder(edges);
+    expect(order.indexOf("F")).toBeLessThan(order.indexOf("I"));
+    expect(order.indexOf("I")).toBeLessThan(order.indexOf("C"));
+  });
+
+  /** @spec tool::query.edge-priority-truncation */
+  it("treats EXTENDS edges as bidirectional in adjacency", () => {
+    // F --CALLS--> Base, Child --EXTENDS--> Base
+    const edges = [
+      edge("F", "Base", "CALLS"),
+      edge("Child", "Base", "EXTENDS"),
+    ];
+    const order = computeBfsOrder(edges);
+    expect(order.indexOf("F")).toBeLessThan(order.indexOf("Base"));
+    expect(order.indexOf("Base")).toBeLessThan(order.indexOf("Child"));
+  });
+
+  /** @spec tool::query.edge-priority-truncation */
+  it("keeps direct CALLS neighbors before reverse IMPLEMENTS nodes", () => {
+    // F --CALLS--> A, F --CALLS--> B, F --TAKES--> I, C --IMPLEMENTS--> I, D --IMPLEMENTS--> I
+    const edges = [
+      edge("F", "A", "CALLS"),
+      edge("F", "B", "CALLS"),
+      edge("F", "I", "TAKES"),
+      edge("C", "I", "IMPLEMENTS"),
+      edge("D", "I", "IMPLEMENTS"),
+    ];
+    const order = computeBfsOrder(edges);
+    // F's direct neighbors (A, B, I) all before implementations (C, D)
+    expect(order.indexOf("A")).toBeLessThan(order.indexOf("C"));
+    expect(order.indexOf("B")).toBeLessThan(order.indexOf("C"));
+    expect(order.indexOf("I")).toBeLessThan(order.indexOf("C"));
+    expect(order.indexOf("I")).toBeLessThan(order.indexOf("D"));
   });
 });

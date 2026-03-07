@@ -34,6 +34,36 @@ subgraph connecting A to B. If no forward path exists from A to B, the tool
 attempts the reverse direction (B to A). If neither direction yields a path, the
 tool returns a "No path found" message.
 
+### Bidirectional IMPLEMENTS and EXTENDS traversal
+
+> `{#tool::query.bidirectional-implements-extends}`
+
+All traversals (forward, backward, path finding) treat `IMPLEMENTS` and
+`EXTENDS` edges as bidirectional. When the BFS reaches a node through a forward
+edge (e.g., `TAKES`), it can follow `IMPLEMENTS` or `EXTENDS` edges in reverse
+to discover implementations or subclasses.
+
+Given `functionF --TAKES--> InterfaceI` and `ClassC --IMPLEMENTS--> InterfaceI`:
+- Forward from `functionF`: returns `InterfaceI` and `ClassC`
+- Path from `functionF` to `ClassC`: returns
+  `functionF --TAKES--> InterfaceI <--IMPLEMENTS-- ClassC`
+
+### Edge priority for truncation
+
+> `{#tool::query.edge-priority-truncation}`
+
+When `max_nodes` truncation is needed, nodes discovered through high-priority
+edges are kept before nodes discovered through low-priority edges.
+
+| Priority | Edges | Direction |
+|----------|-------|-----------|
+| 1 (high) | CALLS, REFERENCES, INCLUDES | forward |
+| 2 | TAKES, RETURNS, HAS_TYPE, HAS_PROPERTY, DERIVES_FROM, ALIAS_FOR | forward |
+| 3 (low) | IMPLEMENTS, EXTENDS | reverse |
+
+When the result fits within `max_nodes`, all discovered nodes are returned
+regardless of priority.
+
 ### Topic search
 
 > `{#tool::query.topic}`

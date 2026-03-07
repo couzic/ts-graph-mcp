@@ -154,11 +154,18 @@ The test: Every changed line should trace directly to the user's request.
 
 **Define success criteria. Loop until verified.**
 
+**Test-first is mandatory.** Never modify implementation code without a failing
+test that covers the change. This applies to all changes — new features, bug
+fixes, and behavior modifications in existing code. Write the test, see it fail,
+then implement. No exceptions.
+
 Transform tasks into verifiable goals:
 
 - "Add validation" → "Write tests for invalid inputs, then make them pass"
 - "Fix the bug" → "Write a test that reproduces it, then make it pass"
 - "Refactor X" → "Ensure tests pass before and after"
+- "Change behavior of X" → "Update/add test for new behavior, see it fail, then
+  change X"
 
 For multi-step tasks, state a brief plan:
 
