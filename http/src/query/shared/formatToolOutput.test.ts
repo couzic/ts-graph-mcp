@@ -3,7 +3,7 @@ import type { FormatInput } from "./formatToolOutput.js";
 import { formatToolOutput, truncateEdges } from "./formatToolOutput.js";
 import type { GraphEdge } from "./GraphTypes.js";
 
-describe("formatToolOutput", () => {
+describe(formatToolOutput.name, () => {
   /** @spec tool::output.mcp-structure */
   it("formats a simple call chain with node snippets", () => {
     const input: FormatInput = {
@@ -476,7 +476,7 @@ fnA --CALLS--> fnB`);
   });
 });
 
-describe("truncateEdges", () => {
+describe(truncateEdges.name, () => {
   it("returns all edges when node count is within maxNodes", () => {
     const edges: GraphEdge[] = [
       {
@@ -562,8 +562,48 @@ describe("truncateEdges", () => {
 
     const result = truncateEdges(edges, 3);
 
-    // Traversal order depends on formatGraph, but should keep first 3 nodes
+    // BFS: A, B, C — keeps all direct children before deeper nodes
     expect(result.totalNodeCount).toBe(4);
-    expect(result.truncatedEdges.length).toBeLessThanOrEqual(edges.length);
+    const keptNodes = new Set<string>();
+    for (const e of result.truncatedEdges) {
+      keptNodes.add(e.source);
+      keptNodes.add(e.target);
+    }
+    expect(keptNodes).toContain("src/a.ts:Function:fnA");
+    expect(keptNodes).toContain("src/b.ts:Function:fnB");
+    expect(keptNodes).toContain("src/c.ts:Function:fnC");
+    expect(keptNodes).not.toContain("src/d.ts:Function:fnD");
+  });
+
+  it("keeps direct calls over deep chains (BFS over DFS)", () => {
+    // A calls B, C, D, E — B calls F, F calls G, G calls H
+    const edges: GraphEdge[] = [
+      { source: "src/a.ts:Function:fnA", target: "src/b.ts:Function:fnB", type: "CALLS" },
+      { source: "src/b.ts:Function:fnB", target: "src/f.ts:Function:fnF", type: "CALLS" },
+      { source: "src/f.ts:Function:fnF", target: "src/g.ts:Function:fnG", type: "CALLS" },
+      { source: "src/g.ts:Function:fnG", target: "src/h.ts:Function:fnH", type: "CALLS" },
+      { source: "src/a.ts:Function:fnA", target: "src/c.ts:Function:fnC", type: "CALLS" },
+      { source: "src/a.ts:Function:fnA", target: "src/d.ts:Function:fnD", type: "CALLS" },
+      { source: "src/a.ts:Function:fnA", target: "src/e.ts:Function:fnE", type: "CALLS" },
+    ];
+
+    const result = truncateEdges(edges, 5);
+
+    // BFS keeps [A, B, C, D, E] — all direct calls
+    // Chain order would keep [A, B, F, G, H] — follows B's deep chain
+    const keptNodes = new Set<string>();
+    for (const e of result.truncatedEdges) {
+      keptNodes.add(e.source);
+      keptNodes.add(e.target);
+    }
+    expect(keptNodes).toContain("src/a.ts:Function:fnA");
+    expect(keptNodes).toContain("src/b.ts:Function:fnB");
+    expect(keptNodes).toContain("src/c.ts:Function:fnC");
+    expect(keptNodes).toContain("src/d.ts:Function:fnD");
+    expect(keptNodes).toContain("src/e.ts:Function:fnE");
+    expect(keptNodes).not.toContain("src/f.ts:Function:fnF");
+    expect(keptNodes).not.toContain("src/g.ts:Function:fnG");
+    expect(keptNodes).not.toContain("src/h.ts:Function:fnH");
+    expect(result.totalNodeCount).toBe(8);
   });
 });

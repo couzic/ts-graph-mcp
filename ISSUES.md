@@ -1,41 +1,5 @@
 # Known Issues
 
-## Graph Truncation Uses Depth-First Order
-
-**Impact:** Medium (output quality)
-
-**Problem:** When `max_nodes` truncates the graph, it keeps nodes in depth-first
-order (determined by `formatGraph`'s `buildChain` in
-`http/src/query/shared/formatGraph.ts`). This follows one branch all the way to
-its leaves before visiting sibling branches.
-
-**Why it matters:** If a root node calls 5 functions and the first one has a deep
-chain of 40 nodes, truncation at `max_nodes=50` shows that entire deep chain but
-may miss the other 4 direct calls entirely. The user gets a narrow deep view
-instead of a broad overview of the immediate neighborhood.
-
-**Example:**
-
-```
-A calls B, C, D, E
-B calls F, F calls G, G calls H...  (deep chain)
-
-DFS truncation (current): A, B, F, G, H, ... (follows B's chain, may never show C, D, E)
-BFS truncation (desired): A, B, C, D, E, F, G, H, ... (all direct calls first, then deeper)
-```
-
-**Fix approach:** Change `nodeOrder` in `formatGraph.ts` to use breadth-first
-traversal. The `buildChain` rendering logic (how lines are printed) can stay
-depth-first for readability — only the `nodeOrder` array (used for truncation
-decisions) needs to change to BFS.
-
-**Key files:**
-
-- `http/src/query/shared/formatGraph.ts` — `buildChain` produces `nodeOrder`
-- `http/src/query/shared/formatToolOutput.ts` — uses `nodeOrder` for truncation
-
----
-
 ## Traversal Depth Limits and `direct` Param
 
 **Impact:** Medium (performance + usability)

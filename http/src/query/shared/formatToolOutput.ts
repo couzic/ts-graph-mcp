@@ -1,6 +1,7 @@
 import type { CallSiteRange } from "../../db/Types.js";
 import { buildAliasMap } from "./buildAliasMap.js";
 import { buildDisplayNames } from "./buildDisplayNames.js";
+import { computeBfsOrder } from "./computeBfsOrder.js";
 import { formatGraph } from "./formatGraph.js";
 import { formatNodes } from "./formatNodes.js";
 import type { GraphEdge, NodeInfo } from "./GraphTypes.js";
@@ -135,23 +136,20 @@ const formatFullOutput = (
 
 /**
  * Truncate edges to include only the first maxNodes nodes.
- * Uses formatGraph's traversal order to determine which nodes to keep.
+ * Uses BFS traversal order to determine which nodes to keep,
+ * ensuring direct neighbors are prioritized over deep descendants.
  *
  * @spec tool::output.truncation
  *
  * @example
  * // Given edges: A -> B -> C -> D -> E and maxNodes: 3
- * // Returns edges between A, B, C only (first 3 in traversal order)
- *
- * @param edges - All edges in the graph
- * @param maxNodes - Maximum number of nodes to keep
- * @returns Truncated edges and total node count
+ * // Returns edges between A, B, C only (first 3 in BFS order)
  */
 export const truncateEdges = <T extends GraphEdge>(
   edges: T[],
   maxNodes: number,
 ): { truncatedEdges: T[]; totalNodeCount: number } => {
-  const { nodeOrder } = formatGraph(edges);
+  const nodeOrder = computeBfsOrder(edges);
   const totalNodeCount = nodeOrder.length;
   const keptNodes = new Set(nodeOrder.slice(0, maxNodes));
   const truncatedEdges = edges.filter(
