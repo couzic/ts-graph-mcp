@@ -1,16 +1,11 @@
 import type Database from "better-sqlite3";
-import {
-  attemptClassMethodFallback,
-  formatDisambiguationMessage,
-} from "../shared/classMethodFallback.js";
 import { collectNodeIds } from "../shared/collectNodeIds.js";
 import { formatMcpFromResult } from "../shared/formatFromResult.js";
 import { messageResult, type QueryResult } from "../shared/QueryResult.js";
 import { queryAliasMap } from "../shared/queryAliasMap.js";
 import { queryNodeInfos } from "../shared/queryNodeInfos.js";
 import { queryNodeMetadata } from "../shared/queryNodeMetadata.js";
-import { queryDependencyEdges } from "../shared/queryTraversalEdges.js";
-import { resolveSymbol } from "../shared/symbolNotFound.js";
+import { queryDependencies } from "../search-graph/traverseGraph.js";
 
 /**
  * Find all code that a symbol depends on (forward dependencies) — returns structured data.
@@ -25,70 +20,35 @@ export const dependenciesData = (
   symbol: string,
   options: { maxNodes?: number } = {},
 ): QueryResult => {
-  const resolution = resolveSymbol(db, filePath, symbol);
-  if (!resolution.success) {
-    return messageResult(resolution.error);
+  const result = queryDependencies(db, filePath, symbol);
+  if (!result.success) {
+    return messageResult(result.error);
   }
 
-  const nodeId = resolution.nodeId;
-  const resolutionMessage = resolution.message;
-  const filePathWasResolved = resolution.filePathWasResolved ?? false;
-
-  let edges = queryDependencyEdges(db, nodeId);
-  let currentNodeId = nodeId;
-  let fallbackMessage: string | undefined;
-
-  if (edges.length === 0) {
-    const fallback = attemptClassMethodFallback(db, nodeId);
-
-    if (fallback.type === "single-method") {
-      // biome-ignore lint/style/noNonNullAssertion: split after includes check
-      const className = symbol.includes(".") ? symbol.split(".")[0]! : symbol;
-      fallbackMessage = `Resolved '${className}' to ${className}.${fallback.methodName}`;
-      currentNodeId = fallback.methodId;
-      edges = queryDependencyEdges(db, currentNodeId);
-    } else if (fallback.type === "multiple-methods") {
-      // biome-ignore lint/style/noNonNullAssertion: split after includes check
-      const className = symbol.includes(".") ? symbol.split(".")[0]! : symbol;
-      const disambiguation = formatDisambiguationMessage(
-        className,
-        fallback.methods,
-      );
-      return messageResult(
-        resolutionMessage
-          ? `${resolutionMessage}\n\n${disambiguation}`
-          : disambiguation,
-      );
-    }
-  }
-
-  const combinedMessage = [resolutionMessage, fallbackMessage]
-    .filter(Boolean)
-    .join("\n\n");
-
-  if (edges.length === 0) {
+  if (result.edges.length === 0) {
     const noResults = "No dependencies found.";
     return messageResult(
-      combinedMessage ? `${combinedMessage}\n\n${noResults}` : noResults,
+      result.message ? `${result.message}\n\n${noResults}` : noResults,
     );
   }
 
-  const nodeIds = collectNodeIds(edges);
+  const nodeIds = collectNodeIds(result.edges);
   const aliasMap = queryAliasMap(db, nodeIds);
   const metadataByNodeId = queryNodeMetadata(db, nodeIds);
 
-  const nodeIdsToQuery = filePathWasResolved
+  const excludeIds = new Set(result.resolvedNodeIds);
+  const nodeIdsToQuery = result.filePathWasResolved
     ? nodeIds
-    : nodeIds.filter((id) => id !== currentNodeId);
+    : nodeIds.filter((id) => !excludeIds.has(id));
   const nodes = queryNodeInfos(db, nodeIdsToQuery);
 
   return {
-    edges,
+    edges: result.edges,
     nodes,
     aliasMap,
     metadataByNodeId,
     maxNodes: options.maxNodes,
-    message: combinedMessage || undefined,
+    message: result.message,
   };
 };
 

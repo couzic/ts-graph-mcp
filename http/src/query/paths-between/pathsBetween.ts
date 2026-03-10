@@ -38,8 +38,8 @@ export const pathsBetweenData = (
     return messageResult(toResolution.error);
   }
 
-  let fromId = fromResolution.nodeId;
-  let toId = toResolution.nodeId;
+  let fromNodeIds = fromResolution.nodeIds;
+  let toNodeIds = toResolution.nodeIds;
   const fromFilePathWasResolved = fromResolution.filePathWasResolved ?? false;
   const toFilePathWasResolved = toResolution.filePathWasResolved ?? false;
 
@@ -51,105 +51,129 @@ export const pathsBetweenData = (
     resolutionMessages.push(toResolution.message);
   }
 
-  const fromFallback = attemptClassMethodFallback(db, fromId);
-  if (fromFallback.type === "multiple-methods") {
-    const className = from.symbol.includes(".")
-      ? (from.symbol.split(".")[0] ?? from.symbol)
-      : from.symbol;
-    const prefix =
-      resolutionMessages.length > 0
-        ? `${resolutionMessages.join("\n")}\n\n`
-        : "";
-    return messageResult(
-      prefix + formatDisambiguationMessage(className, fromFallback.methods),
-    );
-  }
-  if (fromFallback.type === "single-method") {
-    const className = from.symbol.includes(".")
-      ? (from.symbol.split(".")[0] ?? from.symbol)
-      : from.symbol;
-    resolutionMessages.push(
-      `Resolved '${className}' to ${className}.${fromFallback.methodName}`,
-    );
-    fromId = fromFallback.methodId;
+  // Class method fallback for from nodes
+  for (const fromId of fromNodeIds) {
+    const fallback = attemptClassMethodFallback(db, fromId);
+    if (fallback.type === "multiple-methods") {
+      const className = from.symbol.includes(".")
+        ? (from.symbol.split(".")[0] ?? from.symbol)
+        : from.symbol;
+      const prefix =
+        resolutionMessages.length > 0
+          ? `${resolutionMessages.join("\n")}\n\n`
+          : "";
+      return messageResult(
+        prefix + formatDisambiguationMessage(className, fallback.methods),
+      );
+    }
+    if (fallback.type === "single-method") {
+      const className = from.symbol.includes(".")
+        ? (from.symbol.split(".")[0] ?? from.symbol)
+        : from.symbol;
+      resolutionMessages.push(
+        `Resolved '${className}' to ${className}.${fallback.methodName}`,
+      );
+      fromNodeIds = [fallback.methodId];
+      break;
+    }
   }
 
-  const toFallback = attemptClassMethodFallback(db, toId);
-  if (toFallback.type === "multiple-methods") {
-    const className = to.symbol.includes(".")
-      ? (to.symbol.split(".")[0] ?? to.symbol)
-      : to.symbol;
-    const prefix =
-      resolutionMessages.length > 0
-        ? `${resolutionMessages.join("\n")}\n\n`
-        : "";
-    return messageResult(
-      prefix + formatDisambiguationMessage(className, toFallback.methods),
-    );
-  }
-  if (toFallback.type === "single-method") {
-    const className = to.symbol.includes(".")
-      ? (to.symbol.split(".")[0] ?? to.symbol)
-      : to.symbol;
-    resolutionMessages.push(
-      `Resolved '${className}' to ${className}.${toFallback.methodName}`,
-    );
-    toId = toFallback.methodId;
+  // Class method fallback for to nodes
+  for (const toId of toNodeIds) {
+    const fallback = attemptClassMethodFallback(db, toId);
+    if (fallback.type === "multiple-methods") {
+      const className = to.symbol.includes(".")
+        ? (to.symbol.split(".")[0] ?? to.symbol)
+        : to.symbol;
+      const prefix =
+        resolutionMessages.length > 0
+          ? `${resolutionMessages.join("\n")}\n\n`
+          : "";
+      return messageResult(
+        prefix + formatDisambiguationMessage(className, fallback.methods),
+      );
+    }
+    if (fallback.type === "single-method") {
+      const className = to.symbol.includes(".")
+        ? (to.symbol.split(".")[0] ?? to.symbol)
+        : to.symbol;
+      resolutionMessages.push(
+        `Resolved '${className}' to ${className}.${fallback.methodName}`,
+      );
+      toNodeIds = [fallback.methodId];
+      break;
+    }
   }
 
   const resolutionPrefix =
     resolutionMessages.length > 0 ? resolutionMessages.join("\n") : undefined;
 
-  if (fromId === toId) {
+  // Try all from×to combinations
+  const allEdges: EdgeWithCallSites[] = [];
+  const allPathNodes: string[] = [];
+
+  for (const fromId of fromNodeIds) {
+    for (const toId of toNodeIds) {
+      if (fromId === toId) {
+        continue;
+      }
+
+      let paths = queryPath(db, fromId, toId, { maxPaths: 1 });
+      if (paths.length === 0) {
+        paths = queryPath(db, toId, fromId, { maxPaths: 1 });
+      }
+
+      const path = paths[0];
+      if (path) {
+        for (const e of path.edges) {
+          allEdges.push({
+            source: e.source,
+            target: e.target,
+            type: e.type,
+            callSites: e.callSites,
+          });
+        }
+        allPathNodes.push(...path.nodes);
+      }
+    }
+  }
+
+  // Check if all combinations were same-symbol
+  if (fromNodeIds.length === 1 && toNodeIds.length === 1 && fromNodeIds[0] === toNodeIds[0]) {
     const msg = "Invalid query: source and target are the same symbol.";
     return messageResult(
       resolutionPrefix ? `${resolutionPrefix}\n\n${msg}` : msg,
     );
   }
 
-  let paths = queryPath(db, fromId, toId, { maxPaths: 1 });
-  if (paths.length === 0) {
-    paths = queryPath(db, toId, fromId, { maxPaths: 1 });
-  }
-
-  if (paths.length === 0) {
+  if (allEdges.length === 0) {
     const msg = "No path found.";
     return messageResult(
       resolutionPrefix ? `${resolutionPrefix}\n\n${msg}` : msg,
     );
   }
 
-  const path = paths[0];
-  if (!path) {
-    const msg = "No path found.";
-    return messageResult(
-      resolutionPrefix ? `${resolutionPrefix}\n\n${msg}` : msg,
-    );
-  }
-
-  const graphEdges: EdgeWithCallSites[] = path.edges.map((e) => ({
-    source: e.source,
-    target: e.target,
-    type: e.type,
-    callSites: e.callSites,
-  }));
-
-  const aliasMap = queryAliasMap(db, path.nodes);
-  const metadataByNodeId = queryNodeMetadata(db, path.nodes);
+  const uniquePathNodes = [...new Set(allPathNodes)];
+  const aliasMap = queryAliasMap(db, uniquePathNodes);
+  const metadataByNodeId = queryNodeMetadata(db, uniquePathNodes);
 
   const excludeIds = new Set<string>();
   if (!fromFilePathWasResolved) {
-    excludeIds.add(fromId);
+    for (const id of fromNodeIds) {
+      excludeIds.add(id);
+    }
   }
   if (!toFilePathWasResolved) {
-    excludeIds.add(toId);
+    for (const id of toNodeIds) {
+      excludeIds.add(id);
+    }
   }
 
-  const nodeIdsToQuery = path.nodes.filter((id) => !excludeIds.has(id));
+  const nodeIdsToQuery = uniquePathNodes.filter((id) => !excludeIds.has(id));
   const nodes = queryNodeInfos(db, nodeIdsToQuery);
 
   return {
-    edges: graphEdges,
+    edges: allEdges,
     nodes,
     aliasMap,
     metadataByNodeId,

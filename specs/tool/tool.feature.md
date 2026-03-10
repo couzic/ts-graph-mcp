@@ -159,6 +159,15 @@ When `{ symbol: "X" }` is provided without `file_path` and exactly one node
 matches across the entire codebase, the tool auto-resolves and shows a message:
 "Found 'X' in src/foo.ts".
 
+### Same-file coalescing
+
+> `{#tool::resolve.same-file-coalescing}`
+
+When `{ symbol: "X" }` matches multiple nodes with the same name in the same
+file (e.g., a TypeAlias and a Variable), all matches are used as query roots.
+Edges from all matches are merged. Each node appears separately in the output
+with its own type and edges. No disambiguation error is returned.
+
 ### Multi-match disambiguation
 
 > `{#tool::resolve.disambiguation}`

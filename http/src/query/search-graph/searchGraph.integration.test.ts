@@ -6,7 +6,12 @@ import {
   openDatabase,
 } from "../../db/sqlite/sqliteConnection.utils.js";
 import { initializeSchema } from "../../db/sqlite/sqliteSchema.utils.js";
-import type { Edge, FunctionNode } from "../../db/Types.js";
+import type {
+  Edge,
+  FunctionNode,
+  TypeAliasNode,
+  VariableNode,
+} from "../../db/Types.js";
 import { createFakeEmbeddingCache } from "../../embedding/createFakeEmbeddingCache.js";
 import { createFakeEmbeddingProvider } from "../../embedding/createFakeEmbeddingProvider.js";
 import {
@@ -32,6 +37,39 @@ const fn = (name: string, file = "src/test.ts"): FunctionNode => ({
   exported: true,
   contentHash: `hash-${name}`,
   snippet: `function ${name}() { return true; }`,
+});
+
+const typeAlias = (
+  name: string,
+  file = "src/test.ts",
+): TypeAliasNode => ({
+  id: `${file}:TypeAlias:${name}`,
+  type: "TypeAlias",
+  name,
+  package: "main",
+  filePath: file,
+  startLine: 1,
+  endLine: 3,
+  exported: true,
+  contentHash: `hash-type-${name}`,
+  snippet: `type ${name} = { value: string };`,
+});
+
+const variable = (
+  name: string,
+  file = "src/test.ts",
+): VariableNode => ({
+  id: `${file}:Variable:${name}`,
+  type: "Variable",
+  name,
+  package: "main",
+  filePath: file,
+  startLine: 4,
+  endLine: 6,
+  exported: true,
+  contentHash: `hash-var-${name}`,
+  snippet: `const ${name} = { value: "default" };`,
+  isConst: true,
 });
 
 const calls = (from: string, to: string): Edge => ({
@@ -666,6 +704,90 @@ describe(searchGraph.name, () => {
 
       expect(toMcp(result)).toContain("processUserData");
       expect(toMcp(result)).toContain("saveToStorage");
+    });
+  });
+
+  /** @spec tool::resolve.same-file-coalescing */
+  describe("same-file coalescing", () => {
+    it("merges edges from TypeAlias and Variable with same name (forward)", async () => {
+      const writer = createSqliteWriter(db);
+      const configType = typeAlias("Config", "src/config.ts");
+      const configVar = variable("Config", "src/config.ts");
+      const dep1 = fn("BaseConfig", "src/base.ts");
+      const dep2 = fn("loadDefaults", "src/defaults.ts");
+
+      await writer.addNodes([configType, configVar, dep1, dep2]);
+      // TypeAlias derives from BaseConfig, Variable calls loadDefaults
+      await writer.addEdges([
+        { source: configType.id, target: dep1.id, type: "DERIVES_FROM" },
+        { source: configVar.id, target: dep2.id, type: "CALLS" },
+      ]);
+
+      const result = await searchGraph(
+        db,
+        { from: { symbol: "Config", file_path: "src/config.ts" } },
+        { embeddingProvider },
+      );
+
+      const output = toMcp(result);
+      // Both edges should be present — merged from TypeAlias + Variable
+      expect(output).toContain("DERIVES_FROM");
+      expect(output).toContain("CALLS");
+      expect(output).toContain("BaseConfig");
+      expect(output).toContain("loadDefaults");
+    });
+
+    it("merges edges from TypeAlias and Variable with same name (backward)", async () => {
+      const writer = createSqliteWriter(db);
+      const configType = typeAlias("Config", "src/config.ts");
+      const configVar = variable("Config", "src/config.ts");
+      const caller = fn("initApp", "src/app.ts");
+      const user = fn("createUser", "src/user.ts");
+
+      await writer.addNodes([configType, configVar, caller, user]);
+      // caller CALLS the Variable, user TAKES the TypeAlias
+      await writer.addEdges([
+        { source: caller.id, target: configVar.id, type: "CALLS" },
+        { source: user.id, target: configType.id, type: "TAKES" },
+      ]);
+
+      const result = await searchGraph(
+        db,
+        { to: { symbol: "Config", file_path: "src/config.ts" } },
+        { embeddingProvider },
+      );
+
+      const output = toMcp(result);
+      expect(output).toContain("initApp");
+      expect(output).toContain("createUser");
+    });
+
+    it("merges edges from coalesced symbols in path finding", async () => {
+      const writer = createSqliteWriter(db);
+      const configType = typeAlias("Config", "src/config.ts");
+      const configVar = variable("Config", "src/config.ts");
+      const entry = fn("main", "src/main.ts");
+      const target = fn("validate", "src/validate.ts");
+
+      await writer.addNodes([configType, configVar, entry, target]);
+      // entry -> configVar -> validate
+      await writer.addEdges([
+        { source: entry.id, target: configVar.id, type: "CALLS" },
+        { source: configVar.id, target: target.id, type: "CALLS" },
+      ]);
+
+      const result = await searchGraph(
+        db,
+        {
+          from: { symbol: "main", file_path: "src/main.ts" },
+          to: { symbol: "Config", file_path: "src/config.ts" },
+        },
+        { embeddingProvider },
+      );
+
+      const output = toMcp(result);
+      expect(output).toContain("main");
+      expect(output).toContain("CALLS");
     });
   });
 });
