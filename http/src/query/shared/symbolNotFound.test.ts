@@ -272,7 +272,7 @@ describe("resolveSymbol", () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.nodeId).toBe("src/utils.ts:Function:formatDate");
+      expect(result.nodeIds).toEqual(["src/utils.ts:Function:formatDate"]);
       // Exact match: no message needed (keeps output clean)
       expect(result.message).toBeUndefined();
     }
@@ -296,7 +296,7 @@ describe("resolveSymbol", () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.nodeId).toBe("src/entity.ts:Method:User.getSituations");
+      expect(result.nodeIds).toEqual(["src/entity.ts:Method:User.getSituations"]);
       expect(result.message).toContain(
         "Found 'getSituations' as Method:User.getSituations in src/entity.ts",
       );
@@ -317,7 +317,7 @@ describe("resolveSymbol", () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.nodeId).toBe("src/dateUtils.ts:Function:formatDate");
+      expect(result.nodeIds).toEqual(["src/dateUtils.ts:Function:formatDate"]);
       // Exact symbol match uses shorter format (just path, no type prefix)
       expect(result.message).toContain(
         "Found 'formatDate' in src/dateUtils.ts",
@@ -395,7 +395,7 @@ describe("resolveSymbol", () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.nodeId).toBe("src/entity.ts:Method:User.GetData");
+      expect(result.nodeIds).toEqual(["src/entity.ts:Method:User.GetData"]);
     }
   });
 
@@ -414,7 +414,7 @@ describe("resolveSymbol", () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.nodeId).toBe("src/utils.ts:Function:formatDate");
+      expect(result.nodeIds).toEqual(["src/utils.ts:Function:formatDate"]);
       // Exact symbol match uses shorter format (no type prefix)
       expect(result.message).toContain("Found 'formatDate' in src/utils.ts");
       expect(result.filePathWasResolved).toBe(true);
@@ -477,7 +477,7 @@ describe("resolveSymbol", () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.nodeId).toBe("src/entity.ts:Method:User.getSituations");
+      expect(result.nodeIds).toEqual(["src/entity.ts:Method:User.getSituations"]);
       expect(result.message).toContain("User.getSituations");
     }
   });
@@ -513,7 +513,7 @@ describe("resolveSymbol", () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.nodeId).toBe("src/user.ts:Method:User.save");
+      expect(result.nodeIds).toEqual(["src/user.ts:Method:User.save"]);
       expect(result.message).toContain("User.save");
     }
   });
@@ -543,5 +543,78 @@ describe("resolveSymbol", () => {
     if (result.success) {
       expect(result.filePathWasResolved).toBeFalsy();
     }
+  });
+
+  /** @spec tool::resolve.same-file-coalescing */
+  describe("same-file coalescing", () => {
+    it("coalesces TypeAlias + Variable with same name in same file (with file_path)", async () => {
+      const filePath = "src/config.ts";
+      const sourceFile = project.createSourceFile(
+        filePath,
+        `export type Config = { port: number };
+export const Config = { port: 3000 };`,
+      );
+      await writer.addNodes(
+        toNodes(extractNodes(sourceFile, createContext(filePath))),
+      );
+
+      const result = resolveSymbol(db, filePath, "Config");
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.nodeIds).toHaveLength(2);
+        expect(result.nodeIds).toContain("src/config.ts:TypeAlias:Config");
+        expect(result.nodeIds).toContain("src/config.ts:Variable:Config");
+      }
+    });
+
+    it("coalesces TypeAlias + Variable with same name in same file (without file_path)", async () => {
+      const filePath = "src/config.ts";
+      const sourceFile = project.createSourceFile(
+        filePath,
+        `export type Config = { port: number };
+export const Config = { port: 3000 };`,
+      );
+      await writer.addNodes(
+        toNodes(extractNodes(sourceFile, createContext(filePath))),
+      );
+
+      const result = resolveSymbol(db, undefined, "Config");
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.nodeIds).toHaveLength(2);
+        expect(result.nodeIds).toContain("src/config.ts:TypeAlias:Config");
+        expect(result.nodeIds).toContain("src/config.ts:Variable:Config");
+        expect(result.filePathWasResolved).toBe(true);
+      }
+    });
+
+    it("still returns disambiguation for same name across different files", async () => {
+      const fileA = "src/configA.ts";
+      const sourceA = project.createSourceFile(
+        fileA,
+        `export type Config = { port: number };`,
+      );
+      await writer.addNodes(
+        toNodes(extractNodes(sourceA, createContext(fileA))),
+      );
+
+      const fileB = "src/configB.ts";
+      const sourceB = project.createSourceFile(
+        fileB,
+        `export type Config = { host: string };`,
+      );
+      await writer.addNodes(
+        toNodes(extractNodes(sourceB, createContext(fileB))),
+      );
+
+      const result = resolveSymbol(db, undefined, "Config");
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toContain("Multiple symbols named 'Config' found:");
+      }
+    });
   });
 });

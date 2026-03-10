@@ -1,5 +1,8 @@
 import type Database from "better-sqlite3";
-import { attemptClassMethodFallback } from "../shared/classMethodFallback.js";
+import {
+  attemptClassMethodFallback,
+  formatDisambiguationMessage,
+} from "../shared/classMethodFallback.js";
 import { collectNodeIds } from "../shared/collectNodeIds.js";
 import type { GraphEdgeWithCallSites } from "../shared/parseEdgeRows.js";
 import {
@@ -18,8 +21,10 @@ export interface TraversalResult {
   edges: GraphEdgeWithCallSites[];
   /** All node IDs in the traversal (includes source/target) */
   nodeIds: string[];
-  /** The resolved node ID (starting point) */
-  nodeId: string;
+  /** The resolved node IDs (starting points, may be multiple for same-file coalescing) */
+  resolvedNodeIds: string[];
+  /** Whether the file path was auto-resolved (not provided by caller) */
+  filePathWasResolved: boolean;
   /** Optional resolution message (e.g., "Found X in Y") */
   message?: string;
 }
@@ -35,36 +40,57 @@ export interface TraversalError {
 export type TraversalQueryResult = TraversalResult | TraversalError;
 
 /**
- * Query forward dependencies (raw edges, no formatting).
- * Use this when you need to filter edges before formatting.
+ * Shared traversal logic: resolve symbol, query edges, attempt class method fallback.
  */
-export const queryDependencies = (
+const resolveAndTraverse = (
   db: Database.Database,
   filePath: string | undefined,
   symbol: string,
+  queryEdges: (db: Database.Database, nodeId: string) => GraphEdgeWithCallSites[],
 ): TraversalQueryResult => {
   const resolution = resolveSymbol(db, filePath, symbol);
   if (!resolution.success) {
     return { success: false, error: resolution.error };
   }
 
-  let nodeId = resolution.nodeId;
-  let edges = queryDependencyEdges(db, nodeId);
+  let resolvedNodeIds = resolution.nodeIds;
+  let edges: GraphEdgeWithCallSites[] = [];
+  for (const id of resolvedNodeIds) {
+    edges.push(...queryEdges(db, id));
+  }
   let message = resolution.message;
+  const filePathWasResolved = resolution.filePathWasResolved ?? false;
 
-  // If no dependencies found, attempt class method fallback
+  // If no edges found, attempt class method fallback per resolved node
   if (edges.length === 0) {
-    const fallback = attemptClassMethodFallback(db, nodeId);
+    for (const nodeId of resolvedNodeIds) {
+      const fallback = attemptClassMethodFallback(db, nodeId);
 
-    if (fallback.type === "single-method") {
-      // biome-ignore lint/style/noNonNullAssertion: split after includes check
-      const className = symbol.includes(".") ? symbol.split(".")[0]! : symbol;
-      const fallbackMessage = `Resolved '${className}' to ${className}.${fallback.methodName}`;
-      message = message ? `${message}\n\n${fallbackMessage}` : fallbackMessage;
-      nodeId = fallback.methodId;
-      edges = queryDependencyEdges(db, nodeId);
+      if (fallback.type === "multiple-methods") {
+        // biome-ignore lint/style/noNonNullAssertion: split after includes check
+        const className = symbol.includes(".") ? symbol.split(".")[0]! : symbol;
+        const disambiguation = formatDisambiguationMessage(
+          className,
+          fallback.methods,
+        );
+        const error = message
+          ? `${message}\n\n${disambiguation}`
+          : disambiguation;
+        return { success: false, error };
+      }
+
+      if (fallback.type === "single-method") {
+        // biome-ignore lint/style/noNonNullAssertion: split after includes check
+        const className = symbol.includes(".") ? symbol.split(".")[0]! : symbol;
+        const fallbackMessage = `Resolved '${className}' to ${className}.${fallback.methodName}`;
+        message = message
+          ? `${message}\n\n${fallbackMessage}`
+          : fallbackMessage;
+        resolvedNodeIds = [fallback.methodId];
+        edges = queryEdges(db, fallback.methodId);
+        break;
+      }
     }
-    // Note: multiple-methods case is not handled here - caller should handle disambiguation
   }
 
   const nodeIds = collectNodeIds(edges);
@@ -73,10 +99,22 @@ export const queryDependencies = (
     success: true,
     edges,
     nodeIds,
-    nodeId,
+    resolvedNodeIds,
+    filePathWasResolved,
     message,
   };
 };
+
+/**
+ * Query forward dependencies (raw edges, no formatting).
+ * Use this when you need to filter edges before formatting.
+ */
+export const queryDependencies = (
+  db: Database.Database,
+  filePath: string | undefined,
+  symbol: string,
+): TraversalQueryResult =>
+  resolveAndTraverse(db, filePath, symbol, queryDependencyEdges);
 
 /**
  * Query reverse dependencies (raw edges, no formatting).
@@ -86,38 +124,5 @@ export const queryDependents = (
   db: Database.Database,
   filePath: string | undefined,
   symbol: string,
-): TraversalQueryResult => {
-  const resolution = resolveSymbol(db, filePath, symbol);
-  if (!resolution.success) {
-    return { success: false, error: resolution.error };
-  }
-
-  let nodeId = resolution.nodeId;
-  let edges = queryDependentEdges(db, nodeId);
-  let message = resolution.message;
-
-  // If no dependents found, attempt class method fallback
-  if (edges.length === 0) {
-    const fallback = attemptClassMethodFallback(db, nodeId);
-
-    if (fallback.type === "single-method") {
-      // biome-ignore lint/style/noNonNullAssertion: split after includes check
-      const className = symbol.includes(".") ? symbol.split(".")[0]! : symbol;
-      const fallbackMessage = `Resolved '${className}' to ${className}.${fallback.methodName}`;
-      message = message ? `${message}\n\n${fallbackMessage}` : fallbackMessage;
-      nodeId = fallback.methodId;
-      edges = queryDependentEdges(db, nodeId);
-    }
-    // Note: multiple-methods case is not handled here - caller should handle disambiguation
-  }
-
-  const nodeIds = collectNodeIds(edges);
-
-  return {
-    success: true,
-    edges,
-    nodeIds,
-    nodeId,
-    message,
-  };
-};
+): TraversalQueryResult =>
+  resolveAndTraverse(db, filePath, symbol, queryDependentEdges);

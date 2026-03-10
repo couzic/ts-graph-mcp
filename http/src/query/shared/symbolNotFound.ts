@@ -25,7 +25,7 @@ interface SymbolMatch {
 export type SymbolResolution =
   | {
       success: true;
-      nodeId: string;
+      nodeIds: string[];
       message?: string;
       filePathWasResolved?: boolean;
     }
@@ -145,7 +145,7 @@ export const resolveSymbol = (
     // Query by file_path + name to find exact matches
     const exactMatches = db
       .prepare<[string, string], { id: string }>(
-        "SELECT id FROM nodes WHERE file_path = ? AND name = ? LIMIT 2",
+        "SELECT id FROM nodes WHERE file_path = ? AND name = ? LIMIT 10",
       )
       .all(filePath, symbol);
 
@@ -159,23 +159,19 @@ export const resolveSymbol = (
       const idEndsWithSymbol = matchedId.endsWith(`:${symbol}`);
       if (idEndsWithSymbol) {
         // True exact match - return without message (clean output)
-        return { success: true, nodeId: matchedId };
+        return { success: true, nodeIds: [matchedId] };
       }
       // Name matches but symbol path is different (e.g., method on a class)
       const typeAndSymbol = extractTypeAndSymbolFromId(matchedId);
       const message = `Found '${symbol}' as ${typeAndSymbol} in ${filePath}`;
-      return { success: true, nodeId: matchedId, message };
+      return { success: true, nodeIds: [matchedId], message };
     }
 
+    /** @spec tool::resolve.same-file-coalescing */
     if (exactMatches.length > 1) {
-      // Multiple matches with same name in same file (rare but possible with different types)
-      const lines = [
-        `Multiple symbols named '${symbol}' found in ${filePath}:`,
-      ];
-      for (const match of exactMatches) {
-        lines.push(`  - ${extractTypeAndSymbolFromId(match.id)}`);
-      }
-      return { success: false, error: lines.join("\n") };
+      // Same name, same file, different node types (e.g. TypeAlias + Variable)
+      // Coalesce into a single resolution with multiple nodeIds
+      return { success: true, nodeIds: exactMatches.map((m) => m.id) };
     }
 
     // No exact match - search within that file for method matches (e.g., Class.method)
@@ -185,7 +181,7 @@ export const resolveSymbol = (
       const match = matchesInFile[0]!;
       // Show message because we resolved to a different symbol name
       const message = `Found '${symbol}' as ${match.name} in ${match.filePath}`;
-      return { success: true, nodeId: match.nodeId, message };
+      return { success: true, nodeIds: [match.nodeId], message };
     }
     if (matchesInFile.length > 1) {
       // Multiple matches within the same file - disambiguation
@@ -218,13 +214,30 @@ export const resolveSymbol = (
     const message = `Found '${symbol}' in ${match.filePath}`;
     return {
       success: true,
-      nodeId: match.nodeId,
+      nodeIds: [match.nodeId],
       message,
       filePathWasResolved,
     };
   }
 
-  // Multiple matches - disambiguation
+  // Multiple matches — check if all are in the same file (coalesce)
+  // biome-ignore lint/style/noNonNullAssertion: length > 1 checked above
+  const firstFilePath = matches[0]!.filePath;
+  const allSameFile = matches.every((m) => m.filePath === firstFilePath);
+
+  /** @spec tool::resolve.same-file-coalescing */
+  if (allSameFile) {
+    const filePathWasResolved = !filePath;
+    const message = `Found '${symbol}' in ${firstFilePath}`;
+    return {
+      success: true,
+      nodeIds: matches.map((m) => m.nodeId),
+      message,
+      filePathWasResolved,
+    };
+  }
+
+  // Cross-file ambiguity - disambiguation
   const lines = [`Multiple symbols named '${symbol}' found:`];
   for (const match of matches) {
     lines.push(`  - ${match.name} (${match.filePath})`);
