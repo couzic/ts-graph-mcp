@@ -35,7 +35,12 @@ export const indexFeatureFiles = async (
 ): Promise<IndexFeatureFilesResult> => {
   const specsDir = join(projectRoot, "specs");
   if (!existsSync(specsDir)) {
-    return { specIdMap: new Map(), nodesAdded: 0, edgesAdded: 0, filesProcessed: 0 };
+    return {
+      specIdMap: new Map(),
+      nodesAdded: 0,
+      edgesAdded: 0,
+      filesProcessed: 0,
+    };
   }
   const featureFilePaths = findFeatureFiles(specsDir);
   const specIdMap = new Map<string, string>();

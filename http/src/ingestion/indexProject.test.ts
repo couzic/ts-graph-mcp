@@ -470,7 +470,9 @@ describe("login", () => {
 
         // Feature and Spec nodes exist
         expect(nodeExists(db, "specs/auth.feature.md:Feature:auth")).toBe(true);
-        expect(nodeExists(db, "specs/auth.feature.md:Spec:auth::login")).toBe(true);
+        expect(nodeExists(db, "specs/auth.feature.md:Spec:auth::login")).toBe(
+          true,
+        );
 
         // TestSuite and Test nodes exist
         expect(

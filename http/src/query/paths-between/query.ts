@@ -95,7 +95,9 @@ export function queryPath(
     for (let i = 0; i < nodes.length - 1; i++) {
       const from = nodes[i];
       const to = nodes[i + 1];
-      if (from === undefined || to === undefined) { continue; }
+      if (from === undefined || to === undefined) {
+        continue;
+      }
       let edgeRow = db
         .prepare<[string, string], EdgeRow>(
           "SELECT * FROM edges WHERE source = ? AND target = ? LIMIT 1",

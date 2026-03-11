@@ -1,8 +1,12 @@
-import { describe, expect, it } from "vitest";
 import type { EdgeType } from "@ts-graph/shared";
+import { describe, expect, it } from "vitest";
 import { computeBfsOrder } from "./computeBfsOrder.js";
 
-const edge = (source: string, target: string, type: EdgeType = "CALLS"): { source: string; target: string; type: EdgeType } => ({
+const edge = (
+  source: string,
+  target: string,
+  type: EdgeType = "CALLS",
+): { source: string; target: string; type: EdgeType } => ({
   source,
   target,
   type,
@@ -79,10 +83,7 @@ describe("computeBfsOrder", () => {
     // F --TAKES--> I, C --IMPLEMENTS--> I
     // Without bidirectional: C is a root (no incoming), visited early
     // With bidirectional: I has reverse adjacency to C, so C is visited after I
-    const edges = [
-      edge("F", "I", "TAKES"),
-      edge("C", "I", "IMPLEMENTS"),
-    ];
+    const edges = [edge("F", "I", "TAKES"), edge("C", "I", "IMPLEMENTS")];
     const order = computeBfsOrder(edges);
     expect(order.indexOf("F")).toBeLessThan(order.indexOf("I"));
     expect(order.indexOf("I")).toBeLessThan(order.indexOf("C"));

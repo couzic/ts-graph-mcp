@@ -139,7 +139,11 @@ export const pathsBetweenData = (
   }
 
   // Check if all combinations were same-symbol
-  if (fromNodeIds.length === 1 && toNodeIds.length === 1 && fromNodeIds[0] === toNodeIds[0]) {
+  if (
+    fromNodeIds.length === 1 &&
+    toNodeIds.length === 1 &&
+    fromNodeIds[0] === toNodeIds[0]
+  ) {
     const msg = "Invalid query: source and target are the same symbol.";
     return messageResult(
       resolutionPrefix ? `${resolutionPrefix}\n\n${msg}` : msg,

@@ -345,7 +345,15 @@ describe("BFS truncation keeps direct neighbors over deep descendants", () => {
     const deep2 = fn("deep2", "src/deep2.ts");
     const deep3 = fn("deep3", "src/deep3.ts");
 
-    await writer.addNodes([root, directA, directB, directC, deep1, deep2, deep3]);
+    await writer.addNodes([
+      root,
+      directA,
+      directB,
+      directC,
+      deep1,
+      deep2,
+      deep3,
+    ]);
     await writer.addEdges([
       calls(root.id, directA.id),
       calls(root.id, directB.id),

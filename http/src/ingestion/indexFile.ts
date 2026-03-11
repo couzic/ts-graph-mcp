@@ -103,7 +103,7 @@ export const indexFile = async (
   // Extract nodes
   const extractedNodes: ExtractedNode[] = extractNodes(sourceFile, context);
 
-  /** 
+  /**
    * Extract test nodes for test files
    * @spec traceability::search-indexing
    */

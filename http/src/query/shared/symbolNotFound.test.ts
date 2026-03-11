@@ -296,7 +296,9 @@ describe("resolveSymbol", () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.nodeIds).toEqual(["src/entity.ts:Method:User.getSituations"]);
+      expect(result.nodeIds).toEqual([
+        "src/entity.ts:Method:User.getSituations",
+      ]);
       expect(result.message).toContain(
         "Found 'getSituations' as Method:User.getSituations in src/entity.ts",
       );
@@ -477,7 +479,9 @@ describe("resolveSymbol", () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.nodeIds).toEqual(["src/entity.ts:Method:User.getSituations"]);
+      expect(result.nodeIds).toEqual([
+        "src/entity.ts:Method:User.getSituations",
+      ]);
       expect(result.message).toContain("User.getSituations");
     }
   });
@@ -613,7 +617,9 @@ export const Config = { port: 3000 };`,
 
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error).toContain("Multiple symbols named 'Config' found:");
+        expect(result.error).toContain(
+          "Multiple symbols named 'Config' found:",
+        );
       }
     });
   });

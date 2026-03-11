@@ -13,10 +13,7 @@ import type { TsGraphLogger } from "../logging/TsGraphLogger.js";
 import type { SearchIndexWrapper } from "../search/createSearchIndex.js";
 import type { EdgeExtractionContext } from "./extract/edges/EdgeExtractionContext.js";
 import { parseFeatureFile } from "./extract/specs/parseFeatureFile.js";
-import {
-  findFeatureFiles,
-  reindexFeatureFile,
-} from "./indexFeatureFiles.js";
+import { findFeatureFiles, reindexFeatureFile } from "./indexFeatureFiles.js";
 import { indexFile } from "./indexFile.js";
 import {
   compareManifest,
@@ -253,7 +250,12 @@ export const syncOnStartup = async (
         };
 
         // Use shared indexFile function (writes to both DB and search index)
-        const result = await indexFile(sourceFile, extractionContext, writer, embeddingOptions);
+        const result = await indexFile(
+          sourceFile,
+          extractionContext,
+          writer,
+          embeddingOptions,
+        );
         filesReindexed++;
         nodesAdded += result.nodesAdded;
 
@@ -316,7 +318,14 @@ const syncFeatureFiles = async (
   const specIdMap = new Map<string, string>();
   const specsDir = join(projectRoot, "specs");
   if (!existsSync(specsDir)) {
-    return { stale: 0, deleted: 0, added: 0, reindexed: 0, nodesAdded: 0, specIdMap };
+    return {
+      stale: 0,
+      deleted: 0,
+      added: 0,
+      reindexed: 0,
+      nodesAdded: 0,
+      specIdMap,
+    };
   }
 
   // Discover current feature files
@@ -403,7 +412,14 @@ const syncFeatureFiles = async (
     }
   }
 
-  return { stale: stale.length, deleted: deleted.length, added: added.length, reindexed, nodesAdded, specIdMap };
+  return {
+    stale: stale.length,
+    deleted: deleted.length,
+    added: added.length,
+    reindexed,
+    nodesAdded,
+    specIdMap,
+  };
 };
 
 /**

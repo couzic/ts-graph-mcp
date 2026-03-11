@@ -1,11 +1,11 @@
 import type Database from "better-sqlite3";
+import { queryDependencies } from "../search-graph/traverseGraph.js";
 import { collectNodeIds } from "../shared/collectNodeIds.js";
 import { formatMcpFromResult } from "../shared/formatFromResult.js";
 import { messageResult, type QueryResult } from "../shared/QueryResult.js";
 import { queryAliasMap } from "../shared/queryAliasMap.js";
 import { queryNodeInfos } from "../shared/queryNodeInfos.js";
 import { queryNodeMetadata } from "../shared/queryNodeMetadata.js";
-import { queryDependencies } from "../search-graph/traverseGraph.js";
 
 /**
  * Find all code that a symbol depends on (forward dependencies) — returns structured data.

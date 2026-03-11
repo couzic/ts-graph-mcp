@@ -46,7 +46,10 @@ const resolveAndTraverse = (
   db: Database.Database,
   filePath: string | undefined,
   symbol: string,
-  queryEdges: (db: Database.Database, nodeId: string) => GraphEdgeWithCallSites[],
+  queryEdges: (
+    db: Database.Database,
+    nodeId: string,
+  ) => GraphEdgeWithCallSites[],
 ): TraversalQueryResult => {
   const resolution = resolveSymbol(db, filePath, symbol);
   if (!resolution.success) {

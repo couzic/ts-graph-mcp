@@ -67,7 +67,9 @@ describe(parseFeatureFile.name, () => {
     assert(result.specs[0] !== undefined);
     assert(result.specs[1] !== undefined);
     expect(result.specs[0].id).toBe(`${filePath}:Spec:my-feature::some-spec`);
-    expect(result.specs[1].id).toBe(`${filePath}:Spec:my-feature::another-spec`);
+    expect(result.specs[1].id).toBe(
+      `${filePath}:Spec:my-feature::another-spec`,
+    );
   });
 
   it("sets spec names to the spec ID string", () => {
@@ -113,8 +115,12 @@ describe(parseFeatureFile.name, () => {
     }
     assert(result.edges[0] !== undefined);
     assert(result.edges[1] !== undefined);
-    expect(result.edges[0].target).toBe(`${filePath}:Spec:my-feature::some-spec`);
-    expect(result.edges[1].target).toBe(`${filePath}:Spec:my-feature::another-spec`);
+    expect(result.edges[0].target).toBe(
+      `${filePath}:Spec:my-feature::some-spec`,
+    );
+    expect(result.edges[1].target).toBe(
+      `${filePath}:Spec:my-feature::another-spec`,
+    );
   });
 
   it("handles feature with no specs", () => {

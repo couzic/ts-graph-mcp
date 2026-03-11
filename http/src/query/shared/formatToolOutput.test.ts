@@ -578,13 +578,41 @@ describe(truncateEdges.name, () => {
   it("keeps direct calls over deep chains (BFS over DFS)", () => {
     // A calls B, C, D, E — B calls F, F calls G, G calls H
     const edges: GraphEdge[] = [
-      { source: "src/a.ts:Function:fnA", target: "src/b.ts:Function:fnB", type: "CALLS" },
-      { source: "src/b.ts:Function:fnB", target: "src/f.ts:Function:fnF", type: "CALLS" },
-      { source: "src/f.ts:Function:fnF", target: "src/g.ts:Function:fnG", type: "CALLS" },
-      { source: "src/g.ts:Function:fnG", target: "src/h.ts:Function:fnH", type: "CALLS" },
-      { source: "src/a.ts:Function:fnA", target: "src/c.ts:Function:fnC", type: "CALLS" },
-      { source: "src/a.ts:Function:fnA", target: "src/d.ts:Function:fnD", type: "CALLS" },
-      { source: "src/a.ts:Function:fnA", target: "src/e.ts:Function:fnE", type: "CALLS" },
+      {
+        source: "src/a.ts:Function:fnA",
+        target: "src/b.ts:Function:fnB",
+        type: "CALLS",
+      },
+      {
+        source: "src/b.ts:Function:fnB",
+        target: "src/f.ts:Function:fnF",
+        type: "CALLS",
+      },
+      {
+        source: "src/f.ts:Function:fnF",
+        target: "src/g.ts:Function:fnG",
+        type: "CALLS",
+      },
+      {
+        source: "src/g.ts:Function:fnG",
+        target: "src/h.ts:Function:fnH",
+        type: "CALLS",
+      },
+      {
+        source: "src/a.ts:Function:fnA",
+        target: "src/c.ts:Function:fnC",
+        type: "CALLS",
+      },
+      {
+        source: "src/a.ts:Function:fnA",
+        target: "src/d.ts:Function:fnD",
+        type: "CALLS",
+      },
+      {
+        source: "src/a.ts:Function:fnA",
+        target: "src/e.ts:Function:fnE",
+        type: "CALLS",
+      },
     ];
 
     const result = truncateEdges(edges, 5);

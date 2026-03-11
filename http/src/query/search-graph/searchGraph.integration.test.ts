@@ -39,10 +39,7 @@ const fn = (name: string, file = "src/test.ts"): FunctionNode => ({
   snippet: `function ${name}() { return true; }`,
 });
 
-const typeAlias = (
-  name: string,
-  file = "src/test.ts",
-): TypeAliasNode => ({
+const typeAlias = (name: string, file = "src/test.ts"): TypeAliasNode => ({
   id: `${file}:TypeAlias:${name}`,
   type: "TypeAlias",
   name,
@@ -55,10 +52,7 @@ const typeAlias = (
   snippet: `type ${name} = { value: string };`,
 });
 
-const variable = (
-  name: string,
-  file = "src/test.ts",
-): VariableNode => ({
+const variable = (name: string, file = "src/test.ts"): VariableNode => ({
   id: `${file}:Variable:${name}`,
   type: "Variable",
   name,
