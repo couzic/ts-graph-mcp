@@ -193,9 +193,9 @@ Requirements:
 
 ## Supported Types
 
-**Nodes:** Function, Class, Method, Interface, TypeAlias, Variable, SyntheticType
+**Nodes:** Function, Class, Method, Interface, TypeAlias, Variable, SyntheticType, Feature, Spec, TestSuite, Test
 
-**Edges:** CALLS, IMPLEMENTS, EXTENDS, TAKES, RETURNS, HAS_TYPE, HAS_PROPERTY, DERIVES_FROM, ALIAS_FOR, REFERENCES, INCLUDES
+**Edges:** CALLS, IMPLEMENTS, EXTENDS, TAKES, RETURNS, HAS_TYPE, HAS_PROPERTY, DERIVES_FROM, ALIAS_FOR, REFERENCES, INCLUDES, CONTAINS, SPECIFIES, VERIFIED_BY
 
 ## Development
 

@@ -12,7 +12,7 @@ const insertNode = (
   id: string,
   name: string,
   type: string,
-  pkg: string,
+  pkg: string | null,
   filePath: string,
 ) => {
   db.prepare(
@@ -162,6 +162,26 @@ describe("queryNodeMetadata", () => {
     expect(result.get("shared/utils.ts:Variable:format")?.type).toBe(
       "Variable",
     );
+  });
+
+  it("returns null package for traceability nodes", () => {
+    insertNode(
+      db,
+      "specs/auth.feature.md:Feature:auth",
+      "auth",
+      "Feature",
+      null,
+      "specs/auth.feature.md",
+    );
+
+    const result = queryNodeMetadata(db, [
+      "specs/auth.feature.md:Feature:auth",
+    ]);
+
+    expect(result.get("specs/auth.feature.md:Feature:auth")).toEqual({
+      package: null,
+      type: "Feature",
+    });
   });
 
   it("ignores unknown node IDs", () => {

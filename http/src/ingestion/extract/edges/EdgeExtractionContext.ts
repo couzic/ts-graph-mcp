@@ -9,4 +9,9 @@ export interface EdgeExtractionContext {
    * that need a different tsconfig context.
    */
   projectRegistry?: ProjectRegistry;
+  /**
+   * Map from short spec ID (e.g. "tool::forward-traversal") to full node ID.
+   * Built from parseFeatureFile output. When present, extractSpecEdges runs.
+   */
+  specIdMap?: Map<string, string>;
 }

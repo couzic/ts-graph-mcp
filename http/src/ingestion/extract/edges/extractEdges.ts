@@ -6,6 +6,7 @@ import { extractHasPropertyEdges } from "./extractHasPropertyEdges.js";
 import { extractHasTypeEdges } from "./extractHasTypeEdges.js";
 import { extractInheritanceEdges } from "./extractInheritanceEdges.js";
 import { extractReferenceEdges } from "./extractReferenceEdges.js";
+import { extractSpecEdges } from "./extractSpecEdges.js";
 import { extractTakesReturnsEdges } from "./extractTakesReturnsEdges.js";
 import { extractTypeAliasEdges } from "./extractTypeAliasEdges.js";
 
@@ -29,11 +30,18 @@ export const extractEdges = (
   edges.push(...extractInheritanceEdges(sourceFile, context));
   edges.push(...extractReferenceEdges(sourceFile, context));
 
-  // Type signature edges (new)
+  // Type signature edges
   edges.push(...extractTakesReturnsEdges(sourceFile, context));
   edges.push(...extractHasTypeEdges(sourceFile, context));
   edges.push(...extractHasPropertyEdges(sourceFile, context));
   edges.push(...extractTypeAliasEdges(sourceFile, context));
+
+  // Traceability edges (@spec annotations)
+  if (context.specIdMap) {
+    edges.push(
+      ...extractSpecEdges(sourceFile, context.filePath, context.specIdMap),
+    );
+  }
 
   return edges;
 };

@@ -2,13 +2,13 @@ import type { NodeType } from "@ts-graph/shared";
 import type Database from "better-sqlite3";
 
 export interface NodeMetadata {
-  package: string;
+  package: string | null;
   type: NodeType;
 }
 
 interface MetadataRow {
   id: string;
-  package: string;
+  package: string | null;
   type: NodeType;
 }
 

@@ -22,7 +22,7 @@ export const groupNodesBySubgraph = (
   if (metadataByNodeId) {
     for (const nodeId of nodeIds) {
       const meta = metadataByNodeId.get(nodeId);
-      if (meta) {
+      if (meta?.package) {
         uniquePackages.add(meta.package);
       }
     }

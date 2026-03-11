@@ -8,47 +8,52 @@
 
 ## Near-term Enhancements
 
-### Spec ID Indexing (`@spec` in Graph Nodes)
+### Test Hook Nodes (`beforeEach`, `beforeAll`, `afterEach`, `afterAll`)
 
-**Impact: Medium | Effort: Low**
+**Impact: Low | Effort: Low**
 
-Index `@spec` JSDoc annotations as metadata on graph nodes.
+Index test lifecycle hooks as graph nodes.
 
-**The Problem:** The spec system requires every spec ID to be referenced via
-`@spec` in implementation code. Currently there's no way to query which specs a
-function implements, or which functions implement a given spec. The graph doesn't
-know about specs.
+**Prerequisite:** Spec traceability feature (see `specs/traceability/`).
 
-**Goal:** Each graph node carries a list of spec IDs it implements. Enables:
+**The Problem:** Implementation code called only from test hooks (e.g.,
+`setupDatabase()` in `beforeEach`) appears disconnected in the graph. CALLS
+edges from hooks to implementation code are invisible.
 
-- "Which functions implement `indexing::re-export-transparency`?"
-- "Does this spec have any implementation references?"
-- Spec coverage reports from graph queries
+**Goal:** `TestHook` node type, connected to its parent TestSuite via `CONTAINS`
+edge. Enables CALLS edge extraction from hook bodies.
 
-**Approach: position-based scanning.** For each extracted node (function, method,
-class), scan the body's descendants for any `JSDocableNode` with `@spec` tags.
-Since ts-morph's `JSDocableNode` includes `ExpressionStatement`, this catches
-annotations on both declarations and expression statements:
+- ID format: `file.test.ts:TestHook:formatDate > beforeEach`
+- Hooks: `beforeEach`, `beforeAll`, `afterEach`, `afterAll`
+- Low search value (no descriptive names), high graph traversal value
 
-```typescript
-// ✅ On a local declaration
-/** @spec server::startup.orphan-cleanup */
-const orphanedEdges = cleanOrphanedEdges(db);
+---
 
-// ✅ On an expression statement (e.g., Express route)
-/** @spec server::api.health */
-app.get("/health", (_req, res) => { ... });
+### Configurable Feature File Locations
+
+**Impact: Low | Effort: Low**
+
+Allow feature files to live outside `specs/`.
+
+**Current state:** Feature files (`*.feature.md`) are only discovered under the
+`specs/` directory at the project root.
+
+**The Problem:** In larger projects, teams may want feature files colocated with
+their packages (e.g., `packages/auth/specs/auth.feature.md`) rather than in a
+single top-level `specs/` directory.
+
+**Solution:** Add a `specs.paths` config option listing directories to scan for
+`*.feature.md` files:
+
+```json
+{
+  "specs": {
+    "paths": ["specs/", "packages/auth/specs/", "packages/billing/specs/"]
+  }
+}
 ```
 
-Both are attributed to the enclosing function node in the graph.
-
-**Implementation:**
-
-1. During node extraction, scan each function/method/class body for descendant
-   `JSDocableNode`s with `@spec` tags
-2. Collect spec IDs from the node's own JSDoc + all descendant `@spec` tags
-3. Store spec IDs as a node property (e.g., `specs: string[]`)
-4. Expose in search index for querying
+Default remains `["specs/"]` for backward compatibility.
 
 ---
 

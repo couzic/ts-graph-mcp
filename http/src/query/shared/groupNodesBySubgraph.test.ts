@@ -139,6 +139,33 @@ describe(groupNodesBySubgraph.name, () => {
       expect(result.get("shared")).toEqual(["shared/utils.ts:Function:format"]);
     });
 
+    it("falls back to file path for nodes with null package", () => {
+      const nodeIds = new Set([
+        "http/api.ts:Function:handler",
+        "shared/utils.ts:Function:format",
+        "specs/auth.feature.md:Feature:auth",
+      ]);
+      const metadata = new Map<string, NodeMetadata>([
+        ["http/api.ts:Function:handler", { package: "http", type: "Function" }],
+        [
+          "shared/utils.ts:Function:format",
+          { package: "shared", type: "Function" },
+        ],
+        [
+          "specs/auth.feature.md:Feature:auth",
+          { package: null, type: "Feature" },
+        ],
+      ]);
+
+      const result = groupNodesBySubgraph(nodeIds, metadata);
+
+      expect(result.get("http")).toEqual(["http/api.ts:Function:handler"]);
+      expect(result.get("shared")).toEqual(["shared/utils.ts:Function:format"]);
+      expect(result.get("specs/auth.feature.md")).toEqual([
+        "specs/auth.feature.md:Feature:auth",
+      ]);
+    });
+
     it("groups three packages correctly", () => {
       const nodeIds = new Set([
         "http/api.ts:Function:handler",

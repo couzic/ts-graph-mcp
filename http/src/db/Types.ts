@@ -8,8 +8,8 @@ export interface CallSiteRange {
   end: number;
 }
 
-// Base Node (shared properties)
-export interface BaseNode {
+// Core Node (fields shared by all nodes)
+export interface CoreNode {
   /** Unique ID: "{relativePath}:{symbolPath}" e.g., "src/utils.ts:formatDate" */
   id: string;
 
@@ -18,9 +18,6 @@ export interface BaseNode {
 
   /** Symbol name (e.g., "formatDate", "User") */
   name: string;
-
-  /** Package name from config */
-  package: string;
 
   /** Relative file path */
   filePath: string;
@@ -39,6 +36,18 @@ export interface BaseNode {
 
   /** Source code snippet for this node */
   snippet: string;
+}
+
+// Base Node (TS symbol nodes with required package)
+export interface BaseNode extends CoreNode {
+  /** Package name from config */
+  package: string;
+}
+
+// Traceability Base Node (optional package)
+export interface TraceabilityBaseNode extends CoreNode {
+  /** Package name (optional for traceability nodes) */
+  package?: string;
 }
 
 // Node Variants (Discriminated Union)
@@ -85,6 +94,22 @@ export interface SyntheticTypeNode extends BaseNode {
   type: "SyntheticType";
 }
 
+export interface FeatureNode extends TraceabilityBaseNode {
+  type: "Feature";
+}
+
+export interface SpecNode extends TraceabilityBaseNode {
+  type: "Spec";
+}
+
+export interface TestSuiteNode extends TraceabilityBaseNode {
+  type: "TestSuite";
+}
+
+export interface TestNode extends TraceabilityBaseNode {
+  type: "Test";
+}
+
 export type Node =
   | FunctionNode
   | ClassNode
@@ -92,13 +117,17 @@ export type Node =
   | InterfaceNode
   | TypeAliasNode
   | VariableNode
-  | SyntheticTypeNode;
+  | SyntheticTypeNode
+  | FeatureNode
+  | SpecNode
+  | TestSuiteNode
+  | TestNode;
 
 /**
  * A node as returned by extractors, before contentHash and snippet are added.
  * Extractors create nodes without these fields; indexFile enriches them later.
  */
-export type Extracted<T extends BaseNode> = Omit<T, "contentHash" | "snippet">;
+export type Extracted<T extends CoreNode> = Omit<T, "contentHash" | "snippet">;
 
 /** Union of all extracted node types (before enrichment). */
 export type ExtractedNode = Extracted<Node>;

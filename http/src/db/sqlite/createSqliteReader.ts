@@ -16,7 +16,7 @@ interface NodeRow {
   id: string;
   type: string;
   name: string;
-  package: string;
+  package: string | null;
   file_path: string;
   start_line: number;
   end_line: number;
