@@ -21,6 +21,10 @@ export const NODE_TYPES = [
   "TypeAlias",
   "Variable",
   "SyntheticType",
+  "Feature",
+  "Spec",
+  "TestSuite",
+  "Test",
 ] as const;
 
 export type NodeType = (typeof NODE_TYPES)[number];
@@ -41,13 +45,21 @@ export const COMPILE_TIME_EDGE_TYPES = [
   "ALIAS_FOR",
 ] as const;
 
+export const TRACEABILITY_EDGE_TYPES = [
+  "CONTAINS",
+  "SPECIFIES",
+  "VERIFIED_BY",
+] as const;
+
 export const EDGE_TYPES = [
   ...RUNTIME_EDGE_TYPES,
   ...COMPILE_TIME_EDGE_TYPES,
+  ...TRACEABILITY_EDGE_TYPES,
 ] as const;
 
 export type RuntimeEdgeType = (typeof RUNTIME_EDGE_TYPES)[number];
 export type CompileTimeEdgeType = (typeof COMPILE_TIME_EDGE_TYPES)[number];
+export type TraceabilityEdgeType = (typeof TRACEABILITY_EDGE_TYPES)[number];
 export type EdgeType = (typeof EDGE_TYPES)[number];
 
 /** @spec graph-model::edges.calls-metadata */
@@ -59,7 +71,7 @@ export interface CallSiteRange {
 }
 
 /** @spec graph-model::nodes.base-properties */
-export interface BaseNode {
+export interface CoreNode {
   /** Unique ID: "{relativePath}:{symbolPath}" e.g., "src/utils.ts:formatDate" */
   id: NodeId;
 
@@ -68,9 +80,6 @@ export interface BaseNode {
 
   /** Symbol name (e.g., "formatDate", "User") */
   name: string;
-
-  /** Package name from config */
-  package: string;
 
   /** Relative file path */
   filePath: string;
@@ -83,6 +92,16 @@ export interface BaseNode {
 
   /** Whether exported from module */
   exported: boolean;
+}
+
+export interface BaseNode extends CoreNode {
+  /** Package name from config */
+  package: string;
+}
+
+export interface TraceabilityBaseNode extends CoreNode {
+  /** Package name (optional for traceability nodes) */
+  package?: string;
 }
 
 /** @spec graph-model::nodes.function-properties */
@@ -129,13 +148,33 @@ export interface VariableNode extends BaseNode {
   isConst?: boolean;
 }
 
+export interface FeatureNode extends TraceabilityBaseNode {
+  type: "Feature";
+}
+
+export interface SpecNode extends TraceabilityBaseNode {
+  type: "Spec";
+}
+
+export interface TestSuiteNode extends TraceabilityBaseNode {
+  type: "TestSuite";
+}
+
+export interface TestNode extends TraceabilityBaseNode {
+  type: "Test";
+}
+
 export type Node =
   | FunctionNode
   | ClassNode
   | MethodNode
   | InterfaceNode
   | TypeAliasNode
-  | VariableNode;
+  | VariableNode
+  | FeatureNode
+  | SpecNode
+  | TestSuiteNode
+  | TestNode;
 
 /** @spec graph-model::edges.composite-key */
 export interface Edge {

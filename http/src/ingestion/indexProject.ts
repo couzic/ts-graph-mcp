@@ -7,6 +7,7 @@ import { openEmbeddingCache } from "../embedding/embeddingCache.js";
 import type { TsGraphLogger } from "../logging/TsGraphLogger.js";
 import type { SearchIndexWrapper } from "../search/createSearchIndex.js";
 import type { EdgeExtractionContext } from "./extract/edges/EdgeExtractionContext.js";
+import { indexFeatureFiles } from "./indexFeatureFiles.js";
 import type { EmbeddingCache } from "./indexFile.js";
 import { indexFile } from "./indexFile.js";
 import {
@@ -79,6 +80,15 @@ export const indexProject = async (
   // Create project registry for cross-package resolution
   const projectRegistry = createProjectRegistry(config, options.projectRoot);
 
+  // Index feature files first to build specIdMap for @spec edge resolution
+  const featureResult = await indexFeatureFiles(options.projectRoot, dbWriter, {
+    searchIndex: options.searchIndex,
+    embeddingProvider: options.embeddingProvider,
+    embeddingCache,
+  });
+  nodesAdded += featureResult.nodesAdded;
+  edgesAdded += featureResult.edgesAdded;
+
   // Process each package, streaming nodes and edges to DB
   for (const pkg of config.packages) {
     try {
@@ -92,6 +102,7 @@ export const indexProject = async (
         options.searchIndex,
         options.embeddingProvider,
         embeddingCache,
+        featureResult.specIdMap,
       );
 
       filesProcessed += result.filesProcessed;
@@ -158,6 +169,7 @@ const processPackage = async (
   searchIndex: SearchIndexWrapper,
   embeddingProvider: EmbeddingProvider,
   embeddingCache: EmbeddingCache | undefined,
+  specIdMap: Map<string, string>,
 ): Promise<PackageProcessResult> => {
   const errors: Array<{ file: string; message: string }> = [];
   const filesIndexed: string[] = [];
@@ -215,6 +227,7 @@ const processPackage = async (
       filePath: relativePath,
       package: packageName,
       projectRegistry,
+      specIdMap,
     };
 
     try {

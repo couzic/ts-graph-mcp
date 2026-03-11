@@ -17,6 +17,11 @@ import { bufferDebounce } from "./bufferDebounce.js";
 import { createProject } from "./createProject.js";
 import type { EdgeExtractionContext } from "./extract/edges/EdgeExtractionContext.js";
 import { extractConfiguredPackageNames } from "./extractConfiguredPackageNames.js";
+import {
+  buildSpecIdMap,
+  reindexFeatureFile,
+  updateSpecIdMapForFile,
+} from "./indexFeatureFiles.js";
 import { indexFile } from "./indexFile.js";
 import {
   type IndexManifest,
@@ -89,6 +94,9 @@ interface FileContext {
   tsconfigPath: string;
 }
 
+const isFeatureFile = (absolutePath: string): boolean =>
+  absolutePath.endsWith(".feature.md");
+
 /**
  * Resolve a file path to its package context.
  * Returns null if the file doesn't belong to any configured package.
@@ -118,6 +126,7 @@ const resolveFileContext = (
  *
  * Uses tsconfig as the source of truth for which files to index.
  * Only files that are part of the tsconfig compilation will be indexed.
+ * Also watches specs/ for *.feature.md changes.
  *
  * On file add/change: validates against tsconfig, removes old data, extracts new nodes/edges.
  * On file unlink: removes all nodes/edges for that file.
@@ -168,6 +177,9 @@ export const watchProject = (
   // Create project registry for cross-package resolution
   const projectRegistry = createProjectRegistry(config, projectRoot);
 
+  // Build specIdMap from existing feature files (used for @spec edge extraction)
+  const specIdMap = buildSpecIdMap(projectRoot);
+
   /**
    * Check if a file is part of the tsconfig compilation.
    */
@@ -191,10 +203,10 @@ export const watchProject = (
   };
 
   /**
-   * Reindex a single file.
+   * Reindex a single TS file.
    * Creates a fresh Project for accurate cross-file resolution.
    */
-  const reindexFile = async (
+  const reindexTsFile = async (
     absolutePath: string,
     context: FileContext,
   ): Promise<{ nodesAdded: number; edgesAdded: number }> => {
@@ -221,6 +233,7 @@ export const watchProject = (
       filePath: context.relativePath,
       package: context.package,
       projectRegistry,
+      specIdMap,
     };
 
     // Use shared indexFile function (writes to both DB and search index)
@@ -243,13 +256,52 @@ export const watchProject = (
         continue;
       }
 
+      const relativePath = relative(projectRoot, absolutePath);
+
+      // Handle feature files separately
+      if (isFeatureFile(absolutePath)) {
+        try {
+          // Remove old data
+          await writer.removeFileNodes(relativePath);
+          if (searchIndex) {
+            await searchIndex.removeByFile(relativePath);
+          }
+
+          const result = await reindexFeatureFile(
+            absolutePath,
+            relativePath,
+            writer,
+            { searchIndex, embeddingProvider, embeddingCache },
+          );
+
+          // Update in-memory specIdMap (removes stale entries for this file)
+          updateSpecIdMapForFile(specIdMap, relativePath, result.specEntries);
+
+          if (result.nodesAdded > 0 || result.edgesAdded > 0) {
+            if (onReindex) {
+              reindexedFiles.push(relativePath);
+            }
+            updateManifestEntry(manifest, relativePath, absolutePath);
+            logger.success(
+              `Reindexed ${relativePath} (${result.nodesAdded} nodes, ${result.edgesAdded} edges)`,
+            );
+          }
+        } catch (error) {
+          logger.error(
+            `Error reindexing ${relativePath}: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        }
+        continue;
+      }
+
+      // TS file handling
       const context = resolveFileContext(absolutePath, config, projectRoot);
       if (!context) {
         continue; // File not in any configured package
       }
 
       try {
-        const { nodesAdded, edgesAdded } = await reindexFile(
+        const { nodesAdded, edgesAdded } = await reindexTsFile(
           absolutePath,
           context,
         );
@@ -280,7 +332,8 @@ export const watchProject = (
   };
 
   // Handle file deletion
-  const handleUnlink = async (relativePath: string): Promise<void> => {
+  const handleUnlink = async (absolutePath: string): Promise<void> => {
+    const relativePath = relative(projectRoot, absolutePath);
     try {
       await writer.deleteFile(relativePath);
       if (searchIndex) {
@@ -288,6 +341,15 @@ export const watchProject = (
       }
       removeManifestEntry(manifest, relativePath);
       saveManifest(cacheDir, manifest);
+
+      // If a feature file was deleted, remove its spec entries from specIdMap
+      if (isFeatureFile(absolutePath)) {
+        for (const [key, value] of specIdMap) {
+          if (value.startsWith(relativePath + ":")) {
+            specIdMap.delete(key);
+          }
+        }
+      }
     } catch (error) {
       logger.error(
         `Error removing ${relativePath}: ${error instanceof Error ? error.message : String(error)}`,
@@ -314,6 +376,7 @@ export const watchProject = (
   }
 
   // Build chokidar ignored patterns from excludeDirectories and excludeFiles
+  const specsDir = join(projectRoot, "specs");
   const buildIgnoredPatterns = (): (
     | string
     | ((path: string, stats?: Stats) => boolean)
@@ -337,8 +400,14 @@ export const watchProject = (
           path.includes("node_modules") || path.includes("/.claude/worktrees/")
         );
       }
+      // Allow feature files in specs/
+      if (path.endsWith(".feature.md") && path.startsWith(specsDir)) {
+        return false;
+      }
       // Ignore .d.ts files and non-TypeScript files
-      if (path.endsWith(".d.ts")) return true;
+      if (path.endsWith(".d.ts")) {
+        return true;
+      }
       return !path.endsWith(".ts") && !path.endsWith(".tsx");
     });
 
@@ -379,8 +448,7 @@ export const watchProject = (
     .on("change", handleFileChange)
     .on("unlink", (absolutePath) => {
       // Deletions are processed immediately (not debounced)
-      const relativePath = relative(projectRoot, absolutePath);
-      handleUnlink(relativePath);
+      handleUnlink(absolutePath);
     })
     .on("error", (error: unknown) => {
       logger.error(

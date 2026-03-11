@@ -1,6 +1,6 @@
 import type { SourceFile } from "ts-morph";
 import type { DbWriter } from "../db/DbWriter.js";
-import type { ExtractedNode, Node } from "../db/Types.js";
+import type { Edge, ExtractedNode, Node } from "../db/Types.js";
 import type { EmbeddingProvider } from "../embedding/EmbeddingTypes.js";
 import type { EmbeddingCacheConnection } from "../embedding/embeddingCache.js";
 import { embedWithFallback } from "../embedding/embedWithFallback.js";
@@ -9,6 +9,8 @@ import type { SearchDocument } from "../search/SearchTypes.js";
 import type { EdgeExtractionContext } from "./extract/edges/EdgeExtractionContext.js";
 import { extractEdges } from "./extract/edges/extractEdges.js";
 import { extractNodes } from "./extract/nodes/extractNodes.js";
+import { extractTestNodes } from "./extract/nodes/extractTestNodes.js";
+import { isTestFile } from "./extract/testCallUtils.js";
 
 /**
  * Extract source snippet for a node from the source file text.
@@ -99,7 +101,19 @@ export const indexFile = async (
   let edgesAdded = 0;
 
   // Extract nodes
-  const extractedNodes = extractNodes(sourceFile, context);
+  const extractedNodes: ExtractedNode[] = extractNodes(sourceFile, context);
+
+  /** 
+   * Extract test nodes for test files
+   * @spec traceability::search-indexing
+   */
+  const testEdges: Edge[] = [];
+  if (isTestFile(context.filePath)) {
+    const testResult = extractTestNodes(sourceFile, context.filePath);
+    extractedNodes.push(...testResult.nodes);
+    testEdges.push(...testResult.edges);
+  }
+
   if (extractedNodes.length > 0) {
     const sourceText = sourceFile.getFullText();
     const { embeddingProvider, embeddingCache, searchIndex } = options;
@@ -150,6 +164,7 @@ export const indexFile = async (
 
   // Extract and write edges
   const edges = extractEdges(sourceFile, context);
+  edges.push(...testEdges);
   if (edges.length > 0) {
     await writer.addEdges(edges);
     edgesAdded = edges.length;

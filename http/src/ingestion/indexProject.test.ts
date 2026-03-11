@@ -27,6 +27,18 @@ function nodeExists(db: Database.Database, nodeId: string): boolean {
   return row !== undefined;
 }
 
+function edgeExists(
+  db: Database.Database,
+  source: string,
+  target: string,
+  type: string,
+): boolean {
+  const row = db
+    .prepare("SELECT 1 FROM edges WHERE source = ? AND target = ? AND type = ?")
+    .get(source, target, type);
+  return row !== undefined;
+}
+
 const TEST_DIR = "/tmp/ts-graph-rag-ingestion-test";
 const vectorDimensions = 3;
 const embeddingProvider = createFakeEmbeddingProvider({
@@ -381,6 +393,140 @@ export function getPath(): string {
           searchIndex,
         }),
       ).rejects.toThrow();
+    });
+
+    it("indexes feature files, test nodes, and @spec edges", async () => {
+      const pkgDir = join(TEST_DIR, "packages", "app");
+      const specsDir = join(TEST_DIR, "specs");
+      mkdirSync(pkgDir, { recursive: true });
+      mkdirSync(specsDir, { recursive: true });
+
+      // Feature file with one spec
+      writeFileSync(
+        join(specsDir, "auth.feature.md"),
+        `# Authentication
+
+**ID:** \`auth\`
+
+### Login
+
+> \`{#auth::login}\`
+
+User can log in with email and password.
+`,
+      );
+
+      // Implementation file with @spec
+      writeFileSync(
+        join(pkgDir, "auth.ts"),
+        `/** @spec auth::login */
+export function login(email: string, password: string): boolean {
+  return true;
+}`,
+      );
+
+      // Test file with @spec and describe/it
+      writeFileSync(
+        join(pkgDir, "auth.test.ts"),
+        `import { describe, expect, it } from "vitest";
+
+/** @spec auth::login */
+describe("login", () => {
+  it("authenticates valid credentials", () => {
+    expect(true).toBe(true);
+  });
+});`,
+      );
+
+      writeFileSync(
+        join(pkgDir, "tsconfig.json"),
+        JSON.stringify({
+          compilerOptions: {
+            target: "ES2022",
+            module: "NodeNext",
+            moduleResolution: "NodeNext",
+          },
+          include: ["*.ts"],
+        }),
+      );
+
+      const config: ProjectConfig = {
+        packages: [{ name: "app", tsconfig: "./packages/app/tsconfig.json" }],
+      };
+
+      let db: Database.Database | undefined;
+      try {
+        db = openDatabase({ path: ":memory:" });
+        const sqliteWriter = createSqliteWriter(db);
+
+        const result = await indexProject(config, sqliteWriter, {
+          projectRoot: TEST_DIR,
+          logger: silentLogger,
+          embeddingProvider,
+          searchIndex,
+        });
+
+        expect(result.errors).toBeUndefined();
+
+        // Feature and Spec nodes exist
+        expect(nodeExists(db, "specs/auth.feature.md:Feature:auth")).toBe(true);
+        expect(nodeExists(db, "specs/auth.feature.md:Spec:auth::login")).toBe(true);
+
+        // TestSuite and Test nodes exist
+        expect(
+          nodeExists(db, "packages/app/auth.test.ts:TestSuite:login"),
+        ).toBe(true);
+        expect(
+          nodeExists(
+            db,
+            "packages/app/auth.test.ts:Test:login > authenticates valid credentials",
+          ),
+        ).toBe(true);
+
+        // CONTAINS edge: Feature → Spec
+        expect(
+          edgeExists(
+            db,
+            "specs/auth.feature.md:Feature:auth",
+            "specs/auth.feature.md:Spec:auth::login",
+            "CONTAINS",
+          ),
+        ).toBe(true);
+
+        // CONTAINS edge: TestSuite → Test
+        expect(
+          edgeExists(
+            db,
+            "packages/app/auth.test.ts:TestSuite:login",
+            "packages/app/auth.test.ts:Test:login > authenticates valid credentials",
+            "CONTAINS",
+          ),
+        ).toBe(true);
+
+        // SPECIFIES edge: Spec → implementation function
+        expect(
+          edgeExists(
+            db,
+            "specs/auth.feature.md:Spec:auth::login",
+            "packages/app/auth.ts:Function:login",
+            "SPECIFIES",
+          ),
+        ).toBe(true);
+
+        // VERIFIED_BY edge: Spec → test suite
+        expect(
+          edgeExists(
+            db,
+            "specs/auth.feature.md:Spec:auth::login",
+            "packages/app/auth.test.ts:TestSuite:login",
+            "VERIFIED_BY",
+          ),
+        ).toBe(true);
+      } finally {
+        if (db) {
+          closeDatabase(db);
+        }
+      }
     });
 
     it("handles cross-package edges without foreign key errors", async () => {

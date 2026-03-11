@@ -52,6 +52,11 @@ flowchart TD
         EE[Edge Extractors]
     end
 
+    subgraph SpecIngestion["Feature File Ingestion"]
+        FM["specs/*.feature.md"]
+        PF[parseFeatureFile]
+    end
+
     CC -->|spawns stdio| MW
     MW -->|HTTP POST /api/*| HS
     HS --- API
@@ -67,6 +72,11 @@ flowchart TD
     NE -->|writes| NT
     EE -->|writes| ET
     NE -.->|embeddings| SI
+
+    FM --> PF
+    PF -->|Feature/Spec nodes| NT
+    PF -->|CONTAINS edges| ET
+    PF -.->|embeddings| SI
 
     FW -->|file change| TM
 ```
@@ -132,6 +142,15 @@ follow `getAliasedSymbol()` chains until the actual definition is reached. This
 means every edge in the graph points to a real definition, and barrel files
 contribute zero nodes.
 
+### Nullable package for traceability nodes
+
+The `package` column in the nodes table is nullable. TypeScript symbol nodes
+always have a package (from config), but traceability nodes (Feature, Spec,
+TestSuite, Test) may not — they are not TypeScript symbols. Feature/Spec nodes
+inherit package from an optional `**Package:**` header in the feature file.
+TestSuite/Test nodes have no package. The query layer handles null packages by
+falling back to file-path-based grouping.
+
 ### Separate BM25 and vector searches
 
 Hybrid search runs BM25 and vector searches independently against Orama, then
@@ -151,7 +170,16 @@ embedding generation entirely.
 ```mermaid
 flowchart TD
     subgraph Entry["indexProject.ts"]
-        A[indexProject] --> B{For each package}
+        A[indexProject] --> FF[indexFeatureFiles]
+        A --> B{For each package}
+    end
+
+    subgraph FeatureFiles["indexFeatureFiles.ts — Feature Files"]
+        FF --> FF1[Find specs/*.feature.md]
+        FF1 --> FF2[parseFeatureFile]
+        FF2 --> FF3[Feature/Spec nodes<br/>+ CONTAINS edges]
+        FF3 --> FF4[Generate embeddings]
+        FF4 --> FF5[Write to SQLite + Orama]
     end
 
     subgraph Package["Package Processing"]
@@ -162,7 +190,8 @@ flowchart TD
 
     subgraph File["indexFile.ts — Per File"]
         E --> F[extractNodes]
-        F --> H[Extract source snippets]
+        F --> TN["extractTestNodes<br/>(test files only)"]
+        TN --> H[Extract source snippets]
         H --> I[Generate embeddings<br/>node-llama-cpp]
         I --> EN[Enrich nodes with<br/>snippet + contentHash]
         EN --> G[Write nodes to SQLite]
@@ -176,6 +205,8 @@ flowchart TD
         G --> DB[(SQLite<br/>nodes table)]
         Q --> DB2[(SQLite<br/>edges table)]
         J --> SI[(Orama<br/>search index)]
+        FF5 --> DB
+        FF5 --> SI
     end
 ```
 
@@ -190,20 +221,24 @@ Edge extractors use `buildImportMap` to resolve cross-file references:
 
 ### Key Files
 
-| Area              | File                                  | Role                              |
-| ----------------- | ------------------------------------- | --------------------------------- |
-| Indexing          | `http/src/ingestion/indexProject.ts`  | Full project indexing             |
-| Indexing          | `http/src/ingestion/indexFile.ts`     | Per-file extraction               |
-| Indexing          | `http/src/ingestion/syncOnStartup.ts` | Manifest-based delta sync         |
-| Indexing          | `http/src/ingestion/watchProject.ts`  | File watcher with debounce        |
-| Import resolution | `http/src/ingestion/buildImportMap.ts`| Cross-file import resolution      |
-| Import resolution | `http/src/ingestion/followAliasChain.ts`| Re-export chain following      |
-| Workspace         | `http/src/ingestion/buildWorkspaceMap.ts`| Monorepo package mapping      |
-| Query             | `http/src/query/search-graph/searchGraph.ts`| Main tool entry point       |
-| Search            | `http/src/search/createSearchIndex.ts`| Orama index setup                 |
-| Search            | `http/src/search/computeHybridScore.ts`| BM25 + vector score combination |
-| Embedding         | `http/src/embedding/embeddingCache.ts`| Per-model embedding cache         |
-| DB                | `http/src/db/sqlite/`                 | SQLite reader/writer              |
+| Area              | File                                              | Role                              |
+| ----------------- | ------------------------------------------------- | --------------------------------- |
+| Indexing          | `http/src/ingestion/indexProject.ts`               | Full project indexing             |
+| Indexing          | `http/src/ingestion/indexFile.ts`                  | Per-file extraction               |
+| Indexing          | `http/src/ingestion/indexFeatureFiles.ts`           | Feature file indexing             |
+| Indexing          | `http/src/ingestion/syncOnStartup.ts`              | Manifest-based delta sync         |
+| Indexing          | `http/src/ingestion/watchProject.ts`               | File watcher with debounce        |
+| Traceability      | `http/src/ingestion/extract/specs/parseFeatureFile.ts` | Feature/Spec node extraction  |
+| Traceability      | `http/src/ingestion/extract/nodes/extractTestNodes.ts` | TestSuite/Test node extraction |
+| Traceability      | `http/src/ingestion/extract/edges/extractSpecEdges.ts` | @spec edge extraction         |
+| Import resolution | `http/src/ingestion/buildImportMap.ts`             | Cross-file import resolution      |
+| Import resolution | `http/src/ingestion/followAliasChain.ts`           | Re-export chain following         |
+| Workspace         | `http/src/ingestion/buildWorkspaceMap.ts`          | Monorepo package mapping          |
+| Query             | `http/src/query/search-graph/searchGraph.ts`       | Main tool entry point             |
+| Search            | `http/src/search/createSearchIndex.ts`             | Orama index setup                 |
+| Search            | `http/src/search/computeHybridScore.ts`            | BM25 + vector score combination   |
+| Embedding         | `http/src/embedding/embeddingCache.ts`             | Per-model embedding cache         |
+| DB                | `http/src/db/sqlite/`                              | SQLite reader/writer              |
 
 ## LSP Overlap
 
