@@ -1,30 +1,19 @@
 import type { GraphSearchResult } from "./ApiService.js";
-import type { OutputFormat } from "./graph.js";
+import type { ActiveSection, OutputFormat } from "./graph.js";
 import { MermaidRenderer } from "./MermaidRenderer.js";
 
 type QueryResultsProps = {
   result: GraphSearchResult | null;
   format: OutputFormat;
-  hasFromEndpoint: boolean;
-  hasToEndpoint: boolean;
-  hasTopic: boolean;
-};
-
-const queryTypeBySelection: Record<string, string> = {
-  "from-": "dependenciesOf",
-  "-to": "dependentsOf",
-  "from-to": "pathsBetween",
-  "topic": "semanticSearch",
+  activeSection: ActiveSection;
 };
 
 export const QueryResults = ({
   result,
   format,
-  hasFromEndpoint,
-  hasToEndpoint,
-  hasTopic,
+  activeSection,
 }: QueryResultsProps) => {
-  if (!hasFromEndpoint && !hasToEndpoint && !hasTopic) {
+  if (!activeSection) {
     return (
       <div style={emptyStateStyle}>
         <p>Enter a topic for semantic search.</p>
@@ -43,13 +32,7 @@ export const QueryResults = ({
     );
   }
 
-  let queryTypeKey: string;
-  if (hasTopic && !hasFromEndpoint && !hasToEndpoint) {
-    queryTypeKey = "topic";
-  } else {
-    queryTypeKey = `${hasFromEndpoint ? "from" : ""}-${hasToEndpoint ? "to" : ""}`;
-  }
-  const queryType = queryTypeBySelection[queryTypeKey];
+  const queryType = activeSection === "topic" ? "semanticSearch" : "graphTraversal";
 
   return (
     <div style={containerStyle}>

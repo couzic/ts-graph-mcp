@@ -137,6 +137,10 @@ const darkThemeStyles: StylesConfig<SelectOption, false> = {
   }),
 };
 
+/**
+ * @spec server::ui.symbol-search 
+ * @spec server::ui.endpoint-types 
+ */
 export const SymbolSelect = ({
   label,
   value,

@@ -1,5 +1,5 @@
 import { Suspense, useSyncExternalStore } from "react";
-import { appVertex, graph, appActions, OutputFormat, MermaidDirection } from "./graph.js";
+import { appVertex, graph, appActions, OutputFormat, MermaidDirection, ActiveSection } from "./graph.js";
 import { useVertexState } from "./useVertexState.js";
 import { SymbolSelect } from "./SymbolSelect.js";
 import { OutputTabs } from "./OutputTabs.js";
@@ -45,6 +45,7 @@ export const App = () => (
   </div>
 );
 
+/** @spec server::ui.health-badge */
 const HealthBadge = () => {
   const { health } = useVertexState(appVertex, ["health"]);
   return (
@@ -60,12 +61,12 @@ const HealthBadge = () => {
 };
 
 const MainContent = () => {
-  const { fromEndpoint, toEndpoint, topicInput, submittedTopic, outputFormat, mermaidDirection, maxNodes, fromSearchQuery, toSearchQuery } =
+  const { fromEndpoint, toEndpoint, topicInput, activeSection, outputFormat, mermaidDirection, maxNodes, fromSearchQuery, toSearchQuery } =
     useVertexState(appVertex, [
       "fromEndpoint",
       "toEndpoint",
       "topicInput",
-      "submittedTopic",
+      "activeSection",
       "outputFormat",
       "mermaidDirection",
       "maxNodes",
@@ -132,7 +133,8 @@ const MainContent = () => {
 
   return (
     <main style={mainStyle}>
-      <section style={topicSectionStyle}>
+      {/** @spec server::ui.topic-endpoint-exclusivity */}
+      <section style={sectionBorderStyle(activeSection === "topic")} onClick={() => graph.dispatch(appActions.submitTopic())}>
         <label style={topicLabelStyle}>Topic (semantic search)</label>
         <div style={topicRowStyle}>
           <input
@@ -149,33 +151,35 @@ const MainContent = () => {
         </div>
       </section>
 
-      <section style={selectorsStyle}>
-        <SymbolSelect
-          label="FROM"
-          value={fromEndpoint}
-          options={fromSymbolOptions}
-          searchQuery={fromSearchQuery}
-          onSearchChange={handleFromSearchChange}
-          onSelect={handleFromSelect}
-          onClear={handleClearFrom}
-        />
-        <button
-          style={swapButtonStyle}
-          onClick={handleSwap}
-          disabled={fromEndpoint === null && toEndpoint === null}
-          title="Swap FROM and TO"
-        >
-          ⇄
-        </button>
-        <SymbolSelect
-          label="TO"
-          value={toEndpoint}
-          options={toSymbolOptions}
-          searchQuery={toSearchQuery}
-          onSearchChange={handleToSearchChange}
-          onSelect={handleToSelect}
-          onClear={handleClearTo}
-        />
+      <section style={sectionBorderStyle(activeSection === "graph")} onClick={() => graph.dispatch(appActions.activateGraphSection())}>
+        <div style={selectorsStyle}>
+          <SymbolSelect
+            label="FROM"
+            value={fromEndpoint}
+            options={fromSymbolOptions}
+            searchQuery={fromSearchQuery}
+            onSearchChange={handleFromSearchChange}
+            onSelect={handleFromSelect}
+            onClear={handleClearFrom}
+          />
+          <button
+            style={swapButtonStyle}
+            onClick={handleSwap}
+            disabled={fromEndpoint === null && toEndpoint === null}
+            title="Swap FROM and TO"
+          >
+            ⇄
+          </button>
+          <SymbolSelect
+            label="TO"
+            value={toEndpoint}
+            options={toSymbolOptions}
+            searchQuery={toSearchQuery}
+            onSearchChange={handleToSearchChange}
+            onSelect={handleToSelect}
+            onClear={handleClearTo}
+          />
+        </div>
       </section>
 
       <section style={outputSectionStyle}>
@@ -196,9 +200,7 @@ const MainContent = () => {
         <Suspense fallback={<ResultsLoading />}>
           <ResultsContent
             outputFormat={outputFormat}
-            hasFromEndpoint={fromEndpoint !== null}
-            hasToEndpoint={toEndpoint !== null}
-            hasTopic={submittedTopic.trim().length > 0}
+            activeSection={activeSection}
           />
         </Suspense>
       </section>
@@ -212,20 +214,16 @@ const ResultsLoading = () => (
 
 type ResultsContentProps = {
   outputFormat: OutputFormat;
-  hasFromEndpoint: boolean;
-  hasToEndpoint: boolean;
-  hasTopic: boolean;
+  activeSection: ActiveSection;
 };
 
-const ResultsContent = ({ outputFormat, hasFromEndpoint, hasToEndpoint, hasTopic }: ResultsContentProps) => {
+const ResultsContent = ({ outputFormat, activeSection }: ResultsContentProps) => {
   const { queryResult } = useVertexState(appVertex, ["queryResult"]);
   return (
     <QueryResults
       result={queryResult}
       format={outputFormat}
-      hasFromEndpoint={hasFromEndpoint}
-      hasToEndpoint={hasToEndpoint}
-      hasTopic={hasTopic}
+      activeSection={activeSection}
     />
   );
 };
@@ -235,6 +233,7 @@ type DirectionToggleProps = {
   onDirectionChange: (direction: MermaidDirection) => void;
 };
 
+/** @spec server::ui.mermaid-direction */
 const DirectionToggle = ({ direction, onDirectionChange }: DirectionToggleProps) => (
   <div style={directionToggleStyle}>
     <button
@@ -303,11 +302,16 @@ const mainStyle: React.CSSProperties = {
   minHeight: 0,
 };
 
-const topicSectionStyle: React.CSSProperties = {
+const sectionBorderStyle = (active: boolean): React.CSSProperties => ({
   display: "flex",
   flexDirection: "column",
   gap: "0.25rem",
-};
+  padding: "0.75rem",
+  borderRadius: "8px",
+  border: `1px solid ${active ? "#646cff" : "#333"}`,
+  backgroundColor: active ? "#1e1e30" : "transparent",
+  transition: "border-color 0.15s ease, background-color 0.15s ease",
+});
 
 const topicLabelStyle: React.CSSProperties = {
   fontSize: "0.875rem",

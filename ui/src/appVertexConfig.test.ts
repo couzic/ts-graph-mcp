@@ -223,6 +223,112 @@ describe("appVertexConfig", () => {
     });
   });
 
+  describe("activeSection state", () => {
+    it("starts as null", () => {
+      expect(vertex.currentState.activeSection).toBeNull();
+    });
+
+    it("activates topic section on setTopicInput", () => {
+      graph.dispatch(appActions.setTopicInput("auth"));
+      expect(vertex.currentState.activeSection).toBe("topic");
+    });
+
+    it("activates topic section on submitTopic", () => {
+      graph.dispatch(appActions.submitTopic());
+      expect(vertex.currentState.activeSection).toBe("topic");
+    });
+
+    it("activates graph section on setFromEndpoint with non-null value", () => {
+      graph.dispatch(
+        appActions.setFromEndpoint({
+          kind: "symbol",
+          file_path: "src/a.ts",
+          symbol: "a",
+          type: "Function",
+        }),
+      );
+      expect(vertex.currentState.activeSection).toBe("graph");
+    });
+
+    it("activates graph section on setToEndpoint with non-null value", () => {
+      graph.dispatch(
+        appActions.setToEndpoint({
+          kind: "symbol",
+          file_path: "src/a.ts",
+          symbol: "a",
+          type: "Function",
+        }),
+      );
+      expect(vertex.currentState.activeSection).toBe("graph");
+    });
+
+    it("activates graph section on setFromSearchQuery with non-empty value", () => {
+      graph.dispatch(appActions.setFromSearchQuery("test"));
+      expect(vertex.currentState.activeSection).toBe("graph");
+    });
+
+    it("activates graph section on setToSearchQuery with non-empty value", () => {
+      graph.dispatch(appActions.setToSearchQuery("test"));
+      expect(vertex.currentState.activeSection).toBe("graph");
+    });
+
+    it("activates graph section on activateGraphSection", () => {
+      graph.dispatch(appActions.setTopicInput("auth"));
+      expect(vertex.currentState.activeSection).toBe("topic");
+
+      graph.dispatch(appActions.activateGraphSection());
+      expect(vertex.currentState.activeSection).toBe("graph");
+    });
+
+    it("does not activate graph on setFromEndpoint with null", () => {
+      graph.dispatch(appActions.setTopicInput("auth"));
+      graph.dispatch(appActions.setFromEndpoint(null));
+      expect(vertex.currentState.activeSection).toBe("topic");
+    });
+
+    it("does not activate graph on setToEndpoint with null", () => {
+      graph.dispatch(appActions.setTopicInput("auth"));
+      graph.dispatch(appActions.setToEndpoint(null));
+      expect(vertex.currentState.activeSection).toBe("topic");
+    });
+
+    it("does not activate graph on setFromSearchQuery with empty string", () => {
+      graph.dispatch(appActions.setTopicInput("auth"));
+      graph.dispatch(appActions.setFromSearchQuery(""));
+      expect(vertex.currentState.activeSection).toBe("topic");
+    });
+
+    it("switches from topic to graph when selecting an endpoint", () => {
+      graph.dispatch(appActions.setTopicInput("auth"));
+      expect(vertex.currentState.activeSection).toBe("topic");
+
+      graph.dispatch(
+        appActions.setFromEndpoint({
+          kind: "symbol",
+          file_path: "src/a.ts",
+          symbol: "a",
+          type: "Function",
+        }),
+      );
+      expect(vertex.currentState.activeSection).toBe("graph");
+    });
+
+    it("switches from graph to topic when typing topic", () => {
+      graph.dispatch(
+        appActions.setFromEndpoint({
+          kind: "symbol",
+          file_path: "src/a.ts",
+          symbol: "a",
+          type: "Function",
+        }),
+      );
+      expect(vertex.currentState.activeSection).toBe("graph");
+
+      graph.dispatch(appActions.setTopicInput("auth"));
+      expect(vertex.currentState.activeSection).toBe("topic");
+    });
+  });
+
   describe("queryResult loader", () => {
     const fromEndpoint: GraphEndpoint = {
       kind: "symbol",
@@ -242,6 +348,13 @@ describe("appVertexConfig", () => {
     });
 
     it("returns null when no endpoint or topic is specified", () => {
+      vi.advanceTimersByTime(400);
+
+      expect(vertex.currentState.queryResult).toBeNull();
+    });
+
+    it("returns null when graph section is active but no endpoints are set", () => {
+      graph.dispatch(appActions.activateGraphSection());
       vi.advanceTimersByTime(400);
 
       expect(vertex.currentState.queryResult).toBeNull();
@@ -327,27 +440,29 @@ describe("appVertexConfig", () => {
       expect(vertex.currentState.queryResult).toEqual(dependentsResult);
     });
 
-    it("fetches semantic search when topic is submitted", () => {
+    it("fetches semantic search when topic section is active and topicInput is non-empty", () => {
       const topicResult = toGraphResult("## Symbols matching 'auth'");
 
       graph.dispatch(appActions.setTopicInput("auth"));
-      graph.dispatch(appActions.submitTopic());
       vi.advanceTimersByTime(400);
       receivedTopic$.next(topicResult);
 
       expect(vertex.currentState.queryResult).toEqual(topicResult);
     });
 
-    it("does not fetch when topic is typed but not submitted", () => {
+    it("does not fetch topic when activeSection is graph even if topicInput is set", () => {
       graph.dispatch(appActions.setTopicInput("auth"));
+      graph.dispatch(
+        appActions.setFromEndpoint(fromEndpoint),
+      );
       vi.advanceTimersByTime(400);
+      receivedSearch$.next(toGraphResult("graph result"));
 
-      expect(vertex.currentState.queryResult).toBeNull();
+      expect(lastSearchByTopicParams).toBeUndefined();
     });
 
-    it("does not fetch when submitted topic is whitespace only", () => {
+    it("does not fetch when topicInput is whitespace only", () => {
       graph.dispatch(appActions.setTopicInput("   "));
-      graph.dispatch(appActions.submitTopic());
       vi.advanceTimersByTime(400);
 
       expect(vertex.currentState.queryResult).toBeNull();

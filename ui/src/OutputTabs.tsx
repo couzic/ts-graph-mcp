@@ -14,6 +14,10 @@ const tabs: { format: OutputFormat; label: string }[] = [
 
 const maxNodesOptions = [10, 20, 30, 50, 75, 100, 150, 200];
 
+/** 
+ * @spec server::ui.output-format-tabs
+ * @spec server::ui.max-nodes 
+ */
 export const OutputTabs = ({
   activeFormat,
   onFormatChange,

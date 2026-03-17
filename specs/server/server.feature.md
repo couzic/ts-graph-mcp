@@ -176,3 +176,136 @@ The server serves the built UI as static files from the `public` directory
 
 Any GET request that does not match a static file or an API route is served
 `index.html`, enabling client-side routing in the React SPA.
+
+### Query patterns
+
+> `{#server::ui.query-patterns}`
+
+The UI supports the same query patterns as the MCP tool
+`[@tool::query.forward]` `[@tool::query.backward]` `[@tool::query.path]`
+`[@tool::query.topic]`:
+
+- **FROM only** — forward traversal (what does this call?)
+- **TO only** — backward traversal (who calls this?)
+- **FROM + TO** — path finding (how does A reach B?)
+- **Topic only** — semantic search (find symbols related to a concept)
+
+Topic and FROM/TO are mutually exclusive
+`[@server::ui.topic-endpoint-exclusivity]`.
+
+### Topic and endpoint mutual exclusivity
+
+> `{#server::ui.topic-endpoint-exclusivity}`
+
+The UI enforces the same constraint as the MCP tool
+`[@tool::validation.topic-standalone]`: topic search and FROM/TO graph traversal
+cannot be active simultaneously.
+
+Both sections are always visible, wrapped in a bordered rounded container. All
+inputs remain interactive. Only the active section's query is sent to the API.
+
+- The **active section** has a highlighted border (accent color) and a
+  distinguishable background color.
+- The **inactive section** has a muted border and no background.
+- **Initial state**: neither section is active (both muted). The first
+  interaction determines which activates.
+
+Activation rules:
+
+- Typing in the topic input or clicking its Search button activates the topic
+  section.
+- Selecting or typing in a FROM/TO selector activates the graph traversal
+  section.
+- Clicking on a section's container activates that section.
+- Interacting with one section deactivates the other. Previous values are
+  preserved.
+
+```
+┌─ active (accent border) ─────────────────────────┐
+│  Topic   [user authentication...         ] [Search] │
+└──────────────────────────────────────────────────┘
+┌─ muted border ───────────────────────────────────┐
+│  FROM  [handleRequest        ▾]  [⇄]               │
+│  TO    [                      ]                     │
+└──────────────────────────────────────────────────┘
+```
+
+```
+┌─ muted border ───────────────────────────────────┐
+│  Topic   [user authentication...         ] [Search] │
+└──────────────────────────────────────────────────┘
+┌─ active (accent border) ─────────────────────────┐
+│  FROM  [handleRequest        ▾]  [⇄]               │
+│  TO    [Type to search...     ]                     │
+└──────────────────────────────────────────────────┘
+```
+
+### Endpoint types
+
+> `{#server::ui.endpoint-types}`
+
+Each FROM/TO selector supports two endpoint types, matching the MCP tool's
+endpoint resolution `[@tool::resolve.exact]` `[@tool::query.loose-forward]`:
+
+- **Symbol** — selected from search results. Sends
+  `{ symbol, file_path }` to the API.
+- **Text query** — typed freely and submitted via Enter. Sends `{ query }` to
+  the API for loose/semantic resolution.
+
+### Symbol search
+
+> `{#server::ui.symbol-search}`
+
+When the user types in a FROM or TO selector, the UI calls the symbol search
+endpoint `[@server::api.symbol-search]` with a 300ms debounce. Results appear as
+selectable options showing symbol name, type, and file path. Search requires at
+least 2 characters.
+
+### Selection history
+
+> `{#server::ui.selection-history}`
+
+The UI maintains a list of recently selected symbols (up to 12). When a
+selector's search input is empty or under 2 characters, the history is shown as
+options (excluding currently selected endpoints). History is populated only from
+symbol selections, not text queries.
+
+### Swap endpoints
+
+> `{#server::ui.swap-endpoints}`
+
+A swap button exchanges the FROM and TO endpoints. The button is disabled when
+both endpoints are empty.
+
+### Output format tabs
+
+> `{#server::ui.output-format-tabs}`
+
+The UI offers two output format tabs matching the API formats
+`[@server::api.graph-search-formats]`:
+
+- **MCP** — text format (default), displayed as preformatted text.
+- **Mermaid** — rendered as SVG diagrams via the Mermaid library.
+
+### Mermaid direction toggle
+
+> `{#server::ui.mermaid-direction}`
+
+When the Mermaid format is active, a direction toggle appears with two options:
+`LR` (left-to-right) and `TD` (top-down). The selected direction is sent as the
+`direction` parameter to the API.
+
+### Max nodes selector
+
+> `{#server::ui.max-nodes}`
+
+A dropdown allows selecting the `max_nodes` parameter from preset values:
+10, 20, 30, 50, 75, 100, 150, 200. Default is 50, matching the MCP tool default
+`[@tool::output.max-nodes-default]`.
+
+### Health badge
+
+> `{#server::ui.health-badge}`
+
+The header displays a health badge showing the number of indexed files. It polls
+the health endpoint `[@server::api.health]` every 3 seconds.

@@ -11,14 +11,15 @@ import { configureRootVertex } from "verdux";
 import { type ApiService, createApiService } from "./ApiService.js";
 import type { GraphEndpoint, SymbolOption } from "./SymbolOption.js";
 
-export type OutputFormat = "mcp" | "mermaid" | "md";
+export type OutputFormat = "mcp" | "mermaid";
 export type MermaidDirection = "LR" | "TD";
+export type ActiveSection = "topic" | "graph" | null;
 
 type AppState = {
   fromEndpoint: GraphEndpoint | null;
   toEndpoint: GraphEndpoint | null;
   topicInput: string;
-  submittedTopic: string;
+  activeSection: ActiveSection;
   outputFormat: OutputFormat;
   mermaidDirection: MermaidDirection;
   maxNodes: number;
@@ -27,6 +28,7 @@ type AppState = {
   selectionHistory: SymbolOption[];
 };
 
+/** @spec server::ui.selection-history */
 const addToHistory = (state: AppState, endpoint: GraphEndpoint) => {
   if (endpoint.kind !== "symbol") {
     return;
@@ -67,7 +69,7 @@ const initialState: AppState = {
   fromEndpoint: null,
   toEndpoint: null,
   topicInput: "",
-  submittedTopic: "",
+  activeSection: null,
   outputFormat: "mcp",
   mermaidDirection: "LR",
   maxNodes: 50,
@@ -80,23 +82,30 @@ const appSlice = createSlice({
   name: "app",
   initialState,
   reducers: {
+    /** @spec server::ui.topic-endpoint-exclusivity */
     setFromEndpoint: (state, action: PayloadAction<GraphEndpoint | null>) => {
       state.fromEndpoint = action.payload;
       if (action.payload) {
+        state.activeSection = "graph";
         addToHistory(state, action.payload);
       }
     },
+    /** @spec server::ui.topic-endpoint-exclusivity */
     setToEndpoint: (state, action: PayloadAction<GraphEndpoint | null>) => {
       state.toEndpoint = action.payload;
       if (action.payload) {
+        state.activeSection = "graph";
         addToHistory(state, action.payload);
       }
     },
+    /** @spec server::ui.topic-endpoint-exclusivity */
     setTopicInput: (state, action: PayloadAction<string>) => {
       state.topicInput = action.payload;
+      state.activeSection = "topic";
     },
+    /** @spec server::ui.topic-endpoint-exclusivity */
     submitTopic: (state) => {
-      state.submittedTopic = state.topicInput;
+      state.activeSection = "topic";
     },
     setOutputFormat: (state, action: PayloadAction<OutputFormat>) => {
       state.outputFormat = action.payload;
@@ -107,11 +116,19 @@ const appSlice = createSlice({
     setMaxNodes: (state, action: PayloadAction<number>) => {
       state.maxNodes = action.payload;
     },
+    /** @spec server::ui.topic-endpoint-exclusivity */
     setFromSearchQuery: (state, action: PayloadAction<string>) => {
       state.fromSearchQuery = action.payload;
+      if (action.payload) {
+        state.activeSection = "graph";
+      }
     },
+    /** @spec server::ui.topic-endpoint-exclusivity */
     setToSearchQuery: (state, action: PayloadAction<string>) => {
       state.toSearchQuery = action.payload;
+      if (action.payload) {
+        state.activeSection = "graph";
+      }
     },
     clearFromEndpoint: (state) => {
       state.fromEndpoint = null;
@@ -119,6 +136,11 @@ const appSlice = createSlice({
     clearToEndpoint: (state) => {
       state.toEndpoint = null;
     },
+    /** @spec server::ui.topic-endpoint-exclusivity */
+    activateGraphSection: (state) => {
+      state.activeSection = "graph";
+    },
+    /** @spec server::ui.swap-endpoints */
     swapEndpoints: (state) => {
       const temp = state.fromEndpoint;
       state.fromEndpoint = state.toEndpoint;
@@ -215,12 +237,14 @@ const buildVertexConfig = (dependencies: { apiService: () => ApiService }) =>
         [
           "fromEndpoint",
           "toEndpoint",
-          "submittedTopic",
+          "topicInput",
+          "activeSection",
           "maxNodes",
           "outputFormat",
           "mermaidDirection",
         ],
         {
+          /** @spec server::ui.topic-endpoint-exclusivity @spec server::ui.query-patterns */
           queryResult: (fields$) =>
             fields$.pipe(
               debounceTime(300),
@@ -228,7 +252,8 @@ const buildVertexConfig = (dependencies: { apiService: () => ApiService }) =>
                 ({
                   fromEndpoint,
                   toEndpoint,
-                  submittedTopic,
+                  topicInput,
+                  activeSection,
                   maxNodes,
                   outputFormat,
                   mermaidDirection,
@@ -236,44 +261,43 @@ const buildVertexConfig = (dependencies: { apiService: () => ApiService }) =>
                   const format = outputFormat;
                   const direction =
                     format === "mermaid" ? mermaidDirection : undefined;
-                  // Topic only → semantic search
-                  if (submittedTopic.trim() && !fromEndpoint && !toEndpoint) {
+                  // Topic section active → semantic search
+                  if (activeSection === "topic" && topicInput.trim()) {
                     return apiService.searchByTopic(
-                      submittedTopic,
+                      topicInput,
                       maxNodes,
                       format,
                       direction,
                     );
                   }
-                  // FROM only → dependenciesOf (what does this call?)
-                  if (fromEndpoint && !toEndpoint) {
-                    return apiService.searchGraph({
-                      from: fromEndpoint,
-                      maxNodes,
-                      format,
-                      direction,
-                    });
+                  // Graph section active → graph traversal
+                  if (activeSection === "graph") {
+                    if (fromEndpoint && toEndpoint) {
+                      return apiService.searchGraph({
+                        from: fromEndpoint,
+                        to: toEndpoint,
+                        maxNodes,
+                        format,
+                        direction,
+                      });
+                    }
+                    if (fromEndpoint) {
+                      return apiService.searchGraph({
+                        from: fromEndpoint,
+                        maxNodes,
+                        format,
+                        direction,
+                      });
+                    }
+                    if (toEndpoint) {
+                      return apiService.searchGraph({
+                        to: toEndpoint,
+                        maxNodes,
+                        format,
+                        direction,
+                      });
+                    }
                   }
-                  // TO only → dependentsOf (who calls this?)
-                  if (!fromEndpoint && toEndpoint) {
-                    return apiService.searchGraph({
-                      to: toEndpoint,
-                      maxNodes,
-                      format,
-                      direction,
-                    });
-                  }
-                  // Both → pathsBetween
-                  if (fromEndpoint && toEndpoint) {
-                    return apiService.searchGraph({
-                      from: fromEndpoint,
-                      to: toEndpoint,
-                      maxNodes,
-                      format,
-                      direction,
-                    });
-                  }
-                  // Neither selected
                   return of(null);
                 },
               ),
