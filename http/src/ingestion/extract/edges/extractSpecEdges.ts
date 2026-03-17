@@ -127,6 +127,7 @@ const findImplementationTargetId = (
   let current: TsMorphNode | undefined = annotatedNode;
 
   while (current && !TsMorphNode.isSourceFile(current)) {
+    // biome-ignore lint/style/noNonNullAssertion: parent exists since current is not a source file
     const isTopLevel = TsMorphNode.isSourceFile(current.getParent()!);
 
     // Check for variable statement (arrow functions, const declarations)

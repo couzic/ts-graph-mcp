@@ -345,7 +345,7 @@ export const watchProject = (
       // If a feature file was deleted, remove its spec entries from specIdMap
       if (isFeatureFile(absolutePath)) {
         for (const [key, value] of specIdMap) {
-          if (value.startsWith(relativePath + ":")) {
+          if (value.startsWith(`${relativePath}:`)) {
             specIdMap.delete(key);
           }
         }

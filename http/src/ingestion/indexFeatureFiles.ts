@@ -191,7 +191,7 @@ export const updateSpecIdMapForFile = (
   relativePath: string,
   newEntries: Array<[string, string]>,
 ): void => {
-  const prefix = relativePath + ":";
+  const prefix = `${relativePath}:`;
   for (const [key, value] of specIdMap) {
     if (value.startsWith(prefix)) {
       specIdMap.delete(key);

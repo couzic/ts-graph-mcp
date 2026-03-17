@@ -432,6 +432,7 @@ const pickKeys = <T>(
   const result: Record<string, T> = {};
   for (const key of keys) {
     if (key in record) {
+      // biome-ignore lint/style/noNonNullAssertion: key presence checked above
       result[key] = record[key]!;
     }
   }

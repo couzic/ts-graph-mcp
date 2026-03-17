@@ -65,6 +65,7 @@ export const computeBfsOrder = (edges: GraphEdge[]): string[] => {
 
   // If no roots (cycle), start from first edge source
   if (roots.length === 0) {
+    // biome-ignore lint/style/noNonNullAssertion: edges is non-empty (checked at function entry)
     roots.push(edges[0]!.source);
   }
 
@@ -78,6 +79,7 @@ export const computeBfsOrder = (edges: GraphEdge[]): string[] => {
   }
 
   while (queue.length > 0) {
+    // biome-ignore lint/style/noNonNullAssertion: length checked in while condition
     const node = queue.shift()!;
     order.push(node);
 
@@ -100,6 +102,7 @@ export const computeBfsOrder = (edges: GraphEdge[]): string[] => {
       // BFS from this disconnected node
       const subQueue: string[] = [node];
       while (subQueue.length > 0) {
+        // biome-ignore lint/style/noNonNullAssertion: length checked in while condition
         const current = subQueue.shift()!;
         const neighbors = adjacency.get(current);
         if (neighbors) {

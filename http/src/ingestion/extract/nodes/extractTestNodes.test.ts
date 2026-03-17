@@ -120,9 +120,11 @@ describe("parseDate", () => {
 
     const tests = result.nodes.filter((n) => n.type === "Test");
     expect(tests).toHaveLength(2);
+    // biome-ignore lint/style/noNonNullAssertion: length asserted above
     expect(tests[0]!.id).toBe(
       "src/utils.test.ts:Test:formatDate > formats dates",
     );
+    // biome-ignore lint/style/noNonNullAssertion: length asserted above
     expect(tests[1]!.id).toBe(
       "src/utils.test.ts:Test:parseDate > parses dates",
     );

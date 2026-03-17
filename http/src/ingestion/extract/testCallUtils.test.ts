@@ -46,6 +46,7 @@ const findCallByName = (
   const calls = source.getDescendantsOfKind(SyntaxKind.CallExpression);
   return calls.find((c) => {
     const firstArg = c.getArguments()[0];
+    // biome-ignore lint/complexity/useOptionalChain: clearer with explicit check
     if (firstArg && firstArg.getText().includes(name)) {
       return true;
     }
@@ -60,6 +61,7 @@ describe(getTestCallKind.name, () => {
       "test.ts",
       `describe("x", () => {});`,
     );
+    // biome-ignore lint/style/noNonNullAssertion: single call expression in source
     const call = source.getDescendantsOfKind(SyntaxKind.CallExpression)[0]!;
     expect(getTestCallKind(call)).toBe("describe");
   });
@@ -67,6 +69,7 @@ describe(getTestCallKind.name, () => {
   it("returns 'it' for it()", () => {
     const project = createProject();
     const source = project.createSourceFile("test.ts", `it("x", () => {});`);
+    // biome-ignore lint/style/noNonNullAssertion: single call expression in source
     const call = source.getDescendantsOfKind(SyntaxKind.CallExpression)[0]!;
     expect(getTestCallKind(call)).toBe("it");
   });
@@ -74,6 +77,7 @@ describe(getTestCallKind.name, () => {
   it("returns undefined for other calls", () => {
     const project = createProject();
     const source = project.createSourceFile("test.ts", `console.log("x");`);
+    // biome-ignore lint/style/noNonNullAssertion: single call expression in source
     const call = source.getDescendantsOfKind(SyntaxKind.CallExpression)[0]!;
     expect(getTestCallKind(call)).toBeUndefined();
   });
@@ -86,6 +90,7 @@ describe(getTestCallName.name, () => {
       "test.ts",
       `describe("formatDate", () => {});`,
     );
+    // biome-ignore lint/style/noNonNullAssertion: single call expression in source
     const call = source.getDescendantsOfKind(SyntaxKind.CallExpression)[0]!;
     expect(getTestCallName(call)).toBe("formatDate");
   });
@@ -96,6 +101,7 @@ describe(getTestCallName.name, () => {
       "test.ts",
       `describe(myVar, () => {});`,
     );
+    // biome-ignore lint/style/noNonNullAssertion: single call expression in source
     const call = source.getDescendantsOfKind(SyntaxKind.CallExpression)[0]!;
     expect(getTestCallName(call)).toBeUndefined();
   });
@@ -108,6 +114,7 @@ describe(buildTestFullPath.name, () => {
       "test.ts",
       `describe("formatDate", () => {});`,
     );
+    // biome-ignore lint/style/noNonNullAssertion: single call expression in source
     const call = source.getDescendantsOfKind(SyntaxKind.CallExpression)[0]!;
     expect(buildTestFullPath(call)).toBe("formatDate");
   });
@@ -118,6 +125,7 @@ describe(buildTestFullPath.name, () => {
       "test.ts",
       `it("does something", () => {});`,
     );
+    // biome-ignore lint/style/noNonNullAssertion: single call expression in source
     const call = source.getDescendantsOfKind(SyntaxKind.CallExpression)[0]!;
     expect(buildTestFullPath(call)).toBe("does something");
   });
@@ -132,6 +140,7 @@ describe(buildTestFullPath.name, () => {
     );
     const itCall = findCallByName(source, "handles null");
     expect(itCall).toBeDefined();
+    // biome-ignore lint/style/noNonNullAssertion: asserted defined above
     expect(buildTestFullPath(itCall!)).toBe("formatDate > handles null");
   });
 
@@ -147,6 +156,7 @@ describe(buildTestFullPath.name, () => {
     );
     const itCall = findCallByName(source, "handles null");
     expect(itCall).toBeDefined();
+    // biome-ignore lint/style/noNonNullAssertion: asserted defined above
     expect(buildTestFullPath(itCall!)).toBe(
       "formatDate > edge cases > handles null",
     );
@@ -164,6 +174,7 @@ describe(buildTestFullPath.name, () => {
     );
     const describeCall = findCallByName(source, "edge cases");
     expect(describeCall).toBeDefined();
+    // biome-ignore lint/style/noNonNullAssertion: asserted defined above
     expect(buildTestFullPath(describeCall!)).toBe("formatDate > edge cases");
   });
 });

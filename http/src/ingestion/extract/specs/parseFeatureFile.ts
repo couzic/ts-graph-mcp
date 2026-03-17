@@ -42,6 +42,7 @@ export const parseFeatureFile = (
 
   // First pass: extract feature-level metadata
   for (let i = 0; i < lines.length; i++) {
+    // biome-ignore lint/style/noNonNullAssertion: bounded by loop
     const line = lines[i]!;
 
     if (featureHeadingLine === undefined) {
@@ -53,11 +54,13 @@ export const parseFeatureFile = (
 
     const idMatch = line.match(FEATURE_ID_RE);
     if (idMatch) {
+      // biome-ignore lint/style/noNonNullAssertion: capture group guaranteed by regex match
       featureId = idMatch[1]!;
     }
 
     const pkgMatch = line.match(PACKAGE_RE);
     if (pkgMatch) {
+      // biome-ignore lint/style/noNonNullAssertion: capture group guaranteed by regex match
       packageName = pkgMatch[1]!;
     }
   }
@@ -87,19 +90,23 @@ export const parseFeatureFile = (
   }> = [];
 
   for (let i = 0; i < lines.length; i++) {
+    // biome-ignore lint/style/noNonNullAssertion: bounded by loop
     const anchorMatch = lines[i]!.match(SPEC_ANCHOR_RE);
     if (!anchorMatch) {
       continue;
     }
+    // biome-ignore lint/style/noNonNullAssertion: capture group guaranteed by regex match
     const specId = anchorMatch[1]!;
 
     // Walk backwards to find the nearest heading above
     let headingLine: number | undefined;
     let headingLevel = 0;
     for (let j = i - 1; j >= 0; j--) {
+      // biome-ignore lint/style/noNonNullAssertion: bounded by loop
       const hMatch = lines[j]!.match(HEADING_RE);
       if (hMatch) {
         headingLine = j + 1; // 1-indexed
+        // biome-ignore lint/style/noNonNullAssertion: capture group guaranteed by regex match
         headingLevel = hMatch[1]!.length;
         break;
       }
@@ -118,7 +125,9 @@ export const parseFeatureFile = (
     // headingLine is 1-indexed; used as 0-indexed index it naturally starts
     // one line past the heading itself.
     for (let i = entry.headingLine; i < lines.length; i++) {
+      // biome-ignore lint/style/noNonNullAssertion: bounded by loop
       const hMatch = lines[i]!.match(HEADING_RE);
+      // biome-ignore lint/style/noNonNullAssertion: capture group guaranteed by regex match
       if (hMatch && hMatch[1]!.length <= entry.headingLevel) {
         endLine = i; // line before this heading (0-indexed i = 1-indexed line i)
         break;
