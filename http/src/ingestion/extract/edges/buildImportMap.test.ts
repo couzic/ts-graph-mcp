@@ -280,9 +280,6 @@ export const format = () => {};
           }
           return undefined;
         },
-        getProjectForTsConfig() {
-          return undefined;
-        },
       };
 
       const map = buildImportMap(consumer, "apps/frontend/src/App.ts", {
@@ -311,9 +308,6 @@ export const format = () => {};
       // ProjectRegistry that returns nothing
       const projectRegistry: ProjectRegistry = {
         getProjectForFile() {
-          return undefined;
-        },
-        getProjectForTsConfig() {
           return undefined;
         },
       };
@@ -374,9 +368,6 @@ export const format = () => {};
         if (absolutePath.includes("/libs/utils/")) {
           return libraryProject;
         }
-        return undefined;
-      },
-      getProjectForTsConfig() {
         return undefined;
       },
     };

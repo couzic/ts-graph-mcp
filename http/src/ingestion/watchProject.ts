@@ -181,20 +181,13 @@ export const watchProject = (
   const specIdMap = buildSpecIdMap(projectRoot);
 
   /**
-   * Check if a file is part of the tsconfig compilation.
+   * Check if a file is valid for indexing.
+   * chokidar + resolveFileContext already filter by extension and package root.
    */
   const isValidTsconfigFile = (
-    tsconfigPath: string,
+    _tsconfigPath: string,
     absolutePath: string,
   ): boolean => {
-    const project = projectRegistry.getProjectForTsConfig(tsconfigPath);
-    if (!project) {
-      return false;
-    }
-    if (project.getSourceFile(absolutePath)) {
-      return true;
-    }
-    // New file: chokidar + resolveFileContext already filter by extension and package root
     return (
       !absolutePath.includes("node_modules") &&
       !absolutePath.includes("/.claude/worktrees/") &&

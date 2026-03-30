@@ -1116,7 +1116,6 @@ export function calculate(a: number, b: number) {
           }
           return undefined;
         },
-        getProjectForTsConfig: () => undefined,
       };
 
       const edges = extractCallEdges(consumer, {
@@ -1184,7 +1183,6 @@ export function calculate(a: number, b: number) {
           }
           return undefined;
         },
-        getProjectForTsConfig: () => undefined,
       };
 
       const edges = extractCallEdges(consumer, {

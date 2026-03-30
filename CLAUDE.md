@@ -2,6 +2,17 @@
 
 @ARCHITECTURE.md @README.md
 
+## Subagents
+
+- NEVER use the built-in `Explore` subagent type. It does not have access to MCP
+  tools.
+- ALWAYS use `explore-graph` (defined in `.claude/agents/explore-graph.md`) for
+  codebase exploration and review tasks. It has access to the ts-graph MCP
+  server.
+- When launching an agent for code analysis, review, or impact verification,
+  prefer `explore-graph` over `general-purpose` — it has access to `searchGraph`
+  for tracing call chains and dependencies.
+
 ## Philosophy
 
 **Built for Claude Code, by Claude Code.** The agent using this tool is also its
@@ -20,10 +31,6 @@ tracing.
 silently degrade or fail. If embeddings are missing, regenerate them. If
 regeneration fails, log a warning. Always validate that required components are
 present when vector search is enabled.
-
-**Simplicity is a feature.** Each tool should do one thing well. If a tool tries
-to do multiple things, split it. The code, the architecture, the tools — all
-should reflect simplicity.
 
 ## Structure
 

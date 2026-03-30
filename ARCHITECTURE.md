@@ -122,6 +122,16 @@ embeddings → write to DB → extract edges → write to DB. No global accumula
 of nodes or edges across files. This keeps memory at O(1) per file, scaling to
 any codebase size.
 
+### Sequential package processing with lazy registry
+
+Packages are processed one at a time. Each package creates a fresh full ts-morph
+Project (with all source files loaded) that goes out of scope after processing,
+keeping peak memory proportional to the largest single package. The
+`ProjectRegistry` holds separate lazy Projects (`skipAddingFilesFromTsConfig:
+true`) used only for cross-package edge resolution — when a barrel file uses path
+aliases from another package's tsconfig, the registry provides the right compiler
+context and loads source files on demand via `addSourceFileAtPath`.
+
 ### No foreign key constraints
 
 The edges table has no FK constraints referencing the nodes table. This enables
@@ -183,7 +193,7 @@ flowchart TD
     end
 
     subgraph Package["Package Processing"]
-        B --> C[Get Project from registry]
+        B --> C[Create full Project per package]
         C --> D[Get source files]
         D --> E{For each file}
     end

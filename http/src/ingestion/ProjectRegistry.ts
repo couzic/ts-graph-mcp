@@ -24,12 +24,6 @@ export interface ProjectRegistry {
    * @returns The owning Project, or undefined if not in any registered package
    */
   getProjectForFile(absolutePath: string): Project | undefined;
-
-  /**
-   * Get the Project instance for a given tsconfig path.
-   * @param absoluteTsConfigPath - Absolute path to tsconfig.json
-   */
-  getProjectForTsConfig(absoluteTsConfigPath: string): Project | undefined;
 }
 
 interface PackageEntry {
@@ -40,10 +34,13 @@ interface PackageEntry {
 }
 
 /**
+ * @spec indexing::memory.lightweight-cross-package
+ *
  * Create a ProjectRegistry from project configuration.
  *
- * Creates all ts-morph Projects upfront and builds a lookup structure
- * to find the correct Project for any file path.
+ * Creates lazy ts-morph Projects (skipAddingFilesFromTsConfig: true) that hold
+ * compiler options and resolution host only. Source files are resolved on demand
+ * for cross-package edge resolution.
  *
  * @param config - Project configuration with packages
  * @param projectRoot - Absolute path to project root
@@ -54,7 +51,6 @@ export const createProjectRegistry = (
   projectRoot: string,
 ): ProjectRegistry => {
   const entries: PackageEntry[] = [];
-  const projectsByTsConfig = new Map<string, Project>();
   const configuredPackageNames = extractConfiguredPackageNames(
     config,
     projectRoot,
@@ -68,13 +64,13 @@ export const createProjectRegistry = (
       tsConfigFilePath: absoluteTsConfigPath,
       workspaceRoot: projectRoot,
       configuredPackageNames,
+      skipAddingFilesFromTsConfig: true,
     });
 
     entries.push({
       pathPrefix: toPathPrefix(packageRoot),
       project,
     });
-    projectsByTsConfig.set(absoluteTsConfigPath, project);
   }
 
   // Sort by path length descending so more specific paths match first
@@ -90,10 +86,6 @@ export const createProjectRegistry = (
         }
       }
       return undefined;
-    },
-
-    getProjectForTsConfig(absoluteTsConfigPath: string): Project | undefined {
-      return projectsByTsConfig.get(absoluteTsConfigPath);
     },
   };
 };

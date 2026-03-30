@@ -11,8 +11,10 @@ import {
 } from "../embedding/embeddingCache.js";
 import type { TsGraphLogger } from "../logging/TsGraphLogger.js";
 import type { SearchIndexWrapper } from "../search/createSearchIndex.js";
+import { createProject } from "./createProject.js";
 import type { EdgeExtractionContext } from "./extract/edges/EdgeExtractionContext.js";
 import { parseFeatureFile } from "./extract/specs/parseFeatureFile.js";
+import { extractConfiguredPackageNames } from "./extractConfiguredPackageNames.js";
 import { findFeatureFiles, reindexFeatureFile } from "./indexFeatureFiles.js";
 import { indexFile } from "./indexFile.js";
 import {
@@ -21,10 +23,7 @@ import {
   saveManifest,
   updateManifestEntry,
 } from "./manifest.js";
-import {
-  createProjectRegistry,
-  type ProjectRegistry,
-} from "./ProjectRegistry.js";
+import { createProjectRegistry } from "./ProjectRegistry.js";
 
 /**
  * Result of startup sync operation.
@@ -51,13 +50,16 @@ interface FileContext {
 }
 
 /**
+ * @spec indexing::memory.sequential-projects
+ *
  * Build a map of relative file paths to their package context.
- * Reuses ts-morph Projects from the registry to avoid redundant project creation.
+ * Creates a full ts-morph Project per package to enumerate source files,
+ * then releases it before processing the next package.
  */
 const buildFileContextMap = (
   config: ProjectConfig,
   projectRoot: string,
-  projectRegistry: ProjectRegistry,
+  configuredPackageNames: Set<string>,
 ): Map<string, FileContext> => {
   const contextMap = new Map<string, FileContext>();
 
@@ -65,10 +67,11 @@ const buildFileContextMap = (
     const absoluteTsConfigPath = join(projectRoot, pkg.tsconfig);
     const packageRoot = dirname(absoluteTsConfigPath);
 
-    const project = projectRegistry.getProjectForTsConfig(absoluteTsConfigPath);
-    if (!project) {
-      continue;
-    }
+    const project = createProject({
+      tsConfigFilePath: absoluteTsConfigPath,
+      workspaceRoot: projectRoot,
+      configuredPackageNames,
+    });
 
     // Filter source files like indexProject does
     const sourceFiles = project.getSourceFiles().filter((sf) => {
@@ -140,8 +143,12 @@ export const syncOnStartup = async (
     embeddingCache,
   };
 
-  // Create project registry for cross-package resolution
+  // Create project registry for cross-package resolution (lazy Projects)
   const projectRegistry = createProjectRegistry(config, options.projectRoot);
+  const configuredPackageNames = extractConfiguredPackageNames(
+    config,
+    options.projectRoot,
+  );
 
   // --- Feature file sync ---
   const featureFileSync = await syncFeatureFiles(
@@ -159,7 +166,7 @@ export const syncOnStartup = async (
   const fileContextMap = buildFileContextMap(
     config,
     options.projectRoot,
-    projectRegistry,
+    configuredPackageNames,
   );
   const currentFiles = Array.from(fileContextMap.keys());
 
@@ -217,12 +224,13 @@ export const syncOnStartup = async (
     }
   }
 
-  // Process each tsconfig group
+  // Process each tsconfig group with its own full Project
   for (const [tsconfigPath, files] of filesByTsconfig) {
-    const project = projectRegistry.getProjectForTsConfig(tsconfigPath);
-    if (!project) {
-      continue;
-    }
+    const project = createProject({
+      tsConfigFilePath: tsconfigPath,
+      workspaceRoot: options.projectRoot,
+      configuredPackageNames,
+    });
 
     for (const relativePath of files) {
       const context = fileContextMap.get(relativePath);

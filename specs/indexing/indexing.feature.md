@@ -1,8 +1,13 @@
 # Indexing
 
-**Status:** ✅ Implemented
+**Status:** 🚧 In progress
 
 **ID:** `indexing`
+
+## TODO
+
+- [Sequential package processing](#sequential-package-processing) `[@indexing::memory.sequential-projects]`
+- [Lightweight cross-package resolution](#lightweight-cross-package-resolution) `[@indexing::memory.lightweight-cross-package]`
 
 ## Source extraction
 
@@ -388,25 +393,51 @@ Supported workspace glob patterns: `libs/*`, `packages/core` (direct path),
 
 When a file in package A imports a symbol from package B, edge extractors use the
 import map to resolve the target to package B's source file. The import map
-follows re-export chains across package boundaries using `followAliasChain`.
+follows re-export chains across package boundaries.
 
 If a barrel file uses path aliases from a different tsconfig context (e.g.,
-`@/components` in package B's tsconfig), the project registry provides the
-correct ts-morph Project for resolution.
+`@/components` in package B's tsconfig), cross-package resolution uses B's
+compiler options to resolve the path alias, then parses the target file on demand
+to follow the re-export chain to the actual definition.
 
 ### Namespace import resolution
 
 > `{#indexing::monorepo.namespace-resolution}`
 
-Namespace re-exports (`export * as MathUtils from './math'`) are resolved through
-the type system. When a caller invokes `MathUtils.multiply()`, the call edge
+Namespace re-exports (`export * as MathUtils from './math'`) are resolved to
+actual definitions. When a caller invokes `MathUtils.multiply()`, the call edge
 points to the actual `multiply` function definition, not the namespace.
 
-Cross-package namespace resolution uses the project registry to re-resolve in the
-correct tsconfig context when the caller's tsconfig cannot resolve the namespace's
-internal path aliases.
+Cross-package namespace resolution uses the target package's compiler options to
+resolve internal path aliases that the caller's tsconfig cannot resolve.
 
 ## Processing model
+
+### Sequential package processing
+
+> `{#indexing::memory.sequential-projects}`
+
+Packages are processed one at a time. At most one ts-morph Project (full AST for
+all files in a package) is loaded in memory simultaneously. After a package is
+fully processed (all files extracted), its Project is released before the next
+package begins.
+
+This bounds peak memory to the size of the largest single package, not the sum of
+all packages.
+
+### Lightweight cross-package resolution
+
+> `{#indexing::memory.lightweight-cross-package}`
+
+Cross-package edge resolution (resolving imports that cross package boundaries)
+uses lazy ts-morph Projects for target packages. A lazy Project is created with
+`skipAddingFilesFromTsConfig: true` — it holds compiler options and resolution
+host but loads zero source files at creation. Barrel files and re-export targets
+are resolved on demand when `getModuleSpecifierSourceFile()` is called.
+
+This means processing package A never forces loading package B's full AST. A
+monorepo with N packages holds at most 1 full ts-morph Project + N lazy
+Projects (compiler options + resolution host only).
 
 ### Per-file streaming
 

@@ -18,6 +18,14 @@ export interface CreateProjectOptions {
    * an error is logged once per package.
    */
   configuredPackageNames?: Set<string>;
+  /**
+   * @spec indexing::memory.lightweight-cross-package
+   *
+   * When true, creates a lazy Project that skips loading source files from tsconfig.
+   * The Project holds compiler options and resolution host only — source files are
+   * resolved on demand via getModuleSpecifierSourceFile().
+   */
+  skipAddingFilesFromTsConfig?: boolean;
 }
 
 /**
@@ -40,7 +48,12 @@ export interface CreateProjectOptions {
  * });
  */
 export const createProject = (options: CreateProjectOptions): Project => {
-  const { tsConfigFilePath, workspaceRoot, configuredPackageNames } = options;
+  const {
+    tsConfigFilePath,
+    workspaceRoot,
+    configuredPackageNames,
+    skipAddingFilesFromTsConfig,
+  } = options;
 
   const absoluteTsConfigPath = isAbsolute(tsConfigFilePath)
     ? tsConfigFilePath
@@ -56,12 +69,16 @@ export const createProject = (options: CreateProjectOptions): Project => {
 
   // If no workspace packages found, use standard resolution
   if (workspaceMap.size === 0) {
-    return new Project({ tsConfigFilePath: absoluteTsConfigPath });
+    return new Project({
+      tsConfigFilePath: absoluteTsConfigPath,
+      skipAddingFilesFromTsConfig,
+    });
   }
 
   // Workspace resolution: use custom resolutionHost
   return new Project({
     tsConfigFilePath: absoluteTsConfigPath,
+    skipAddingFilesFromTsConfig,
     resolutionHost: (moduleResolutionHost, getCompilerOptions) => ({
       resolveModuleNames: (
         moduleNames: string[],

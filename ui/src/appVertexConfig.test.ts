@@ -452,9 +452,7 @@ describe("appVertexConfig", () => {
 
     it("does not fetch topic when activeSection is graph even if topicInput is set", () => {
       graph.dispatch(appActions.setTopicInput("auth"));
-      graph.dispatch(
-        appActions.setFromEndpoint(fromEndpoint),
-      );
+      graph.dispatch(appActions.setFromEndpoint(fromEndpoint));
       vi.advanceTimersByTime(400);
       receivedSearch$.next(toGraphResult("graph result"));
 

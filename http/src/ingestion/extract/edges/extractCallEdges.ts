@@ -139,8 +139,15 @@ const resolveNamespaceCallCrossPackage = (
     return undefined;
   }
 
-  // Get the barrel file in the correct context
-  const barrelFile = barrelProject.getSourceFile(barrelAbsolutePath);
+  // Load the barrel file on demand (lazy Projects don't preload source files)
+  let barrelFile = barrelProject.getSourceFile(barrelAbsolutePath);
+  if (!barrelFile) {
+    try {
+      barrelFile = barrelProject.addSourceFileAtPath(barrelAbsolutePath);
+    } catch {
+      // File may not exist on disk (stale import, mid-edit state)
+    }
+  }
   if (!barrelFile) {
     return undefined;
   }

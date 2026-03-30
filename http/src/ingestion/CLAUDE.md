@@ -82,6 +82,20 @@ Uses ts-morph for type-aware TypeScript parsing:
 - Reuse `Project` instance across files for performance
 - Skips `node_modules` and `.d.ts` files automatically
 
+### Lazy vs Full Projects
+
+`ProjectRegistry` holds **lazy** Projects (`skipAddingFilesFromTsConfig: true`)
+— compiler options and resolution host only, zero source files loaded at
+creation. Used exclusively for cross-package edge resolution.
+
+Each caller (`indexProject`, `syncOnStartup`, `watchProject`) creates its own
+**full** Project per package for extraction, then releases it.
+
+**Critical:** `getModuleSpecifierSourceFile()`, `getExportSymbols()`, and
+`getAliasedSymbol()` all work correctly on lazy Projects. Source files are loaded
+on demand via `addSourceFileAtPath()` in `buildImportMap.ts` and
+`extractCallEdges.ts` when cross-package resolution needs them.
+
 ## Common Patterns
 
 ### Index Entire Project

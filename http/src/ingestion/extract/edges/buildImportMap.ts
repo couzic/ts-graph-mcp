@@ -270,9 +270,17 @@ const resolveActualDefinition = (
       const barrelProject =
         projectRegistry.getProjectForFile(barrelAbsolutePath);
       if (barrelProject) {
-        // Get the barrel file from the correct Project (with correct tsconfig context)
-        const barrelInCorrectContext =
+        // Load the barrel file on demand (lazy Projects don't preload source files)
+        let barrelInCorrectContext =
           barrelProject.getSourceFile(barrelAbsolutePath);
+        if (!barrelInCorrectContext) {
+          try {
+            barrelInCorrectContext =
+              barrelProject.addSourceFileAtPath(barrelAbsolutePath);
+          } catch {
+            // File may not exist on disk (stale import, mid-edit state)
+          }
+        }
         if (barrelInCorrectContext) {
           // Find the export for this symbol in the correctly-contexted barrel file
           const result = resolveExportInBarrel(

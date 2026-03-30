@@ -1,5 +1,60 @@
 # Known Issues
 
+## Startup Memory: Heap Out of Memory on Sync Path
+
+**Impact:** Critical (server crashes)
+
+**Problem:** The "Using existing database. Checking for file changes..." startup
+path (`syncOnStartup` + `populateSearchIndex`) causes JavaScript heap out of
+memory crashes on large codebases. Two overlapping memory spikes combine to
+exceed heap limits.
+
+### Spike 1: populateSearchIndex loads entire nodes table at once
+
+After sync completes, `server.ts` (line 154) calls `populateSearchIndex` which
+runs:
+
+```sql
+SELECT id, name, file_path, type, content_hash, snippet FROM nodes
+```
+
+with `.all()`, materializing **every node row with full source snippets** into a
+single JS array. For large codebases (10K+ symbols), this is tens of MB of
+strings held in memory while batches are processed.
+
+**Key file:** `http/src/search/populateSearchIndex.ts` lines 71-75
+
+### Spike 2: Orama doubles embedding vector memory
+
+`createSearchIndex.ts` converts `Float32Array` embeddings to JS `number[]` via
+`Array.from(doc.embedding!)` before inserting into Orama. JS numbers are 8 bytes
+each vs 4 bytes in Float32Array, **doubling vector memory**:
+
+- 10K nodes × 768 dims × 8 bytes = ~60 MB (vs ~30 MB with Float32Array)
+- 10K nodes × 2560 dims (qwen3-4b) = ~200 MB (vs ~100 MB)
+
+**Key file:** `http/src/search/createSearchIndex.ts` line 160
+
+### Combined effect
+
+At peak during startup, both spikes overlap in time:
+
+| Component                      | Memory (large codebase) |
+| ------------------------------ | ----------------------- |
+| Node rows + snippets from SQL  | Tens of MB              |
+| Orama embeddings (JS number[]) | 60-200 MB               |
+| Embedding model (resident)     | 300 MB - 4 GB           |
+
+### Fix approaches
+
+1. **Stream `populateSearchIndex`.** Use a SQLite iterator instead of `.all()`
+   to process one batch at a time without holding the full result set.
+
+2. **Keep embeddings as `Float32Array` in Orama.** Avoid the `Array.from()`
+   conversion. Requires checking Orama's vector API supports typed arrays.
+
+---
+
 ## Traversal Depth Limits and `direct` Param
 
 **Impact:** Medium (performance + usability)
@@ -172,7 +227,8 @@ but lacks:
 
 **Current behavior:** `http/src/ingestion/watchProject.ts` creates a fresh
 ts-morph `Project` for each file change in `reindexFile`. Tsconfig validation
-(`isValidTsconfigFile`) now uses the `ProjectRegistry`.
+(`isValidTsconfigFile`) uses path-based exclusion checks (`node_modules`,
+`.claude/worktrees/`).
 
 **Why:** Cached Projects don't know about files added since cache creation. When
 files are added/modified concurrently, cross-file import resolution fails with
@@ -306,9 +362,8 @@ export const EDGE_TYPES: EdgeType[] = [
 **Impact:** Low (performance)
 
 **Problem:** `buildWorkspaceMap()` is called every time `createProject()` is
-invoked. `indexProject` and `syncOnStartup` reuse Projects from the
-`ProjectRegistry`, but `reindexFile` in `watchProject` still calls
-`createProject()` directly, rebuilding the workspace map each time.
+invoked. All three callers (`indexProject`, `syncOnStartup`, `watchProject`)
+call `createProject()` directly, rebuilding the workspace map each time.
 
 For large monorepos with many packages, this adds overhead: parsing all
 `package.json` files, expanding workspace globs, inferring source entries from

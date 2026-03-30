@@ -6,7 +6,9 @@ import type { EmbeddingProvider } from "../embedding/EmbeddingTypes.js";
 import { openEmbeddingCache } from "../embedding/embeddingCache.js";
 import type { TsGraphLogger } from "../logging/TsGraphLogger.js";
 import type { SearchIndexWrapper } from "../search/createSearchIndex.js";
+import { createProject } from "./createProject.js";
 import type { EdgeExtractionContext } from "./extract/edges/EdgeExtractionContext.js";
+import { extractConfiguredPackageNames } from "./extractConfiguredPackageNames.js";
 import { indexFeatureFiles } from "./indexFeatureFiles.js";
 import type { EmbeddingCache } from "./indexFile.js";
 import { indexFile } from "./indexFile.js";
@@ -77,8 +79,12 @@ export const indexProject = async (
       ? openEmbeddingCache(cacheDir, modelName)
       : undefined;
 
-  // Create project registry for cross-package resolution
+  // Create project registry for cross-package resolution (lazy Projects)
   const projectRegistry = createProjectRegistry(config, options.projectRoot);
+  const configuredPackageNames = extractConfiguredPackageNames(
+    config,
+    options.projectRoot,
+  );
 
   // Index feature files first to build specIdMap for @spec edge resolution
   const featureResult = await indexFeatureFiles(options.projectRoot, dbWriter, {
@@ -98,6 +104,7 @@ export const indexProject = async (
         options.projectRoot,
         dbWriter,
         projectRegistry,
+        configuredPackageNames,
         options.logger,
         options.searchIndex,
         options.embeddingProvider,
@@ -148,16 +155,18 @@ interface PackageProcessResult {
 }
 
 /**
+ * @spec indexing::memory.sequential-projects
+ *
  * Process a single package by streaming nodes and edges to the database.
+ *
+ * Creates its own full ts-morph Project for source file extraction, independent
+ * of the lazy registry (used only for cross-package edge resolution). The full
+ * Project goes out of scope after this function returns, making it GC-eligible
+ * before the next package begins.
  *
  * For each file:
  * 1. Extract nodes → write to DB
  * 2. Extract edges → write to DB
- *
- * No global accumulation - edge extractors use buildImportMap for cross-file resolution.
- *
- * Memory efficiency: O(1) per file (~100MB peak regardless of project size).
- * Each file's import map contains ~100 entries max vs millions if we held all nodes.
  */
 const processPackage = async (
   packageName: string,
@@ -165,6 +174,7 @@ const processPackage = async (
   projectRoot: string,
   dbWriter: DbWriter,
   projectRegistry: ProjectRegistry,
+  configuredPackageNames: Set<string>,
   logger: TsGraphLogger,
   searchIndex: SearchIndexWrapper,
   embeddingProvider: EmbeddingProvider,
@@ -180,21 +190,11 @@ const processPackage = async (
   const absoluteTsConfigPath = resolve(projectRoot, tsconfigPath);
   const packageRoot = dirname(absoluteTsConfigPath);
 
-  const project = projectRegistry.getProjectForTsConfig(absoluteTsConfigPath);
-  if (!project) {
-    return {
-      filesProcessed: 0,
-      filesIndexed: [],
-      nodesAdded: 0,
-      edgesAdded: 0,
-      errors: [
-        {
-          file: tsconfigPath,
-          message: `No Project found in registry for ${tsconfigPath}`,
-        },
-      ],
-    };
-  }
+  const project = createProject({
+    tsConfigFilePath: absoluteTsConfigPath,
+    workspaceRoot: projectRoot,
+    configuredPackageNames,
+  });
 
   // Filter source files:
   // - Only include files within this package's directory tree
