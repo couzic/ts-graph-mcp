@@ -377,6 +377,29 @@ describe(buildWorkspaceMap.name, () => {
     });
   });
 
+  describe("self-referencing workspace", () => {
+    it("handles dot workspace entry without infinite recursion", () => {
+      const testDir = createTempDir("self-ref");
+      writePackageJson("self-ref", {
+        name: "root",
+        version: "1.0.0",
+        workspaces: [".", "packages/*"],
+        main: "./dist/index.js",
+      });
+      writeTsconfig("self-ref", { outDir: "./dist", rootDir: "./src" });
+      writeFile("self-ref/src/index.ts");
+
+      createWorkspacePackage("self-ref/packages/a", "package-a");
+
+      const result = buildWorkspaceMap(testDir);
+
+      expect(result.get("root")).toBe(join(testDir, "src/index.ts"));
+      expect(result.get("package-a")).toBe(
+        join(testDir, "packages/a/src/index.ts"),
+      );
+    });
+  });
+
   describe("missing package.json", () => {
     it("skips directories without package.json", () => {
       const testDir = createTempDir("missing-pkg");

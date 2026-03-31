@@ -38,8 +38,9 @@ export type WorkspaceMap = Map<string, string>;
 export const buildWorkspaceMap = (workspaceRoot: string): WorkspaceMap => {
   const result: WorkspaceMap = new Map();
   const absoluteRoot = resolve(workspaceRoot);
+  const visited = new Set<string>();
 
-  processWorkspaceRoot(absoluteRoot, result);
+  processWorkspaceRoot(absoluteRoot, result, visited);
 
   return result;
 };
@@ -50,7 +51,14 @@ export const buildWorkspaceMap = (workspaceRoot: string): WorkspaceMap => {
 const processWorkspaceRoot = (
   directory: string,
   result: WorkspaceMap,
+  visited: Set<string>,
 ): void => {
+  const normalized = resolve(directory);
+  if (visited.has(normalized)) {
+    return;
+  }
+  visited.add(normalized);
+
   const packageJsonPath = join(directory, "package.json");
 
   if (!existsSync(packageJsonPath)) {
@@ -71,7 +79,7 @@ const processWorkspaceRoot = (
     const packageDirs = expandWorkspaceGlob(directory, workspaceGlob);
 
     for (const packageDir of packageDirs) {
-      processPackageDirectory(packageDir, result);
+      processPackageDirectory(packageDir, result, visited);
     }
   }
 };
@@ -82,6 +90,7 @@ const processWorkspaceRoot = (
 const processPackageDirectory = (
   packageDir: string,
   result: WorkspaceMap,
+  visited: Set<string>,
 ): void => {
   const packageJsonPath = join(packageDir, "package.json");
 
@@ -108,7 +117,7 @@ const processPackageDirectory = (
   // Handle nested workspaces recursively
   const nestedWorkspaces = extractWorkspaces(packageJson);
   if (nestedWorkspaces.length > 0) {
-    processWorkspaceRoot(packageDir, result);
+    processWorkspaceRoot(packageDir, result, visited);
   }
 };
 
