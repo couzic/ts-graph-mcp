@@ -443,18 +443,24 @@ Projects (compiler options + resolution host only).
 
 > `{#indexing::streaming.per-file}`
 
-Files are processed one at a time: extract nodes, generate embeddings, write to
-DB, extract edges, write to DB. No global accumulation of nodes or edges across
-files. Each file's import map contains only its own imports (~100 entries),
-keeping memory usage constant regardless of project size.
+Files are processed one at a time: extract nodes, optionally generate embeddings
+`[@configuration::embedding.disabled]`, write to DB, extract edges, write to DB.
+No global accumulation of nodes or edges across files. Each file's import map
+contains only its own imports (~100 entries), keeping memory usage constant
+regardless of project size.
 
 ### Embedding generation
 
 > `{#indexing::embedding.generation}`
 
-Each node's source snippet is extracted and embedded (vector embedding) during
+When embedding is enabled `[@configuration::embedding.enabled-default]`, each
+node's source snippet is extracted and embedded (vector embedding) during
 indexing. The embedding and a content hash are stored. Nodes are added to an
 in-memory search index (Orama) for hybrid BM25 + vector search.
+
+When embedding is disabled `[@configuration::embedding.disabled]`, the embedding
+step is skipped. Nodes are still written to SQLite and added to the search index
+(BM25-only, without vectors). No content hash is computed.
 
 ### Embedding cache reuse
 
@@ -462,4 +468,5 @@ in-memory search index (Orama) for hybrid BM25 + vector search.
 
 When reindexing a file whose content has not changed, the embedding cache avoids
 regenerating embeddings. The cache is keyed by content hash, so unchanged symbols
-reuse their previously computed embeddings.
+reuse their previously computed embeddings. This only applies when embedding is
+enabled.

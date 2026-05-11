@@ -88,6 +88,7 @@ export function validateEmail(email: string): boolean {
 
     // Step 1: Index the project (populates both DB and search index)
     const initialSearchIndex = await createSearchIndex({
+      vectorSearchEnabled: true,
       vectorDimensions,
     });
     const writer = createSqliteWriter(db);
@@ -112,7 +113,10 @@ export function validateEmail(email: string): boolean {
 
     // Step 2: Simulate server restart - create a NEW empty search index
     // (This is what happens in server.ts on restart)
-    const freshSearchIndex = await createSearchIndex({ vectorDimensions });
+    const freshSearchIndex = await createSearchIndex({
+      vectorSearchEnabled: true,
+      vectorDimensions,
+    });
     expect(await freshSearchIndex.count()).toBe(0);
 
     // Create manifest that matches current file state (simulating previous indexing)
@@ -132,6 +136,7 @@ export function validateEmail(email: string): boolean {
     const syncResult = await syncOnStartup(db, config, manifest, {
       projectRoot: TEST_DIR,
       cacheDir: CACHE_DIR,
+      modelName: "test-model",
       logger: silentLogger,
       searchIndex: freshSearchIndex,
       embeddingProvider,
@@ -192,7 +197,10 @@ export function formatDate(date: Date): string {
       onEmbed: (content) => generatedEmbeddings.push(content),
     });
 
-    const searchIndex = await createSearchIndex({ vectorDimensions });
+    const searchIndex = await createSearchIndex({
+      vectorSearchEnabled: true,
+      vectorDimensions,
+    });
     const writer = createSqliteWriter(db);
     await indexProject(config, writer, {
       projectRoot: TEST_DIR,
@@ -269,9 +277,14 @@ describe("syncOnStartup cross-package resolution", () => {
         dimensions: vectorDimensions,
       });
 
-      const searchIndex = await createSearchIndex({ vectorDimensions });
+      const searchIndex = await createSearchIndex({
+        vectorSearchEnabled: true,
+        vectorDimensions,
+      });
       await indexProject(config, writer, {
         projectRoot,
+        cacheDir: projectRoot,
+        modelName: "test",
         logger: silentLogger,
         embeddingProvider,
         searchIndex,
@@ -310,6 +323,7 @@ describe("syncOnStartup cross-package resolution", () => {
       await syncOnStartup(db, config, manifest, {
         projectRoot,
         cacheDir,
+        modelName: "test",
         logger: silentLogger,
         embeddingProvider,
       });

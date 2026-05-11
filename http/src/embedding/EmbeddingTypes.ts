@@ -36,6 +36,10 @@ export interface EmbeddingConfig {
  * Abstracts the embedding generation so it can be swapped out.
  */
 export interface EmbeddingProvider {
+  /** Whether semantic search is enabled */
+  enabled: boolean;
+  /** Vector dimensions */
+  dimensions: number;
   /** Initialize the provider (downloads model if needed). Call before indexing. */
   initialize(): Promise<void>;
   /** Generate embedding for a query (for search) */

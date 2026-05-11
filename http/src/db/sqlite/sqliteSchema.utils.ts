@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS nodes (
   end_line INTEGER NOT NULL,
   exported INTEGER NOT NULL DEFAULT 0,
   properties TEXT NOT NULL DEFAULT '{}',
-  content_hash TEXT NOT NULL,
+  content_hash TEXT,
   snippet TEXT NOT NULL
 )`;
 

@@ -111,7 +111,10 @@ describe("Ingestion", () => {
       rmSync(TEST_DIR, { recursive: true });
     }
     mkdirSync(TEST_DIR, { recursive: true });
-    searchIndex = await createSearchIndex({ vectorDimensions });
+    searchIndex = await createSearchIndex({
+      vectorSearchEnabled: true,
+      vectorDimensions,
+    });
   });
 
   afterEach(() => {
@@ -161,6 +164,8 @@ describe("Ingestion", () => {
       const writer = createMockWriter();
       const result = await indexProject(config, writer, {
         projectRoot: TEST_DIR,
+        cacheDir: TEST_DIR,
+        modelName: "test",
         logger: silentLogger,
         embeddingProvider,
         searchIndex,
@@ -195,6 +200,8 @@ describe("Ingestion", () => {
       const writer = createMockWriter();
       const result = await indexProject(config, writer, {
         projectRoot: TEST_DIR,
+        cacheDir: TEST_DIR,
+        modelName: "test",
         logger: silentLogger,
         embeddingProvider,
         searchIndex,
@@ -224,6 +231,8 @@ describe("Ingestion", () => {
       const writer = createMockWriter();
       await indexProject(config, writer, {
         projectRoot: TEST_DIR,
+        cacheDir: TEST_DIR,
+        modelName: "test",
         clearFirst: true,
         logger: silentLogger,
         embeddingProvider,
@@ -292,6 +301,8 @@ export function helper(): void {
 
         const result = await indexProject(config, sqliteWriter, {
           projectRoot: TEST_DIR,
+          cacheDir: TEST_DIR,
+          modelName: "test",
           logger: silentLogger,
           embeddingProvider,
           searchIndex,
@@ -364,6 +375,8 @@ export function getPath(): string {
 
         const result = await indexProject(config, sqliteWriter, {
           projectRoot: TEST_DIR,
+          cacheDir: TEST_DIR,
+          modelName: "test",
           logger: silentLogger,
           embeddingProvider,
           searchIndex,
@@ -388,6 +401,8 @@ export function getPath(): string {
       await expect(
         indexProject(config, writer, {
           projectRoot: TEST_DIR,
+          cacheDir: TEST_DIR,
+          modelName: "test",
           logger: silentLogger,
           embeddingProvider,
           searchIndex,
@@ -461,6 +476,8 @@ describe("login", () => {
 
         const result = await indexProject(config, sqliteWriter, {
           projectRoot: TEST_DIR,
+          cacheDir: TEST_DIR,
+          modelName: "test",
           logger: silentLogger,
           embeddingProvider,
           searchIndex,
@@ -602,6 +619,8 @@ export function formatDate(date: Date): string {
 
         const result = await indexProject(config, sqliteWriter, {
           projectRoot: TEST_DIR,
+          cacheDir: TEST_DIR,
+          modelName: "test",
           logger: silentLogger,
           embeddingProvider,
           searchIndex,

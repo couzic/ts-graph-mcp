@@ -62,6 +62,8 @@ export const createFakeEmbeddingProvider = (options?: {
   };
 
   return {
+    enabled: true,
+    dimensions,
     async initialize(): Promise<void> {
       // No initialization needed for fake provider
     },

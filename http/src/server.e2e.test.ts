@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
   rmSync,
@@ -347,4 +348,129 @@ export function authenticateSession(token: string): boolean {
     // Clean up
     await serverHandle.close();
   }, 60_000); // 60s timeout for model loading
+});
+
+/**
+ * E2E test for server with embedding disabled.
+ *
+ * @spec configuration::embedding.disabled
+ * @spec server::startup.no-embeddings
+ */
+describe("HTTP server with embedding disabled", () => {
+  const TEST_DIR = mkdtempSync(join(tmpdir(), "server-no-embed-test-"));
+  const TEST_PORT = 14997;
+  let serverHandle: ServerHandle;
+  let originalCwd: string;
+
+  beforeAll(async () => {
+    mkdirSync(join(TEST_DIR, "src"), { recursive: true });
+
+    writeFileSync(
+      join(TEST_DIR, "tsconfig.json"),
+      JSON.stringify(
+        {
+          compilerOptions: {
+            target: "ES2022",
+            module: "ESNext",
+            moduleResolution: "bundler",
+            strict: true,
+          },
+          include: ["src/**/*.ts"],
+        },
+        null,
+        2,
+      ),
+    );
+
+    writeFileSync(
+      join(TEST_DIR, "ts-graph-mcp.config.json"),
+      JSON.stringify(
+        {
+          packages: [{ name: "main", tsconfig: "./tsconfig.json" }],
+          server: { port: TEST_PORT },
+          embedding: { enabled: false },
+          watch: { silent: true },
+        },
+        null,
+        2,
+      ),
+    );
+
+    writeFileSync(
+      join(TEST_DIR, "src/utils.ts"),
+      `export function formatDate(d: Date): string { return d.toISOString(); }
+export function parseDate(s: string): Date { return new Date(s); }
+`,
+    );
+
+    originalCwd = process.cwd();
+    process.chdir(TEST_DIR);
+
+    serverHandle = await startHttpServer([], { logger: silentLogger });
+  });
+
+  afterAll(async () => {
+    process.chdir(originalCwd);
+    await serverHandle.close();
+    rmSync(TEST_DIR, { recursive: true, force: true });
+  });
+
+  it("starts without downloading a model", () => {
+    // No .ts-graph-mcp/models directory should be created
+    expect(existsSync(join(TEST_DIR, ".ts-graph-mcp", "models"))).toBe(false);
+  });
+
+  it("health endpoint responds", async () => {
+    const response = await fetch(`http://localhost:${TEST_PORT}/health`);
+    const data = (await response.json()) as { status: string };
+    expect(data.status).toBe("ok");
+  });
+
+  it("indexes symbols", async () => {
+    const response = await fetch(
+      `http://localhost:${TEST_PORT}/api/symbols?q=formatDate`,
+    );
+    const symbols = (await response.json()) as Array<{ symbol: string }>;
+    expect(symbols.some((s) => s.symbol === "formatDate")).toBe(true);
+  });
+
+  it("topic search returns BM25 results", async () => {
+    const response = await fetch(
+      `http://localhost:${TEST_PORT}/api/graph/search`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topic: "formatDate" }),
+      },
+    );
+    const data = (await response.json()) as { result: string };
+    expect(data.result).toContain("formatDate");
+  });
+
+  it("graph traversal works", async () => {
+    const response = await fetch(
+      `http://localhost:${TEST_PORT}/api/graph/search`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ from: { symbol: "formatDate" } }),
+      },
+    );
+    const data = (await response.json()) as { result: string };
+    expect(response.status).toBe(200);
+    expect(data.result).toBeDefined();
+  });
+
+  it("reindexes file changes without errors", async () => {
+    writeFileSync(
+      join(TEST_DIR, "src/utils.ts"),
+      `export function formatDate(d: Date): string { return d.toISOString(); }
+export function parseDate(s: string): Date { return new Date(s); }
+export function newHelper(): void {}
+`,
+    );
+
+    const symbols = await waitForSymbol(TEST_PORT, "newHelper");
+    expect(symbols.some((s) => s.symbol === "newHelper")).toBe(true);
+  });
 });

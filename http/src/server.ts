@@ -10,7 +10,9 @@ import { getCacheDir, getSqliteDir } from "./config/getCacheDir.js";
 import { createSqliteWriter } from "./db/sqlite/createSqliteWriter.js";
 import { removeOrphanedEdges } from "./db/sqlite/removeOrphanedEdges.js";
 import { openDatabase } from "./db/sqlite/sqliteConnection.utils.js";
+import { DB_SCHEMA_VERSION, readSchemaVersion } from "./db/versions.js";
 import { createEmbeddingProvider } from "./embedding/createEmbeddingProvider.js";
+import { createNoopEmbeddingProvider } from "./embedding/createNoopEmbeddingProvider.js";
 import type { EmbeddingProvider } from "./embedding/EmbeddingTypes.js";
 import { openEmbeddingCache } from "./embedding/embeddingCache.js";
 import { DEFAULT_PRESET, EMBEDDING_PRESETS } from "./embedding/presets.js";
@@ -42,7 +44,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 /**
  * Index the project and return the open database connection.
  */
-const indexAndOpenDb = async (
+export const indexAndOpenDb = async (
   projectRoot: string,
   cacheDir: string,
   modelName: string,
@@ -60,6 +62,8 @@ const indexAndOpenDb = async (
   logger.info(`Project root: ${projectRoot}`);
   const dbPath = join(getSqliteDir(cacheDir), "graph.db");
   const dbExists = existsSync(dbPath);
+  const schemaOutdated =
+    dbExists && readSchemaVersion(dbPath) < DB_SCHEMA_VERSION;
   const db = openDatabase({ path: dbPath });
 
   const configResult = loadConfigOrDetect(projectRoot);
@@ -72,6 +76,26 @@ const indexAndOpenDb = async (
       manifest: { version: 1, files: {} },
       config: null,
     };
+  }
+
+  if (schemaOutdated && !forceReindex) {
+    logger.info("Database schema is outdated. Reindexing...");
+    forceReindex = true;
+  }
+
+  // Detect DB indexed without embeddings — force reindex to generate them
+  if (dbExists && !forceReindex && embeddingProvider.enabled) {
+    const nullHashCount = db
+      .prepare<[], { count: number }>(
+        "SELECT COUNT(*) as count FROM nodes WHERE content_hash IS NULL",
+      )
+      .get();
+    if (nullHashCount && nullHashCount.count > 0) {
+      logger.info(
+        "Database was indexed without embeddings. Reindexing with embeddings...",
+      );
+      forceReindex = true;
+    }
   }
 
   if (forceReindex || !dbExists) {
@@ -149,15 +173,24 @@ const indexAndOpenDb = async (
     }
   }
 
-  // Populate search index from database (with embeddings from cache)
-  const embeddingCache = openEmbeddingCache(cacheDir, modelName);
-  await populateSearchIndex({
-    db,
-    searchIndex,
-    embeddingCache,
-    embeddingProvider,
-  });
-  embeddingCache.close();
+  // Populate search index from database (with embeddings from cache when enabled)
+  if (embeddingProvider.enabled) {
+    const embeddingCache = openEmbeddingCache(cacheDir, modelName);
+    await populateSearchIndex({
+      db,
+      searchIndex,
+      embeddingCache,
+      embeddingProvider,
+    });
+    embeddingCache.close();
+  } else {
+    await populateSearchIndex({
+      db,
+      searchIndex,
+      embeddingCache: null,
+      embeddingProvider,
+    });
+  }
 
   // Get actual file count from database
   const countResult = db
@@ -213,56 +246,73 @@ export const startHttpServer = async (
   // Load config early to get embedding settings
   const configResult = loadConfigOrDetect(projectRoot);
   const embeddingConfig = configResult?.config?.embedding;
+  /** @spec configuration::embedding.enabled-default */
+  const embeddingEnabled = embeddingConfig?.enabled !== false;
 
-  // Create embedding provider (always enabled, uses default preset if not configured)
-  const presetName = embeddingConfig?.preset ?? DEFAULT_PRESET;
-  const preset = EMBEDDING_PRESETS[presetName];
+  let embeddingProvider: EmbeddingProvider;
+  let vectorDimensions: number;
+  let presetName: string;
 
-  if (!preset) {
-    logger.error(`Unknown embedding preset: ${presetName}`);
-    process.exit(1);
+  if (embeddingEnabled) {
+    presetName = embeddingConfig?.preset ?? DEFAULT_PRESET;
+    const preset = EMBEDDING_PRESETS[presetName];
+
+    if (!preset) {
+      logger.error(`Unknown embedding preset: ${presetName}`);
+      process.exit(1);
+    }
+
+    vectorDimensions = preset.dimensions;
+    logger.info(
+      `Semantic search: ${presetName} (${vectorDimensions} dimensions)`,
+    );
+
+    let downloadComplete = false;
+    embeddingProvider = await createEmbeddingProvider({
+      config: {
+        preset: presetName,
+        repo: embeddingConfig?.repo,
+        filename: embeddingConfig?.filename,
+        queryPrefix: embeddingConfig?.queryPrefix,
+        documentPrefix: embeddingConfig?.documentPrefix,
+      },
+      modelsDir: join(cacheDir, "models"),
+      onProgress: (downloaded, total) => {
+        if (downloadComplete) {
+          return;
+        }
+        const percent = Math.round((downloaded / total) * 100);
+        process.stdout.write(`\rDownloading model: ${percent}%`);
+        if (downloaded === total) {
+          process.stdout.write("\n");
+          downloadComplete = true;
+        }
+      },
+    });
+
+    // Initialize embedding provider (downloads model if needed) before indexing
+    await embeddingProvider.initialize();
+  } else {
+    /** @spec server::startup.no-embeddings */
+    presetName = "";
+    vectorDimensions = 0;
+    embeddingProvider = createNoopEmbeddingProvider();
+    logger.info("Semantic search: disabled");
   }
-
-  const vectorDimensions = preset.dimensions;
-  logger.info(
-    `Semantic search: ${presetName} (${vectorDimensions} dimensions)`,
-  );
-
-  let downloadComplete = false;
-  const embeddingProvider = await createEmbeddingProvider({
-    config: {
-      preset: presetName,
-      repo: embeddingConfig?.repo,
-      filename: embeddingConfig?.filename,
-      queryPrefix: embeddingConfig?.queryPrefix,
-      documentPrefix: embeddingConfig?.documentPrefix,
-    },
-    modelsDir: join(cacheDir, "models"),
-    onProgress: (downloaded, total) => {
-      if (downloadComplete) {
-        return;
-      }
-      const percent = Math.round((downloaded / total) * 100);
-      process.stdout.write(`\rDownloading model: ${percent}%`);
-      if (downloaded === total) {
-        process.stdout.write("\n");
-        downloadComplete = true;
-      }
-    },
-  });
-
-  // Initialize embedding provider (downloads model if needed) before indexing
-  await embeddingProvider.initialize();
 
   // Create fresh search index (rebuilt from SQLite + embedding cache on startup)
   // dbHolder.ref is set after indexAndOpenDb returns.
   // Safe because search() is only called after the server is up.
   const dbHolder: { ref: Database.Database | null } = { ref: null };
-  const searchIndex = await createSearchIndex({
+  const searchIndexOptions: Parameters<typeof createSearchIndex>[0] = {
+    vectorSearchEnabled: embeddingEnabled,
     vectorDimensions,
-    openCache: () => openEmbeddingCache(cacheDir, presetName),
-    embeddingProvider,
-    getNodeEmbeddingData: (ids: string[]) => {
+  };
+  if (embeddingEnabled) {
+    searchIndexOptions.openCache = () =>
+      openEmbeddingCache(cacheDir, presetName);
+    searchIndexOptions.embeddingProvider = embeddingProvider;
+    searchIndexOptions.getNodeEmbeddingData = (ids: string[]) => {
       const result = new Map<
         string,
         { contentHash: string; snippet: string }
@@ -286,8 +336,9 @@ export const startHttpServer = async (
         });
       }
       return result;
-    },
-  });
+    };
+  }
+  const searchIndex = await createSearchIndex(searchIndexOptions);
 
   // Index project and keep DB open (unified: SQLite + search index)
   const { db, indexedFiles, manifest, config } = await indexAndOpenDb(

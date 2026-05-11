@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  EmbeddingConfigSchema,
   PackageConfigSchema,
   ProjectConfigSchema,
   ServerConfigSchema,
@@ -145,6 +146,34 @@ describe("ConfigSchema", () => {
     it("rejects server config without port", () => {
       const result = ServerConfigSchema.safeParse({});
       expect(result.success).toBe(false);
+    });
+  });
+
+  /** @spec configuration::embedding.enabled-default */
+  describe("EmbeddingConfigSchema", () => {
+    it("parses config without enabled field (defaults to enabled)", () => {
+      const config = { preset: "nomic-embed-text-v1.5" as const };
+      const result = EmbeddingConfigSchema.parse(config);
+      expect(result.enabled).toBeUndefined();
+    });
+
+    /** @spec configuration::embedding.disabled */
+    it("parses config with enabled: false", () => {
+      const config = { enabled: false };
+      const result = EmbeddingConfigSchema.parse(config);
+      expect(result.enabled).toBe(false);
+    });
+
+    it("parses config with enabled: true", () => {
+      const config = { enabled: true };
+      const result = EmbeddingConfigSchema.parse(config);
+      expect(result.enabled).toBe(true);
+    });
+
+    it("parses empty config", () => {
+      const result = EmbeddingConfigSchema.parse({});
+      expect(result.enabled).toBeUndefined();
+      expect(result.preset).toBeUndefined();
     });
   });
 

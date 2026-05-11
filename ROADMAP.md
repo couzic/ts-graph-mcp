@@ -57,6 +57,45 @@ Default remains `["specs/"]` for backward compatibility.
 
 ---
 
+### Background Semantic Indexing
+
+**Impact: High | Effort: High**
+
+Decouple embedding generation from server startup so the HTTP server is available
+immediately.
+
+**Current state:** When embedding is enabled (default), the server blocks on
+embedding generation during indexing — every node is embedded sequentially before
+the server starts listening. On large codebases with a cold embedding cache, this
+can take minutes. Embedding can be disabled via `embedding.enabled: false`, which
+skips model download and runs BM25-only search.
+
+**Goal:** The server starts accepting requests as soon as AST extraction and
+SQLite writes are complete. Embedding generation runs in the background.
+
+**Design challenges:**
+
+1. **Orama population order:** Documents must be insertable without embeddings
+   first (BM25-only), then backfilled with vectors. The current code already
+   handles documents without embeddings (`as any` cast in `createSearchIndex.ts`),
+   but there is no mechanism to update a document's embedding after insertion.
+
+2. **Concurrent Orama mutations:** Background embedding writes must not conflict
+   with file watcher reindexing or query reads.
+
+3. **Graceful degradation:** `topic` searches should work immediately (BM25-only)
+   and improve as embeddings arrive. The UI/MCP output should indicate when
+   semantic search is unavailable or partial.
+
+4. **Progress signaling:** The health endpoint or a dedicated endpoint should
+   report embedding progress (e.g., `embeddings: { total: 5000, ready: 1200 }`).
+
+5. **Search index rebuild on startup:** When the DB already exists,
+   `populateSearchIndex` currently reads all nodes + embeddings from cache. This
+   would need to handle partially cached embeddings gracefully.
+
+---
+
 ### Embedding Cache Cleanup
 
 **Impact: Medium | Effort: Low**

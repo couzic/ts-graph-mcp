@@ -160,6 +160,7 @@ ts-graph-mcp --reindex    # Force clean reindex
 
 | Field                      | Description                   | Default                   |
 | -------------------------- | ----------------------------- | ------------------------- |
+| `embedding.enabled`        | Enable semantic search        | `true`                    |
 | `embedding.preset`         | Embedding model               | `"nomic-embed-text-v1.5"` |
 | `storage.type`             | Database type                 | `"sqlite"`                |
 | `storage.path`             | Database file path            | `.ts-graph-mcp/graph.db`  |

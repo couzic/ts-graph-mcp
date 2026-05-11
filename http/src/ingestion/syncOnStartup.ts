@@ -123,7 +123,7 @@ export const syncOnStartup = async (
     logger: TsGraphLogger;
     searchIndex?: SearchIndexWrapper;
     embeddingProvider: EmbeddingProvider;
-    /** Model name for embedding cache lookup */
+    /** Model name for embedding cache lookup. Required when embedding is enabled. */
     modelName?: string;
   },
 ): Promise<SyncOnStartupResult> => {
@@ -131,10 +131,10 @@ export const syncOnStartup = async (
   const errors: Array<{ file: string; message: string }> = [];
   const writer = createSqliteWriter(db);
 
-  // Open embedding cache if model name is provided
+  const { modelName } = options;
   const embeddingCache =
-    options.modelName !== undefined
-      ? openEmbeddingCache(options.cacheDir, options.modelName)
+    options.embeddingProvider.enabled && modelName !== undefined
+      ? openEmbeddingCache(options.cacheDir, modelName)
       : undefined;
 
   const embeddingOptions = {

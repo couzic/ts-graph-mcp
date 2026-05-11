@@ -69,7 +69,9 @@ const resolveEndpoint = async (
     return [];
   }
 
-  const vector = await embeddingProvider.embedQuery(endpoint.query);
+  const vector = embeddingProvider.enabled
+    ? await embeddingProvider.embedQuery(endpoint.query)
+    : undefined;
 
   const results = await searchIndex.search(endpoint.query, {
     limit,
@@ -248,7 +250,9 @@ export const searchGraph = async (
       );
     }
 
-    const vector = await embeddingProvider.embedQuery(input.topic);
+    const vector = embeddingProvider.enabled
+      ? await embeddingProvider.embedQuery(input.topic)
+      : undefined;
 
     const results = await searchIndex.search(input.topic, {
       limit: maxNodes ?? 50,

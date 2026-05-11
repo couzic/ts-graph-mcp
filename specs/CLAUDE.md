@@ -347,18 +347,18 @@ Features can reference it with `[@search-context]`.
 
 ### Plan files
 
-`*.plan.md` files are **local working documents** (gitignored) used to plan the
-implementation of a feature. They are placed next to the corresponding feature
-file. Useful for multi-step features (migrations, multiple endpoints, frontend +
-backend). For a simple spec with a straightforward implementation, the feature
-file's TODO is sufficient.
+`*.plan.md` files are working documents used to plan the implementation of a
+feature. They are placed next to the corresponding feature file. Useful for
+multi-step features (migrations, multiple endpoints, frontend + backend). For a
+simple spec with a straightforward implementation, the feature file's TODO is
+sufficient.
 
 ```
 specs/
   search/
     hybrid/
-      hybrid.feature.md         # Source of truth (committed)
-      hybrid.plan.md            # Implementation plan (gitignored)
+      hybrid.feature.md         # Source of truth
+      hybrid.plan.md            # Implementation plan
 ```
 
 **Typical content:**
@@ -451,8 +451,8 @@ The priority is to detect drift as early as possible.
 
 **Rules:**
 
-- Ephemeral: must be deleted once the plan is finished (all its tasks completed),
-  even if the associated feature still has specs in TODO
+- Delete the plan once finished (all tasks completed) — completed plans are
+  noise. Unfinished plans should be committed so the next session can resume.
 - **No specs** in plans (no `{#...}` IDs) — specs live exclusively in
   `*.feature.md`
 - **One-way dependency**: a plan can reference specs and features via

@@ -91,7 +91,10 @@ describe("indexFile", () => {
     let searchIndex: SearchIndexWrapper;
 
     beforeEach(async () => {
-      searchIndex = await createSearchIndex({ vectorDimensions });
+      searchIndex = await createSearchIndex({
+        vectorSearchEnabled: true,
+        vectorDimensions,
+      });
     });
 
     it("adds nodes to search index", async () => {
@@ -164,7 +167,10 @@ export type DATE_FORMAT = typeof DATE_FORMAT;`,
 
     beforeEach(async () => {
       // Create index with vector support
-      searchIndex = await createSearchIndex({ vectorDimensions });
+      searchIndex = await createSearchIndex({
+        vectorSearchEnabled: true,
+        vectorDimensions,
+      });
     });
 
     it("generates embeddings when provider is present", async () => {

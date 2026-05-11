@@ -47,7 +47,9 @@ export interface SearchIndexWrapper {
  * Options for creating a search index.
  */
 export interface SearchIndexOptions {
-  /** Vector dimensions (e.g., 384, 768, 1024). */
+  /** Whether vector search is enabled */
+  vectorSearchEnabled: boolean;
+  /** Vector dimensions (e.g., 384, 768, 1024) */
   vectorDimensions: number;
   /** Open an embedding cache connection for cosine backfill. */
   openCache?: () => EmbeddingCacheConnection;
@@ -85,7 +87,7 @@ type SearchSchema = {
   file: "string";
   nodeType: "string";
   content: "string";
-  embedding: `vector[${number}]`;
+  embedding?: `vector[${number}]`;
 };
 
 type SearchIndex = Orama<SearchSchema>;
@@ -112,6 +114,7 @@ const buildWrapper = (
   docsByFile: Map<string, Set<string>>,
   options: SearchIndexOptions,
 ): SearchIndexWrapper => {
+  const vectorSearchEnabled = options.vectorSearchEnabled;
   const trackDoc = (doc: SearchDocument) => {
     const ids = docsByFile.get(doc.file) ?? new Set();
     ids.add(doc.id);
@@ -141,7 +144,7 @@ const buildWrapper = (
       trackDoc(doc);
     },
 
-    async addBatch(docs: SearchDocument[]): Promise<void> {
+    async addBatch(docs): Promise<void> {
       const docsWithEmbeddings = docs.filter(
         (doc) => doc.embedding && doc.embedding.length > 0,
       );
@@ -180,11 +183,11 @@ const buildWrapper = (
       }
     },
 
-    async remove(id: string): Promise<void> {
+    async remove(id): Promise<void> {
       await remove(db, id);
     },
 
-    async removeByFile(filePath: string): Promise<void> {
+    async removeByFile(filePath): Promise<void> {
       const ids = docsByFile.get(filePath);
       if (ids) {
         for (const id of ids) {
@@ -194,18 +197,15 @@ const buildWrapper = (
       }
     },
 
-    async search(
-      query: string,
-      searchOptions?: SearchOptions,
-    ): Promise<SearchResult[]> {
-      const limit = searchOptions?.limit ?? 10;
+    async search(query, searchOptions = {}): Promise<SearchResult[]> {
+      const limit = searchOptions.limit ?? 10;
 
       const where: Record<string, string | string[]> = {};
-      if (searchOptions?.nodeTypes && searchOptions.nodeTypes.length > 0) {
+      if (searchOptions.nodeTypes && searchOptions.nodeTypes.length > 0) {
         // biome-ignore lint/complexity/useLiteralKeys: index signature
         where["nodeType"] = searchOptions.nodeTypes;
       }
-      if (searchOptions?.filePattern) {
+      if (searchOptions.filePattern) {
         // biome-ignore lint/complexity/useLiteralKeys: index signature
         where["file"] = searchOptions.filePattern;
       }
@@ -216,7 +216,7 @@ const buildWrapper = (
         ...(Object.keys(where).length > 0 ? { where } : {}),
       };
 
-      if (searchOptions?.vector) {
+      if (searchOptions?.vector && vectorSearchEnabled) {
         /** @spec search.hybrid::separate-searches */
         /** @spec search.hybrid::vector-threshold */
         const [bm25Results, vectorResults] = await Promise.all([
@@ -382,21 +382,27 @@ const buildWrapper = (
  * @spec search.semantic::preset-dimensions
  *
  * @example
- * const index = await createSearchIndex({ vectorDimensions: 384 });
+ * const index = await createSearchIndex({ vectorSearchEnabled: true, vectorDimensions: 384 });
  */
 export const createSearchIndex = async (
   options: SearchIndexOptions,
 ): Promise<SearchIndexWrapper> => {
   const docsByFile = new Map<string, Set<string>>();
 
-  const schema = {
+  const baseSchema = {
     id: "string",
     symbol: "string",
     file: "string",
     nodeType: "string",
     content: "string",
-    embedding: `vector[${options.vectorDimensions}]`,
   } as const;
+
+  const schema = options.vectorSearchEnabled
+    ? ({
+        ...baseSchema,
+        embedding: `vector[${options.vectorDimensions}]`,
+      } as const)
+    : baseSchema;
 
   const db = create({ schema }) as SearchIndex;
   return buildWrapper(db, docsByFile, options);
@@ -409,7 +415,7 @@ export const createSearchIndex = async (
  *
  * @example
  * const data = JSON.parse(fs.readFileSync('.ts-graph-mcp/search.json', 'utf8'));
- * const index = await restoreSearchIndex(data, { vectorDimensions: 384 });
+ * const index = await restoreSearchIndex(data, { vectorSearchEnabled: true, vectorDimensions: 384 });
  */
 export const restoreSearchIndex = async (
   data: RawData,
@@ -417,14 +423,20 @@ export const restoreSearchIndex = async (
 ): Promise<SearchIndexWrapper> => {
   const docsByFile = new Map<string, Set<string>>();
 
-  const schema = {
+  const baseSchema = {
     id: "string",
     symbol: "string",
     file: "string",
     nodeType: "string",
     content: "string",
-    embedding: `vector[${options.vectorDimensions}]`,
   } as const;
+
+  const schema = options.vectorSearchEnabled
+    ? ({
+        ...baseSchema,
+        embedding: `vector[${options.vectorDimensions}]`,
+      } as const)
+    : baseSchema;
 
   const db = create({ schema }) as SearchIndex;
   load(db, data);

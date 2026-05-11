@@ -68,7 +68,10 @@ export function parseDate(s: string): Date { return new Date(s); }`,
       const sourceFile = project.getSourceFileOrThrow(join(pkgDir, "utils.ts"));
 
       const writer = createSqliteWriter(db);
-      const searchIndex = await createSearchIndex({ vectorDimensions });
+      const searchIndex = await createSearchIndex({
+        vectorSearchEnabled: true,
+        vectorDimensions,
+      });
 
       const result = await indexFile(
         sourceFile,
@@ -150,10 +153,15 @@ export function validateInput(): boolean { return true; }`,
       };
 
       const writer = createSqliteWriter(db);
-      const searchIndex = await createSearchIndex({ vectorDimensions });
+      const searchIndex = await createSearchIndex({
+        vectorSearchEnabled: true,
+        vectorDimensions,
+      });
 
       const result = await indexProject(config, writer, {
         projectRoot: pkgDir,
+        cacheDir: pkgDir,
+        modelName: "test",
         logger: silentLogger,
         searchIndex,
         embeddingProvider,
@@ -227,11 +235,16 @@ describe("Unified Indexing - Watch Mode", () => {
     };
 
     const writer = createSqliteWriter(db);
-    const searchIndex = await createSearchIndex({ vectorDimensions });
+    const searchIndex = await createSearchIndex({
+      vectorSearchEnabled: true,
+      vectorDimensions,
+    });
 
     // Index initially
     await indexProject(config, writer, {
       projectRoot: WATCH_TEST_DIR,
+      cacheDir: CACHE_DIR,
+      modelName: "test",
       logger: silentLogger,
       searchIndex,
       embeddingProvider,
@@ -246,6 +259,7 @@ describe("Unified Indexing - Watch Mode", () => {
     const watchHandle = watchProject(db, config, manifest, {
       projectRoot: WATCH_TEST_DIR,
       cacheDir: CACHE_DIR,
+      modelName: "test",
       logger: silentLogger,
       searchIndex,
       embeddingProvider,
@@ -284,11 +298,16 @@ describe("Unified Indexing - Watch Mode", () => {
     };
 
     const writer = createSqliteWriter(db);
-    const searchIndex = await createSearchIndex({ vectorDimensions });
+    const searchIndex = await createSearchIndex({
+      vectorSearchEnabled: true,
+      vectorDimensions,
+    });
 
     // Index initially
     await indexProject(config, writer, {
       projectRoot: WATCH_TEST_DIR,
+      cacheDir: CACHE_DIR,
+      modelName: "test",
       logger: silentLogger,
       searchIndex,
       embeddingProvider,
@@ -305,6 +324,7 @@ describe("Unified Indexing - Watch Mode", () => {
     const watchHandle = watchProject(db, config, manifest, {
       projectRoot: WATCH_TEST_DIR,
       cacheDir: CACHE_DIR,
+      modelName: "test",
       logger: silentLogger,
       searchIndex,
       embeddingProvider,
@@ -345,11 +365,16 @@ describe("Unified Indexing - Watch Mode", () => {
     };
 
     const writer = createSqliteWriter(db);
-    const searchIndex = await createSearchIndex({ vectorDimensions });
+    const searchIndex = await createSearchIndex({
+      vectorSearchEnabled: true,
+      vectorDimensions,
+    });
 
     // Index initially
     await indexProject(config, writer, {
       projectRoot: WATCH_TEST_DIR,
+      cacheDir: CACHE_DIR,
+      modelName: "test",
       logger: silentLogger,
       searchIndex,
       embeddingProvider,
@@ -366,6 +391,7 @@ describe("Unified Indexing - Watch Mode", () => {
     const watchHandle = watchProject(db, config, manifest, {
       projectRoot: WATCH_TEST_DIR,
       cacheDir: CACHE_DIR,
+      modelName: "test",
       logger: silentLogger,
       searchIndex,
       embeddingProvider,

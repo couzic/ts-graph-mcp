@@ -16,7 +16,7 @@ interface NodeRow {
   name: string;
   file_path: string;
   type: string;
-  content_hash: string;
+  content_hash: string | null;
   snippet: string;
 }
 
@@ -40,8 +40,8 @@ export interface PopulateSearchIndexOptions {
   db: Database.Database;
   /** Search index wrapper */
   searchIndex: SearchIndexWrapper;
-  /** Embedding cache for restoring embeddings on startup */
-  embeddingCache: EmbeddingCacheConnection;
+  /** Embedding cache for restoring embeddings on startup (null when embedding is disabled) */
+  embeddingCache: EmbeddingCacheConnection | null;
   /** Embedding provider for regenerating cache misses */
   embeddingProvider: EmbeddingProvider;
 }
@@ -78,6 +78,22 @@ export const populateSearchIndex = async (
     return { total: 0, cacheHits: 0, regenerated: 0 };
   }
 
+  // BM25-only mode when embedding cache is null (embedding disabled)
+  if (!embeddingCache) {
+    const docs: SearchDocument[] = rows.map((row) => ({
+      id: row.id,
+      symbol: row.name,
+      file: row.file_path,
+      nodeType: row.type as NodeType,
+      content: row.snippet,
+    }));
+    await searchIndex.addBatch(docs);
+    return { total: rows.length, cacheHits: 0, regenerated: 0 };
+  }
+
+  // After the early return above, embeddingCache is guaranteed non-null
+  const cache = embeddingCache;
+
   let cacheHits = 0;
   let regenerated = 0;
 
@@ -85,16 +101,22 @@ export const populateSearchIndex = async (
   for (let i = 0; i < rows.length; i += BATCH_SIZE) {
     const batch = rows.slice(i, i + BATCH_SIZE);
 
-    // Batch cache lookup
-    const hashesToLookup = batch.map((r) => r.content_hash);
+    // Batch cache lookup (filter out null hashes from embedding-disabled indexing)
+    const hashesToLookup = batch
+      .map((r) => r.content_hash)
+      .filter((h): h is string => h !== null);
 
-    const cachedEmbeddings = embeddingCache.getBatch(hashesToLookup);
+    const cachedEmbeddings = cache.getBatch(hashesToLookup);
 
     // Separate cache hits from misses
     const hits: Array<{ row: NodeRow; embedding: Float32Array }> = [];
     const misses: NodeRow[] = [];
 
     for (const row of batch) {
+      if (!row.content_hash) {
+        misses.push(row);
+        continue;
+      }
       const embedding = cachedEmbeddings.get(row.content_hash);
       if (embedding) {
         hits.push({ row, embedding });
@@ -114,7 +136,7 @@ export const populateSearchIndex = async (
           row.file_path,
           row.snippet,
           embeddingProvider,
-          embeddingCache,
+          cache,
         );
         regenerated++;
         return result.embedding;

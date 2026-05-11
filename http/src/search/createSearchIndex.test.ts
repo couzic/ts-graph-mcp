@@ -51,6 +51,9 @@ describe(preprocessForBM25.name, () => {
   });
 });
 
+const createIndex = () =>
+  createSearchIndex({ vectorSearchEnabled: true, vectorDimensions: DIMS });
+
 describe(createSearchIndex.name, () => {
   const doc = (
     name: string,
@@ -70,12 +73,12 @@ describe(createSearchIndex.name, () => {
    * @spec search.lexical::fulltext-only-mode
    */
   it("indexes and searches documents", async () => {
-    const index = await createSearchIndex({ vectorDimensions: DIMS });
+    const index = await createIndex();
 
     await index.add(doc("validateCart"));
     await index.add(doc("processOrder"));
 
-    const results = await index.search("validate");
+    const results = await index.search("validate", { vector: undefined });
 
     expect(results).toHaveLength(1);
     expect(results[0]?.symbol).toBe("validateCart");
@@ -86,7 +89,7 @@ describe(createSearchIndex.name, () => {
    * @spec search.lexical::content-field-composition
    */
   it("finds camelCase symbols by split words", async () => {
-    const index = await createSearchIndex({ vectorDimensions: DIMS });
+    const index = await createIndex();
 
     await index.add(doc("validateCartItems"));
 
@@ -97,7 +100,7 @@ describe(createSearchIndex.name, () => {
   });
 
   it("returns empty array for no matches", async () => {
-    const index = await createSearchIndex({ vectorDimensions: DIMS });
+    const index = await createIndex();
 
     await index.add(doc("validateCart"));
 
@@ -111,7 +114,7 @@ describe(createSearchIndex.name, () => {
    * @spec search.lexical::default-result-limit
    */
   it("respects limit option", async () => {
-    const index = await createSearchIndex({ vectorDimensions: DIMS });
+    const index = await createIndex();
 
     await index.addBatch([
       doc("validateA"),
@@ -129,7 +132,7 @@ describe(createSearchIndex.name, () => {
    * @spec search.lexical::node-type-filtering
    */
   it("filters by nodeType", async () => {
-    const index = await createSearchIndex({ vectorDimensions: DIMS });
+    const index = await createIndex();
 
     await index.add({ ...doc("formatDate"), nodeType: "Function" });
     await index.add({ ...doc("DateFormatter"), nodeType: "Class" });
@@ -142,7 +145,7 @@ describe(createSearchIndex.name, () => {
 
   /** @spec search::removal.by-id */
   it("removes document by ID", async () => {
-    const index = await createSearchIndex({ vectorDimensions: DIMS });
+    const index = await createIndex();
 
     const document = doc("validateCart");
     await index.add(document);
@@ -155,7 +158,7 @@ describe(createSearchIndex.name, () => {
 
   /** @spec search::removal.by-file */
   it("removes all documents for a file", async () => {
-    const index = await createSearchIndex({ vectorDimensions: DIMS });
+    const index = await createIndex();
 
     await index.add(doc("fnA", "src/utils.ts"));
     await index.add(doc("fnB", "src/utils.ts"));
@@ -169,7 +172,7 @@ describe(createSearchIndex.name, () => {
   });
 
   it("batch adds documents efficiently", async () => {
-    const index = await createSearchIndex({ vectorDimensions: DIMS });
+    const index = await createIndex();
 
     await index.addBatch([doc("fnA"), doc("fnB"), doc("fnC")]);
 
@@ -179,13 +182,14 @@ describe(createSearchIndex.name, () => {
 
   /** @spec search::index-persistence */
   it("exports and restores index", async () => {
-    const original = await createSearchIndex({ vectorDimensions: DIMS });
+    const original = await createIndex();
 
     await original.add(doc("validateCart"));
     await original.add(doc("processOrder"));
 
     const exported = await original.export();
     const restored = await restoreSearchIndex(exported, {
+      vectorSearchEnabled: true,
       vectorDimensions: DIMS,
     });
 
@@ -199,7 +203,7 @@ describe(createSearchIndex.name, () => {
    * @spec search.hybrid::separate-searches
    */
   it("performs hybrid search when vector is provided", async () => {
-    const index = await createSearchIndex({ vectorDimensions: DIMS });
+    const index = await createIndex();
 
     await index.add(doc("validateCart"));
     await index.add(doc("processOrder"));
@@ -215,7 +219,7 @@ describe(createSearchIndex.name, () => {
   describe("hybrid search merge logic", () => {
     /** @spec search.hybrid::union-merge */
     it("merges document appearing in both BM25 and vector results", async () => {
-      const index = await createSearchIndex({ vectorDimensions: DIMS });
+      const index = await createIndex();
 
       // "validateCart" will match BM25 for "validate" AND vector for "validate"
       await index.add(doc("validateCart"));
@@ -235,7 +239,7 @@ describe(createSearchIndex.name, () => {
      * @spec search.hybrid::descending-sort
      */
     it("returns results sorted by hybrid score descending", async () => {
-      const index = await createSearchIndex({ vectorDimensions: DIMS });
+      const index = await createIndex();
 
       await index.addBatch([
         doc("validateA"),
@@ -257,7 +261,7 @@ describe(createSearchIndex.name, () => {
      * @spec search.hybrid::zero-score-filtering
      */
     it("filters out zero-score results", async () => {
-      const index = await createSearchIndex({ vectorDimensions: DIMS });
+      const index = await createIndex();
 
       // Add docs with very different names — "zzz" won't match BM25 for "validate"
       // and with simple embedding function, cosine will likely be below threshold
@@ -274,7 +278,7 @@ describe(createSearchIndex.name, () => {
     });
 
     it("includes vector-only results when cosine is high enough", async () => {
-      const index = await createSearchIndex({ vectorDimensions: DIMS });
+      const index = await createIndex();
 
       // "processOrder" won't match BM25 for "validate"
       // but we give it an embedding very similar to the query vector
@@ -292,7 +296,7 @@ describe(createSearchIndex.name, () => {
     });
 
     it("respects limit in hybrid search", async () => {
-      const index = await createSearchIndex({ vectorDimensions: DIMS });
+      const index = await createIndex();
 
       await index.addBatch([
         doc("validateA"),
@@ -311,8 +315,58 @@ describe(createSearchIndex.name, () => {
     });
   });
 
+  it("creates index without vector schema when vectorSearchEnabled is false", async () => {
+    const index = await createSearchIndex({
+      vectorSearchEnabled: false,
+      vectorDimensions: DIMS,
+    });
+
+    await index.add({
+      id: "src/test.ts:validateCart",
+      symbol: "validateCart",
+      file: "src/test.ts",
+      nodeType: "Function",
+      content: "validates cart items",
+    });
+
+    const results = await index.search("validate");
+    expect(results).toHaveLength(1);
+    expect(results[0]?.symbol).toBe("validateCart");
+  });
+
+  it("performs BM25-only search when vectorSearchEnabled is false", async () => {
+    const index = await createSearchIndex({
+      vectorSearchEnabled: false,
+      vectorDimensions: DIMS,
+    });
+
+    await index.addBatch([
+      {
+        id: "src/test.ts:validateCart",
+        symbol: "validateCart",
+        file: "src/test.ts",
+        nodeType: "Function",
+        content: "",
+      },
+      {
+        id: "src/test.ts:processOrder",
+        symbol: "processOrder",
+        file: "src/test.ts",
+        nodeType: "Function",
+        content: "",
+      },
+    ]);
+
+    // Even if a vector is passed, it should be ignored
+    const queryVector = simpleEmbeddingFunction("validate", DIMS);
+    const results = await index.search("validate", { vector: queryVector });
+
+    expect(results).toHaveLength(1);
+    expect(results[0]?.symbol).toBe("validateCart");
+  });
+
   it("addBatch inserts documents both with and without embeddings", async () => {
-    const index = await createSearchIndex({ vectorDimensions: DIMS });
+    const index = await createIndex();
 
     const docWithoutEmbedding: SearchDocument = {
       id: "src/test.ts:noEmbed",
@@ -361,13 +415,15 @@ const createFakeCache = (): EmbeddingCacheConnection & {
 /**
  * Create a fake embedding provider that uses simpleEmbeddingFunction.
  */
-const createFakeProvider = (dims: number): EmbeddingProvider => ({
+const createFakeProvider = (dimensions: number): EmbeddingProvider => ({
+  enabled: true,
+  dimensions,
   async initialize() {},
   async embedQuery(text: string) {
-    return simpleEmbeddingFunction(text, dims);
+    return simpleEmbeddingFunction(text, dimensions);
   },
   async embedDocument(text: string) {
-    return simpleEmbeddingFunction(text, dims);
+    return simpleEmbeddingFunction(text, dimensions);
   },
   async dispose() {},
 });
@@ -432,6 +488,7 @@ describe("cosine backfill for BM25-only hits", () => {
     });
 
     const options: SearchIndexOptions = {
+      vectorSearchEnabled: true,
       vectorDimensions: dims,
       openCache: () => cache,
       embeddingProvider: provider,
@@ -509,7 +566,7 @@ describe("cosine backfill for BM25-only hits", () => {
 
   it("skips backfill when dependencies are not provided", async () => {
     // No backfill deps → cosine stays 0 for BM25-only hits
-    const index = await createSearchIndex({ vectorDimensions: DIMS });
+    const index = await createIndex();
 
     await index.add({
       id: "src/test.ts:validateCart",

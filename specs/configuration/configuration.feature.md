@@ -183,6 +183,31 @@ When both explicit watch config and tsconfig watchOptions exist, explicit values
 take precedence field by field. Undefined values in explicit config do not
 override tsconfig values.
 
+## Embedding
+
+### Embedding enabled by default
+
+> `{#configuration::embedding.enabled-default}`
+
+When `embedding.enabled` is not specified, embedding is enabled (`true`). The
+server downloads the model, generates embeddings during indexing, and supports
+semantic (vector) search.
+
+### Embedding can be disabled
+
+> `{#configuration::embedding.disabled}`
+
+When `embedding.enabled` is `false`:
+
+- No embedding model is downloaded or loaded.
+- No embedding provider is created.
+- Indexing skips embedding generation entirely — nodes are written to SQLite and
+  added to the search index without vectors.
+- The search index still supports BM25 (lexical) search via `topic` queries.
+- Vector search is unavailable — hybrid search degrades to BM25-only.
+- All graph traversal queries (`from`/`to` with `symbol` or `query`) work
+  normally — they use SQLite, not the search index.
+
 ## Embedding presets
 
 ### Default embedding preset

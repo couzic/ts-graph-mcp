@@ -95,6 +95,8 @@ export const ServerConfigSchema = z.object({
  * @spec configuration::embedding.unknown-preset
  */
 export const EmbeddingConfigSchema = z.object({
+  /** Enable embedding for semantic search (default: true) */
+  enabled: z.boolean().optional(),
   /** Embedding model preset (default: 'nomic-embed-text-v1.5') */
   preset: z
     .enum([

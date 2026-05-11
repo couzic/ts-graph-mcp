@@ -128,10 +128,15 @@ export function entry(): string { return helper(); }
       packages: [{ name: "main", tsconfig: "tsconfig.json" }],
     };
 
-    const searchIndex = await createSearchIndex({ vectorDimensions: 3 });
+    const searchIndex = await createSearchIndex({
+      vectorSearchEnabled: true,
+      vectorDimensions: 3,
+    });
     const writer = createSqliteWriter(db);
     await indexProject(projectConfig, writer, {
       projectRoot: TEST_DIR,
+      cacheDir: CACHE_DIR,
+      modelName: "test",
       logger: silentLogger,
       embeddingProvider,
       searchIndex,
@@ -145,6 +150,7 @@ export function entry(): string { return helper(); }
     watchHandle = watchProject(db, projectConfig, manifest, {
       projectRoot: TEST_DIR,
       cacheDir: CACHE_DIR,
+      modelName: "test",
       logger: silentLogger,
       embeddingProvider,
       onReindex: (files) => reindexCalls.push(files),

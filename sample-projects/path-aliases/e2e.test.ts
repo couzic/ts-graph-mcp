@@ -41,7 +41,10 @@ describe("path-aliases E2E tests", () => {
     const config = loadConfig(`${projectRoot}/ts-graph-mcp.config.json`);
     const writer = createSqliteWriter(db);
     const embeddingProvider = createFakeEmbeddingProvider({ dimensions: 3 });
-    const searchIndex = await createSearchIndex({ vectorDimensions: 3 });
+    const searchIndex = await createSearchIndex({
+      vectorSearchEnabled: true,
+      vectorDimensions: 3,
+    });
     await indexProject(config, writer, {
       projectRoot,
       logger: silentLogger,

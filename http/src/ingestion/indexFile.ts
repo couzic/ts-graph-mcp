@@ -117,6 +117,7 @@ export const indexFile = async (
   if (extractedNodes.length > 0) {
     const sourceText = sourceFile.getFullText();
     const { embeddingProvider, embeddingCache, searchIndex } = options;
+    const embeddingEnabled = embeddingProvider.enabled;
 
     // Extract snippets for all nodes
     const nodeSnippets = extractedNodes.map((node) => ({
@@ -124,21 +125,27 @@ export const indexFile = async (
       snippet: extractSourceSnippet(sourceText, node),
     }));
 
-    // Generate embeddings sequentially
+    // Generate embeddings sequentially (skip when disabled)
     const embedResults: Array<{
-      contentHash: string;
+      contentHash: string | null;
       embedding?: Float32Array;
     }> = [];
-    for (const { node, snippet } of nodeSnippets) {
-      const result = await embedWithFallback(
-        node.type,
-        node.name,
-        node.filePath,
-        snippet,
-        embeddingProvider,
-        embeddingCache,
-      );
-      embedResults.push(result);
+    if (embeddingEnabled) {
+      for (const { node, snippet } of nodeSnippets) {
+        const result = await embedWithFallback(
+          node.type,
+          node.name,
+          node.filePath,
+          snippet,
+          embeddingProvider,
+          embeddingCache,
+        );
+        embedResults.push(result);
+      }
+    } else {
+      for (const _item of nodeSnippets) {
+        embedResults.push({ contentHash: null });
+      }
     }
 
     // Enrich extracted nodes with snippet + contentHash to produce full Nodes

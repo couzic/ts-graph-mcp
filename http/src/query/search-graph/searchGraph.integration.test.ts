@@ -177,7 +177,10 @@ describe(searchGraph.name, () => {
     let searchIndex: SearchIndexWrapper;
 
     beforeEach(async () => {
-      searchIndex = await createSearchIndex({ vectorDimensions });
+      searchIndex = await createSearchIndex({
+        vectorSearchEnabled: true,
+        vectorDimensions,
+      });
     });
 
     /** @spec tool::validation.search-index-required */
@@ -319,7 +322,10 @@ describe(searchGraph.name, () => {
     let searchIndex: SearchIndexWrapper;
 
     beforeEach(async () => {
-      searchIndex = await createSearchIndex({ vectorDimensions });
+      searchIndex = await createSearchIndex({
+        vectorSearchEnabled: true,
+        vectorDimensions,
+      });
     });
 
     /** @spec tool::query.loose-no-results */
@@ -533,7 +539,10 @@ describe(searchGraph.name, () => {
     let searchIndex: SearchIndexWrapper;
 
     beforeEach(async () => {
-      searchIndex = await createSearchIndex({ vectorDimensions });
+      searchIndex = await createSearchIndex({
+        vectorSearchEnabled: true,
+        vectorDimensions,
+      });
     });
 
     it("falls back to semantic search for forward traversal when no exact match", async () => {
@@ -652,7 +661,10 @@ describe(searchGraph.name, () => {
     let searchIndex: SearchIndexWrapper;
 
     beforeEach(async () => {
-      searchIndex = await createSearchIndex({ vectorDimensions });
+      searchIndex = await createSearchIndex({
+        vectorSearchEnabled: true,
+        vectorDimensions,
+      });
     });
 
     it("uses hybrid search for from.query resolution", async () => {

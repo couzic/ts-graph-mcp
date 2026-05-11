@@ -31,8 +31,8 @@ export interface CoreNode {
   /** Whether exported from module */
   exported: boolean;
 
-  /** Hash of embedding content (for cache lookup during search index population) */
-  contentHash: string;
+  /** Hash of embedding content (for cache lookup during search index population). Null when embedding is disabled. */
+  contentHash: string | null;
 
   /** Source code snippet for this node */
   snippet: string;

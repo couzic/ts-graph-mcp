@@ -126,6 +126,16 @@ The HTTP server starts up in this order:
 
 The server is not ready to accept requests until step 7 completes.
 
+### Startup without embeddings
+
+> `{#server::startup.no-embeddings}`
+
+When `embedding.enabled` is `false` `[@configuration::embedding.disabled]`, the
+startup sequence skips steps 1-2 of `[@server::startup.sequence]` (embedding
+preset resolution and provider initialization). The search index is created
+without a vector field. Indexing proceeds without embedding generation. The
+server starts faster because no model is downloaded or loaded.
+
 ### Port required
 
 > `{#server::startup.port-required}`

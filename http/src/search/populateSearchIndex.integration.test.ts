@@ -58,7 +58,10 @@ describe(populateSearchIndex.name, () => {
   });
 
   it("returns 0 for empty database", async () => {
-    const searchIndex = await createSearchIndex({ vectorDimensions });
+    const searchIndex = await createSearchIndex({
+      vectorSearchEnabled: true,
+      vectorDimensions,
+    });
     const result = await populateSearchIndex({
       db,
       searchIndex,
@@ -78,7 +81,10 @@ describe(populateSearchIndex.name, () => {
       iface("User"),
     ]);
 
-    const searchIndex = await createSearchIndex({ vectorDimensions });
+    const searchIndex = await createSearchIndex({
+      vectorSearchEnabled: true,
+      vectorDimensions,
+    });
     const result = await populateSearchIndex({
       db,
       searchIndex,
@@ -98,7 +104,10 @@ describe(populateSearchIndex.name, () => {
       fn("validateOutput"),
     ]);
 
-    const searchIndex = await createSearchIndex({ vectorDimensions });
+    const searchIndex = await createSearchIndex({
+      vectorSearchEnabled: true,
+      vectorDimensions,
+    });
     await populateSearchIndex({
       db,
       searchIndex,
@@ -116,7 +125,10 @@ describe(populateSearchIndex.name, () => {
     const writer = createSqliteWriter(db);
     await writer.addNodes([fn("handleUserRequest")]);
 
-    const searchIndex = await createSearchIndex({ vectorDimensions });
+    const searchIndex = await createSearchIndex({
+      vectorSearchEnabled: true,
+      vectorDimensions,
+    });
     await populateSearchIndex({
       db,
       searchIndex,
@@ -149,7 +161,10 @@ describe(populateSearchIndex.name, () => {
     const writer = createSqliteWriter(db);
     await writer.addNodes([bigNode]);
 
-    const searchIndex = await createSearchIndex({ vectorDimensions });
+    const searchIndex = await createSearchIndex({
+      vectorSearchEnabled: true,
+      vectorDimensions,
+    });
     // Use a cache that starts empty — forces regeneration on cache miss
     const store = new Map<string, Float32Array>();
     const emptyCache: import("../embedding/embeddingCache.js").EmbeddingCacheConnection =
@@ -186,12 +201,43 @@ describe(populateSearchIndex.name, () => {
     expect(await searchIndex.count()).toBe(1);
   });
 
+  it("populates BM25-only index when embeddingCache is null", async () => {
+    const writer = createSqliteWriter(db);
+    await writer.addNodes([
+      { ...fn("validateInput"), contentHash: null },
+      { ...fn("processData"), contentHash: null },
+    ]);
+
+    const searchIndex = await createSearchIndex({
+      vectorSearchEnabled: false,
+      vectorDimensions,
+    });
+    const result = await populateSearchIndex({
+      db,
+      searchIndex,
+      embeddingCache: null,
+      embeddingProvider,
+    });
+
+    expect(result.total).toBe(2);
+    expect(result.cacheHits).toBe(0);
+    expect(result.regenerated).toBe(0);
+    expect(await searchIndex.count()).toBe(2);
+
+    const results = await searchIndex.search("validate");
+    expect(results).toHaveLength(1);
+    expect(results[0]?.symbol).toBe("validateInput");
+  });
+
   it("handles large datasets in batches", async () => {
     const writer = createSqliteWriter(db);
     const nodes = Array.from({ length: 1000 }, (_, i) => fn(`func${i}`));
     await writer.addNodes(nodes);
 
-    const searchIndex = await createSearchIndex({ vectorDimensions });
+    const searchIndex = await createSearchIndex({
+      vectorSearchEnabled: true,
+      vectorDimensions,
+    });
     const result = await populateSearchIndex({
       db,
       searchIndex,

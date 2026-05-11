@@ -45,7 +45,10 @@ describe("search recall E2E tests", () => {
     const repoRoot = join(import.meta.dirname, "..", "..");
 
     // Create search index and embedding provider FIRST
-    searchIndex = await createSearchIndex({ vectorDimensions: VECTOR_DIMS });
+    searchIndex = await createSearchIndex({
+      vectorSearchEnabled: true,
+      vectorDimensions: VECTOR_DIMS,
+    });
     embeddingProvider = await createEmbeddingProvider({
       modelsDir: join(repoRoot, ".ts-graph-mcp", "models"),
     });

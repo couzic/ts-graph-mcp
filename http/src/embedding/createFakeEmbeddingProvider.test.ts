@@ -14,6 +14,12 @@ describe("createFakeEmbeddingProvider", () => {
     const embedding = await provider.embedDocument("test");
 
     expect(embedding).toHaveLength(384);
+    expect(provider.dimensions).toBe(384);
+  });
+
+  it("exposes specified dimensions", () => {
+    const provider = createFakeEmbeddingProvider({ dimensions: 768 });
+    expect(provider.dimensions).toBe(768);
   });
 
   it("returns normalized unit vectors", async () => {

@@ -104,6 +104,7 @@ export const reindexFeatureFile = async (
   // Enrich nodes with snippet + contentHash
   const allExtracted = [...parsed.features, ...parsed.specs];
   const lines = content.split("\n");
+  const embeddingEnabled = options.embeddingProvider.enabled;
 
   const nodes: Node[] = [];
   for (const extracted of allExtracted) {
@@ -111,19 +112,26 @@ export const reindexFeatureFile = async (
       .slice(extracted.startLine - 1, extracted.endLine)
       .join("\n");
 
-    const embedResult = await embedWithFallback(
-      extracted.type,
-      extracted.name,
-      extracted.filePath,
-      snippet,
-      options.embeddingProvider,
-      options.embeddingCache,
-    );
+    let contentHash: string | null = null;
+    let embedding: Float32Array | undefined;
+
+    if (embeddingEnabled) {
+      const embedResult = await embedWithFallback(
+        extracted.type,
+        extracted.name,
+        extracted.filePath,
+        snippet,
+        options.embeddingProvider,
+        options.embeddingCache,
+      );
+      contentHash = embedResult.contentHash;
+      embedding = embedResult.embedding;
+    }
 
     nodes.push({
       ...extracted,
       snippet,
-      contentHash: embedResult.contentHash,
+      contentHash,
     });
 
     // Add to search index
@@ -134,7 +142,7 @@ export const reindexFeatureFile = async (
         file: extracted.filePath,
         nodeType: extracted.type,
         content: snippet,
-        embedding: embedResult.embedding,
+        embedding,
       };
       await options.searchIndex.addBatch([searchDoc]);
     }

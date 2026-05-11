@@ -7,10 +7,7 @@ import { Subject, type Subscription } from "rxjs";
 import type { ProjectConfig } from "../config/Config.schemas.js";
 import { createSqliteWriter } from "../db/sqlite/createSqliteWriter.js";
 import type { EmbeddingProvider } from "../embedding/EmbeddingTypes.js";
-import {
-  type EmbeddingCacheConnection,
-  openEmbeddingCache,
-} from "../embedding/embeddingCache.js";
+import { openEmbeddingCache } from "../embedding/embeddingCache.js";
 import type { TsGraphLogger } from "../logging/TsGraphLogger.js";
 import type { SearchIndexWrapper } from "../search/createSearchIndex.js";
 import { bufferDebounce } from "./bufferDebounce.js";
@@ -67,7 +64,7 @@ export interface WatchOptions {
   searchIndex?: SearchIndexWrapper;
   /** Embedding provider for semantic search */
   embeddingProvider: EmbeddingProvider;
-  /** Model name for embedding cache lookup (optional) */
+  /** Model name for embedding cache lookup. Required when embedding is enabled. */
   modelName?: string;
 
   // Callbacks
@@ -164,9 +161,8 @@ export const watchProject = (
 
   const writer = createSqliteWriter(db);
 
-  // Open embedding cache if model name is provided (kept open for watcher lifetime)
-  const embeddingCache: EmbeddingCacheConnection | undefined =
-    modelName !== undefined
+  const embeddingCache =
+    embeddingProvider.enabled && modelName !== undefined
       ? openEmbeddingCache(cacheDir, modelName)
       : undefined;
   const configuredPackageNames = extractConfiguredPackageNames(

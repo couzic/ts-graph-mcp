@@ -112,6 +112,8 @@ export const createEmbeddingProvider = async (
   };
 
   return {
+    enabled: true,
+    dimensions: presetConfig?.dimensions ?? 0,
     initialize,
 
     async embedQuery(text: string): Promise<Float32Array> {

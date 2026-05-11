@@ -23,9 +23,9 @@ import {
 export interface IndexProjectOptions {
   /** Project root directory (for resolving relative paths) */
   projectRoot: string;
-  /** Cache directory (for embedding cache, required when using embeddingProvider) */
+  /** Cache directory (for embedding cache). Required when embedding is enabled. */
   cacheDir?: string;
-  /** Embedding model name (for cache file naming, required when using embeddingProvider) */
+  /** Embedding model name (for cache file naming). Required when embedding is enabled. */
   modelName?: string;
   /** Clear database before indexing */
   clearFirst?: boolean;
@@ -72,11 +72,11 @@ export const indexProject = async (
     await dbWriter.clearAll();
   }
 
-  // Open embedding cache connection (only when cacheDir and modelName are provided)
-  const { cacheDir, modelName } = options;
   const embeddingCache =
-    cacheDir !== undefined && modelName !== undefined
-      ? openEmbeddingCache(cacheDir, modelName)
+    options.embeddingProvider.enabled &&
+    options.cacheDir !== undefined &&
+    options.modelName !== undefined
+      ? openEmbeddingCache(options.cacheDir, options.modelName)
       : undefined;
 
   // Create project registry for cross-package resolution (lazy Projects)
