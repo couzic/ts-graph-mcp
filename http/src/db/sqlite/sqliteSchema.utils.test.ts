@@ -1,11 +1,11 @@
-import type Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { DB_SCHEMA_VERSION } from "../versions.js";
+import type { SqliteDb } from "./SqliteDb.js";
 import { closeDatabase, openDatabase } from "./sqliteConnection.utils.js";
 import { initializeSchema } from "./sqliteSchema.utils.js";
 
 describe(initializeSchema.name, () => {
-  let db: Database.Database;
+  let db: SqliteDb;
 
   beforeEach(() => {
     db = openDatabase({ path: ":memory:" });

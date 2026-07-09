@@ -1,5 +1,5 @@
-import type Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import type { SqliteDb } from "../../db/sqlite/SqliteDb.js";
 import {
   closeDatabase,
   openDatabase,
@@ -7,7 +7,7 @@ import {
 import { initializeSchema } from "../../db/sqlite/sqliteSchema.utils.js";
 import { connectSeeds } from "./connectSeeds.js";
 
-const insertNode = (db: Database.Database, id: string, name: string): void => {
+const insertNode = (db: SqliteDb, id: string, name: string): void => {
   db.prepare(
     `INSERT INTO nodes (id, name, type, package, file_path, start_line, end_line, exported, content_hash, snippet)
      VALUES (?, ?, 'Function', 'test', 'src/test.ts', 1, 10, 1, ?, ?)`,
@@ -15,7 +15,7 @@ const insertNode = (db: Database.Database, id: string, name: string): void => {
 };
 
 const insertEdge = (
-  db: Database.Database,
+  db: SqliteDb,
   source: string,
   target: string,
   type = "CALLS",
@@ -29,7 +29,7 @@ const insertEdge = (
 
 /** @spec tool::query.topic-bridge */
 describe("connectSeeds", () => {
-  let db: Database.Database;
+  let db: SqliteDb;
 
   beforeEach(() => {
     db = openDatabase({ path: ":memory:" });

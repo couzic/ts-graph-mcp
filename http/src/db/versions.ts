@@ -1,4 +1,5 @@
 import Database from "better-sqlite3";
+import type { SqliteDb } from "./sqlite/SqliteDb.js";
 
 /**
  * HTTP API version - bump when HTTP endpoints change in incompatible ways.
@@ -14,7 +15,7 @@ export const DB_SCHEMA_VERSION = 2;
  * Set the DB schema version in the SQLite user_version pragma.
  * Called by initializeSchema() before creating tables.
  */
-export const setDbSchemaVersion = (db: Database.Database): void => {
+export const setDbSchemaVersion = (db: SqliteDb): void => {
   db.pragma(`user_version = ${DB_SCHEMA_VERSION}`);
 };
 

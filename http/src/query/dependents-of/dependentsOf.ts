@@ -1,4 +1,4 @@
-import type Database from "better-sqlite3";
+import type { SqliteDb } from "../../db/sqlite/SqliteDb.js";
 import { queryDependents } from "../search-graph/traverseGraph.js";
 import { collectNodeIds } from "../shared/collectNodeIds.js";
 import { formatMcpFromResult } from "../shared/formatFromResult.js";
@@ -15,7 +15,7 @@ import { queryNodeMetadata } from "../shared/queryNodeMetadata.js";
  * @spec tool::resolve.class-disambiguation
  */
 export const dependentsData = (
-  db: Database.Database,
+  db: SqliteDb,
   filePath: string | undefined,
   symbol: string,
   options: { maxNodes?: number } = {},
@@ -57,7 +57,7 @@ export const dependentsData = (
  * Production code uses `dependentsData` directly via `searchGraph`.
  */
 export function dependentsOf(
-  db: Database.Database,
+  db: SqliteDb,
   filePath: string | undefined,
   symbol: string,
   options: { maxNodes?: number } = {},

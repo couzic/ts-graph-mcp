@@ -1,4 +1,4 @@
-import type Database from "better-sqlite3";
+import type { SqliteDb } from "../../db/sqlite/SqliteDb.js";
 import type { Edge } from "../../db/Types.js";
 import type { EdgeRow } from "../shared/QueryTypes.js";
 import { rowToEdge } from "../shared/rowToEdge.js";
@@ -42,7 +42,7 @@ export interface QueryPathOptions {
  * @returns Array of path results (empty if no path exists)
  */
 export function queryPath(
-  db: Database.Database,
+  db: SqliteDb,
   sourceId: string,
   targetId: string,
   options: QueryPathOptions = {},

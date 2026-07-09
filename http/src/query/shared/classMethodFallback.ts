@@ -1,5 +1,5 @@
 import { EDGE_TYPES } from "@ts-graph/shared";
-import type Database from "better-sqlite3";
+import type { SqliteDb } from "../../db/sqlite/SqliteDb.js";
 
 interface ClassMethodInfo {
   id: string;
@@ -19,7 +19,7 @@ interface MethodRow {
 /**
  * Check if a node is a Class type.
  */
-export const isClassNode = (db: Database.Database, nodeId: string): boolean => {
+export const isClassNode = (db: SqliteDb, nodeId: string): boolean => {
   const sql = `SELECT type FROM nodes WHERE id = ?`;
   const row = db.prepare<[string], NodeTypeRow>(sql).get(nodeId);
   return row?.type === "Class";
@@ -32,7 +32,7 @@ export const isClassNode = (db: Database.Database, nodeId: string): boolean => {
  * Method IDs use format: `{filePath}:Method:{className}.{methodName}`
  */
 export const findClassMethods = (
-  db: Database.Database,
+  db: SqliteDb,
   classNodeId: string,
 ): ClassMethodInfo[] => {
   // Parse class node ID: {filePath}:Class:{className}
@@ -92,7 +92,7 @@ export type ClassMethodFallbackResult =
  * @spec tool::resolve.class-disambiguation
  */
 export const attemptClassMethodFallback = (
-  db: Database.Database,
+  db: SqliteDb,
   nodeId: string,
 ): ClassMethodFallbackResult => {
   if (!isClassNode(db, nodeId)) {

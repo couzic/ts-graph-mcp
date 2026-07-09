@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import Database from "better-sqlite3";
+import type { SqliteDb } from "../db/sqlite/SqliteDb.js";
 
 /**
  * Compute SHA-256 hash of content for cache key.
@@ -51,7 +52,7 @@ const bufferToFloat32Array = (buffer: Buffer): Float32Array => {
 /**
  * Initialize the embedding cache schema.
  */
-const initializeSchema = (db: Database.Database): void => {
+const initializeSchema = (db: SqliteDb): void => {
   db.exec(`
     CREATE TABLE IF NOT EXISTS embeddings (
       hash TEXT PRIMARY KEY,

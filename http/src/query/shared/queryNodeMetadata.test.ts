@@ -1,5 +1,5 @@
-import type { Database } from "better-sqlite3";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import type { SqliteDb } from "../../db/sqlite/SqliteDb.js";
 import {
   closeDatabase,
   openDatabase,
@@ -8,7 +8,7 @@ import { initializeSchema } from "../../db/sqlite/sqliteSchema.utils.js";
 import { queryNodeMetadata } from "./queryNodeMetadata.js";
 
 const insertNode = (
-  db: Database,
+  db: SqliteDb,
   id: string,
   name: string,
   type: string,
@@ -32,7 +32,7 @@ const insertNode = (
 };
 
 describe("queryNodeMetadata", () => {
-  let db: Database;
+  let db: SqliteDb;
 
   beforeAll(() => {
     db = openDatabase({ path: ":memory:" });

@@ -1,6 +1,6 @@
-import type Database from "better-sqlite3";
 import type { DbWriter } from "../DbWriter.js";
 import type { Edge, Node } from "../Types.js";
+import type { SqliteDb } from "./SqliteDb.js";
 import { dropAllTables, initializeSchema } from "./sqliteSchema.utils.js";
 
 /**
@@ -29,7 +29,7 @@ const extractNodeProperties = (node: Node): Record<string, unknown> => {
  * @param db - better-sqlite3 database instance
  * @returns DbWriter implementation
  */
-export const createSqliteWriter = (db: Database.Database): DbWriter => {
+export const createSqliteWriter = (db: SqliteDb): DbWriter => {
   // Prepared statements for upsert operations
   const upsertNodeStmt = db.prepare(`
     INSERT INTO nodes (id, type, name, package, file_path, start_line, end_line, exported, properties, content_hash, snippet)

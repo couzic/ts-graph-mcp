@@ -1,10 +1,10 @@
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { ProjectConfig } from "../config/Config.schemas.js";
 import type { DbWriter } from "../db/DbWriter.js";
 import { createSqliteWriter } from "../db/sqlite/createSqliteWriter.js";
+import type { SqliteDb } from "../db/sqlite/SqliteDb.js";
 import {
   closeDatabase,
   openDatabase,
@@ -22,13 +22,13 @@ import { indexProject } from "./indexProject.js";
  * Simple helper to check if a node exists in the database.
  * Used for test verification only.
  */
-function nodeExists(db: Database.Database, nodeId: string): boolean {
+function nodeExists(db: SqliteDb, nodeId: string): boolean {
   const row = db.prepare("SELECT 1 FROM nodes WHERE id = ?").get(nodeId);
   return row !== undefined;
 }
 
 function edgeExists(
-  db: Database.Database,
+  db: SqliteDb,
   source: string,
   target: string,
   type: string,
@@ -294,7 +294,7 @@ export function helper(): void {
       };
 
       // Use real SQLite writer with foreign key constraints
-      let db: Database.Database | undefined;
+      let db: SqliteDb | undefined;
       try {
         db = openDatabase({ path: ":memory:" });
         const sqliteWriter = createSqliteWriter(db);
@@ -368,7 +368,7 @@ export function getPath(): string {
       };
 
       // Use real SQLite writer with foreign key constraints
-      let db: Database.Database | undefined;
+      let db: SqliteDb | undefined;
       try {
         db = openDatabase({ path: ":memory:" });
         const sqliteWriter = createSqliteWriter(db);
@@ -469,7 +469,7 @@ describe("login", () => {
         packages: [{ name: "app", tsconfig: "./packages/app/tsconfig.json" }],
       };
 
-      let db: Database.Database | undefined;
+      let db: SqliteDb | undefined;
       try {
         db = openDatabase({ path: ":memory:" });
         const sqliteWriter = createSqliteWriter(db);
@@ -612,7 +612,7 @@ export function formatDate(date: Date): string {
       };
 
       // Use real SQLite writer with foreign key constraints
-      let db: Database.Database | undefined;
+      let db: SqliteDb | undefined;
       try {
         db = openDatabase({ path: ":memory:" });
         const sqliteWriter = createSqliteWriter(db);

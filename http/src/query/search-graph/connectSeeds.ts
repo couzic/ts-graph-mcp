@@ -1,5 +1,5 @@
 import { EDGE_TYPES } from "@ts-graph/shared";
-import type Database from "better-sqlite3";
+import type { SqliteDb } from "../../db/sqlite/SqliteDb.js";
 import {
   type EdgeRowWithCallSites,
   type GraphEdgeWithCallSites,
@@ -25,7 +25,7 @@ const DEFAULT_MAX_DEPTH = 4;
  * connectSeeds(db, ["src/a.ts:fnA", "src/b.ts:fnB"])
  */
 export const connectSeeds = (
-  db: Database.Database,
+  db: SqliteDb,
   seedNodeIds: string[],
   options?: ConnectSeedsOptions,
 ): GraphEdgeWithCallSites[] => {
@@ -99,7 +99,7 @@ interface BFSRow {
 }
 
 const multiSourceBFS = (
-  db: Database.Database,
+  db: SqliteDb,
   seedNodeIds: string[],
   maxDepth: number,
 ): BFSRow[] => {

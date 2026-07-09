@@ -1,5 +1,5 @@
 import { EDGE_TYPES } from "@ts-graph/shared";
-import type Database from "better-sqlite3";
+import type { SqliteDb } from "../../db/sqlite/SqliteDb.js";
 import { MAX_DEPTH } from "./constants.js";
 import {
   type EdgeRowWithCallSites,
@@ -14,7 +14,7 @@ import {
  * @spec tool::query.bidirectional-implements-extends
  */
 export const queryDependencyEdges = (
-  db: Database.Database,
+  db: SqliteDb,
   sourceId: string,
 ): GraphEdgeWithCallSites[] => {
   const edgeTypesPlaceholder = EDGE_TYPES.map(() => "?").join(", ");
@@ -64,7 +64,7 @@ export const queryDependencyEdges = (
  * @spec tool::query.bidirectional-implements-extends
  */
 export const queryDependentEdges = (
-  db: Database.Database,
+  db: SqliteDb,
   targetId: string,
 ): GraphEdgeWithCallSites[] => {
   const edgeTypesPlaceholder = EDGE_TYPES.map(() => "?").join(", ");

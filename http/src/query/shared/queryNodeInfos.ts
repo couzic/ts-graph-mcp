@@ -1,5 +1,5 @@
 import type { NodeType } from "@ts-graph/shared";
-import type Database from "better-sqlite3";
+import type { SqliteDb } from "../../db/sqlite/SqliteDb.js";
 import type { NodeInfo } from "./GraphTypes.js";
 
 /**
@@ -20,10 +20,7 @@ interface NodeRow {
  *
  * Returns NodeInfo objects suitable for the Nodes section output.
  */
-export const queryNodeInfos = (
-  db: Database.Database,
-  nodeIds: string[],
-): NodeInfo[] => {
+export const queryNodeInfos = (db: SqliteDb, nodeIds: string[]): NodeInfo[] => {
   if (nodeIds.length === 0) return [];
 
   const placeholders = nodeIds.map(() => "?").join(", ");

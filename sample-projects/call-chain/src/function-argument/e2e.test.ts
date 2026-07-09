@@ -1,8 +1,8 @@
 import { join } from "node:path";
-import type { Database } from "better-sqlite3";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { ProjectConfig } from "../../../../http/src/config/Config.schemas.js";
 import { createSqliteWriter } from "../../../../http/src/db/sqlite/createSqliteWriter.js";
+import type { SqliteDb } from "../../../../http/src/db/sqlite/SqliteDb.js";
 import {
   closeDatabase,
   openDatabase,
@@ -25,7 +25,7 @@ import { createSearchIndex } from "../../../../http/src/search/createSearchIndex
  * The processor callback is passed through the chain via REFERENCES edges.
  */
 describe("function-argument E2E tests", () => {
-  let db: Database;
+  let db: SqliteDb;
   let projectRoot: string;
 
   beforeAll(async () => {

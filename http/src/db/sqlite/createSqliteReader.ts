@@ -1,7 +1,7 @@
 import { EDGE_TYPES, type EdgeType, type NodeType } from "@ts-graph/shared";
-import type Database from "better-sqlite3";
 import type { DbReader, PathResult } from "../DbReader.js";
 import type { CallSiteRange, Edge, Node, TraversalOptions } from "../Types.js";
+import type { SqliteDb } from "./SqliteDb.js";
 
 /** Maximum traversal depth for recursive queries */
 const DEFAULT_MAX_DEPTH = 100;
@@ -94,7 +94,7 @@ const rowToEdge = (row: EdgeRow): Edge => {
  * const reader = createSqliteReader(db);
  * const deps = reader.queryDependencies("src/api.ts:handleRequest");
  */
-export const createSqliteReader = (db: Database.Database): DbReader => {
+export const createSqliteReader = (db: SqliteDb): DbReader => {
   return {
     queryDependencies(nodeId: string, options?: TraversalOptions): Edge[] {
       const edgeTypes = options?.edgeTypes ?? EDGE_TYPES;

@@ -1,9 +1,9 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
-import type Database from "better-sqlite3";
 import type { ProjectConfig } from "../config/Config.schemas.js";
 import type { DbWriter } from "../db/DbWriter.js";
 import { createSqliteWriter } from "../db/sqlite/createSqliteWriter.js";
+import type { SqliteDb } from "../db/sqlite/SqliteDb.js";
 import type { EmbeddingProvider } from "../embedding/EmbeddingTypes.js";
 import {
   type EmbeddingCacheConnection,
@@ -114,7 +114,7 @@ const buildFileContextMap = (
  * 5. Update manifest
  */
 export const syncOnStartup = async (
-  db: Database.Database,
+  db: SqliteDb,
   config: ProjectConfig,
   manifest: IndexManifest,
   options: {

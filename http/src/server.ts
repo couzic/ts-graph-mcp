@@ -2,13 +2,13 @@ import { existsSync } from "node:fs";
 import path, { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { GraphSearchRequest } from "@ts-graph/shared";
-import type Database from "better-sqlite3";
 import express from "express";
 import type { ProjectConfig } from "./config/Config.schemas.js";
 import { loadConfigOrDetect } from "./config/configLoader.utils.js";
 import { getCacheDir, getSqliteDir } from "./config/getCacheDir.js";
 import { createSqliteWriter } from "./db/sqlite/createSqliteWriter.js";
 import { removeOrphanedEdges } from "./db/sqlite/removeOrphanedEdges.js";
+import type { SqliteDb } from "./db/sqlite/SqliteDb.js";
 import { openDatabase } from "./db/sqlite/sqliteConnection.utils.js";
 import { DB_SCHEMA_VERSION, readSchemaVersion } from "./db/versions.js";
 import { createEmbeddingProvider } from "./embedding/createEmbeddingProvider.js";
@@ -53,7 +53,7 @@ export const indexAndOpenDb = async (
   searchIndex: SearchIndexWrapper,
   embeddingProvider: EmbeddingProvider,
 ): Promise<{
-  db: Database.Database;
+  db: SqliteDb;
   indexedFiles: number;
   manifest: IndexManifest;
   config: ProjectConfig | null;
@@ -303,7 +303,7 @@ export const startHttpServer = async (
   // Create fresh search index (rebuilt from SQLite + embedding cache on startup)
   // dbHolder.ref is set after indexAndOpenDb returns.
   // Safe because search() is only called after the server is up.
-  const dbHolder: { ref: Database.Database | null } = { ref: null };
+  const dbHolder: { ref: SqliteDb | null } = { ref: null };
   const searchIndexOptions: Parameters<typeof createSearchIndex>[0] = {
     vectorSearchEnabled: embeddingEnabled,
     vectorDimensions,

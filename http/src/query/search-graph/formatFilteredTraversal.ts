@@ -1,4 +1,4 @@
-import type Database from "better-sqlite3";
+import type { SqliteDb } from "../../db/sqlite/SqliteDb.js";
 import { collectNodeIds } from "../shared/collectNodeIds.js";
 import type { GraphEdgeWithCallSites } from "../shared/parseEdgeRows.js";
 import { messageResult, type QueryResult } from "../shared/QueryResult.js";
@@ -10,7 +10,7 @@ import { queryNodeMetadata } from "../shared/queryNodeMetadata.js";
  * Input for building a QueryResult from filtered traversal edges.
  */
 export interface FilteredTraversalInput {
-  db: Database.Database;
+  db: SqliteDb;
   edges: GraphEdgeWithCallSites[];
   /** Node ID to exclude from the Nodes section (caller already knows it) */
   startNodeId?: string;

@@ -1,5 +1,5 @@
 import type { NodeType } from "@ts-graph/shared";
-import type Database from "better-sqlite3";
+import type { SqliteDb } from "../db/sqlite/SqliteDb.js";
 import type { EmbeddingProvider } from "../embedding/EmbeddingTypes.js";
 import type { EmbeddingCacheConnection } from "../embedding/embeddingCache.js";
 import { embedWithFallback } from "../embedding/embedWithFallback.js";
@@ -37,7 +37,7 @@ export interface PopulateSearchIndexResult {
  */
 export interface PopulateSearchIndexOptions {
   /** SQLite database connection */
-  db: Database.Database;
+  db: SqliteDb;
   /** Search index wrapper */
   searchIndex: SearchIndexWrapper;
   /** Embedding cache for restoring embeddings on startup (null when embedding is disabled) */

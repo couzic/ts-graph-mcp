@@ -1,7 +1,7 @@
 import assert from "node:assert";
-import type Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createSqliteWriter } from "../db/sqlite/createSqliteWriter.js";
+import type { SqliteDb } from "../db/sqlite/SqliteDb.js";
 import {
   closeDatabase,
   openDatabase,
@@ -42,7 +42,7 @@ const iface = (name: string, file = "src/types.ts"): InterfaceNode => ({
 const vectorDimensions = 3;
 
 describe(populateSearchIndex.name, () => {
-  let db: Database.Database;
+  let db: SqliteDb;
   const embeddingCache = createFakeEmbeddingCache(vectorDimensions);
   const embeddingProvider = createFakeEmbeddingProvider({
     dimensions: vectorDimensions,

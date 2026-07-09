@@ -1,4 +1,4 @@
-import type Database from "better-sqlite3";
+import type { SqliteDb } from "../../db/sqlite/SqliteDb.js";
 import {
   attemptClassMethodFallback,
   formatDisambiguationMessage,
@@ -43,13 +43,10 @@ export type TraversalQueryResult = TraversalResult | TraversalError;
  * Shared traversal logic: resolve symbol, query edges, attempt class method fallback.
  */
 const resolveAndTraverse = (
-  db: Database.Database,
+  db: SqliteDb,
   filePath: string | undefined,
   symbol: string,
-  queryEdges: (
-    db: Database.Database,
-    nodeId: string,
-  ) => GraphEdgeWithCallSites[],
+  queryEdges: (db: SqliteDb, nodeId: string) => GraphEdgeWithCallSites[],
 ): TraversalQueryResult => {
   const resolution = resolveSymbol(db, filePath, symbol);
   if (!resolution.success) {
@@ -113,7 +110,7 @@ const resolveAndTraverse = (
  * Use this when you need to filter edges before formatting.
  */
 export const queryDependencies = (
-  db: Database.Database,
+  db: SqliteDb,
   filePath: string | undefined,
   symbol: string,
 ): TraversalQueryResult =>
@@ -124,7 +121,7 @@ export const queryDependencies = (
  * Use this when you need to filter edges before formatting.
  */
 export const queryDependents = (
-  db: Database.Database,
+  db: SqliteDb,
   filePath: string | undefined,
   symbol: string,
 ): TraversalQueryResult =>

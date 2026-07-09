@@ -8,11 +8,11 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { ProjectConfig } from "../config/Config.schemas.js";
 import { loadConfig } from "../config/configLoader.utils.js";
 import { createSqliteWriter } from "../db/sqlite/createSqliteWriter.js";
+import type { SqliteDb } from "../db/sqlite/SqliteDb.js";
 import {
   closeDatabase,
   openDatabase,
@@ -35,7 +35,7 @@ const CACHE_DIR = join(TEST_DIR, ".ts-graph-mcp");
 const vectorDimensions = 3; // Use small dimensions for testing to speed up embedding generation
 
 describe(syncOnStartup.name, () => {
-  let db: Database.Database;
+  let db: SqliteDb;
 
   beforeEach(() => {
     if (existsSync(TEST_DIR)) {

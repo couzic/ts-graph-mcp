@@ -1,5 +1,5 @@
-import type Database from "better-sqlite3";
 import { DB_SCHEMA_VERSION, setDbSchemaVersion } from "../versions.js";
+import type { SqliteDb } from "./SqliteDb.js";
 
 /**
  * SQLite schema for the code graph.
@@ -65,7 +65,7 @@ const INDEXES = [
  *
  * @param db - better-sqlite3 database instance
  */
-export const initializeSchema = (db: Database.Database): void => {
+export const initializeSchema = (db: SqliteDb): void => {
   // Check existing schema version — drop tables if outdated
   const currentVersion = (
     db.pragma("user_version") as Array<{ user_version: number }>
@@ -92,7 +92,7 @@ export const initializeSchema = (db: Database.Database): void => {
  *
  * @param db - better-sqlite3 database instance
  */
-export const dropAllTables = (db: Database.Database): void => {
+export const dropAllTables = (db: SqliteDb): void => {
   db.exec("DROP TABLE IF EXISTS edges");
   db.exec("DROP TABLE IF EXISTS nodes");
 };

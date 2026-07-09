@@ -1,7 +1,7 @@
-import type { Database } from "better-sqlite3";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { loadConfig } from "../../http/src/config/configLoader.utils.js";
 import { createSqliteWriter } from "../../http/src/db/sqlite/createSqliteWriter.js";
+import type { SqliteDb } from "../../http/src/db/sqlite/SqliteDb.js";
 import {
   closeDatabase,
   openDatabase,
@@ -30,7 +30,7 @@ import { createSearchIndex } from "../../http/src/search/createSearchIndex.js";
  * - src/consumer.ts: imports from barrel and calls the function
  */
 describe("path-aliases E2E tests", () => {
-  let db: Database;
+  let db: SqliteDb;
   let projectRoot: string;
 
   beforeAll(async () => {

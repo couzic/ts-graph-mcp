@@ -1,8 +1,8 @@
 import { join } from "node:path";
-import type { Database } from "better-sqlite3";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { ProjectConfig } from "../../../../http/src/config/Config.schemas.js";
 import { createSqliteWriter } from "../../../../http/src/db/sqlite/createSqliteWriter.js";
+import type { SqliteDb } from "../../../../http/src/db/sqlite/SqliteDb.js";
 import {
   closeDatabase,
   openDatabase,
@@ -17,7 +17,7 @@ import { pathsBetween } from "../../../../http/src/query/paths-between/pathsBetw
 import { createSearchIndex } from "../../../../http/src/search/createSearchIndex.js";
 
 describe("long functions E2E - snippet truncation", () => {
-  let db: Database;
+  let db: SqliteDb;
   let projectRoot: string;
 
   beforeAll(async () => {

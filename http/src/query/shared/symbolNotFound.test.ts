@@ -1,8 +1,8 @@
-import type Database from "better-sqlite3";
 import { Project } from "ts-morph";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { DbWriter } from "../../db/DbWriter.js";
 import { createSqliteWriter } from "../../db/sqlite/createSqliteWriter.js";
+import type { SqliteDb } from "../../db/sqlite/SqliteDb.js";
 import {
   closeDatabase,
   openDatabase,
@@ -27,7 +27,7 @@ const toNodes = (extractedNodes: ExtractedNode[]): Node[] =>
 
 /** @spec tool::resolve.not-found */
 describe("symbolNotFound", () => {
-  let db: Database.Database;
+  let db: SqliteDb;
   let writer: DbWriter;
   let project: Project;
 
@@ -238,7 +238,7 @@ export function parser() {}`,
 });
 
 describe("resolveSymbol", () => {
-  let db: Database.Database;
+  let db: SqliteDb;
   let writer: DbWriter;
   let project: Project;
 

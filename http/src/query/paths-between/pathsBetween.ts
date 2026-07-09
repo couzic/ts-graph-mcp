@@ -1,4 +1,4 @@
-import type Database from "better-sqlite3";
+import type { SqliteDb } from "../../db/sqlite/SqliteDb.js";
 import {
   attemptClassMethodFallback,
   formatDisambiguationMessage,
@@ -23,7 +23,7 @@ export interface SymbolRef {
  * @spec tool::query.path
  */
 export const pathsBetweenData = (
-  db: Database.Database,
+  db: SqliteDb,
   from: SymbolRef,
   to: SymbolRef,
   options: { maxNodes?: number } = {},
@@ -191,7 +191,7 @@ export const pathsBetweenData = (
  * Production code uses `pathsBetweenData` directly via `searchGraph`.
  */
 export function pathsBetween(
-  db: Database.Database,
+  db: SqliteDb,
   from: SymbolRef,
   to: SymbolRef,
   options: { maxNodes?: number } = {},

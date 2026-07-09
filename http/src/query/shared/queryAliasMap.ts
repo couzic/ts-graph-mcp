@@ -1,4 +1,4 @@
-import type Database from "better-sqlite3";
+import type { SqliteDb } from "../../db/sqlite/SqliteDb.js";
 import { extractSymbol } from "./extractSymbol.js";
 
 /**
@@ -13,7 +13,7 @@ import { extractSymbol } from "./extractSymbol.js";
  * // Map { "ReturnType<typeof createService>" => "Service" }
  */
 export const queryAliasMap = (
-  db: Database.Database,
+  db: SqliteDb,
   nodeIds: string[],
 ): Map<string, string> => {
   const aliasMap = new Map<string, string>();

@@ -1,6 +1,6 @@
-import type Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createSqliteWriter } from "../../db/sqlite/createSqliteWriter.js";
+import type { SqliteDb } from "../../db/sqlite/SqliteDb.js";
 import {
   closeDatabase,
   openDatabase,
@@ -75,7 +75,7 @@ const calls = (from: string, to: string): Edge => ({
 const vectorDimensions = 3;
 
 describe(searchGraph.name, () => {
-  let db: Database.Database;
+  let db: SqliteDb;
   const embeddingCache = createFakeEmbeddingCache(vectorDimensions);
   const embeddingProvider = createFakeEmbeddingProvider({
     dimensions: vectorDimensions,

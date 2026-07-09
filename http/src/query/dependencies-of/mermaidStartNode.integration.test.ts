@@ -1,7 +1,7 @@
-import type { Database } from "better-sqlite3";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { DbWriter } from "../../db/DbWriter.js";
 import { createSqliteWriter } from "../../db/sqlite/createSqliteWriter.js";
+import type { SqliteDb } from "../../db/sqlite/SqliteDb.js";
 import {
   closeDatabase,
   openDatabase,
@@ -10,7 +10,7 @@ import { formatMermaidFromResult } from "../shared/formatFromResult.js";
 import { dependenciesData } from "./dependenciesOf.js";
 
 describe("mermaid start node type-aware display", () => {
-  let db: Database;
+  let db: SqliteDb;
   let writer: DbWriter;
 
   beforeAll(async () => {

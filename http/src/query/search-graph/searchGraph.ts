@@ -1,4 +1,4 @@
-import type Database from "better-sqlite3";
+import type { SqliteDb } from "../../db/sqlite/SqliteDb.js";
 import type { EmbeddingProvider } from "../../embedding/EmbeddingTypes.js";
 import type { SearchIndexWrapper } from "../../search/createSearchIndex.js";
 import { dependenciesData } from "../dependencies-of/dependenciesOf.js";
@@ -95,7 +95,7 @@ const resolveEndpoint = async (
  * @spec tool::query.loose-forward
  */
 const queryMultipleFromEndpoints = (
-  db: Database.Database,
+  db: SqliteDb,
   endpoints: ResolvedEndpoint[],
   maxNodes?: number,
 ): QueryResult => {
@@ -129,7 +129,7 @@ const queryMultipleFromEndpoints = (
  * @spec tool::query.loose-path
  */
 const queryMultiplePathsBetween = (
-  db: Database.Database,
+  db: SqliteDb,
   fromEndpoints: ResolvedEndpoint[],
   toEndpoints: ResolvedEndpoint[],
   maxNodes?: number,
@@ -170,7 +170,7 @@ const queryMultiplePathsBetween = (
  * @spec tool::query.loose-backward
  */
 const queryMultipleToEndpoints = (
-  db: Database.Database,
+  db: SqliteDb,
   endpoints: ResolvedEndpoint[],
   maxNodes?: number,
 ): QueryResult => {
@@ -234,7 +234,7 @@ const isTopicSearch = (
   "topic" in input && typeof input.topic === "string" && input.topic.length > 0;
 
 export const searchGraph = async (
-  db: Database.Database,
+  db: SqliteDb,
   input: SearchGraphInput,
   options: SearchGraphOptions,
 ): Promise<QueryResult> => {

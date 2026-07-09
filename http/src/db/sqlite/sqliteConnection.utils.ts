@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import Database from "better-sqlite3";
+import type { SqliteDb } from "./SqliteDb.js";
 import { initializeSchema } from "./sqliteSchema.utils.js";
 
 export interface SqliteConnectionOptions {
@@ -15,9 +16,7 @@ export interface SqliteConnectionOptions {
  * @param options - Connection options
  * @returns Initialized database instance
  */
-export const openDatabase = (
-  options: SqliteConnectionOptions,
-): Database.Database => {
+export const openDatabase = (options: SqliteConnectionOptions): SqliteDb => {
   const { path } = options;
 
   // Ensure parent directory exists (unless in-memory)
@@ -46,6 +45,6 @@ export const openDatabase = (
  *
  * @param db - Database instance to close
  */
-export const closeDatabase = (db: Database.Database): void => {
+export const closeDatabase = (db: SqliteDb): void => {
   db.close();
 };

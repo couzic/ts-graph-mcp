@@ -1,11 +1,11 @@
 import type { Stats } from "node:fs";
 import { existsSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
-import type Database from "better-sqlite3";
 import { watch } from "chokidar";
 import { Subject, type Subscription } from "rxjs";
 import type { ProjectConfig } from "../config/Config.schemas.js";
 import { createSqliteWriter } from "../db/sqlite/createSqliteWriter.js";
+import type { SqliteDb } from "../db/sqlite/SqliteDb.js";
 import type { EmbeddingProvider } from "../embedding/EmbeddingTypes.js";
 import { openEmbeddingCache } from "../embedding/embeddingCache.js";
 import type { TsGraphLogger } from "../logging/TsGraphLogger.js";
@@ -138,7 +138,7 @@ const resolveFileContext = (
  * @spec configuration::watch.polling-interval-default
  */
 export const watchProject = (
-  db: Database.Database,
+  db: SqliteDb,
   config: ProjectConfig,
   manifest: IndexManifest,
   options: WatchOptions,

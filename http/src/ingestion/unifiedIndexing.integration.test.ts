@@ -8,11 +8,11 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type Database from "better-sqlite3";
 import { Project } from "ts-morph";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { ProjectConfig } from "../config/Config.schemas.js";
 import { createSqliteWriter } from "../db/sqlite/createSqliteWriter.js";
+import type { SqliteDb } from "../db/sqlite/SqliteDb.js";
 import {
   closeDatabase,
   openDatabase,
@@ -33,7 +33,7 @@ const embeddingProvider = createFakeEmbeddingProvider({
 });
 
 describe("Unified Indexing", () => {
-  let db: Database.Database;
+  let db: SqliteDb;
 
   beforeEach(() => {
     db = openDatabase({ path: ":memory:" });
@@ -191,7 +191,7 @@ describe("Unified Indexing - Watch Mode", () => {
   const CACHE_DIR = join(WATCH_TEST_DIR, ".ts-graph-mcp");
   const DB_PATH = join(CACHE_DIR, "graph.db");
 
-  let db: Database.Database;
+  let db: SqliteDb;
 
   const sleep = (ms: number) =>
     new Promise((resolve) => setTimeout(resolve, ms));

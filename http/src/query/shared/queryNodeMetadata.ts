@@ -1,5 +1,5 @@
 import type { NodeType } from "@ts-graph/shared";
-import type Database from "better-sqlite3";
+import type { SqliteDb } from "../../db/sqlite/SqliteDb.js";
 
 export interface NodeMetadata {
   package: string | null;
@@ -21,7 +21,7 @@ interface MetadataRow {
  * // Map { "src/api.ts:handler" => { package: "http", type: "Function" }, "src/User.ts:User" => { package: "http", type: "Class" } }
  */
 export const queryNodeMetadata = (
-  db: Database.Database,
+  db: SqliteDb,
   nodeIds: string[],
 ): Map<string, NodeMetadata> => {
   if (nodeIds.length === 0) {

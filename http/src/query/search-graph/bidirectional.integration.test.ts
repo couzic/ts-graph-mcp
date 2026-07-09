@@ -1,6 +1,6 @@
-import type Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createSqliteWriter } from "../../db/sqlite/createSqliteWriter.js";
+import type { SqliteDb } from "../../db/sqlite/SqliteDb.js";
 import {
   closeDatabase,
   openDatabase,
@@ -88,7 +88,7 @@ const vectorDimensions = 3;
  * Tests for bidirectional IMPLEMENTS/EXTENDS traversal and edge priority truncation.
  */
 describe("bidirectional IMPLEMENTS/EXTENDS traversal", () => {
-  let db: Database.Database;
+  let db: SqliteDb;
   const embeddingProvider = createFakeEmbeddingProvider({
     dimensions: vectorDimensions,
   });
@@ -258,7 +258,7 @@ describe("bidirectional IMPLEMENTS/EXTENDS traversal", () => {
 
 /** @spec tool::query.edge-priority-truncation */
 describe("edge priority truncation", () => {
-  let db: Database.Database;
+  let db: SqliteDb;
   const embeddingProvider = createFakeEmbeddingProvider({
     dimensions: vectorDimensions,
   });
@@ -319,7 +319,7 @@ describe("edge priority truncation", () => {
 
 /** @spec tool::output.truncation */
 describe("BFS truncation keeps direct neighbors over deep descendants", () => {
-  let db: Database.Database;
+  let db: SqliteDb;
   const embeddingProvider = createFakeEmbeddingProvider({
     dimensions: vectorDimensions,
   });

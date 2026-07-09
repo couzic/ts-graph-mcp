@@ -1,5 +1,5 @@
 import type { NodeType } from "@ts-graph/shared";
-import type Database from "better-sqlite3";
+import type { SqliteDb } from "../../db/sqlite/SqliteDb.js";
 import { levenshteinDistance } from "./levenshteinDistance.js";
 
 interface SymbolInFile {
@@ -47,7 +47,7 @@ const extractTypeAndSymbolFromId = (id: string): string => {
  * Node ID format: `{filePath}:{type}:{symbol}`
  */
 const findSymbolMatchesInFile = (
-  db: Database.Database,
+  db: SqliteDb,
   symbol: string,
   filePath: string,
 ): SymbolMatch[] => {
@@ -80,10 +80,7 @@ const findSymbolMatchesInFile = (
  *
  * Node ID format: `{filePath}:{type}:{symbol}`
  */
-const findSymbolMatches = (
-  db: Database.Database,
-  symbol: string,
-): SymbolMatch[] => {
+const findSymbolMatches = (db: SqliteDb, symbol: string): SymbolMatch[] => {
   // Match: exact name, method suffix, or ID ending with :symbol
   const rows = db
     .prepare<
@@ -136,7 +133,7 @@ const findSymbolMatches = (
  * // { success: false, error: "Multiple symbols named 'getLines' found:\n  - User.getLines (src/user.ts)\n  - Order.getLines (src/order.ts)" }
  */
 export const resolveSymbol = (
-  db: Database.Database,
+  db: SqliteDb,
   filePath: string | undefined,
   symbol: string,
 ): SymbolResolution => {
@@ -261,7 +258,7 @@ export const resolveSymbol = (
  * // "Symbol 'formatDate' not found at src/utils.ts\n\nFound in:\n  - src/date/format.ts"
  */
 export const symbolNotFound = (
-  db: Database.Database,
+  db: SqliteDb,
   filePath: string,
   symbol: string,
 ): string => {
@@ -314,10 +311,7 @@ const formatFoundIn = (
   ];
 };
 
-const getSymbolsInFile = (
-  db: Database.Database,
-  filePath: string,
-): SymbolInFile[] => {
+const getSymbolsInFile = (db: SqliteDb, filePath: string): SymbolInFile[] => {
   const rows = db
     .prepare<[string], { name: string; type: NodeType }>(
       "SELECT name, type FROM nodes WHERE file_path = ? ORDER BY start_line LIMIT 5",
@@ -327,7 +321,7 @@ const getSymbolsInFile = (
 };
 
 const findSymbolElsewhere = (
-  db: Database.Database,
+  db: SqliteDb,
   symbol: string,
   excludeFilePath: string,
 ): SymbolElsewhere[] => {
