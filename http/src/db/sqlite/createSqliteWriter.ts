@@ -28,6 +28,10 @@ const extractNodeProperties = (node: Node): Record<string, unknown> => {
  *
  * node:sqlite has no `transaction()` helper. Nesting is not supported, which
  * is fine here: no writer method calls another.
+ *
+ * On SQLITE_FULL/IOERR/BUSY, SQLite rolls back on its own, so the ROLLBACK
+ * below throws and masks the original error. Accepted: the rollback already
+ * happened, so only the message is lost. Guard on `db.isTransaction` to fix.
  */
 const inTransaction = (db: SqliteDb, write: () => void): void => {
   db.exec("BEGIN");
