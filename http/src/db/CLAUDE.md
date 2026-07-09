@@ -33,6 +33,10 @@ Write operations used by Ingestion Module:
 
 ### SQLite Implementation (`sqlite/`)
 
+#### `SqliteDb.ts` / `SqliteStatement.ts`
+- `SqliteDb` - Structural view of node:sqlite's `DatabaseSync`, re-typed so `prepare<Params, Row>()` carries the caller's row shape
+- The driver is named only in `openDatabase()`, `readSchemaVersion()` and `openEmbeddingCache()`; everything else depends on `SqliteDb`
+
 #### `sqliteConnection.utils.ts`
 - `openDatabase()` - Create/open DB with WAL mode and performance settings
 - `closeDatabase()` - Clean shutdown
@@ -46,6 +50,16 @@ Write operations used by Ingestion Module:
 - Prepared statements with transactions for batch operations
 
 ## Critical Information
+
+### node:sqlite Driver Constraints
+Storage uses Node's built-in `node:sqlite` (requires Node >= 24). It is stricter and leaner than better-sqlite3:
+
+- **`undefined` cannot be bound.** It throws rather than coercing to NULL. Traceability nodes (Feature, Spec, TestSuite, Test) have no `package`, so writers must normalize to `null` — see `createSqliteWriter.ts`.
+- **No `transaction()` helper.** Batch writes go through `inTransaction()` in `createSqliteWriter.ts`. Nesting is unsupported; no writer method calls another.
+- **No `pragma()` helper.** Pragmas run via `exec()`; reads via `getDbSchemaVersion()` in `versions.ts`.
+- **`readOnly`, not `readonly`.** Unknown options are ignored silently, so the wrong spelling opens the DB read-write.
+- **BLOBs return `Uint8Array`, not `Buffer`** — see `embeddingCache.ts`.
+- **`run().changes` is `number | bigint`.**
 
 ### Node ID Format
 Node IDs follow the pattern: `{relativePath}:{symbolPath}`
@@ -98,7 +112,7 @@ closeDatabase(db);
 ## Related Modules
 
 - Used by: `src/ingestion` (writes via DbWriter), `src/tools/*` (direct SQL queries in each tool's query.ts)
-- Depends on: `better-sqlite3` (SQLite driver)
+- Depends on: `node:sqlite` (Node.js built-in SQLite driver)
 
 ## Architecture Notes
 

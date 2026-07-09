@@ -20,6 +20,11 @@ AI agents query the graph through the `searchGraph` MCP tool to:
 - Traverse call graphs (who calls this? what does this call?)
 - Find paths between symbols
 
+## Requirements
+
+Node.js 24 or later. Storage uses the built-in `node:sqlite` module, so there
+is nothing to compile — no build tools on any platform.
+
 ## Quick Start
 
 ### 1. Configuration
@@ -216,16 +221,6 @@ ts-graph-mcp/
 ├── ui/            # Web UI (React + Vite)
 └── main.ts        # Entry point
 ```
-
-## Windows Users
-
-This package uses `better-sqlite3`, which requires compilation tools:
-
-1. Install
-   [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
-   with "Desktop development with C++"
-2. Install Python 3.x
-3. Use Node.js LTS
 
 ## Contributing
 
