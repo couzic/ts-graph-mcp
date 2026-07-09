@@ -24,9 +24,26 @@ const extractNodeProperties = (node: Node): Record<string, unknown> => {
 };
 
 /**
+ * Run `write` inside a transaction, rolling back if it throws.
+ *
+ * node:sqlite has no `transaction()` helper. Nesting is not supported, which
+ * is fine here: no writer method calls another.
+ */
+const inTransaction = (db: SqliteDb, write: () => void): void => {
+  db.exec("BEGIN");
+  try {
+    write();
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+};
+
+/**
  * Create a DbWriter implementation backed by SQLite.
  *
- * @param db - better-sqlite3 database instance
+ * @param db - SQLite database instance
  * @returns DbWriter implementation
  */
 export const createSqliteWriter = (db: SqliteDb): DbWriter => {
@@ -71,15 +88,15 @@ export const createSqliteWriter = (db: SqliteDb): DbWriter => {
     WHERE target = @filePath OR target LIKE @filePrefix
   `);
 
-  // Transaction wrappers for batch operations
-  const addNodesTransaction = db.transaction((nodes: Node[]) => {
+  const insertNodes = (nodes: Node[]): void => {
     for (const node of nodes) {
       const properties = extractNodeProperties(node);
       upsertNodeStmt.run({
         id: node.id,
         type: node.type,
         name: node.name,
-        package: node.package,
+        // Traceability nodes omit `package`; node:sqlite rejects `undefined`.
+        package: node.package ?? null,
         filePath: node.filePath,
         startLine: node.startLine,
         endLine: node.endLine,
@@ -89,9 +106,9 @@ export const createSqliteWriter = (db: SqliteDb): DbWriter => {
         snippet: node.snippet,
       });
     }
-  });
+  };
 
-  const addEdgesTransaction = db.transaction((edges: Edge[]) => {
+  const insertEdges = (edges: Edge[]): void => {
     for (const edge of edges) {
       upsertEdgeStmt.run({
         source: edge.source,
@@ -103,15 +120,15 @@ export const createSqliteWriter = (db: SqliteDb): DbWriter => {
         referenceContext: edge.referenceContext ?? null,
       });
     }
-  });
+  };
 
   return {
     async addNodes(nodes: Node[]): Promise<void> {
-      addNodesTransaction(nodes);
+      inTransaction(db, () => insertNodes(nodes));
     },
 
     async addEdges(edges: Edge[]): Promise<void> {
-      addEdgesTransaction(edges);
+      inTransaction(db, () => insertEdges(edges));
     },
 
     async removeFileNodes(filePath: string): Promise<void> {

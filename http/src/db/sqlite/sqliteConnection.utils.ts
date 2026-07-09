@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-import Database from "better-sqlite3";
+import { DatabaseSync } from "node:sqlite";
 import type { SqliteDb } from "./SqliteDb.js";
 import { initializeSchema } from "./sqliteSchema.utils.js";
 
@@ -27,12 +27,13 @@ export const openDatabase = (options: SqliteConnectionOptions): SqliteDb => {
     }
   }
 
-  const db = new Database(path);
+  // The driver boundary: DatabaseSync erases row shapes, SqliteDb restores them.
+  const db = new DatabaseSync(path) as unknown as SqliteDb;
 
   // Performance settings
-  db.pragma("journal_mode = WAL");
-  db.pragma("synchronous = NORMAL");
-  db.pragma("cache_size = -64000"); // 64MB cache
+  db.exec("PRAGMA journal_mode = WAL");
+  db.exec("PRAGMA synchronous = NORMAL");
+  db.exec("PRAGMA cache_size = -64000"); // 64MB cache
 
   // Initialize schema
   initializeSchema(db);

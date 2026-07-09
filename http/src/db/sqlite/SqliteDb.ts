@@ -1,9 +1,17 @@
-import type Database from "better-sqlite3";
+import type { SqliteStatement } from "./SqliteStatement.js";
 
 /**
  * The SQLite database handle passed to every reader, writer and query function.
  *
- * Declaring the handle through this alias keeps the driver named in exactly one
- * place, so swapping drivers does not touch the query or ingestion layers.
+ * A structural view of node:sqlite's `DatabaseSync`, restricted to what this
+ * codebase uses and re-typed so `prepare()` carries the caller's row shape.
+ * Declaring the handle through this interface keeps the driver named in exactly
+ * one place: `openDatabase`.
  */
-export type SqliteDb = Database.Database;
+export interface SqliteDb {
+  prepare<Params extends unknown[] = unknown[], Row = unknown>(
+    sql: string,
+  ): SqliteStatement<Params, Row>;
+  exec(sql: string): void;
+  close(): void;
+}

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { DB_SCHEMA_VERSION } from "../versions.js";
+import { DB_SCHEMA_VERSION, getDbSchemaVersion } from "../versions.js";
 import type { SqliteDb } from "./SqliteDb.js";
 import { closeDatabase, openDatabase } from "./sqliteConnection.utils.js";
 import { initializeSchema } from "./sqliteSchema.utils.js";
@@ -32,11 +32,7 @@ describe(initializeSchema.name, () => {
   it("sets the schema version", () => {
     initializeSchema(db);
 
-    const version = (
-      db.pragma("user_version") as Array<{ user_version: number }>
-    )[0]?.user_version;
-
-    expect(version).toBe(DB_SCHEMA_VERSION);
+    expect(getDbSchemaVersion(db)).toBe(DB_SCHEMA_VERSION);
   });
 
   it("drops and recreates tables when schema version is outdated", () => {
@@ -50,7 +46,7 @@ describe(initializeSchema.name, () => {
     );
 
     // Simulate an outdated schema by lowering user_version below current
-    db.pragma("user_version = 0");
+    db.exec("PRAGMA user_version = 0");
 
     // Act: reinitialize — should drop and recreate
     initializeSchema(db);

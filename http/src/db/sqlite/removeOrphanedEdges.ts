@@ -12,5 +12,6 @@ export const removeOrphanedEdges = (db: SqliteDb): number => {
   const result = db
     .prepare(`DELETE FROM edges WHERE target NOT IN (SELECT id FROM nodes)`)
     .run();
-  return result.changes;
+  // node:sqlite widens `changes` to number | bigint.
+  return Number(result.changes);
 };

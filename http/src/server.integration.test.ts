@@ -7,7 +7,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import Database from "better-sqlite3";
+import { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createNoopEmbeddingProvider } from "./embedding/createNoopEmbeddingProvider.js";
 import {
@@ -62,8 +62,8 @@ describe(indexAndOpenDb.name, () => {
     mkdirSync(sqliteDir, { recursive: true });
     const dbPath = join(sqliteDir, "graph.db");
 
-    const oldDb = new Database(dbPath);
-    oldDb.pragma("user_version = 1");
+    const oldDb = new DatabaseSync(dbPath);
+    oldDb.exec("PRAGMA user_version = 1");
     oldDb.exec(
       "CREATE TABLE nodes (id TEXT PRIMARY KEY, content_hash TEXT NOT NULL)",
     );

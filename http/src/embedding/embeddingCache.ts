@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
-import Database from "better-sqlite3";
+import { DatabaseSync } from "node:sqlite";
 import type { SqliteDb } from "../db/sqlite/SqliteDb.js";
 
 /**
@@ -32,20 +32,21 @@ export interface EmbeddingCacheConnection {
 }
 
 /**
- * Convert Float32Array to Buffer for SQLite BLOB storage.
+ * Convert Float32Array to a BLOB for SQLite storage.
  */
-const vectorToBuffer = (vector: Float32Array): Buffer => {
-  return Buffer.from(vector.buffer, vector.byteOffset, vector.byteLength);
+const vectorToBlob = (vector: Float32Array): Uint8Array => {
+  return new Uint8Array(vector.buffer, vector.byteOffset, vector.byteLength);
 };
 
 /**
- * Convert Buffer from SQLite BLOB to Float32Array.
+ * Convert a SQLite BLOB back to Float32Array. node:sqlite returns BLOBs as
+ * Uint8Array, not Buffer.
  */
-const bufferToFloat32Array = (buffer: Buffer): Float32Array => {
+const blobToFloat32Array = (blob: Uint8Array): Float32Array => {
   return new Float32Array(
-    buffer.buffer,
-    buffer.byteOffset,
-    buffer.byteLength / Float32Array.BYTES_PER_ELEMENT,
+    blob.buffer,
+    blob.byteOffset,
+    blob.byteLength / Float32Array.BYTES_PER_ELEMENT,
   );
 };
 
@@ -86,18 +87,18 @@ export const openEmbeddingCache = (
   }
 
   const dbPath = join(dir, `${modelName}.db`);
-  const db = new Database(dbPath);
+  const db = new DatabaseSync(dbPath) as unknown as SqliteDb;
 
-  db.pragma("journal_mode = WAL");
-  db.pragma("synchronous = NORMAL");
+  db.exec("PRAGMA journal_mode = WAL");
+  db.exec("PRAGMA synchronous = NORMAL");
 
   initializeSchema(db);
 
-  const getStmt = db.prepare<[string], { vector: Buffer }>(
+  const getStmt = db.prepare<[string], { vector: Uint8Array }>(
     "SELECT vector FROM embeddings WHERE hash = ?",
   );
 
-  const setStmt = db.prepare<[string, Buffer]>(
+  const setStmt = db.prepare<[string, Uint8Array]>(
     "INSERT OR REPLACE INTO embeddings (hash, vector) VALUES (?, ?)",
   );
 
@@ -107,7 +108,7 @@ export const openEmbeddingCache = (
       if (!row) {
         return undefined;
       }
-      return bufferToFloat32Array(row.vector);
+      return blobToFloat32Array(row.vector);
     },
 
     getBatch(hashes: string[]): Map<string, Float32Array> {
@@ -117,18 +118,18 @@ export const openEmbeddingCache = (
       }
       const placeholders = hashes.map(() => "?").join(",");
       const rows = db
-        .prepare<string[], { hash: string; vector: Buffer }>(
+        .prepare<string[], { hash: string; vector: Uint8Array }>(
           `SELECT hash, vector FROM embeddings WHERE hash IN (${placeholders})`,
         )
         .all(...hashes);
       for (const row of rows) {
-        result.set(row.hash, bufferToFloat32Array(row.vector));
+        result.set(row.hash, blobToFloat32Array(row.vector));
       }
       return result;
     },
 
     set(hash: string, vector: Float32Array): void {
-      setStmt.run(hash, vectorToBuffer(vector));
+      setStmt.run(hash, vectorToBlob(vector));
     },
 
     close(): void {

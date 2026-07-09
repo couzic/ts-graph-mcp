@@ -1,4 +1,8 @@
-import { DB_SCHEMA_VERSION, setDbSchemaVersion } from "../versions.js";
+import {
+  DB_SCHEMA_VERSION,
+  getDbSchemaVersion,
+  setDbSchemaVersion,
+} from "../versions.js";
 import type { SqliteDb } from "./SqliteDb.js";
 
 /**
@@ -63,14 +67,11 @@ const INDEXES = [
  * Creates tables and indexes if they don't exist.
  * Drops and recreates tables if the schema version is outdated.
  *
- * @param db - better-sqlite3 database instance
+ * @param db - SQLite database instance
  */
 export const initializeSchema = (db: SqliteDb): void => {
   // Check existing schema version — drop tables if outdated
-  const currentVersion = (
-    db.pragma("user_version") as Array<{ user_version: number }>
-  )[0]?.user_version;
-  if (currentVersion !== undefined && currentVersion < DB_SCHEMA_VERSION) {
+  if (getDbSchemaVersion(db) < DB_SCHEMA_VERSION) {
     dropAllTables(db);
   }
 
@@ -90,7 +91,7 @@ export const initializeSchema = (db: SqliteDb): void => {
 /**
  * Drop all tables (for clearAll operation).
  *
- * @param db - better-sqlite3 database instance
+ * @param db - SQLite database instance
  */
 export const dropAllTables = (db: SqliteDb): void => {
   db.exec("DROP TABLE IF EXISTS edges");

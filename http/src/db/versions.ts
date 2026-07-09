@@ -1,4 +1,4 @@
-import Database from "better-sqlite3";
+import { DatabaseSync } from "node:sqlite";
 import type { SqliteDb } from "./sqlite/SqliteDb.js";
 
 /**
@@ -16,21 +16,36 @@ export const DB_SCHEMA_VERSION = 2;
  * Called by initializeSchema() before creating tables.
  */
 export const setDbSchemaVersion = (db: SqliteDb): void => {
-  db.pragma(`user_version = ${DB_SCHEMA_VERSION}`);
+  db.exec(`PRAGMA user_version = ${DB_SCHEMA_VERSION}`);
+};
+
+/**
+ * Read the schema version from an open connection.
+ * A database that never had its version set reports 0.
+ */
+export const getDbSchemaVersion = (db: SqliteDb): number => {
+  const row = db
+    .prepare<[], { user_version: number }>("PRAGMA user_version")
+    .get();
+  return row?.user_version ?? 0;
 };
 
 /**
  * Read the schema version from an on-disk SQLite DB without mutating it.
  * Used to detect schema migrations before `openDatabase` auto-upgrades them.
  *
+ * `readOnly` is spelled differently from better-sqlite3's `readonly`, and
+ * node:sqlite ignores unknown options rather than rejecting them.
+ *
  * @example
  * const version = readSchemaVersion("/path/to/graph.db"); // 1
  */
 export const readSchemaVersion = (dbPath: string): number => {
-  const db = new Database(dbPath, { readonly: true });
+  const db = new DatabaseSync(dbPath, {
+    readOnly: true,
+  }) as unknown as SqliteDb;
   try {
-    const result = db.pragma("user_version") as Array<{ user_version: number }>;
-    return result[0]?.user_version ?? 0;
+    return getDbSchemaVersion(db);
   } finally {
     db.close();
   }
